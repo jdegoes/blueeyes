@@ -1,3 +1,5 @@
 target
 test-deps
+lib_managed
+project/boot
 *~
