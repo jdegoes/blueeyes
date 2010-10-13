@@ -5,6 +5,7 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
     val scalareleases   = "Scala Repo Releases"        at "http://scala-tools.org/repo-releases/"
     val scalasnapshots  = "Scala-tools.org Repository" at "http://scala-tools.org/repo-snapshots/"
     val jbossreleases   = "JBoss Releases"             at "http://repository.jboss.org/nexus/content/groups/public/"
+    val sonatyperelease = "Sonatype Releases"          at "http://oss.sonatype.org/content/repositories/releases"
   }
   
   class TestDepsProject(info: ProjectInfo) extends DefaultProject(info) {
@@ -26,6 +27,7 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
   }
   
   class CoreProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
-    val netty = "org.jboss.netty" % "netty" % "3.2.2" % "compile"
+    val netty = "org.jboss.netty" % "netty" % "3.2.2.Final" % "compile"
+    val async = "com.ning" % "async-http-client" % "1.1.0" % "compile"
   }
 }
