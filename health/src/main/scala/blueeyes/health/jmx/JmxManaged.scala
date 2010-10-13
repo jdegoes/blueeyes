@@ -26,7 +26,7 @@ trait JmxManaged {
     JMX.register(builder.build, objectName)
   }
 
-  private def objectName = new ObjectName(
+  protected def objectName = new ObjectName(
     "%s:type=%s".format(getClass.getPackage.getName, getClass.getSimpleName)
   )
 }
