@@ -17,13 +17,13 @@ object XSchemaDatabaseExamples extends Specification {
   "Common primitive fields in products of a coproduct are identified" in {
     val db = XSchemaDatabase(DataSocialGenderSchema)
     
-    val coproduct = DataSocialGenderSchema.definitions.filter(_.isInstanceOf[XCoproduct]).map(_.asInstanceOf[XCoproduct]).first
+    val coproduct = DataSocialGenderSchema.definitions.filter(_.isInstanceOf[XCoproduct]).map(_.asInstanceOf[XCoproduct]).head
     
     val commonFields = db.commonFieldsOf(coproduct)
     
     commonFields.length mustEqual 1
-    commonFields.first._1 mustEqual "text"
-    commonFields.first._2 mustEqual XString
+    commonFields.head._1 mustEqual "text"
+    commonFields.head._2 mustEqual XString
   }
   
   "Common coproduct fields in products of a coproduct are identified" in {
@@ -34,8 +34,8 @@ object XSchemaDatabaseExamples extends Specification {
     val commonFields = db.commonFieldsOf(employee)
     
     commonFields.length mustEqual 1
-    commonFields.first._1 mustEqual "id"
-    commonFields.first._2 mustEqual XDefinitionRef("SSN", "data.employee")
+    commonFields.head._1 mustEqual "id"
+    commonFields.head._2 mustEqual XDefinitionRef("SSN", "data.employee")
   }
 }
 

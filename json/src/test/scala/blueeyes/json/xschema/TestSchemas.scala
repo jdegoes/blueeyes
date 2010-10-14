@@ -519,7 +519,7 @@ package data.fringe {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -531,7 +531,7 @@ package data.fringe {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.LongOrdering.compare(v1.value, v2.value) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -559,7 +559,7 @@ package data.fringe {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(data.fringe.Orderings.UnionOfStringAndProductOrdering.compare(v1.value, v2.value) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.StringOrdering).compare(v1.stringMap, v2.stringMap) * 1, empty))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }

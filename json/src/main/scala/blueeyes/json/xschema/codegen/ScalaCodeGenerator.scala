@@ -639,7 +639,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                     return if (v1 == v2) 0 else {      
                       val comparisons = ${comparisons}
 
-                      comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+                      comparisons.dropWhile(_ == 0).append(0 :: Nil).head
                     }
                   }
                 }""",
