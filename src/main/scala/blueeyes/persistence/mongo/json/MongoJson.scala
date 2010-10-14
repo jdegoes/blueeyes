@@ -6,38 +6,20 @@ import com.mongodb.{BasicDBObject, DBObject}
 import scala.collection.JavaConversions._
 
 object MongoJson {
-  case class StringToJValue(v: String) { def toJValue: JString = JString(v) }
-  case class LongToJValue(v: java.lang.Long) { def toJValue: JInt = JInt(v.longValue) }
-  case class IntegerToJValue(v: java.lang.Integer) { def toJValue: JInt = JInt(v.intValue) }
-  case class DoubleToJValue(v: java.lang.Double) { def toJValue: JDouble = JDouble(v.doubleValue) }
-  case class FloatToJValue(v: java.lang.Float) { def toJValue: JDouble = JDouble(v.floatValue.doubleValue) }
-  case class BooleanToJValue(v: java.lang.Boolean) { def toJValue: JBool = JBool(v.booleanValue) }
-  case class ArrayListToJValue(v: java.util.ArrayList[AnyRef]) { 
-    def toJValue: JArray = {
-      val values   = new ListBuffer[JValue]()
-      val iterator = v.iterator
-      while (iterator.hasNext){
-        values += anyRef2JValue(iterator.next)
-      }
-
-      JArray(values.toList)
-    }
-  }
-  case class DBObjectToJValue(v: DBObject) { def toJValue: JObject = mongoObject2JObject(v) }
-
-  implicit def string2JValue(v: String): StringToJValue = StringToJValue(v)
-  implicit def long2JValue(v: java.lang.Long): LongToJValue = LongToJValue(v)
-  implicit def integer2JValue(v: java.lang.Integer): IntegerToJValue = IntegerToJValue(v)
-  implicit def double2JValue(v: java.lang.Double): DoubleToJValue = DoubleToJValue(v)
-  implicit def float2JValue(v: java.lang.Float): FloatToJValue = FloatToJValue(v)
-  implicit def boolean2JValue(v: java.lang.Boolean): BooleanToJValue = BooleanToJValue(v)
-  implicit def arrayList2JValue(v: java.util.ArrayList[AnyRef]): ArrayListToJValue = ArrayListToJValue(v)
-  implicit def dbObject2JValue(v: DBObject): DBObjectToJValue = DBObjectToJValue(v)
-
+  trait CanConvertToJValue { def toJValue: JValue }
+  
+  implicit def string2JValue(v: String)             = new CanConvertToJValue { def toJValue: JString = JString(v) }
+  implicit def long2JValue(v: java.lang.Long)       = new CanConvertToJValue { def toJValue: JInt    = JInt(v.longValue) }
+  implicit def integer2JValue(v: java.lang.Integer) = new CanConvertToJValue { def toJValue: JInt    = JInt(v.intValue) }
+  implicit def double2JValue(v: java.lang.Double)   = new CanConvertToJValue { def toJValue: JDouble = JDouble(v.doubleValue) }
+  implicit def float2JValue(v: java.lang.Float)     = new CanConvertToJValue { def toJValue: JDouble = JDouble(v.floatValue.doubleValue) }
+  implicit def boolean2JValue(v: java.lang.Boolean) = new CanConvertToJValue { def toJValue: JBool   = JBool(v.booleanValue) }
+  implicit def arrayList2JValue(v: java.util.ArrayList[AnyRef]) = new CanConvertToJValue { def toJValue: JArray = JArray(v.map(anyRef2JValue).toList) }
+  implicit def dbObject2JValue(v: DBObject) = new CanConvertToJValue { def toJValue: JObject = mongoObject2JObject(v) }
 
   implicit def mongoObject2JObject(dbObject: DBObject): JObject = {
-    val allKeys   = asSet(dbObject.keySet)
-    val pureKeys  = allKeys.filter(!_.startsWith("_"))
+    val allKeys  = asSet(dbObject.keySet)
+    val pureKeys = allKeys.filter(_ != "_id")
 
     def toJField(key: String): JField = {
       JField(key, anyRef2JValue(dbObject.get(key)))
@@ -51,7 +33,7 @@ object MongoJson {
 
     jObject.obj.foreach(obj => {
       jValue2MongoValue(obj.value) match {
-        case Some(v)    => dbObject.put(obj.name, v)
+        case Some(v) => dbObject.put(obj.name, v)
         case None =>
       }
     })
@@ -69,18 +51,20 @@ object MongoJson {
     case x: java.util.ArrayList[AnyRef]  => x.toJValue
     case x: DBObject                     => x.toJValue
     case null                            => JNull
+    // Missing cases: com.mongodb.ObjectId, java.util.regex.Pattern, java.util.Date, com.mongodb.DBRef, byte[]
     case _                               => error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
   }
 
-  import Predef._
-  private def jValue2MongoValue[T <: JValue](value: T): Option[AnyRef]  = value match {
-    case x: JString => Some(new String(x.s))
-    case x: JInt    => Some(long2Long(x.num.longValue))
-    case x: JDouble => Some(double2Double(x.num))
-    case x: JBool   => Some(boolean2Boolean(x.value))
-    case x: JObject => Some(jObject2MongoObject(x))
-    case x: JArray  => {
-      if (!x.arr.isEmpty){
+  private def jValue2MongoValue[T <: JValue](value: T): Option[AnyRef]  = {
+    import Predef._
+    
+    value match {
+      case x: JString => Some(x.s)
+      case x: JInt    => Some(long2Long(x.num.longValue))
+      case x: JDouble => Some(double2Double(x.num))
+      case x: JBool   => Some(boolean2Boolean(x.value))
+      case x: JObject => Some(jObject2MongoObject(x))
+      case x: JArray  => {
         val values = new java.util.ArrayList[AnyRef]
         x.arr.foreach(y => { 
           jValue2MongoValue(y) match { 
@@ -90,11 +74,10 @@ object MongoJson {
         })
         Some(values)
       }
-      else None
+      case JNothing   => None
+      case JNull      => Some(null)
+      case _          => error("Unknown type for value: " + value)
     }
-    case JNothing   => None
-    case JNull      => Some(null)
-    case _          => error("Unknown type for value: " + value)
   }
 }
 

@@ -111,11 +111,6 @@ class MongoJsonTester extends WordSpec with MustMatchers {
       array.add("2")
       toMongo("array", jArray) must be (array)
     }
-    "does not add empty array" in {
-      val jArray = JArray(Nil)
-
-      toMongoObject("array", jArray).containsField("array") must be (false)
-    }
   }
   "JavaToScala" must {
     "convert String to JString" in {
