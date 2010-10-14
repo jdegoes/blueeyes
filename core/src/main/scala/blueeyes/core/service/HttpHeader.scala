@@ -1,5 +1,7 @@
 package blueeyes.core.service
 
+private[service] trait HttpHeaderNameFrom
+
 sealed trait HttpHeader extends Product2[String, String] { self =>
   lazy val _1 = {
     def toDashes(s: List[Char]): List[Char] = s match {
