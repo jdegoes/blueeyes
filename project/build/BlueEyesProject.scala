@@ -9,7 +9,25 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val paranamer   = "com.thoughtworks.paranamer"  % "paranamer"         % "2.0"
   val junit       = "junit"                       % "junit"             % "4.7"         % "test"
   val netty       = "org.jboss.netty"             % "netty"             % "3.2.2.Final" % "compile"
-  val async       = "com.ning"                    % "async-http-client" % "1.1.0"       % "compile"  
+  val async       = "com.ning"                    % "async-http-client" % "1.1.0"       % "compile"
+
+  override def managedStyle = ManagedStyle.Maven
+
+  override def packageDocsJar = defaultJarPath("-javadoc.jar")
+  override def packageSrcJar= defaultJarPath("-sources.jar")
+  
+  val sourceArtifact = Artifact.sources(artifactID)
+  val docsArtifact = Artifact.javadoc(artifactID)
+  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
+
+  override def pomExtra =
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 }
 
 trait Repositories {
