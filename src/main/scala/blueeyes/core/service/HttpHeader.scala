@@ -454,3 +454,4 @@ trait HttpHeaderImplicits {
     case (name, value) => new CustomHeader(name, value)
   }
 }
+object HttpHeaderImplicits extends HttpHeaderImplicits
