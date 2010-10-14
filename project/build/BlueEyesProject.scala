@@ -6,12 +6,13 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
     val scalasnapshots  = "Scala-tools.org Repository" at "http://scala-tools.org/repo-snapshots/"
     val jbossreleases   = "JBoss Releases"             at "http://repository.jboss.org/nexus/content/groups/public/"
     val sonatyperelease = "Sonatype Releases"          at "http://oss.sonatype.org/content/repositories/releases"
+    val nexusscalatools = "Nexus Scala Tols"           at "http://nexus.scala-tools.org/content/repositories/releases"
   }
   
   class TestDepsProject(info: ProjectInfo) extends DefaultProject(info) with Repositories{
-    val scalatest  = "org.scalatest"           % "scalatest"        % "1.2"    % "test"
-    val scalaspec   = "org.scala-tools.testing"    % "specs_2.8.0"      % "1.6.6-SNAPSHOT"  % "test"
-    val scalacheck  = "org.scala-tools.testing"    % "scalacheck_2.8.0" % "1.8-SNAPSHOT"  % "test"
+    val scalatest  = "org.scalatest"           % "scalatest"        % "1.2-for-scala-2.8.0.final-SNAPSHOT"    % "test"
+    val scalaspec   = "org.scala-tools.testing"    % "specs_2.8.0"      % "1.6.5"  % "test"
+    val scalacheck  = "org.scala-tools.testing"    % "scalacheck_2.8.0" % "1.7"  % "test"
     val mockito    = "org.mockito"             % "mockito-all"      % "1.8.4"  % "test"
   }
 
@@ -30,7 +31,7 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
 
   class JsonProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
     val paranamer   = "com.thoughtworks.paranamer" % "paranamer"            % "2.0"
-    val junit      = "junit" % "junit" % "4.5" % "test"
+    val junit      = "junit" % "junit" % "4.7" % "test"
   }
   
   class CoreProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
