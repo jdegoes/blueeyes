@@ -1,6 +1,6 @@
 import sbt._
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories{
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories {
 
   val scalatest   = "org.scalatest"               % "scalatest"         % "1.2-for-scala-2.8.0.final-SNAPSHOT"    % "test"
   val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.5"       % "test"
@@ -10,6 +10,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val junit       = "junit"                       % "junit"             % "4.7"         % "test"
   val netty       = "org.jboss.netty"             % "netty"             % "3.2.2.Final" % "compile"
   val async       = "com.ning"                    % "async-http-client" % "1.1.0"       % "compile"
+  val mongo       = "org.mongodb"                 % "mongo-java-driver" % "2.1"         % "compile"
 
   override def managedStyle = ManagedStyle.Maven
 
