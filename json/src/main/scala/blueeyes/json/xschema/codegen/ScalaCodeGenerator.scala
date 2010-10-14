@@ -245,7 +245,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase, includeSchemas: Boolean): Unit = {
-    def coproductPrefix(x: XCoproduct): String = if (database.namespacesOf(x).removeDuplicates.length <= 1) "sealed " else ""
+    def coproductPrefix(x: XCoproduct): String = if (database.namespacesOf(x).distinct.length <= 1) "sealed " else ""
     def buildProductFields(x: XProduct): Unit = {
       code.add(x.realFields.map(x => x.name + ": " + typeSignatureOf(x.fieldType, database)).mkString(", "))
     }
@@ -550,7 +550,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         code.add("${implicitPrefix}val ${typeHint}Decomposer: Decomposer[${typeSig}] = new Decomposer[${typeSig}] ", "implicitPrefix" -> getImplicitPrefix(multitype)).block {
           code.add("def decompose(tvalue: ${typeSig}): JValue = ").block {
             code.add("tvalue match ").block {
-              val expandedTerms = database.referencesOf(database.findLeafTerms(multitype)).removeDuplicates
+              val expandedTerms = database.referencesOf(database.findLeafTerms(multitype)).distinct
               
               code.join(expandedTerms, code.newline) { term =>
                 code.add("case x: ${termType} => JObject(JField(\"${typeHint}\", ${decomposer}.decompose(x)) :: Nil)",

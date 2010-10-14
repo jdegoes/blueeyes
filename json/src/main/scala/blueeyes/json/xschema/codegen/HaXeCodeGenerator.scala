@@ -83,7 +83,7 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       import haxe.data.collections.List;
       """ +
 
-      database.definitions.filter(_.namespace != namespace).map("import " + _.namespace + ".Data;").removeDuplicates.mkString("\n") +
+      database.definitions.filter(_.namespace != namespace).map("import " + _.namespace + ".Data;").distinct.mkString("\n") +
 
       """
       using PreludeExtensions;
@@ -93,7 +93,7 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       using ${namespace}.Data;
       """ +
 
-      database.definitions.filter(_.namespace != namespace).map("using " + _.namespace + ".Data;").removeDuplicates.mkString("\n") +
+      database.definitions.filter(_.namespace != namespace).map("using " + _.namespace + ".Data;").distinct.mkString("\n") +
 
       """
 

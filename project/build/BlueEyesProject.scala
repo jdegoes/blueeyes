@@ -21,7 +21,9 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
   // Blueeyes projects
   lazy val health = project("health", "health",  new HealthProject(_), testDeps)
   
-  lazy val core = project("core", "core", new CoreProject(_), testDeps)
+  lazy val core   = project("core", "core", new CoreProject(_), testDeps)
+
+  lazy val json   = project("json", "json", new JsonProject(_), testDeps)
 
   class HealthProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
   }

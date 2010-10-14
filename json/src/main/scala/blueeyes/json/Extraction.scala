@@ -153,7 +153,7 @@ object Extraction {
           case ArrayElem(p, i)    => set + p        
           case x @ _              => set + x
         }
-    }.toList.sort(_ < _) // Sort is necessary to get array order right
+    }.toList.sortWith(_ < _) // Sort is necessary to get array order right
     
     uniquePaths.foldLeft[JValue](JNothing) { (jvalue, key) => 
       jvalue.merge(key match {

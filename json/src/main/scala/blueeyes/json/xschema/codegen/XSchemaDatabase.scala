@@ -28,7 +28,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     case x: XProduct   => x :: Nil
     case x: XMultitype => findProductTerms(x)
     case _ => Nil
-  }).removeDuplicates
+  }).distinct
   
   /** Finds all leaf terms of the specified multitype, regardless of how deep 
    * they are in the type hierarchy.
@@ -36,7 +36,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   def findLeafTerms(x: XMultitype): List[XSchema] = (resolve(elementsOf(x)).flatMap {
     case x: XMultitype => findProductTerms(x)
     case x => x :: Nil
-  }).removeDuplicates
+  }).distinct
   
   /** Attempts to find the definition for the specified reference.
    */
@@ -50,7 +50,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
    */
   def definitionsReferencedBy(defn: XDefinition): List[XDefinitionRef] = walk(defn, Nil, new XSchemaWalker[List[XDefinitionRef]] {
     override def walk(data: List[XDefinitionRef], prim: XDefinitionRef): List[XDefinitionRef] = prim :: data
-  }).removeDuplicates
+  }).distinct
   
   def definitionsReferencedIn(namespace: String): List[XDefinitionRef] = definitionsIn(namespace).flatMap(definitionsReferencedBy(_))
   
@@ -76,11 +76,11 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   
   def definitionRefsIn(namespace: String) = definitionRefs.filter(_.namespace == namespace)  
   
-  def definitionByName(name: String) = definitions.filter(_.name == name).firstOption
+  def definitionByName(name: String) = definitions.filter(_.name == name).headOption
   
   /** Retrieves all the namespaces.
    */
-  def namespaces = definitions.map(_.namespace).removeDuplicates
+  def namespaces = definitions.map(_.namespace).distinct
 
   /** Resolves the type. Will return the passed in type except when it is a 
    * reference to a defined type, in which case it will return the definition 
@@ -213,7 +213,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
       case Nil => Nil
       
       case head :: tail => tail.foldLeft(head) { (common, list) => common.intersect(list) }
-    }).sort { (t1, t2) =>
+    }).sortWith { (t1, t2) =>
       val key1 = t1._1
       val key2 = t2._1
       

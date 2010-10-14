@@ -249,8 +249,8 @@ object JsonAST {
       def find(json: JValue): Option[JValue] = {
         if (p(json)) return Some(json)
         json match {
-          case JObject(l) => l.flatMap(find _).firstOption
-          case JArray(l) => l.flatMap(find _).firstOption
+          case JObject(l) => l.flatMap(find _).headOption
+          case JArray(l) => l.flatMap(find _).headOption
           case JField(_, value) => find(value)
           case _ => None
         }
@@ -403,7 +403,7 @@ object JsonAST {
       str.replaceAll(pair._1, pair._2)
     } + Quote
     
-    def intersperse(l: List[Document], i: Document) = l.zip(List.make(l.length - 1, i) ::: List(text(""))).map(t => t._1 :: t._2)
+    def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
     
     value match {
       case null => text("null")
@@ -558,7 +558,7 @@ trait Printer {
    */
   def compact[A <: Writer](d: Document, out: A): A = {
     // Non-recursive implementation to support serialization of big structures.
-    var nodes = Stack.Empty.push(d)
+    var nodes = Stack.empty.push(d)
     val visited = new IdentityHashMap[Document, Unit]()
     while (!nodes.isEmpty) {
       val cur = nodes.top
