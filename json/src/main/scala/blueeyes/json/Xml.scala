@@ -1,4 +1,4 @@
-  /*
+/*
  * Copyright 2009-2010 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -144,7 +144,7 @@ object Xml {
     
     buildNodes(xml) match {
       case List(x @ XLeaf(_, _ :: _)) => toJValue(x)
-      case List(x) => JObject(JField(nameOf(xml.first), toJValue(x)) :: Nil)
+      case List(x) => JObject(JField(nameOf(xml.head), toJValue(x)) :: Nil)
       case x => JArray(x.map(toJValue))
     }
   }

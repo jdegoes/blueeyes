@@ -71,7 +71,7 @@ trait DefaultOrderings {
   
   def ArrayOrdering[T](ordering: Ordering[T]): Ordering[Array[T]] = new Ordering[Array[T]] {
     def compare(t1: Array[T], t2: Array[T]): Int = {
-      t1.zip(t2).toList.map(t => ordering.compare(t._1, t._2)).dropWhile(_ == 0).firstOption match {
+      t1.zip(t2).toList.map(t => ordering.compare(t._1, t._2)).dropWhile(_ == 0).headOption match {
         case None => t1.length.compare(t2.length)
         
         case Some(c: Int) => c
@@ -81,7 +81,7 @@ trait DefaultOrderings {
   
   def ListOrdering[T](ordering: Ordering[T]): Ordering[List[T]] = new Ordering[List[T]] {
     def compare(v1: List[T], v2: List[T]): Int = {
-      v1.zip(v2).map(t => ordering.compare(t._1, t._2)).dropWhile(_ == 0).firstOption match {
+      v1.zip(v2).map(t => ordering.compare(t._1, t._2)).dropWhile(_ == 0).headOption match {
         case None => v1.length.compare(v2.length)
         
         case Some(c: Int) => c
@@ -90,14 +90,14 @@ trait DefaultOrderings {
   }
   
   def SetOrdering[T](ordering: Ordering[T]): Ordering[Set[T]] = new Ordering[Set[T]] {
-    def compare(v1: Set[T], v2: Set[T]): Int = ListOrdering(ordering).compare(v1.toList.sort(ordering.compare(_, _) < 0), v2.toList.sort(ordering.compare(_, _) < 0))
+    def compare(v1: Set[T], v2: Set[T]): Int = ListOrdering(ordering).compare(v1.toList.sortWith(ordering.compare(_, _) < 0), v2.toList.sortWith(ordering.compare(_, _) < 0))
   }
   
   def MapOrdering[K, V](ordering1: Ordering[K], ordering2: Ordering[V]): Ordering[Map[K, V]] = new Ordering[Map[K, V]] {
     def compare(v1: Map[K, V], v2: Map[K, V]): Int = {
       def sorter(t1: (K, V), t2: (K, V)) = ordering1.compare(t1._1, t2._1) < 0
       
-      ListOrdering(Tuple2Ordering(ordering1, ordering2)).compare(v1.toList.sort(sorter), v2.toList.sort(sorter))
+      ListOrdering(Tuple2Ordering(ordering1, ordering2)).compare(v1.toList.sortWith(sorter), v2.toList.sortWith(sorter))
     }
   }
   
@@ -108,7 +108,7 @@ trait DefaultOrderings {
       return if (v1 == v2) 0 else {      
         val comparisons = cons(StringOrdering.compare(v1.name, v2.name), cons(JValueOrdering.compare(v1.value, v2.value), empty))
       
-        comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+        comparisons.dropWhile(_ == 0).append(0 :: Nil).head
       }
     }
   }

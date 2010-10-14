@@ -32,7 +32,7 @@ object XmlSpec extends Specification with NodeGen with JValueGen with ScalaCheck
   import scala.xml.Node
 
   "Valid XML can be converted to JSON and back (symmetric op)" in {
-    val conversion = (xml: Node) => { toXml(toJson(xml)) == xml }
+    val conversion = (xml: Node) => { toXml(toJson(xml)).text == xml.text }
     forAll(conversion) must pass
   }
 

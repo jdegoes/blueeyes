@@ -66,7 +66,7 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
               indents.push(count)
             }
             else {
-              val lastCount = indents.peek
+              val lastCount = indents.top
             
               if (count != lastCount) {
                 if (count > lastCount) {
@@ -75,7 +75,7 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
                   indents.push(count)
                 }
                 else if (count < lastCount) {
-                  while (indents.size > 0 && indents.peek != count) {
+                  while (indents.size > 0 && indents.top != count) {
                     indents.pop
                   
                     state.unindent

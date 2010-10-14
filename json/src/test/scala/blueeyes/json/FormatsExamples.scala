@@ -27,7 +27,7 @@ object FormatsExamples extends Specification with TypeHintExamples {
   import JsonAST._
   import JsonParser._
 
-  implicit val formats = ShortTypeHintExamples.formats + FullTypeHintExamples.formats.typeHints
+  implicit val formats = FullTypeHintExamples.formats + ShortTypeHintExamples.formats.typeHints
   
   val hintsForFish   = ShortTypeHintExamples.formats.typeHints.hintFor(classOf[Fish])
   val hintsForDog    = ShortTypeHintExamples.formats.typeHints.hintFor(classOf[Dog])

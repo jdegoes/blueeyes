@@ -12,7 +12,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XDefinitionOrdering).compare(v1.definitions, v2.definitions) * 1, cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XConstantOrdering).compare(v1.constants, v2.constants) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, empty)))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -215,7 +215,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.namespace, v2.namespace) * 1, empty))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -227,7 +227,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -239,7 +239,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -251,7 +251,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -263,7 +263,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -275,7 +275,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -287,7 +287,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -299,7 +299,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -311,7 +311,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -350,7 +350,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.elementType, v2.elementType) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -362,7 +362,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.elementType, v2.elementType) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -374,7 +374,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.elementType, v2.elementType) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -386,7 +386,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.keyType, v2.keyType) * 1, cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.valueType, v2.valueType) * 1, empty))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -398,7 +398,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.optionalType, v2.optionalType) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -410,7 +410,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XReferenceOrdering).compare(v1.types, v2.types) * 1, empty)
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -489,7 +489,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.namespace, v2.namespace) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XFieldOrdering).compare(v1.terms, v2.terms) * 1, empty))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -501,7 +501,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.namespace, v2.namespace) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XDefinitionRefOrdering).compare(v1.terms, v2.terms) * 1, cons(blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(v1.default, v2.default) * 1, empty)))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -513,7 +513,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.namespace, v2.namespace) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.DefaultOrderings.ListOrdering(blueeyes.json.xschema.Orderings.XReferenceOrdering).compare(v1.terms, v2.terms) * 1, cons(blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(v1.default, v2.default) * 1, empty)))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -525,7 +525,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.namespace, v2.namespace) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.constantType, v2.constantType) * 1, cons(blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(v1.default, v2.default) * 1, empty)))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -537,7 +537,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.fieldType, v2.fieldType) * 1, cons(blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(v1.default, v2.default) * 1, cons(blueeyes.json.xschema.Orderings.XOrderOrdering.compare(v1.order, v2.order) * 1, empty)))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -549,7 +549,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.fieldType, v2.fieldType) * 1, empty)))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -561,7 +561,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(v1.name, v2.name) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.JValueOrdering).compare(v1.properties, v2.properties) * 1, cons(blueeyes.json.xschema.Orderings.XReferenceOrdering.compare(v1.fieldType, v2.fieldType) * 1, cons(blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(v1.default, v2.default) * 1, empty))))
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -600,7 +600,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -612,7 +612,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
@@ -624,7 +624,7 @@ package blueeyes.json.xschema {
         return if (v1 == v2) 0 else {      
           val comparisons = empty
           
-          comparisons.dropWhile(_ == 0).append(0 :: Nil).first
+          comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
       }
     }
