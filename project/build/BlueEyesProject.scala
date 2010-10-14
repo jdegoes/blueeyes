@@ -19,11 +19,10 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
   lazy val testDeps = project("test-deps", "test-deps",  new TestDepsProject(_))
 
   // Blueeyes projects
-  lazy val health = project("health", "health",  new HealthProject(_), testDeps)
-  
   lazy val core   = project("core", "core", new CoreProject(_), testDeps)
-
+  lazy val health = project("health", "health",  new HealthProject(_), testDeps)
   lazy val json   = project("json", "json", new JsonProject(_), testDeps)
+  lazy val mongo   = project("mongo", "mongo", new MongoProject(_), testDeps, json)
 
   class HealthProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
   }
@@ -36,5 +35,9 @@ class BlueEyesProject(info: ProjectInfo) extends ParentProject(info) {
   class CoreProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
     val netty = "org.jboss.netty" % "netty" % "3.2.2.Final" % "compile"
     val async = "com.ning" % "async-http-client" % "1.1.0" % "compile"
+  }
+
+  class MongoProject(info: ProjectInfo) extends DefaultProject(info) with Repositories {
+    val mongo = "org.mongodb" % "mongo-java-driver" % "2.1" % "compile"
   }
 }
