@@ -162,6 +162,7 @@ class MongoJsonTester extends WordSpec with MustMatchers {
     dbObject.put(key, value)    
     jValue(key, dbObject)
   }
+
   private def toMongo(key: String, value: JValue) = toMongoObject(key, value).get(key)
 
   private def toMongoObject(key: String, value: JValue): DBObject = {
