@@ -1,5 +1,11 @@
 package blueeyes.core.service
 
-case class HttpStatus(code: HttpStatusCode, reason: String) {
-  def this(code: HttpStatusCode) = this(code, code.defaultMessage)
+case class HttpStatus(code: HttpStatusCode, reason: String)
+object HttpStatus {
+  def apply(code: HttpStatusCode) = new HttpStatus(code, code.defaultMessage)
 }
+
+trait HttpStatusImplicits {
+  implicit def statusCode2HttpStatus(code: HttpStatusCode) = HttpStatus(code, code.defaultMessage)
+}
+object HttpStatusImplicits extends HttpStatusImplicits
