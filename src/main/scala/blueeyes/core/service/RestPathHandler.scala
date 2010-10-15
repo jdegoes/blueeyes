@@ -15,11 +15,11 @@ case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, Strin
 }
 
 trait RestPathHandlerImplicits {
-  implicit def fullHandler2PartialHandler(f: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]): PartialFunction[(Map[Symbol, String], HttpRequest[T]), Future[HttpResponse[T]]] = {
-    return new PartialFunction {
-      def isDefinedAt(p) = true
+  implicit def fullHandler2PartialHandler[T](f: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]): PartialFunction[(Map[Symbol, String], HttpRequest[T]), Future[HttpResponse[T]]] = {
+    return new PartialFunction[(Map[Symbol, String], HttpRequest[T]), Future[HttpResponse[T]]] {
+      def isDefinedAt(p: (Map[Symbol, String], HttpRequest[T])) = true
       
-      def apply(p) = f(p)
+      def apply(p: (Map[Symbol, String], HttpRequest[T])) = f(p)
     }
   }
 }

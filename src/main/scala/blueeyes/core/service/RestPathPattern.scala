@@ -1,5 +1,7 @@
 package blueeyes.core.service
 
+import util.matching.Regex
+
 sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]] { self =>
   def elementPatterns: List[PathElement]
   
