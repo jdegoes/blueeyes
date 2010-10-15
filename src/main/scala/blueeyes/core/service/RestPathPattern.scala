@@ -23,7 +23,7 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   }
 }
 
-object RestPath {
+object RestPathPattern {
   def Root = new RestPathPattern { def elementPatterns = Nil }
 }
 sealed trait PathElement extends PartialFunction[String, List[(Symbol, String)]]
