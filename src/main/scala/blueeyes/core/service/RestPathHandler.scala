@@ -15,7 +15,7 @@ case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, Strin
 }
 
 trait RestPathHandlerImplicits {
-  implicit def fullHandler2PartialHandler(f: String => (HttpRequest[T] => Future[HttpResponse[T]])): PartialFunction[String, HttpRequest[T] => Future[HttpResponse[T]]] = {
+  implicit def fullHandler2PartialHandler(f: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]): PartialFunction[(Map[Symbol, String], HttpRequest[T]), Future[HttpResponse[T]]] = {
     return new PartialFunction {
       def isDefinedAt(p) = true
       
