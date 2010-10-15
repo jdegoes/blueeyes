@@ -48,18 +48,24 @@ case class SymbolElement(element: Symbol) {
   
   def apply(s: String) = (element -> s) :: Nil
 }
-/*case class RegexElement(pattern: Regex) {
+case class RegexElement(pattern: Regex, names: List[String]) {
   def isDefinedAt(s: String) = s match {
     case pattern(matches) => true
     case _ => false
   }
   
   def apply(s: String) = {
-    val pattern(matches) = s
+    val matches: List[String] = pattern.unapplySeq(s).get
     
-    matches(captureGroup)
+    matches.foldLeft[(List[(Symbol, String)], Int)]((Nil, 0)) { (state, captured) =>
+      val list  = state._1
+      val index = state._2
+      val name  = names(index)
+      
+      ((Symbol(name), captured) :: list, index + 1)
+    }._1
   }
-}*/
+}
 
 
 sealed trait RestPathHandlerType
