@@ -10,4 +10,10 @@ trait Future[+T] {
   def filter(f: T => Boolean): Future[T]
   
   def foreach(f: T => Unit): Unit
+  
+  def value(): Option[T]
+  
+  def deliverTo(f: T => Unit): Future[T] = { foreach(f); this }
+  
+  def whenDone(f: => Unit): Future[T]
 }

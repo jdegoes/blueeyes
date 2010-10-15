@@ -3,8 +3,8 @@ package blueeyes.core.service
 import blueeyes.util.Future
 import util.matching.Regex
 
-case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, String]], handler: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]])
-                             extends PartialFunction[String, HttpRequest[T] => Future[HttpResponse[T]]] {
+case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, String]], 
+                              handler: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]) extends PartialFunction[String, HttpRequest[T] => Future[HttpResponse[T]]] {
  def isDefinedAt(url: String) = pattern.isDefinedAt(url)
 
  def apply(url: String) = (request: HttpRequest[T]) => {
@@ -14,11 +14,52 @@ case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, Strin
  }
 }
 
-sealed trait RestPath {
-  def elements: List[PathElement]
+sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]] { self =>
+  def elementPatterns: List[PathElement]
+  
+  def isDefinedAt(s: String) = {
+    var elementStrings = s.split('/').toList
+    
+    elementPatterns.length == elementStrings.length && elementPatterns.zip(elementStrings).takeWhile(t => t._1.isDefinedAt(t._2)).length == 0
+  }
+  
+  def apply(s: String) = {
+    var elementStrings = s.split('/').toList
+    
+    Map(elementPatterns.zip(elementStrings).flatMap(t => t._1(t._2)): _*)
+  }
+  
+  def + (that: RestPathPattern) = new RestPathPattern {
+    def elementPatterns = self.elementPatterns ++ that.elementPatterns
+  }
 }
 
-sealed trait PathElement
-case class StringElement(element: String)
-case class SymbolElement(element: Symbol)
-case class RegexElement(element: Regex)
+object RestPath {
+  def Root = new RestPathPattern { def elementPatterns = Nil }
+}
+sealed trait PathElement extends PartialFunction[String, List[(Symbol, String)]]
+case class StringElement(element: String) {
+  def isDefinedAt(s: String) = element == s
+  
+  def apply(s: String) = Nil
+}
+case class SymbolElement(element: Symbol) {
+  def isDefinedAt(s: String) = true
+  
+  def apply(s: String) = (element -> s) :: Nil
+}
+/*case class RegexElement(pattern: Regex) {
+  def isDefinedAt(s: String) = s match {
+    case pattern(matches) => true
+    case _ => false
+  }
+  
+  def apply(s: String) = {
+    val pattern(matches) = s
+    
+    matches(captureGroup)
+  }
+}*/
+
+
+sealed trait RestPathHandlerType
