@@ -13,7 +13,7 @@ case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, Strin
    handler(symbols, request)
  }
 }
-
+/*
 trait RestPathHandlerImplicits {
   implicit def fullHandler2PartialHandler(f: (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]): PartialFunction[(Map[Symbol, String], HttpRequest[T]), Future[HttpResponse[T]]] = {
     return new PartialFunction {
@@ -24,3 +24,4 @@ trait RestPathHandlerImplicits {
   }
 }
 object RestPathHandlerImplicits extends RestPathHandlerImplicits
+*/
