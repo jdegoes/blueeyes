@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<projectDescription>
+  <name>blueeyes</name>
+  <comment>blueeyes 1.0</comment>
+  <projects></projects>
+  <buildSpec>
+    <buildCommand>
+      <name>org.scala-ide.sdt.core.scalabuilder</name>
+    </buildCommand>
+    
+  </buildSpec>
+  <natures>
+    <nature>org.scala-ide.sdt.core.scalanature</nature>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+    
+  </natures>
+</projectDescription>

@@ -1,6 +1,7 @@
 import sbt._
+import de.element34.sbteclipsify._
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories {
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories with Eclipsify {
 
   val scalatest   = "org.scalatest"               % "scalatest"         % "1.2-for-scala-2.8.0.final-SNAPSHOT"    % "test"
   val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.5"       % "test"
