@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-trait Bijection[T, S] { self =>
+trait Bijection[T, S] extends Function1[T, S] { self =>
   def apply(t: T): S
   
   def unapply(s: S): T
