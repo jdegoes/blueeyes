@@ -38,8 +38,14 @@ object HttpHeaders {
   class Accept(val value: String) extends HttpHeader {
   }
   object Accept {
+    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
+    
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(keyValue._2) else None
   }
+  
+  // import MimeTypes._
+  //
+  // val myAcceptHeader = Accept(image/gif, image/png, image/jpeg)
 
   class AcceptCharset(val value: String) extends HttpHeader {
   }
@@ -86,6 +92,8 @@ object HttpHeaders {
   class ContentLength(val value: String) extends HttpHeader {
   }
   object ContentLength {
+    def apply(length: Long): ContentLength = new ContentLength(length.toString)
+    
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2) else None
   }
 

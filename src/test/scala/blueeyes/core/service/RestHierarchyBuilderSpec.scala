@@ -23,8 +23,11 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
   "add service to the specified nested path" in {
 
     val serviceByPath = netsedService.hierarchy.head
+    
+    val list1 = serviceByPath._1.elementPatterns
+    val list2 = "blue/eyes/api/v1/ads/'adId/adCode.html".elementPatterns
 
-    serviceByPath._1.elementPatterns mustEqual("blue" / "eyes" / "api" / "v1" / "ads" / 'adId / "adCode.html" elementPatterns)
+    list1 mustEqual(list2)
   }
 
   "associate handler with specified nested path" in {
