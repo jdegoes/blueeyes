@@ -1,12 +1,16 @@
 package blueeyes.core.service.server
 
 import blueeyes.core.service._
-import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil;
 
 object Converters{
+  implicit def fromNetty(version: NettyHttpVersion): HttpVersion = HttpVersion(version.getText())
+  implicit def toNetty(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
+  implicit def toNetty(status : HttpStatus) : HttpResponseStatus = new HttpResponseStatus(status.code.value, status.reason)
+  
   implicit def fromNetty(method: NettyHttpMethod): HttpMethod = method match{
     case NettyHttpMethod.GET      => HttpMethods.GET
     case NettyHttpMethod.PUT      => HttpMethods.PUT
@@ -20,11 +24,7 @@ object Converters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def fromNetty(version: NettyHttpVersion): HttpVersion = HttpVersion(version.getText())
-  implicit def toNetty(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
-  implicit def toNetty(status : HttpStatus) : HttpResponseStatus = new HttpResponseStatus(status.code.value, status.reason)
-
-  implicit def toNetty[T](response: HttpResponse[T])(implicit converter: (T) => String): DefaultHttpResponse = {
+  implicit def toNetty[T](response: HttpResponse[T])(implicit converter: (T) => String): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(toNetty(response.version), toNetty(response.status))
     
     response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(converter(content), CharsetUtil.UTF_8)))

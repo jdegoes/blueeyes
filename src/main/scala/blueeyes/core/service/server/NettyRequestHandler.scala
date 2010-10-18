@@ -32,7 +32,7 @@ class NettyRequestHandler[T](builder: RestHierarchyBuilder[T])(implicit stringTo
 
   private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){
     val keepAlive = isKeepAlive(e.getMessage().asInstanceOf[NettyHttpRequest])
-    val future    = e.getChannel().write(response)
+    val future    = e.getChannel().write(toNetty(response))
 
     if (!keepAlive) {
       future.addListener(ChannelFutureListener.CLOSE)
