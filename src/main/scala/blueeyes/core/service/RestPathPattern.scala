@@ -25,8 +25,8 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
 object RestPathPattern {
   import scala.util.matching.Regex
   
-  private val SymbolPattern = """'(\w+)""".r
-  private val PathPattern   = """(\w+)""".r
+  private val SymbolPattern = """'([\w.\-]+)""".r
+  private val PathPattern   = """([\w.\-]+)""".r
   
   def Root = new RestPathPattern { def elementPatterns = Nil }
   
