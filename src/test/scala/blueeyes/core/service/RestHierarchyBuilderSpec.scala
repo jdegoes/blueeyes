@@ -1,8 +1,7 @@
 package blueeyes.core.service
 
 import org.specs.Specification
-import PathElement._
-import RestPathPattern._
+import RestPathPatternImplicits._
 import org.scalatest.mock.MockitoSugar
 import blueeyes.util.Future
 
