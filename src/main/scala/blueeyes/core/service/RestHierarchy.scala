@@ -18,7 +18,7 @@ trait RestHierarchyBuilder[T] {
     
     try { f } finally { pathStack.pop() }
   }
-  
+
   def get(handler: Handler[T]) = custom(GET, handler)
   
   def put(handler: Handler[T]) = custom(PUT, handler)
@@ -39,5 +39,5 @@ trait RestHierarchyBuilder[T] {
     _hierarchy += ((currentPath, method, handler))
   }
   
-  private def currentPath: RestPathPattern = pathStack.foldRight[RestPathPattern](RestPathPattern.Root) { (path, element) => path ++ element }
+  private def currentPath: RestPathPattern = pathStack.foldRight[RestPathPattern](RestPathPattern.Root) { (element, path) => path ++ element }
 }

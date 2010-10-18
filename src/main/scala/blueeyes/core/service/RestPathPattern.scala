@@ -20,24 +20,33 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   def ++ (that: RestPathPattern) = new RestPathPattern {
     def elementPatterns = self.elementPatterns ++ that.elementPatterns
   }
-  def + (tailElement: PathElement) = new RestPathPattern {
+  def / (tailElement: PathElement) = new RestPathPattern {
     def elementPatterns = self.elementPatterns :+ tailElement
   }
+
+  override def toString = elementPatterns.mkString("/")
 }
 
 object RestPathPattern {
   def Root = new RestPathPattern { def elementPatterns = Nil }
+
+  implicit def stringToRestPathPattern(element: String) = Root / StringElement(element)
+  implicit def symbolToRestPathPattern(element: Symbol) = Root / SymbolElement(element)
 }
 sealed trait PathElement extends PartialFunction[String, List[(Symbol, String)]]
 case class StringElement(element: String) extends PathElement{
   def isDefinedAt(s: String) = element == s
 
   def apply(s: String) = Nil
+
+  override def toString = element
 }
 case class SymbolElement(element: Symbol) extends PathElement{
   def isDefinedAt(s: String) = true
   
   def apply(s: String) = (element -> s) :: Nil
+
+  override def toString = "'" + element.name
 }
 case class RegexElement(pattern: Regex, names: List[String]) {
   def isDefinedAt(s: String) = s match {
@@ -56,4 +65,11 @@ case class RegexElement(pattern: Regex, names: List[String]) {
       ((Symbol(name), captured) :: list, index + 1)
     }._1
   }
+
+  override def toString = "pattern=%s; names=%s".format(pattern.toString, names.mkString(", "))
+}
+
+object PathElement{
+  implicit def stringToStringElement(element: String) = StringElement(element)
+  implicit def symbolToSymbolElement(element: Symbol) = SymbolElement(element)
 }
