@@ -2,6 +2,14 @@ package blueeyes.core.service
 
 import util.matching.Regex
 
+private[service] object PathUtils {
+  def sanitizePath(s: String) = ("/" + s + "/").replaceAll("/+", "/")
+  
+  def toPathElements(path: String): List[String] = {
+    sanitizePath(path).split("/").toList.map(_.trim).filter(_.length > 0)
+  }
+}
+
 sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]] { self =>
   def elementPatterns: List[PathElement]
   
@@ -12,7 +20,7 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   }
   
   def apply(s: String) = {
-    var pathElements = RestPathPattern.toPathElements(s)
+    var pathElements = PathUtils.toPathElements(s)
     
     Map(elementPatterns.zip(pathElements).flatMap(t => t._1(t._2)): _*)
   }
@@ -20,6 +28,8 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   def / (tailElement: RestPathPattern) = new RestPathPattern {
     def elementPatterns = self.elementPatterns ++ tailElement.elementPatterns
   }
+  
+  override def toString = PathUtils.sanitizePath(elementPatterns.mkString("/"))
 }
 
 object RestPathPattern {
@@ -30,16 +40,11 @@ object RestPathPattern {
   
   def Root = new RestPathPattern { def elementPatterns = Nil }
   
-  def toPathElements(path: String): List[String] = {
-    def sanitizePath(s: String) = ("/" + path + "/").replaceAll("/+", "/")
-    
-    sanitizePath(path).split("/").toList.map(_.trim).filter(_.length > 0)
-  }
-  
   def apply(string: String): RestPathPattern = new RestPathPattern {
-    lazy val elementPatterns = toPathElements(string).map { 
+    lazy val elementPatterns = PathUtils.toPathElements(string).map { 
       case SymbolPattern(name) => SymbolElement(Symbol(name))
       case PathPattern(name)   => StringElement(name)
+      case _ => error("Unknown rest path pattern: " + string)
     }
   }
 }
@@ -50,11 +55,15 @@ case class StringElement(element: String) extends PathElement {
   override def isDefinedAt(s: String) = element == s
 
   override def apply(s: String) = Map()
+  
+  override def toString = element
 }
 case class SymbolElement(element: Symbol) extends PathElement {
   override def isDefinedAt(s: String) = true
   
   override def apply(s: String) = Map(element -> s)
+  
+  override def toString = element.toString
 }
 case class RegexElement(pattern: Regex, names: List[String]) extends PathElement {
   override def isDefinedAt(s: String) = s match {
@@ -73,6 +82,8 @@ case class RegexElement(pattern: Regex, names: List[String]) extends PathElement
       ((Symbol(name), captured) :: list, index + 1)
     }._1: _*)
   }
+  
+   override def toString = pattern.toString + "~(" + names.mkString(",") + ")"
 }
 
 trait RestPathPatternImplicits {

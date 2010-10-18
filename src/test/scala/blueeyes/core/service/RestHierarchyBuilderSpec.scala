@@ -37,10 +37,22 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
   }
 
   class TestService extends RestHierarchyBuilder[Any]{
-    path("ads" / 'adId / "adCode.html"){get(handler)}
+    path("ads" / 'adId / "adCode.html") {
+      get {
+        handler
+      }
+    }
   }
   class TestNestedService extends RestHierarchyBuilder[Any]{
-    path("blue" / "eyes") {path("api" / "v1"){ path("ads" / 'adId / "adCode.html") {get(handler)}}}
+    path("blue/eyes") {
+      path("api/v1") {
+        path("ads/'adId/adCode.html") {
+          get {
+            handler
+          }
+        }
+      }
+    }
   }
 }
 
