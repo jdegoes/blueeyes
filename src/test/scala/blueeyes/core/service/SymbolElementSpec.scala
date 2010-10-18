@@ -7,6 +7,6 @@ class SymbolElementSpec  extends Specification{
     SymbolElement('foo).isDefinedAt("bar") mustEqual(true)
   }
   "create parameters" in {
-    SymbolElement('foo).apply("bar") mustEqual(('foo -> "bar") :: Nil)
+    SymbolElement('foo).apply("bar") mustEqual(Map('foo -> "bar"))
   }
 }

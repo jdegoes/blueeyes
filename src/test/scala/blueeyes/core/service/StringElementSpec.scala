@@ -10,6 +10,6 @@ class StringElementSpec  extends Specification{
     StringElement("foo").isDefinedAt("bar") mustEqual(false)
   }
   "does not create parameters" in {
-    StringElement("foo").apply("bar") mustEqual(Nil)
+    StringElement("foo").apply("bar") mustEqual(Map())
   }
 }

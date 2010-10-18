@@ -12,48 +12,77 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   }
   
   def apply(s: String) = {
-    var elementStrings = s.split('/').toList
+    var pathElements = RestPathPattern.toPathElements(s)
     
-    Map(elementPatterns.zip(elementStrings).flatMap(t => t._1(t._2)): _*)
+    Map(elementPatterns.zip(pathElements).flatMap(t => t._1(t._2)): _*)
   }
   
-  def ++ (that: RestPathPattern) = new RestPathPattern {
-    def elementPatterns = self.elementPatterns ++ that.elementPatterns
-  }
-  def + (tailElement: PathElement) = new RestPathPattern {
-    def elementPatterns = self.elementPatterns :+ tailElement
+  def / (tailElement: RestPathPattern) = new RestPathPattern {
+    def elementPatterns = self.elementPatterns ++ tailElement.elementPatterns
   }
 }
 
 object RestPathPattern {
-  def Root = new RestPathPattern { def elementPatterns = Nil }
-}
-sealed trait PathElement extends PartialFunction[String, List[(Symbol, String)]]
-case class StringElement(element: String) extends PathElement{
-  def isDefinedAt(s: String) = element == s
-
-  def apply(s: String) = Nil
-}
-case class SymbolElement(element: Symbol) extends PathElement{
-  def isDefinedAt(s: String) = true
+  import scala.util.matching.Regex
   
-  def apply(s: String) = (element -> s) :: Nil
+  private val SymbolPattern = """'(\w+)""".r
+  private val PathPattern   = """(\w+)""".r
+  
+  def Root = new RestPathPattern { def elementPatterns = Nil }
+  
+  def toPathElements(path: String): List[String] = {
+    def sanitizePath(s: String) = ("/" + path + "/").replaceAll("/+", "/")
+    
+    sanitizePath(path).split("/").toList.map(_.trim).filter(_.length > 0)
+  }
+  
+  def apply(string: String): RestPathPattern = new RestPathPattern {
+    lazy val elementPatterns = toPathElements(string).map { 
+      case SymbolPattern(name) => SymbolElement(Symbol(name))
+      case PathPattern(name)   => StringElement(name)
+    }
+  }
 }
-case class RegexElement(pattern: Regex, names: List[String]) {
-  def isDefinedAt(s: String) = s match {
+sealed trait PathElement extends RestPathPattern { self =>
+  def elementPatterns = List(self)
+}
+case class StringElement(element: String) extends PathElement {
+  override def isDefinedAt(s: String) = element == s
+
+  override def apply(s: String) = Map()
+}
+case class SymbolElement(element: Symbol) extends PathElement {
+  override def isDefinedAt(s: String) = true
+  
+  override def apply(s: String) = Map(element -> s)
+}
+case class RegexElement(pattern: Regex, names: List[String]) extends PathElement {
+  override def isDefinedAt(s: String) = s match {
     case pattern(matches) => true
     case _ => false
   }
   
-  def apply(s: String) = {
+  override def apply(s: String) = {
     val matches: List[String] = pattern.unapplySeq(s).get
     
-    matches.foldLeft[(List[(Symbol, String)], Int)]((Nil, 0)) { (state, captured) =>
+    Map(matches.foldLeft[(List[(Symbol, String)], Int)]((Nil, 0)) { (state, captured) =>
       val list  = state._1
       val index = state._2
       val name  = names(index)
       
       ((Symbol(name), captured) :: list, index + 1)
-    }._1
+    }._1: _*)
   }
 }
+
+trait RestPathPatternImplicits {
+  implicit def stringToRestPathPattern(string: String): RestPathPattern = RestPathPattern(string)
+  
+  implicit def symbolToRestPathPattern(symbol: Symbol): RestPathPattern = SymbolElement(symbol)
+  
+  // """(\w+)""" ~ List('adId)
+  implicit def regexToRestPathPatternCreator(regex: Regex) = new {
+    def ~ (names: List[Symbol]) = RegexElement(regex, names.map(_.name))
+  }
+}
+object RestPathPatternImplicits extends RestPathPatternImplicits

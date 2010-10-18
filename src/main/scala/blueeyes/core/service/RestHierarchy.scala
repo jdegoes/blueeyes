@@ -39,5 +39,5 @@ trait RestHierarchyBuilder[T] {
     _hierarchy += ((currentPath, method, handler))
   }
   
-  private def currentPath: RestPathPattern = pathStack.foldRight[RestPathPattern](RestPathPattern.Root) { (path, element) => path ++ element }
+  private def currentPath: RestPathPattern = pathStack.foldRight[RestPathPattern](RestPathPattern.Root) { (path, element) => path / element }
 }
