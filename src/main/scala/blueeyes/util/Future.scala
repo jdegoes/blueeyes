@@ -165,6 +165,10 @@ class Future[T] {
 
     fut
   }
+  
+  /** Delivers the result of the future to the specified callback.
+   */
+  def foreach(f: T => Unit): Unit = deliverTo(f)
 
   /** Zips this future and the specified future into another future, whose
    * result is a tuple of the individual results of the futures. Useful when
