@@ -1,6 +1,8 @@
 package blueeyes.core.service;
 
-import blueeyes.util._
+import MimeTypes._
+import blueeyes.core.data.{Bijection, DataTranscoder}
+import blueeyes.util.Future
 import org.specs.Specification
 import org.specs.util._
 
@@ -27,4 +29,5 @@ trait String2StringTranscoder extends DataTranscoder[String, String] {
     def apply(s: String) = s
     def unapply(t: String) = t
   }
+  def mimeType = text/plain
 }

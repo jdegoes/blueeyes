@@ -1,7 +1,8 @@
 package blueeyes.core.service
 
 import HttpStatusCodeImplicits._
-import blueeyes.util._
+import blueeyes.core.data.{Bijection, DataTranscoder}
+import blueeyes.util.Future
 import com.ning.http.client.{ 
 	AsyncHttpClient, 
 	AsyncCompletionHandler, 
