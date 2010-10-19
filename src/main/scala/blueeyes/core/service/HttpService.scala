@@ -8,9 +8,9 @@ trait HttpService[T] extends RestHierarchyBuilder[T] {
    */
   def name: String
   
-  /** The version of the service, e.g. "1.02.09" 
+  /** The version of the service, e.g. "32" 
    */
-  def version: String
+  def version: Int
   
   /** The root path of the service, which defaults to "/"
    */
