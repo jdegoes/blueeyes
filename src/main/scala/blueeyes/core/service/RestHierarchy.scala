@@ -3,7 +3,11 @@ package blueeyes.core.service
 import HttpMethods._
 import blueeyes.util.Future
 
-trait RestHierarchyBuilder[T] {
+trait RestHierarchy[T] {
+  def hierarchy: List[(RestPathPattern, HttpMethod, (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]])]
+}
+
+trait RestHierarchyBuilder[T] extends RestHierarchy[T] {
   import scala.collection.mutable.{Stack, ArrayBuffer}
   
   private type Handler[T] = (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]
