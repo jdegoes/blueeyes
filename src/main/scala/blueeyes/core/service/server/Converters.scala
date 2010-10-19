@@ -4,7 +4,8 @@ import blueeyes.core.service._
 import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.util.CharsetUtil;
+import org.jboss.netty.util.CharsetUtil
+import blueeyes.core.data.Bijection;
 
 object Converters{
   implicit def fromNetty(version: NettyHttpVersion): HttpVersion = HttpVersion(version.getText())
@@ -24,12 +25,12 @@ object Converters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNetty[T](response: HttpResponse[T])(implicit converter: (T) => String): NettyHttpResponse = {
+  implicit def toNetty[T](response: HttpResponse[T])(implicit bijection: Bijection[String, T]): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(toNetty(response.version), toNetty(response.status))
-    
-    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(converter(content), CharsetUtil.UTF_8)))
+    val headers       = response.headers.find(_._1 == "Content-Type").map(v => response.headers).getOrElse(response.headers + ("Content-Type" -> "text/html"))
 
-    response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
+    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(bijection.unapply(content), CharsetUtil.UTF_8)))
+    headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
 
     nettyResponse
   }
