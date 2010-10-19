@@ -35,21 +35,15 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
 }
 
 object HttpHeaders {
-  class Accept(val value: String) extends HttpHeader {
-  }
+  class Accept(val value: String) extends HttpHeader 
   object Accept {
     def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
-    
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(keyValue._2) else None
   }
   
-  // import MimeTypes._
-  //
-  // val myAcceptHeader = Accept(image/gif, image/png, image/jpeg)
-
-  class AcceptCharset(val value: String) extends HttpHeader {
-  }
+  class AcceptCharset(val value: String) extends HttpHeader 
   object AcceptCharset {
+    def apply(charSets: CharSet*) = new AcceptCharset(charSets.map(_.value).mkString(";"))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(keyValue._2) else None
   }
 
@@ -97,9 +91,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2) else None
   }
 
-  class ContentType(val value: String) extends HttpHeader {
-  }
+  class ContentType(val value: String) extends HttpHeader 
   object ContentType {
+    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(keyValue._2) else None
   }
 
