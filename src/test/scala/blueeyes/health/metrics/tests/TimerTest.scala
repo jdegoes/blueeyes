@@ -18,7 +18,7 @@ class TimerTest extends Spec with MustMatchers {
     it("records the duration of the event") {
       val timer = new Timer
       timer.time { Thread.sleep(10) }
-      timer.mean.ms.value must be(10.0 plusOrMinus precision)
+      timer.mean.ms.value must be(10.0 plusOrMinus precision * 3)
     }
 
     it("records the existence of the event") {
