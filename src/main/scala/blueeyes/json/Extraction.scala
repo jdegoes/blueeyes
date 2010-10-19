@@ -239,7 +239,7 @@ object Extraction {
       case Value(targetType) => convert(root, targetType, formats)
       case c: Constructor => newInstance(c, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
-      case Arg(path, m, optional) => mkValue(fieldValue(root), m, path, optional)
+      case Arg(path, m, optional) => mkValue(root, m, path, optional)
       case Col(c, m) =>
         if (c == classOf[List[_]]) newCollection(root, m, a => List(a: _*))
         else if (c == classOf[Set[_]]) newCollection(root, m, a => Set(a: _*))
@@ -273,12 +273,6 @@ object Extraction {
     } catch { 
       case MappingException(msg, _) => 
         if (optional) None else fail("No usable value for " + path + "\n" + msg) 
-    }
-
-    def fieldValue(json: JValue): JValue = json match {
-      case JField(_, value) => value
-      case JNothing => JNothing
-      case x => fail("Expected JField but got " + x)
     }
 
     build(json, mapping)

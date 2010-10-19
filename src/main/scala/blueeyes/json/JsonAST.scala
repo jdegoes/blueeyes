@@ -43,14 +43,18 @@ object JsonAST {
      * </pre>
      */
     def \(nameToFind: String): JValue = {
+      def extractValue(jvalue: JValue): JValue = jvalue match {
+        case JField(n, v) => v
+        case _ => jvalue
+      }
       val p = (json: JValue) => json match {
         case JField(name, value) if name == nameToFind => true
         case _ => false
       }
       findDirect(children, p) match {
         case Nil => JNothing
-        case x :: Nil => x
-        case x => JArray(x)
+        case x :: Nil => extractValue(x)
+        case x => JArray(x.map(extractValue))
       }
     }
     
@@ -104,8 +108,8 @@ object JsonAST {
         case _ => Nil
       }
       find(this) match {
-        case x :: Nil => x
-        case x => JObject(x)
+        case x :: Nil => x.value
+        case x => JArray(x.map(_.value))
       }
     }
 
@@ -132,6 +136,14 @@ object JsonAST {
       case x if x.getClass == clazz => true
       case _ => false
     }
+    
+    /** Gets the specified value using JSON syntax.
+     * <p>
+     * Example:<pre>
+     * json.get("foo[0].bar.baz[123]")
+     * </pre>
+     */
+    def get(path: String): JValue = JPath(path).extract(this)
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
@@ -162,7 +174,7 @@ object JsonAST {
       case JField(n, v) => List(v)
       case _ => Nil
     }
-
+    
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
      * for each element. The initial value is <code>z</code>.
      */
@@ -210,34 +222,12 @@ object JsonAST {
       if (f.isDefinedAt(x)) f(x) else x
     }
 
-    /** Return a new JValue resulting from replacing the value at the specified field
-     * path with the replacement value provided. This has no effect if the path is empty
-     * or if the value is not a JObject instance.
-     * <p>
-     * Example:<pre>
-     * JObject(List(JField("foo", JObject(List(JField("bar", JInt(1))))))).replace("foo" :: "bar" :: Nil, JString("baz"))
-     * // returns JObject(List(JField("foo", JObject(List(JField("bar", JString("baz")))))))
-     * </pre>
-     */
-    def replace(l: List[String], replacement: JValue): JValue = {
-      def rep(l: List[String], in: JValue): JValue = {
-        l match {
-          case x :: xs => in match {
-            case JObject(fields) => JObject(
-                fields.map {
-                  case JField(`x`, value) => JField(x, if (xs == Nil) replacement else rep(xs, value))
-                  case field => field
-                }
-              )
-            case other => other
-          }
-
-          case Nil => in
-        }
-      }
-
-      rep(l, this)
+    /*
+    // TODO:
+    def replace(target: JPath, replacement: JValue): JValue = {
+    
     }
+    */
 
     /** Return the first element from JSON which matches the given predicate.
      * <p>

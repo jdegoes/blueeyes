@@ -164,5 +164,5 @@ class MongoJsonTester extends WordSpec with MustMatchers {
     JObject(List(JField(key, value)))
   }
 
-  private def jValue(key: String, jObject: JObject) = (jObject \ key).asInstanceOf[JField].value
+  private def jValue(key: String, jObject: JObject) = jObject \ key
 }
