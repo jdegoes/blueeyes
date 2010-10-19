@@ -12,6 +12,7 @@ import org.jboss.netty.channel._
 import org.mockito.Mockito.{when, times}
 import org.jboss.netty.util.CharsetUtil
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
+import blueeyes.core.data.Bijection
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val handler       = mock[(Map[Symbol, String], HttpRequest[Int]) => Future[HttpResponse[Int]]]
@@ -20,7 +21,12 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val channelFuture = mock[ChannelFuture]
 
   private val response     = HttpResponse[Int](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(12), HttpVersions.Http_1_0)
-  private val nettyHandler = new NettyRequestHandler[Int](new TestService())(_.toInt, _.toString)
+  private val nettyHandler = new NettyRequestHandler[Int](new TestService())(textToInt)
+
+  private val textToInt = new Bijection[String, Int]{
+    def unapply(s: Int) = s.toString
+    def apply(t: String) = t.toInt
+  }
 
   "write OK responce service when path is match" in {
     val event  = mock[MessageEvent]
@@ -31,7 +37,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(handler.apply(Map('adId -> "1"), Converters.fromNetty(nettyRequest)(_.toInt))).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
-    when(channel.write( Matchers.argThat(new RequestMatcher(Converters.toNetty(response)(_.toString))))).thenReturn(channelFuture, channelFuture)
+    when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNetty(response)(textToInt))))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
 
@@ -46,7 +52,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getChannel()).thenReturn(channel, channel)
-    when(channel.write( Matchers.argThat(new RequestMatcher(Converters.toNetty(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))(_.toString))))).thenReturn(channelFuture, channelFuture)
+    when(channel.write( Matchers.argThat(new RequestMatcher(Converters.toNetty(HttpResponse[Int](HttpStatus(HttpStatusCodes.NotFound)))(textToInt))))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
 
