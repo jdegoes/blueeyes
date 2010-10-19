@@ -8,3 +8,6 @@ GPATH
 GRTAGS
 GSYMS
 GTAGS
+*#*#
+.scala_dependencies
+classes

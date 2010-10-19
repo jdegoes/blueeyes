@@ -5,7 +5,8 @@ import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatu
 import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
-import blueeyes.core.data.Bijection;
+import blueeyes.core.data.{DataTranscoder}
+import blueeyes.core.service.HttpHeaders._
 
 object Converters{
   implicit def fromNetty(version: NettyHttpVersion): HttpVersion = HttpVersion(version.getText())
@@ -25,17 +26,18 @@ object Converters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNetty[T](response: HttpResponse[T])(implicit bijection: Bijection[String, T]): NettyHttpResponse = {
+  implicit def toNetty[T](response: HttpResponse[T], transcoder: DataTranscoder[String, T]): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(toNetty(response.version), toNetty(response.status))
-    val headers       = response.headers.find(_._1 == "Content-Type").map(v => response.headers).getOrElse(response.headers + ("Content-Type" -> "text/html"))
+    val contentType   = (for (ContentType(t) <- response.headers) yield t).headOption.getOrElse(transcoder.mimeType.value)
+    val headers       = response.headers + ("Content-Type" -> transcoder.mimeType.value)
 
-    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(bijection.unapply(content), CharsetUtil.UTF_8)))
+    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(transcoder.transcode.unapply(content), CharsetUtil.UTF_8)))
     headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
 
     nettyResponse
   }
 
-  implicit def fromNetty[T](request: NettyHttpRequest)(implicit converter: (String) => T): HttpRequest[T] = {
+  implicit def fromNetty[T](request: NettyHttpRequest, converter: (String) => T): HttpRequest[T] = {
     val queryStringDecoder = new QueryStringDecoder(request.getUri())
     val params             = queryStringDecoder.getParameters().map(param => (param._1, if (!param._2.isEmpty) param._2.head else "")).toMap
     val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)

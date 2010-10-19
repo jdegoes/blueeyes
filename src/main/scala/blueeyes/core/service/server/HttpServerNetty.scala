@@ -5,22 +5,22 @@ import org.jboss.netty.channel.{Channels, ChannelPipeline, ChannelPipelineFactor
 import java.net.InetSocketAddress
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.bootstrap.ServerBootstrap
-import blueeyes.core.data.{Bijection}
-import blueeyes.core.service.{RestHierarchyBuilder}
 import org.jboss.netty.util.internal.ExecutorUtil
-import java.util.concurrent.{ExecutorService, Executor, Executors}
+import java.util.concurrent.{Executor, Executors}
+import blueeyes.core.service.{RestHierarchy}
+import blueeyes.core.data.{DataTranscoder, Bijection}
 
-trait HttpServerNetty[T] {self: RestHierarchyBuilder[T] =>
+trait HttpServerNetty[T] {
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
   private var serverExecutor: Option[Executor] = None
 
-  def start(port: Int)(implicit bijection: Bijection[String, T]) = {
+  def start(port: Int) = {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(this))
+    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(hierarchies))
 
     bootstrap.bind(new InetSocketAddress(port))
 
@@ -32,16 +32,18 @@ trait HttpServerNetty[T] {self: RestHierarchyBuilder[T] =>
     serverExecutor.foreach(ExecutorUtil.terminate(_))
     server.foreach(_.releaseExternalResources)
   }
+
+  def hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]
 }
 
-class HttpServerPipelineFactory[T](builder: RestHierarchyBuilder[T])(implicit bijection: Bijection[String, T]) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory[T](hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
     val pipeline = Channels.pipeline()
 
     pipeline.addLast("decoder", new HttpRequestDecoder())
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
-    pipeline.addLast("handler", new NettyRequestHandler(builder))
+    pipeline.addLast("handler", new NettyRequestHandler(hierarchies))
 
     pipeline
   }

@@ -5,17 +5,54 @@ import blueeyes.core.service._
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service.{HttpResponse, HttpRequest, RestHierarchyBuilder}
 import blueeyes.util.{Future}
-import blueeyes.core.data.Bijections
+import java.net.URI
+import com.ning.http.client._
+import blueeyes.core.service.MimeTypes._
+import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
 
 class HttpServerNettySpec extends Specification{
+  @volatile
+  private var port = 8080
   @volatile
   private var server: Option[TestServer] = None
   "HttpServer" should{
     doFirst{
       val testServer = new TestServer()
-      testServer.start(8585)(Bijections.textToText)
 
+      var success = false
+      do{
+        success = try {
+          testServer.start(port)
+          true
+        }
+        catch {
+          case e: Throwable => {
+            port = port + 1
+            false
+          }
+        }
+      }while(!success)
+
+      println("PORT=" + port)
       server = Some(testServer)
+    }
+
+    "return html by correct URI" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/bar/foo/adCode.html".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
+      response.getResponseBody mustEqual (Context.context)
+      
+    }
+
+    "return not found error by wrong URI" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/foo/foo/adCode.html".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
     }
 
     doLast{
@@ -24,12 +61,12 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-class TestServer extends TestService with HttpServerNetty[String]
-
+class TestServer extends TestService with HttpServerNetty[String]{
+  val hierarchies = (new TestService(), new DataTranscoderImpl(TextToTextBijection, text / html)) :: Nil
+}
 class TestService extends RestHierarchyBuilder[String]{
   path("bar/'adId/adCode.html"){get(new Handler())}
 }
-
 class Handler extends Function2[Map[Symbol, String], HttpRequest[String], Future[HttpResponse[String]]]{
   def apply(params: Map[Symbol, String], request: HttpRequest[String]) = {
     val future = new Future[HttpResponse[String]]()
