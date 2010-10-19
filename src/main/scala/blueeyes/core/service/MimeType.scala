@@ -1,13 +1,12 @@
 package blueeyes.core.service
 
-import scala.util.matching.Regex
-
 /*
 Usage: 
 
 import MimeTypes._
 val mimeType = image/gif
-
+val imageMimeType = image/gif 
+val javaScriptMimeType = text/javascript
 */
 
 sealed trait MimeType {
@@ -36,8 +35,11 @@ object MimeTypes {
   sealed abstract class VideoType(val extensions: List[String]) extends GenericType
 
   /* Application Types */
-  //object javascript extends ApplicationType("js" :: Nil)
+  sealed abstract class JavaScriptApplicationType extends ApplicationType("js" :: Nil)
+  sealed abstract class OggApplicationType extends ApplicationType("ogg" :: Nil)
 
+  case object javascript extends JavaScriptApplicationType
+  case object `x-javascript` extends JavaScriptApplicationType
   case object `soap+xml` extends ApplicationType("soap+xml" :: Nil)
   case object `xhtml+xml` extends ApplicationType("xhtml+xml" :: Nil)
   case object `xml-dtd` extends ApplicationType("xml-dtd" :: Nil)
@@ -45,6 +47,7 @@ object MimeTypes {
   case object json extends ApplicationType("json" :: Nil)
   case object `x-latex` extends ApplicationType("latex" :: Nil)
   case object `octect-stream` extends ApplicationType("bin" :: "class" :: "dms" :: "exe" :: "lha" :: "lzh" :: Nil)
+  case object ogg extends JavaScriptApplicationType
   case object pdf extends ApplicationType("pdf" :: Nil)
   case object postscript extends ApplicationType("ai" :: Nil)
   case object `x-dvi` extends ApplicationType("dvi" :: Nil)
@@ -54,10 +57,13 @@ object MimeTypes {
   case object zip extends ApplicationType("zip" :: Nil)
 
   /* Audio Types */
+  sealed abstract class MpegAudioType extends AudioType("mpg" :: "mpeg" :: "mpga" :: "mpe" :: "mp3" :: "mp2" :: Nil)
+  sealed abstract class Mp4AudioType extends AudioType("mp4" :: Nil)
+
   case object basic extends AudioType("au" :: "snd" :: Nil)
-  case object mp4 extends AudioType("mp4" :: Nil)
+  case object mp4 extends Mp4AudioType
   case object midi extends AudioType("midi" :: "mid" :: "kar" :: Nil)
-  case object ogg extends AudioType("ogg" :: Nil)
+  case object mpeg extends MpegAudioType
   case object vorbis extends AudioType("vorbis" :: Nil)
   case object `x-ms-wma` extends AudioType("wma" :: Nil)
   case object `x-ms-wax` extends AudioType("wax" :: Nil)
@@ -87,15 +93,49 @@ object MimeTypes {
   /* Text Types */
   case object css extends TextType("css" :: Nil)
   case object csv extends TextType("csv" :: Nil)
-  case object javascript extends TextType("js" :: Nil)
   case object html extends TextType("html" :: "htm" :: Nil)
   case object plain extends TextType("c" :: "c++" :: "cc" :: "com" :: "conf" :: "f" :: "h" :: "jav" :: "pl" :: "text" :: "txt" :: Nil)
   case object xml extends TextType("xml" :: Nil)
 
   /* Video Types */
-  case object mpeg extends AudioType("mpg" :: "mpeg" :: "mpga" :: "mpe" :: Nil)
   case object quicktime extends VideoType("qt" :: "mov" :: Nil)
   case object `x-msvideo` extends VideoType("avi" :: Nil)
+
+  /* Implicit Conversions */
+  implicit def applicationTypeJavaScript2TextTypeJavaScript(appType: JavaScriptApplicationType): TextType = {
+    case object TextTypeJavaScript extends TextType(appType.extensions) { 
+      override def productPrefix = appType.subtype 
+    }
+    return TextTypeJavaScript
+  }
+
+  implicit def applicationTypeOgg2AudioTypeOgg(appType: OggApplicationType ): AudioType = {
+    case object AudioTypeOgg extends AudioType(appType.extensions) {
+      override def productPrefix = appType.subtype
+    }
+    return AudioTypeOgg
+  }
+
+  implicit def applicationTypeOgg2VideoTypeOgg(appType: OggApplicationType): VideoType = {
+    case object VideoTypeOgg extends VideoType(appType.extensions) {
+      override def productPrefix = appType.subtype 
+    }
+    return VideoTypeOgg
+  }
+
+  implicit def audioTypeMpeg2VideoTypeMpeg (audioType: MpegAudioType): VideoType = {
+    case object VideoTypeMpeg extends VideoType(audioType.extensions) {
+      override def productPrefix = audioType.subtype
+    }
+    return VideoTypeMpeg
+  }
+
+  implicit def audioTypeMp42VideoTypeMp4 (audioType: Mp4AudioType): VideoType = {
+    case object VideoTypeMp4 extends VideoType(audioType.extensions) {
+      override def productPrefix = audioType.subtype
+    }
+    return VideoTypeMp4
+  }
 
   /* Constructor Methods */
   object application {
@@ -146,7 +186,5 @@ object MimeTypes {
     }
   }
 }
-// val imageMimeType = image/gif 
-// val javaScriptMimeType = text/javascript
 
 
