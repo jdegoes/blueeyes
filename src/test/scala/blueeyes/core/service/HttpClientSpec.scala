@@ -8,13 +8,15 @@ import org.specs.util._
 
 class HttpClientSpec extends Specification {
   "Support get requests with status OK" in {
+	skip("Will use Skalatra")
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(beSomething) 
     f.value.get.status.code must eventually(20, new Duration(500))(be(HttpStatusCodes.OK))
-  }
+  } 
 
   "Support get requests with status Not Found" in {
+	skip("Will use Skalatra")
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/bogus"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(beSomething) 
