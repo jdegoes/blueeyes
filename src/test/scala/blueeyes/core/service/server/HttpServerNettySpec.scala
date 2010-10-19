@@ -12,18 +12,34 @@ import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
 
 class HttpServerNettySpec extends Specification{
   @volatile
+  private var port = 8080
+  @volatile
   private var server: Option[TestServer] = None
   "HttpServer" should{
     doFirst{
       val testServer = new TestServer()
-      testServer.start(8585)
 
+      var success = false
+      do{
+        success = try {
+          testServer.start(port)
+          true
+        }
+        catch {
+          case e: Throwable => {
+            port = port + 1
+            false
+          }
+        }
+      }while(!success)
+
+      println("PORT=" + port)
       server = Some(testServer)
     }
 
     "return html by correct URI" in{
       val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:8585/bar/foo/adCode.html").execute();
+      val future = client.prepareGet("http://localhost:%d/bar/foo/adCode.html".format(port)).execute();
 
       val response = future.get
       response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
@@ -33,7 +49,7 @@ class HttpServerNettySpec extends Specification{
 
     "return not found error by wrong URI" in{
       val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:8585/foo/foo/adCode.html").execute();
+      val future = client.prepareGet("http://localhost:%d/foo/foo/adCode.html".format(port)).execute();
 
       val response = future.get
       response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
