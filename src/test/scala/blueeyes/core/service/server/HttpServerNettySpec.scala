@@ -1,0 +1,72 @@
+package blueeyes.core.service.server
+
+import org.specs.Specification
+import blueeyes.core.service._
+import blueeyes.core.service.RestPathPatternImplicits._
+import blueeyes.core.service.{HttpResponse, HttpRequest, RestHierarchyBuilder}
+import blueeyes.util.{Future}
+import java.net.URI
+import com.ning.http.client._
+import blueeyes.core.service.MimeTypes._
+import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
+
+class HttpServerNettySpec extends Specification{
+  @volatile
+  private var server: Option[TestServer] = None
+  "HttpServer" should{
+    doFirst{
+      val testServer = new TestServer()
+      testServer.start(8585)
+
+      server = Some(testServer)
+    }
+
+    "return html by correct URI" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:8585/bar/foo/adCode.html").execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
+      response.getResponseBody mustEqual (Context.context)
+      
+    }
+
+    "return not found error by wrong URI" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:8585/foo/foo/adCode.html").execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
+    }
+
+    doLast{
+      server.foreach(_.stop)  
+    }
+  }
+}
+
+class TestServer extends TestService with HttpServerNetty[String]{
+  val hierarchies = (new TestService(), new DataTranscoderImpl(TextToTextBijection, text / html)) :: Nil
+}
+class TestService extends RestHierarchyBuilder[String]{
+  path("bar/'adId/adCode.html"){get(new Handler())}
+}
+class Handler extends Function2[Map[Symbol, String], HttpRequest[String], Future[HttpResponse[String]]]{
+  def apply(params: Map[Symbol, String], request: HttpRequest[String]) = {
+    val future = new Future[HttpResponse[String]]()
+    future.deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.Http_1_1))
+
+    future
+  }
+}
+
+object Context{
+  val context = """<html>
+<head>
+</head>
+
+<body>
+    <h1>Test</h1>
+</body>
+</html>"""
+}

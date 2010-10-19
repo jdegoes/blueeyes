@@ -4,11 +4,19 @@ import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.ChannelBuffers
 import blueeyes.core.service._
-import org.jboss.netty.util.CharsetUtil;
+import org.jboss.netty.util.CharsetUtil
+import java.lang.String
+import blueeyes.core.data.{DataTranscoderImpl, Bijection};
 import scala.collection.JavaConversions._
+import blueeyes.core.service.MimeTypes._
 import Converters._
 
 class ConvertersSpec extends Specification {
+  private val textToInt = new DataTranscoderImpl(new Bijection[String, Int]{
+    def unapply(s: Int) = s.toString
+    def apply(t: String) = t.toInt
+  }, text / html)
+
   "convert netty method to service method" in {
     fromNetty(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
@@ -23,19 +31,19 @@ class ConvertersSpec extends Specification {
   }
   "convert service HttpResponse to netty HttpResponse" in {
     val response      = HttpResponse[Int](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(12), HttpVersions.Http_1_0)
-    val nettyResponse = toNetty(response)((v: Int) => {v.toString})
+    val nettyResponse = toNetty(response, textToInt)
 
     nettyResponse.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     nettyResponse.getContent.toString(CharsetUtil.UTF_8)  mustEqual("12")
     nettyResponse.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
-    Map(nettyResponse.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("retry-after" -> "1"))
+    Map(nettyResponse.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("retry-after" -> "1", "Content-Type" -> "text/html"))
   }
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
-    val request = fromNetty(nettyRequest)((v: String) => {v.toInt})
+    val request = fromNetty(nettyRequest, textToInt.transcode)
     
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")

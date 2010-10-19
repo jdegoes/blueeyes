@@ -11,32 +11,32 @@ import org.jboss.netty.handler.codec.http._
 
 object HTTPServer {
   def main(args: Array[String]) {
-    val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool()))
-
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory())
-
-    bootstrap.bind(new InetSocketAddress(8080))
+//    val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool()))
+//
+//    bootstrap.setPipelineFactory(new HttpServerPipelineFactory())
+//
+//    bootstrap.bind(new InetSocketAddress(8080))
   }
 }
 
-class HttpServerPipelineFactory extends ChannelPipelineFactory {
-  def getPipeline(): ChannelPipeline = {
-
-    val pipeline = Channels.pipeline()
-
-    //    val sslEngine = SecureChatSslContextFactory.getServerContext().createSSLEngine()
-    //    engine.setUseClientMode(false)
-    //    pipeline.addLast("ssl", new SslHandler(engine))
-
-    pipeline.addLast("decoder", new HttpRequestDecoder())
-    pipeline.addLast("encoder", new HttpResponseEncoder())
-    // Remove the following line if you don't want automatic content compression.
-    //    pipeline.addLast("deflater", new HttpContentCompressor())
-    pipeline.addLast("handler", new HttpRequestHandler())
-
-    pipeline
-  }
-}
+//class HttpServerPipelineFactory extends ChannelPipelineFactory {
+//  def getPipeline(): ChannelPipeline = {
+//
+//    val pipeline = Channels.pipeline()
+//
+//    //    val sslEngine = SecureChatSslContextFactory.getServerContext().createSSLEngine()
+//    //    engine.setUseClientMode(false)
+//    //    pipeline.addLast("ssl", new SslHandler(engine))
+//
+//    pipeline.addLast("decoder", new HttpRequestDecoder())
+//    pipeline.addLast("encoder", new HttpResponseEncoder())
+//    // Remove the following line if you don't want automatic content compression.
+//    //    pipeline.addLast("deflater", new HttpContentCompressor())
+//    pipeline.addLast("handler", new HttpRequestHandler())
+//
+//    pipeline
+//  }
+//}
 
 import scala.collection.JavaConversions._
 import org.jboss.netty.handler.codec.http.HttpHeaders._;
@@ -103,4 +103,8 @@ class HttpRequestHandler extends SimpleChannelUpstreamHandler {
       future.addListener(ChannelFutureListener.CLOSE)
     }
   }
+}
+
+trait HttpHandlerJValue{
+
 }
