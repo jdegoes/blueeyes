@@ -1,8 +1,9 @@
 package blueeyes.core.service
 
 sealed trait RangeUnit extends Product {
-  def name: String = productPrefix
-  def value: String = name
+  def value: String = productPrefix
+  
+  override def toString = value
 }
 
 object RangeUnits {

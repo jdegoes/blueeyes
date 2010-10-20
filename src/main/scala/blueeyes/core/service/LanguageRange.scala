@@ -3,26 +3,23 @@ package blueeyes.core.service
 /* Language Ranges are used for the Accept-Language Http Header */
 
 sealed trait LanguageRange {
+  def mainType:   String
+  def subType:    Option[String]
+  def subSubType: Option[String]
 
-  def mainType: String
-  def subType: String
-  def subSubType: String
-
-  def value: String = {
-    var out = mainType
-    if (subType != "") {
-      out += "-" + subType
-    }
-    if (subSubType != "") {
-      out += "-" + subSubType
-    }
-    out
-  }
+  def value: String = (mainType :: Nil ++ subType.toList ++ subSubType.toList).mkString("-")
+  
+  override def toString = value
 }
 
 object LanguageRanges {
-  case class Range (mainType: String, subType: String, subSubType: String) extends LanguageRange {
-    def this(mainType: String) = this(mainType, "", "");
-    def this(mainType: String, subType: String) = this(mainType, subType, "")
+  case class Range (mainType: String, subType: Option[String], subSubType: Option[String]) extends LanguageRange
+    
+  object Range {
+    def apply(mainType: String): Range = new Range(mainType, None, None)
+    
+    def apply(mainType: String, subType: String): Range = new Range(mainType, Some(subType), None)
+    
+    def apply(mainType: String, subType: String, subSubType: String): Range = new Range(mainType, Some(subType), Some(subSubType))
   }
 }

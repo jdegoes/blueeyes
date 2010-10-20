@@ -3,23 +3,19 @@ package blueeyes.core.service
   Encodings for AcceptEncoding
 */
 
-sealed trait Encoding {
+sealed trait Encoding extends Product {
+  def value: String = productPrefix
 
-  def encodingName: String
-  def value: String = encodingName
-
+  override def toString = value
 }
 
 object Encodings {
-
-  trait GenericEncoding extends Product with Encoding {
-    def encodingName = productPrefix
-  }
-
-  case object compress extends GenericEncoding
-  case object gzip extends GenericEncoding
-  case object identity extends GenericEncoding
-  case object `x-compress` extends GenericEncoding 
-  case object `x-zip` extends GenericEncoding
-
+  case object compress extends Encoding
+  case object gzip extends Encoding
+  case object identity extends Encoding
+  case object `x-compress` extends Encoding 
+  case object `x-zip` extends Encoding
+  case object `*` extends Encoding
+  
+  sealed case class CustomEncoding(override val value: String) extends Encoding
 }
