@@ -58,20 +58,19 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
   }
 
-  class Authorization(val value: String) extends HttpHeader {
-  }
+  class Authorization(val value: String) extends HttpHeader 
   object Authorization {
+    def appply(credentials: String) = new Authorization(credentials) // can we do better here?
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
   }
 
-  class Connection(val value: String) extends HttpHeader {
-  }
+  class Connection(val value: String) extends HttpHeader 
   object Connection {
+    def apply(connectionToken: ConnectionToken) = new Connection(connectionToken.value)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection") Some(keyValue._2) else None
   }
 
-  class Cookie(val value: String) extends HttpHeader {
-  }
+  class Cookie(val value: String) extends HttpHeader
   object Cookie {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
   }
