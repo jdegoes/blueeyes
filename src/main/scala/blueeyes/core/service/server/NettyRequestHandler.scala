@@ -13,7 +13,7 @@ import blueeyes.util.{Future}
 class NettyRequestHandler[T](hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]) extends SimpleChannelUpstreamHandler{
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request        = e.getMessage().asInstanceOf[NettyHttpRequest]
-    val method         = fromNetty(request.getMethod())
+    val method         = fromNettyMethod(request.getMethod())
     val requestUri     = if (request.getUri().startsWith("/")) request.getUri().substring(1) else request.getUri()
 
     val builders       = hierarchies.map(v => new RequestBuilder(e, v._1, v._2))
@@ -48,7 +48,7 @@ class NettyRequestHandler[T](hierarchies: List[(RestHierarchy[T], DataTranscoder
 class NotFoundBuilder extends Function1[(String, HttpMethod), Future[NettyHttpResponse]]{
   def apply(uriAndMethod: (String, HttpMethod)) = {
     val future = new Future[NettyHttpResponse]()
-    future.deliver(new DefaultHttpResponse(HttpVersion.HTTP_1_1, toNetty(HttpStatus(HttpStatusCodes.NotFound))))
+    future.deliver(new DefaultHttpResponse(HttpVersion.HTTP_1_1, toNettyStatus(HttpStatus(HttpStatusCodes.NotFound))))
     future
   }
 }
@@ -60,7 +60,7 @@ class RequestBuilder[T](e: MessageEvent, hierarchy: RestHierarchy[T], transcoder
     val request     = e.getMessage().asInstanceOf[NettyHttpRequest]
     val parameters  = handler._1(uriAndMethod._1)
 
-    handler._3(parameters, fromNetty(request, transcoder.transcode)).map(response => toNetty(response, transcoder))
+    handler._3(parameters, fromNettyRequest(request, transcoder.transcode)).map(response => toNettyResponse(response, transcoder))
   }
   private def findPattern(uri: String, method: HttpMethod) = hierarchy.hierarchy.find(handler => handler._1.isDefinedAt(uri) && method == handler._2)
 }

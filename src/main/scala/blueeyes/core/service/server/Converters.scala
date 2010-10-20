@@ -7,13 +7,17 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.{DataTranscoder}
 import blueeyes.core.service.HttpHeaders._
+import blueeyes.core.service.HttpVersions._
 
-object Converters{
-  implicit def fromNetty(version: NettyHttpVersion): HttpVersion = HttpVersion(version.getText())
-  implicit def toNetty(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
-  implicit def toNetty(status : HttpStatus) : HttpResponseStatus = new HttpResponseStatus(status.code.value, status.reason)
+object Converters {
+  implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
+    case "HTTP/1.0" => `HTTP/1.0`
+    case "HTTP/1.1" => `HTTP/1.1`
+  }
+  implicit def toNettyVersion(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
+  implicit def toNettyStatus(status : HttpStatus) : HttpResponseStatus = new HttpResponseStatus(status.code.value, status.reason)
   
-  implicit def fromNetty(method: NettyHttpMethod): HttpMethod = method match{
+  implicit def fromNettyMethod(method: NettyHttpMethod): HttpMethod = method match{
     case NettyHttpMethod.GET      => HttpMethods.GET
     case NettyHttpMethod.PUT      => HttpMethods.PUT
     case NettyHttpMethod.POST     => HttpMethods.POST
@@ -26,8 +30,8 @@ object Converters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNetty[T](response: HttpResponse[T], transcoder: DataTranscoder[String, T]): NettyHttpResponse = {
-    val nettyResponse = new DefaultHttpResponse(toNetty(response.version), toNetty(response.status))
+  implicit def toNettyResponse[T](response: HttpResponse[T], transcoder: DataTranscoder[String, T]): NettyHttpResponse = {
+    val nettyResponse = new DefaultHttpResponse(toNettyVersion(response.version), toNettyStatus(response.status))
     val contentType   = (for (`Content-Type`(t) <- response.headers) yield t).headOption.getOrElse(transcoder.mimeType.value)
     val headers       = response.headers + ("Content-Type" -> transcoder.mimeType.value)
 
@@ -37,13 +41,13 @@ object Converters{
     nettyResponse
   }
 
-  implicit def fromNetty[T](request: NettyHttpRequest, converter: (String) => T): HttpRequest[T] = {
+  implicit def fromNettyRequest[T](request: NettyHttpRequest, converter: (String) => T): HttpRequest[T] = {
     val queryStringDecoder = new QueryStringDecoder(request.getUri())
     val params             = queryStringDecoder.getParameters().map(param => (param._1, if (!param._2.isEmpty) param._2.head else "")).toMap
     val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
     val nettyContent       = request.getContent()
     val content            = if (nettyContent.readable()) Some(converter(nettyContent.toString(CharsetUtil.UTF_8))) else None
 
-    HttpRequest(fromNetty(request.getMethod), request.getUri, params, headers, content, fromNetty(request.getProtocolVersion()))
+    HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, fromNettyVersion(request.getProtocolVersion()))
   }
 }

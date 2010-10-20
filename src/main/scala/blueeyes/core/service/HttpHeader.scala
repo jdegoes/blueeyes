@@ -26,7 +26,7 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
   }
 }
 
-object HttpHeaders {
+trait HttpHeaders {
   class Accept(val value: String) extends HttpHeader 
   object Accept {
     def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
@@ -380,6 +380,7 @@ object HttpHeaders {
   class CustomHeader(override val name: String, val value: String) extends HttpHeader {
   }
 }
+object HttpHeaders extends HttpHeaders
 
 trait HttpHeaderImplicits {
   import HttpHeaders._
