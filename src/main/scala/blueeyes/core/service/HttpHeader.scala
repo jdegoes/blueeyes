@@ -29,7 +29,7 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
 trait HttpHeaders {
   class Accept(val value: String) extends HttpHeader 
   object Accept {
-    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
+    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(","))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(keyValue._2) else None
   }
   
@@ -39,21 +39,21 @@ trait HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(keyValue._2) else None
   }
 
-  class `Accept-Encoding`(val value: String) extends HttpHeader {
-  }
+  class `Accept-Encoding`(val value: String) extends HttpHeader 
   object `Accept-Encoding` {
+    def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings.map(_.value).mkString(","))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(keyValue._2) else None
   }
 
-  class `Accept-Language`(val value: String) extends HttpHeader {
-  }
+  class `Accept-Language`(val value: String) extends HttpHeader 
   object `Accept-Language` {
+    def apply(languageRange: LanguageRange*) = new `Accept-Language`(languageRange.map(_.value).mkString(","));
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(keyValue._2) else None
   }
 
-  class `Accept-Ranges`(val value: String) extends HttpHeader {
-  }
+  class `Accept-Ranges`(val value: String) extends HttpHeader 
   object `Accept-Ranges` {
+    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit.value.mkString(","));
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
   }
 
