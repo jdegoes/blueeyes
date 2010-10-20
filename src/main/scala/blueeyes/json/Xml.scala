@@ -120,7 +120,7 @@ object Xml {
         // XML attributes. Flattening keeps transformation more predicatable.  
         // <a><foo id="1">x</foo></a> -> {"a":{"foo":{"foo":"x","id":"1"}}} vs
         // <a><foo id="1">x</foo></a> -> {"a":{"foo":"x","id":"1"}}
-        case (XLeaf(v, x :: xs), o: JObject) => o.obj
+        case (XLeaf(v, x :: xs), o: JObject) => o.fields
         case (_, json) => JField(name, json) :: Nil }}
 
     def buildNodes(xml: NodeSeq): List[XElem] = xml match {
@@ -134,11 +134,11 @@ object Xml {
       case nodes: NodeSeq => 
         val allLabels = nodes.map(_.label)
         if (array_?(allLabels)) {
-          val arr = XArray(nodes.toList.flatMap { n => 
+          val elements = XArray(nodes.toList.flatMap { n => 
             if (leaf_?(n) && n.attributes.length == 0) XValue(n.text) :: Nil
             else buildNodes(n)
           })
-          XLeaf((allLabels(0), arr), Nil) :: Nil
+          XLeaf((allLabels(0), elements), Nil) :: Nil
         } else nodes.toList.flatMap(buildNodes)
     }
     

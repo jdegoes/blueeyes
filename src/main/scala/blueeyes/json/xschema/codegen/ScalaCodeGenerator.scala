@@ -452,7 +452,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           ${implicitPrefix}val ${typeHint}Extractor: Extractor[${typeSig}] = new Extractor[${typeSig}] {
             def extract(jvalue: JValue): ${typeSig} = {
               def extract0(jvalue: JValue): Option[${typeSig}] = {
-                (jvalue --> classOf[JObject]).obj.filter(${typeHint}ExtractorFunction.isDefinedAt _) match {
+                (jvalue --> classOf[JObject]).fields.filter(${typeHint}ExtractorFunction.isDefinedAt _) match {
                   case field :: fields => Some(${typeHint}ExtractorFunction(field))
                   case Nil => None
                 }

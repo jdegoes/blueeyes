@@ -104,9 +104,9 @@ object Extraction {
         case JField(name: String, 
                     value: JValue)      => flatten0(path + escapePath(name), value)
         case JObject(obj: List[JField]) => obj.foldLeft(Map[String, String]()) { (map, field) => map ++ flatten0(path + ".", field) }
-        case JArray(arr: List[JValue])  => arr.length match {
+        case JArray(elements: List[JValue])  => elements.length match {
           case 0 => Map(path -> "[]")
-          case _ => arr.foldLeft((Map[String, String](), 0)) { 
+          case _ => elements.foldLeft((Map[String, String](), 0)) { 
                       (tuple, value) => (tuple._1 ++ flatten0(path + "[" + tuple._2 + "]", value), tuple._2 + 1) 
                     }._1
         }
@@ -227,7 +227,7 @@ object Extraction {
     
     def newCollection(root: JValue, m: Mapping, constructor: Array[_] => Any) = {
       val array: Array[_] = root match {
-        case JArray(arr)      => arr.map(build(_, m)).toArray
+        case JArray(elements)      => elements.map(build(_, m)).toArray
         case JNothing | JNull => Array[AnyRef]()
         case x                => fail("Expected collection but got " + x + " for root " + root + " and mapping " + m)
       }
@@ -239,7 +239,7 @@ object Extraction {
       case Value(targetType) => convert(root, targetType, formats)
       case c: Constructor => newInstance(c, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
-      case Arg(path, m, optional) => mkValue(fieldValue(root), m, path, optional)
+      case Arg(path, m, optional) => mkValue(root, m, path, optional)
       case Col(c, m) =>
         if (c == classOf[List[_]]) newCollection(root, m, a => List(a: _*))
         else if (c == classOf[Set[_]]) newCollection(root, m, a => Set(a: _*))
@@ -260,7 +260,7 @@ object Extraction {
     }
 
     def mkList(root: JValue, m: Mapping) = root match {
-      case JArray(arr) => arr.map(build(_, m))
+      case JArray(elements) => elements.map(build(_, m))
       case JNothing | JNull => Nil
       case x => fail("Expected array but got " + x)
     }
@@ -273,12 +273,6 @@ object Extraction {
     } catch { 
       case MappingException(msg, _) => 
         if (optional) None else fail("No usable value for " + path + "\n" + msg) 
-    }
-
-    def fieldValue(json: JValue): JValue = json match {
-      case JField(_, value) => value
-      case JNothing => JNothing
-      case x => fail("Expected JField but got " + x)
     }
 
     build(json, mapping)

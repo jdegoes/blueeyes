@@ -1,15 +1,7 @@
 package blueeyes.core.service
 
 sealed trait HttpHeader extends Product2[String, String] { self =>
-  lazy val _1 = {
-    def toDashes(s: List[Char]): List[Char] = s match {
-      case x1 :: x2 :: xs if (x1.isLower && x2.isUpper) => x1 :: '-' :: x2 :: toDashes(xs)
-      case x :: xs => x :: toDashes(xs)
-      case xs => xs
-    }
-    
-    toDashes(productPrefix.toList).mkString("")
-  }
+  def _1 = productPrefix
   def _2 = value
   
   def name: String = _1
@@ -41,27 +33,27 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(keyValue._2) else None
   }
   
-  class AcceptCharset(val value: String) extends HttpHeader 
-  object AcceptCharset {
-    def apply(charSets: CharSet*) = new AcceptCharset(charSets.map(_.value).mkString(";"))
+  class `Accept-Charset`(val value: String) extends HttpHeader 
+  object `Accept-Charset` {
+    def apply(charSets: CharSet*) = new `Accept-Charset`(charSets.map(_.value).mkString(";"))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(keyValue._2) else None
   }
 
-  class AcceptEncoding(val value: String) extends HttpHeader 
-  object AcceptEncoding {
-    def apply(encodings: Encoding*) = new AcceptEncoding(encodings.map(_.value).mkString(","))
+  class `Accept-Encoding`(val value: String) extends HttpHeader 
+  object `Accept-Encoding` {
+    def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings.map(_.value).mkString(","))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(keyValue._2) else None
   }
 
-  class AcceptLanguage(val value: String) extends HttpHeader 
-  object AcceptLanguage {
-    def apply(languageRange: LanguageRange*) = new AcceptLanguage(languageRange.map(_.value).mkString(","));
+  class `Accept-Language`(val value: String) extends HttpHeader 
+  object `Accept-Language` {
+    def apply(languageRange: LanguageRange*) = new `Accept-Language`(languageRange.map(_.value).mkString(","));
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(keyValue._2) else None
   }
 
-  class AcceptRanges(val value: String) extends HttpHeader 
-  object AcceptRanges {
-    def apply(rangeUnit: RangeUnit) = new AcceptRanges(rangeUnit.value.mkString(","));
+  class `Accept-Ranges`(val value: String) extends HttpHeader 
+  object `Accept-Ranges` {
+    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit.value.mkString(","));
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
   }
 
@@ -83,16 +75,16 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
   }
 
-  class ContentLength(val value: String) extends HttpHeader {
+  class `Content-Length`(val value: String) extends HttpHeader {
   }
-  object ContentLength {
-    def apply(length: Long): ContentLength = new ContentLength(length.toString)
+  object `Content-Length` {
+    def apply(length: Long): `Content-Length` = new `Content-Length`(length.toString)
     
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2) else None
   }
 
-  class ContentType(val value: String) extends HttpHeader 
-  object ContentType {
+  class `Content-Type`(val value: String) extends HttpHeader 
+  object `Content-Type` {
     def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(keyValue._2) else None
   }
@@ -121,39 +113,39 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host") Some(keyValue._2) else None
   }
 
-  class IfMatch(val value: String) extends HttpHeader {
+  class `If-Match`(val value: String) extends HttpHeader {
   }
-  object IfMatch {
+  object `If-Match` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match") Some(keyValue._2) else None
   }
 
-  class IfModifiedSince(val value: String) extends HttpHeader {
+  class `If-Modified-Since`(val value: String) extends HttpHeader {
   }
-  object IfModifiedSince {
+  object `If-Modified-Since` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since") Some(keyValue._2) else None
   }
 
-  class IfNoneMatch(val value: String) extends HttpHeader {
+  class `If-None-Match`(val value: String) extends HttpHeader {
   }
-  object IfNoneMatch {
+  object `If-None-Match` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match") Some(keyValue._2) else None
   }
 
-  class IfRange(val value: String) extends HttpHeader {
+  class `If-Range`(val value: String) extends HttpHeader {
   }
-  object IfRange {
+  object `If-Range` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range") Some(keyValue._2) else None
   }
 
-  class IfUnmodifiedSince(val value: String) extends HttpHeader {
+  class `If-Unmodified-Since`(val value: String) extends HttpHeader {
   }
-  object IfUnmodifiedSince {
+  object `If-Unmodified-Since` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-unmodified-since") Some(keyValue._2) else None
   }
 
-  class MaxForwards(val value: String) extends HttpHeader {
+  class `Max-Forwards`(val value: String) extends HttpHeader {
   }
-  object MaxForwards {
+  object `Max-Forwards` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards") Some(keyValue._2) else None
   }
 
@@ -163,9 +155,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "pragma") Some(keyValue._2) else None
   }
 
-  class ProxyAuthorization(val value: String) extends HttpHeader {
+  class `Proxy-Authorization`(val value: String) extends HttpHeader {
   }
-  object ProxyAuthorization {
+  object `Proxy-Authorization` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authorization") Some(keyValue._2) else None
   }
 
@@ -193,9 +185,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade") Some(keyValue._2) else None
   }
 
-  class UserAgent(val value: String) extends HttpHeader {
+  class `User-Agent`(val value: String) extends HttpHeader {
   }
-  object UserAgent {
+  object `User-Agent` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "user-agent") Some(keyValue._2) else None
   }
 
@@ -223,45 +215,45 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow") Some(keyValue._2) else None
   }
 
-  class CacheControl(val value: String) extends HttpHeader {
+  class `Cache-Control`(val value: String) extends HttpHeader {
   }
-  object CacheControl {
+  object `Cache-Control` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cache-control") Some(keyValue._2) else None
   }
 
-  class ContentEncoding(val value: String) extends HttpHeader {
+  class `Content-Encoding`(val value: String) extends HttpHeader {
   }
-  object ContentEncoding {
+  object `Content-Encoding` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-encoding") Some(keyValue._2) else None
   }
 
-  class ContentLanguage(val value: String) extends HttpHeader {
+  class `Content-Language`(val value: String) extends HttpHeader {
   }
-  object ContentLanguage {
+  object `Content-Language` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-language") Some(keyValue._2) else None
   }
 
-  class ContentLocation(val value: String) extends HttpHeader {
+  class `Content-Location`(val value: String) extends HttpHeader {
   }
-  object ContentLocation {
+  object `Content-Location` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-location") Some(keyValue._2) else None
   }
 
-  class ContentDisposition(val value: String) extends HttpHeader {
+  class `Content-Disposition`(val value: String) extends HttpHeader {
   }
-  object ContentDisposition {
+  object `Content-Disposition` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-disposition") Some(keyValue._2) else None
   }
 
-  class ContentMD5(val value: String) extends HttpHeader {
+  class `Content-MD5`(val value: String) extends HttpHeader {
   }
-  object ContentMD5 {
+  object `Content-MD5` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-md5") Some(keyValue._2) else None
   }
 
-  class ContentRange(val value: String) extends HttpHeader {
+  class `Content-Range`(val value: String) extends HttpHeader {
   }
-  object ContentRange {
+  object `Content-Range` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-range") Some(keyValue._2) else None
   }
 
@@ -277,9 +269,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expires") Some(keyValue._2) else None
   }
 
-  class LastModified(val value: String) extends HttpHeader {
+  class `Last-Modified`(val value: String) extends HttpHeader {
   }
-  object LastModified {
+  object `Last-Modified` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "last-modified") Some(keyValue._2) else None
   }
 
@@ -289,9 +281,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location") Some(keyValue._2) else None
   }
 
-  class ProxyAuthenticate(val value: String) extends HttpHeader {
+  class `Proxy-Authenticate`(val value: String) extends HttpHeader {
   }
-  object ProxyAuthenticate {
+  object `Proxy-Authenticate` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authenticate") Some(keyValue._2) else None
   }
 
@@ -301,9 +293,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "refresh") Some(keyValue._2) else None
   }
 
-  class RetryAfter(val value: String) extends HttpHeader {
+  class `Retry-After`(val value: String) extends HttpHeader {
   }
-  object RetryAfter {
+  object `Retry-After` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "retry-after") Some(keyValue._2) else None
   }
 
@@ -313,9 +305,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
   }
 
-  class SetCookie(val value: String) extends HttpHeader {
+  class `Set-Cookie`(val value: String) extends HttpHeader {
   }
-  object SetCookie {
+  object `Set-Cookie` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "set-cookie") Some(keyValue._2) else None
   }
 
@@ -325,9 +317,9 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer") Some(keyValue._2) else None
   }
 
-  class TransferEncoding(val value: String) extends HttpHeader {
+  class `Transfer-Encoding`(val value: String) extends HttpHeader {
   }
-  object TransferEncoding {
+  object `Transfer-Encoding` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "transfer-encoding") Some(keyValue._2) else None
   }
 
@@ -337,51 +329,51 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "vary") Some(keyValue._2) else None
   }
 
-  class WWWAuthenticate(val value: String) extends HttpHeader {
+  class `WWW-Authenticate`(val value: String) extends HttpHeader {
   }
-  object WWWAuthenticate {
+  object `WWW-Authenticate` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "www-authenticate") Some(keyValue._2) else None
   }
 
-  class XFrameOptions(val value: String) extends HttpHeader {
+  class `X-Frame-Options`(val value: String) extends HttpHeader {
   }
-  object XFrameOptions {
+  object `X-Frame-Options` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-frame-options") Some(keyValue._2) else None
   }
 
-  class XXSSProtection(val value: String) extends HttpHeader {
+  class `X-XSS-Protection`(val value: String) extends HttpHeader {
   }
-  object XXSSProtection {
+  object `X-XSS-Protection` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-xss-protection") Some(keyValue._2) else None
   }
 
-  class XContentTypeOptions(val value: String) extends HttpHeader {
+  class `X-Content-Type-Options`(val value: String) extends HttpHeader {
   }
-  object XContentTypeOptions {
+  object `X-Content-Type-Options` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-content-type-options") Some(keyValue._2) else None
   }
 
-  class XRequestedWith(val value: String) extends HttpHeader {
+  class `X-Requested-With`(val value: String) extends HttpHeader {
   }
-  object XRequestedWith {
+  object `X-Requested-With` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-requested-with") Some(keyValue._2) else None
   }
 
-  class XForwardedFor(val value: String) extends HttpHeader {
+  class `X-Forwarded-For`(val value: String) extends HttpHeader {
   }
-  object XForwardedFor {
+  object `X-Forwarded-For` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-for") Some(keyValue._2) else None
   }
 
-  class XForwardedProto(val value: String) extends HttpHeader {
+  class `X-Forwarded-Proto`(val value: String) extends HttpHeader {
   }
-  object XForwardedProto {
+  object `X-Forwarded-Proto` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-proto") Some(keyValue._2) else None
   }
 
-  class XPoweredBy(val value: String) extends HttpHeader {
+  class `X-Powered-By`(val value: String) extends HttpHeader {
   }
-  object XPoweredBy {
+  object `X-Powered-By` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by") Some(keyValue._2) else None
   }  
   
@@ -396,63 +388,63 @@ trait HttpHeaderImplicits {
   
   implicit def tuple2HttpHeader(keyValue: (String, String)): HttpHeader = keyValue match {
     case Accept(value) => new Accept(value)
-    case AcceptCharset(value) => new AcceptCharset(value)
-    case AcceptEncoding(value) => new AcceptEncoding(value)
-    case AcceptLanguage(value) => new AcceptLanguage(value)
-    case AcceptRanges(value) => new AcceptRanges(value)
+    case `Accept-Charset`(value) => new `Accept-Charset`(value)
+    case `Accept-Encoding`(value) => new `Accept-Encoding`(value)
+    case `Accept-Language`(value) => new `Accept-Language`(value)
+    case `Accept-Ranges`(value) => new `Accept-Ranges`(value)
     case Authorization(value) => new Authorization(value)
     case Connection(value) => new Connection(value)
     case Cookie(value) => new Cookie(value)
-    case ContentLength(value) => new ContentLength(value)
-    case ContentType(value) => new ContentType(value)
+    case `Content-Length`(value) => new `Content-Length`(value)
+    case `Content-Type`(value) => new `Content-Type`(value)
     case Date(value) => new Date(value)
     case Expect(value) => new Expect(value)
     case From(value) => new From(value)
     case Host(value) => new Host(value)
-    case IfMatch(value) => new IfMatch(value)
-    case IfModifiedSince(value) => new IfModifiedSince(value)
-    case IfNoneMatch(value) => new IfNoneMatch(value)
-    case IfRange(value) => new IfRange(value)
-    case IfUnmodifiedSince(value) => new IfUnmodifiedSince(value)
-    case MaxForwards(value) => new MaxForwards(value)
+    case `If-Match`(value) => new `If-Match`(value)
+    case `If-Modified-Since`(value) => new `If-Modified-Since`(value)
+    case `If-None-Match`(value) => new `If-None-Match`(value)
+    case `If-Range`(value) => new `If-Range`(value)
+    case `If-Unmodified-Since`(value) => new `If-Unmodified-Since`(value)
+    case `Max-Forwards`(value) => new `Max-Forwards`(value)
     case Pragma(value) => new Pragma(value)
-    case ProxyAuthorization(value) => new ProxyAuthorization(value)
+    case `Proxy-Authorization`(value) => new `Proxy-Authorization`(value)
     case Range(value) => new Range(value)
     case Referer(value) => new Referer(value)
     case TE(value) => new TE(value)
     case Upgrade(value) => new Upgrade(value)
-    case UserAgent(value) => new UserAgent(value)
+    case `User-Agent`(value) => new `User-Agent`(value)
     case Via(value) => new Via(value)
     case Warning(value) => new Warning(value)
     case Age(value) => new Age(value)
     case Allow(value) => new Allow(value)
-    case CacheControl(value) => new CacheControl(value)
-    case ContentEncoding(value) => new ContentEncoding(value)
-    case ContentLanguage(value) => new ContentLanguage(value)
-    case ContentLocation(value) => new ContentLocation(value)
-    case ContentDisposition(value) => new ContentDisposition(value)
-    case ContentMD5(value) => new ContentMD5(value)
-    case ContentRange(value) => new ContentRange(value)
+    case `Cache-Control`(value) => new `Cache-Control`(value)
+    case `Content-Encoding`(value) => new `Content-Encoding`(value)
+    case `Content-Language`(value) => new `Content-Language`(value)
+    case `Content-Location`(value) => new `Content-Location`(value)
+    case `Content-Disposition`(value) => new `Content-Disposition`(value)
+    case `Content-MD5`(value) => new `Content-MD5`(value)
+    case `Content-Range`(value) => new `Content-Range`(value)
     case ETag(value) => new ETag(value)
     case Expires(value) => new Expires(value)
-    case LastModified(value) => new LastModified(value)
+    case `Last-Modified`(value) => new `Last-Modified`(value)
     case Location(value) => new Location(value)
-    case ProxyAuthenticate(value) => new ProxyAuthenticate(value)
+    case `Proxy-Authenticate`(value) => new `Proxy-Authenticate`(value)
     case Refresh(value) => new Refresh(value)
-    case RetryAfter(value) => new RetryAfter(value)
+    case `Retry-After`(value) => new `Retry-After`(value)
     case Server(value) => new Server(value)
-    case SetCookie(value) => new SetCookie(value)
+    case `Set-Cookie`(value) => new `Set-Cookie`(value)
     case Trailer(value) => new Trailer(value)
-    case TransferEncoding(value) => new TransferEncoding(value)
+    case `Transfer-Encoding`(value) => new `Transfer-Encoding`(value)
     case Vary(value) => new Vary(value)
-    case WWWAuthenticate(value) => new WWWAuthenticate(value)
-    case XFrameOptions(value) => new XFrameOptions(value)
-    case XXSSProtection(value) => new XXSSProtection(value)
-    case XContentTypeOptions(value) => new XContentTypeOptions(value)
-    case XRequestedWith(value) => new XRequestedWith(value)
-    case XForwardedFor(value) => new XForwardedFor(value)
-    case XForwardedProto(value) => new XForwardedProto(value)
-    case XPoweredBy(value) => new XPoweredBy(value)
+    case `WWW-Authenticate`(value) => new `WWW-Authenticate`(value)
+    case `X-Frame-Options`(value) => new `X-Frame-Options`(value)
+    case `X-XSS-Protection`(value) => new `X-XSS-Protection`(value)
+    case `X-Content-Type-Options`(value) => new `X-Content-Type-Options`(value)
+    case `X-Requested-With`(value) => new `X-Requested-With`(value)
+    case `X-Forwarded-For`(value) => new `X-Forwarded-For`(value)
+    case `X-Forwarded-Proto`(value) => new `X-Forwarded-Proto`(value)
+    case `X-Powered-By`(value) => new `X-Powered-By`(value)
     case (name, value) => new CustomHeader(name, value)
   }
 }

@@ -61,7 +61,7 @@ object Validation {
      * because it generates the appropriate path structure necessary for 
      * informative errors.
      */
-    def !! (i: Int) = JPathValue(path + "[" + i + "]", (this --> classOf[JArray]).arr(i))
+    def !! (i: Int) = JPathValue(path + "[" + i + "]", (this --> classOf[JArray]).elements(i))
     
     private def failFind[T](path: String): T = throw ValidationError("Expected to find ${path}, but it did not exist", path)
     private def failType[T](path: String, etype: Class[_], atype: Class[_]): T = throw ValidationError("Expected ${path} to have type " + etype.toString + " but was: " + atype.toString, path)

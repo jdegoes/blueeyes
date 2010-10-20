@@ -40,7 +40,7 @@ package blueeyes.json.xschema.codegen {
           sw.toString
         }
         
-        println(sw)
+        //println(sw)
 
         out must not be equalTo("")
       }
