@@ -1,35 +1,75 @@
 package blueeyes.core.service;
 
+import HttpHeaders._
+import HttpHeaderImplicits._
 import MimeTypes._
-import blueeyes.core.data.{Bijection, DataTranscoder}
+import blueeyes.core.data.{ Bijection, DataTranscoder }
 import blueeyes.util.Future
 import org.specs.Specification
 import org.specs.util._
 
 class HttpClientSpec extends Specification {
-  "Support get requests with status OK" in {
-	skip("Will use Skalatra")
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost"))
+  "Support GET requests with status OK" in {
+    skip("Will use Skalatra")
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php"))
     f.deliverTo((res: HttpResponse[String]) => {})
-    f.value must eventually(beSomething) 
-    f.value.get.status.code must eventually(20, new Duration(500))(be(HttpStatusCodes.OK))
-  } 
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+  }
 
-  "Support get requests with status Not Found" in {
-	skip("Will use Skalatra")
+  "Support GET requests with status Not Found" in {
+    skip("Will use Skalatra")
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/bogus"))
     f.deliverTo((res: HttpResponse[String]) => {})
-    f.value must eventually(beSomething) 
-    f.value.get.status.code must eventually(20, new Duration(500))(be(HttpStatusCodes.NotFound))
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.status.code must eventually(be(HttpStatusCodes.NotFound))
   }
+
+  "Support GET requests with query params" in {
+    skip("Will use Skalatra")
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php?param1=a&param2=b"))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
+    f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+  }
+
+  "Support POST requests with query params" in {
+    skip("Will use Skalatra")
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php?param1=a&param2=b"))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
+    f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+  }
+
+  "Support POST requests with request params" in {
+    skip("Will use Skalatra")
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", parameters=Map("param1" -> "a", "param2" -> "b")))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
+    f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+  }
+
+  "Support POST requests with body" in {
+    skip("Will use Skalatra")
+    val content = "Hello, world"
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content), headers=Map(ContentLength(content.length))))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(20, new Duration(500))(beSomething)
+    f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))
+    f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+  }
+
 }
 
-class HttpClientNettyString extends HttpClientNetty[String] with String2StringTranscoder 
+class HttpClientNettyString extends HttpClientNetty[String] with String2StringTranscoder
 
 trait String2StringTranscoder extends DataTranscoder[String, String] {
   def transcode: Bijection[String, String] = new Bijection[String, String] {
     def apply(s: String) = s
     def unapply(t: String) = t
   }
-  def mimeType = text/plain
+  def mimeType:MimeType = text/plain
 }

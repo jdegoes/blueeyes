@@ -1,14 +1,17 @@
 package blueeyes.core.service
 
+import HttpHeaders._
+import HttpHeaderImplicits._
 import HttpStatusCodeImplicits._
-import blueeyes.core.data.{Bijection, DataTranscoder}
+import MimeTypes._
+import blueeyes.core.data.{ Bijection, DataTranscoder }
 import blueeyes.util.Future
-import com.ning.http.client.{ 
-	AsyncHttpClient, 
-	AsyncCompletionHandler, 
-	FluentStringsMap, 
-	Response, 
-	RequestBuilderBase 
+import com.ning.http.client.{
+  AsyncHttpClient,
+  AsyncCompletionHandler,
+  FluentStringsMap,
+  Response,
+  RequestBuilderBase
 }
 import java.util.concurrent.{ Future => JavaFuture }
 
@@ -35,44 +38,52 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
    * @param request
    * @return
    */
-  protected def prepareRequest(request: HttpRequest[T]): Option[AsyncHttpClient#BoundRequestBuilder] = {	
-    def setBody(rb: Option[AsyncHttpClient#BoundRequestBuilder]): Option[AsyncHttpClient#BoundRequestBuilder] = {
-      for (content <- request.content; requestBuilder <- rb)
-        yield requestBuilder.setBody(transcode(content))
+  protected def prepareRequest(request: HttpRequest[T]): Option[AsyncHttpClient#BoundRequestBuilder] = {
+    def setBody(requestBuilder: AsyncHttpClient#BoundRequestBuilder): AsyncHttpClient#BoundRequestBuilder = {
+      (for (content <- request.content)  
+        yield requestBuilder.setBody(transcode(content))).getOrElse(requestBuilder)
     }
 
     /**
-    * Netty does not allow parameters to be set for non-POST/PUT requests
-    */
-    def setParameters(requestBuilder: Option[AsyncHttpClient#BoundRequestBuilder]): Option[AsyncHttpClient#BoundRequestBuilder] = {
-      requestBuilder.map(rb => { 
-        rb.setParameters(request.parameters.foldLeft(new FluentStringsMap()) { (fsMap, pair) => 
+     * Netty does not allow parameters to be set for non-POST/PUT requests
+     */
+    def setParameters(requestBuilder: AsyncHttpClient#BoundRequestBuilder): AsyncHttpClient#BoundRequestBuilder = {
+        requestBuilder.setParameters(request.parameters.foldLeft(new FluentStringsMap()) { (fsMap, pair) =>
           fsMap.add(pair._1, pair._2)
         })
-      })
     }
-	
-    var reqBuilder = request.method match {
-      case HttpMethods.GET      => Some(new AsyncHttpClient().prepareGet(request.uri))
-      case HttpMethods.POST     => setParameters(setBody(Some(new AsyncHttpClient().preparePost(request.uri))))
-      case HttpMethods.PUT      => setParameters(setBody(Some(new AsyncHttpClient().preparePut(request.uri))))
-      case HttpMethods.DELETE   => Some(new AsyncHttpClient().prepareDelete(request.uri))
-      case HttpMethods.OPTIONS  => Some(new AsyncHttpClient().prepareOptions(request.uri))
+
+    import blueeyes.util.QueryParser
+    import java.net.URI
+    import scala.collection.mutable.LinkedHashMap
+
+    // Merge request.parameters and original query params (in uri)
+    val origURI = URI.create(request.uri)
+    val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")))
+    val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath, newQueryParams, origURI.getFragment).toString
+      
+    var requestBuilder = request.method match {
+      case HttpMethods.GET => Some(new AsyncHttpClient().prepareGet(uri))
+      case HttpMethods.POST => Some(setBody(new AsyncHttpClient().preparePost(uri)))
+      case HttpMethods.PUT => Some(setBody(new AsyncHttpClient().preparePut(uri)))
+      case HttpMethods.DELETE => Some(new AsyncHttpClient().prepareDelete(uri))
+      case HttpMethods.OPTIONS => Some(new AsyncHttpClient().prepareOptions(uri))
       case _ => None
     }
 
     // ("Content-Type", "text/javascript")
-    val newHeaders = request.headers /*++ Map(
-      ContentType((for (ContentType(contentType) <- request.headers) yield contentType).headOption.getOrElse(transcoder.mimeType._2)),
-      ContentLength(): _*
-    )*/
-    
+    val newHeaders = request.headers ++ Map()
+//    val newHeaders = request.headers ++ Map(
+//      ContentType((for (ContentType(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType)),
+//      ContentLength(): _*
+//    )
+
     //val contentType = 
 
-    for (pair <- newHeaders; r <- reqBuilder)
-      yield r.setHeader(pair._1, pair._2)   
-    
-    reqBuilder
+    for (pair <- newHeaders; r <- requestBuilder)
+      yield r.setHeader(pair._1, pair._2)
+
+    requestBuilder
   }
 }
 
