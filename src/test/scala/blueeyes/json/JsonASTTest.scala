@@ -95,15 +95,12 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
     forAll(removeNothingProp) must pass
   }
 
-  "Remove removes only matching elements (in case of a field, its value is set to JNothing)" in {
+  "Remove removes only matching elements (in case of a field, the field is removed)" in {
     val removeProp = (json: JValue, x: Class[_ <: JValue]) => {
       val removed = json remove typePredicate(x)
       val Diff(c, a, d) = json diff removed
-      val elemsLeft = removed filter {
-        case JField(_, JNothing) => false
-        case _ => true 
-      }
-      c == JNothing && a == JNothing && elemsLeft.forall(_.getClass != x)
+      
+      removed.flatten.forall(_.getClass != x)
     }
     implicit val arbJValueClass1 = arbJValueClass
     forAll(removeProp) must pass
