@@ -21,7 +21,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
-  private val response     = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.Http_1_0)
+  private val response     = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
   private val handlers  = (new TestService2(), new DataTranscoderImpl(TextToTextBijection, text / html)) :: Nil
   private val nettyHandler = new NettyRequestHandler(handlers)
 
@@ -34,9 +34,9 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
     future.deliver(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
-    when(handler.apply(Map('adId -> "1"), Converters.fromNetty(nettyRequest, transcoder.transcode))).thenReturn(future, future)
+    when(handler.apply(Map('adId -> "1"), Converters.fromNettyRequest(nettyRequest, transcoder))).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
-    when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNetty(response, transcoder))))).thenReturn(channelFuture, channelFuture)
+    when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNettyResponse(response, transcoder))))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
 
@@ -51,7 +51,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getChannel()).thenReturn(channel, channel)
-    when(channel.write( Matchers.argThat(new RequestMatcher(Converters.toNetty(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)), transcoder))))).thenReturn(channelFuture, channelFuture)
+    when(channel.write( Matchers.argThat(new RequestMatcher(Converters.toNettyResponse(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)), transcoder))))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
 

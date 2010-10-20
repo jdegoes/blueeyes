@@ -60,7 +60,7 @@ class RequestBuilder[T](e: MessageEvent, hierarchy: RestHierarchy[T], transcoder
     val request     = e.getMessage().asInstanceOf[NettyHttpRequest]
     val parameters  = handler._1(uriAndMethod._1)
 
-    handler._3(parameters, fromNettyRequest(request, transcoder.transcode)).map(response => toNettyResponse(response, transcoder))
+    handler._3(parameters, fromNettyRequest(request, transcoder)).map(response => toNettyResponse(response, transcoder))
   }
   private def findPattern(uri: String, method: HttpMethod) = hierarchy.hierarchy.find(handler => handler._1.isDefinedAt(uri) && method == handler._2)
 }
