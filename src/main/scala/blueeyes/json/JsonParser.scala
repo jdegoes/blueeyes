@@ -145,12 +145,12 @@ object JsonParser {
           val field = vals.pop(classOf[JField])
           val newField = JField(field.name, v)
           val obj = vals.peek(classOf[JObject])
-          vals.replace(JObject(newField :: obj.obj))
+          vals.replace(JObject(newField :: obj.fields))
         case Some(o: JObject) => v match {
-          case x: JField => vals.replace(JObject(x :: o.obj))
+          case x: JField => vals.replace(JObject(x :: o.fields))
           case _ => p.fail("expected field but got " + v)
         }
-        case Some(a: JArray) => vals.replace(JArray(v :: a.arr))
+        case Some(a: JArray) => vals.replace(JArray(v :: a.elements))
         case Some(x) => p.fail("expected field, array or object but got " + x)
         case None => root = Some(reverse(v))
       }
@@ -162,8 +162,8 @@ object JsonParser {
           vals.pop(classOf[JField])
           val newField = JField(f.name, v)
           val obj = vals.peek(classOf[JObject])
-          vals.replace(JObject(newField :: obj.obj))
-        case a: JArray => vals.replace(JArray(v :: a.arr))
+          vals.replace(JObject(newField :: obj.fields))
+        case a: JArray => vals.replace(JArray(v :: a.elements))
         case _ => p.fail("expected field or array")
       }
     }

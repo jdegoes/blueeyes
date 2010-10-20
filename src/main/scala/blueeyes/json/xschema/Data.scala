@@ -821,7 +821,7 @@ package blueeyes.json.xschema {
     implicit val XSchemaExtractor: Extractor[blueeyes.json.xschema.XSchema] = new Extractor[blueeyes.json.xschema.XSchema] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XSchema = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XSchema] = {
-          (jvalue --> classOf[JObject]).obj.filter(XSchemaExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XSchemaExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XSchemaExtractorFunction(field))
             case Nil => None
           }
@@ -845,7 +845,7 @@ package blueeyes.json.xschema {
     implicit val XReferenceExtractor: Extractor[blueeyes.json.xschema.XReference] = new Extractor[blueeyes.json.xschema.XReference] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XReference = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XReference] = {
-          (jvalue --> classOf[JObject]).obj.filter(XReferenceExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XReferenceExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XReferenceExtractorFunction(field))
             case Nil => None
           }
@@ -874,7 +874,7 @@ package blueeyes.json.xschema {
     implicit val XPrimitiveRefExtractor: Extractor[blueeyes.json.xschema.XPrimitiveRef] = new Extractor[blueeyes.json.xschema.XPrimitiveRef] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XPrimitiveRef = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XPrimitiveRef] = {
-          (jvalue --> classOf[JObject]).obj.filter(XPrimitiveRefExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XPrimitiveRefExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XPrimitiveRefExtractorFunction(field))
             case Nil => None
           }
@@ -899,7 +899,7 @@ package blueeyes.json.xschema {
     implicit val XContainerRefExtractor: Extractor[blueeyes.json.xschema.XContainerRef] = new Extractor[blueeyes.json.xschema.XContainerRef] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XContainerRef = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XContainerRef] = {
-          (jvalue --> classOf[JObject]).obj.filter(XContainerRefExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XContainerRefExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XContainerRefExtractorFunction(field))
             case Nil => None
           }
@@ -980,7 +980,7 @@ package blueeyes.json.xschema {
     implicit val XCollectionExtractor: Extractor[blueeyes.json.xschema.XCollection] = new Extractor[blueeyes.json.xschema.XCollection] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XCollection = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XCollection] = {
-          (jvalue --> classOf[JObject]).obj.filter(XCollectionExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XCollectionExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XCollectionExtractorFunction(field))
             case Nil => None
           }
@@ -1052,7 +1052,7 @@ package blueeyes.json.xschema {
     implicit val XDefinitionExtractor: Extractor[blueeyes.json.xschema.XDefinition] = new Extractor[blueeyes.json.xschema.XDefinition] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XDefinition = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XDefinition] = {
-          (jvalue --> classOf[JObject]).obj.filter(XDefinitionExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XDefinitionExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XDefinitionExtractorFunction(field))
             case Nil => None
           }
@@ -1075,7 +1075,7 @@ package blueeyes.json.xschema {
     implicit val XMultitypeExtractor: Extractor[blueeyes.json.xschema.XMultitype] = new Extractor[blueeyes.json.xschema.XMultitype] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XMultitype = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XMultitype] = {
-          (jvalue --> classOf[JObject]).obj.filter(XMultitypeExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XMultitypeExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XMultitypeExtractorFunction(field))
             case Nil => None
           }
@@ -1099,7 +1099,7 @@ package blueeyes.json.xschema {
     implicit val XFieldExtractor: Extractor[blueeyes.json.xschema.XField] = new Extractor[blueeyes.json.xschema.XField] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XField = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XField] = {
-          (jvalue --> classOf[JObject]).obj.filter(XFieldExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XFieldExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XFieldExtractorFunction(field))
             case Nil => None
           }
@@ -1203,7 +1203,7 @@ package blueeyes.json.xschema {
     implicit val XOrderExtractor: Extractor[blueeyes.json.xschema.XOrder] = new Extractor[blueeyes.json.xschema.XOrder] {
       def extract(jvalue: JValue): blueeyes.json.xschema.XOrder = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XOrder] = {
-          (jvalue --> classOf[JObject]).obj.filter(XOrderExtractorFunction.isDefinedAt _) match {
+          (jvalue --> classOf[JObject]).fields.filter(XOrderExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XOrderExtractorFunction(field))
             case Nil => None
           }

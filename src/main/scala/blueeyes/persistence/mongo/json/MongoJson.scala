@@ -31,7 +31,7 @@ object MongoJson {
   implicit def jObject2MongoObject(jObject: JObject): DBObject = {
     val dbObject = new BasicDBObject()
 
-    jObject.obj.foreach(obj => {
+    jObject.fields.foreach(obj => {
       jValue2MongoValue(obj.value) match {
         case Some(v) => dbObject.put(obj.name, v)
         case None =>
@@ -59,14 +59,14 @@ object MongoJson {
     import Predef._
     
     value match {
-      case x: JString => Some(x.s)
-      case x: JInt    => Some(long2Long(x.num.longValue))
-      case x: JDouble => Some(double2Double(x.num))
+      case x: JString => Some(x.value)
+      case x: JInt    => Some(long2Long(x.value.longValue))
+      case x: JDouble => Some(double2Double(x.value))
       case x: JBool   => Some(boolean2Boolean(x.value))
       case x: JObject => Some(jObject2MongoObject(x))
       case x: JArray  => {
         val values = new java.util.ArrayList[AnyRef]
-        x.arr.foreach(y => { 
+        x.elements.foreach(y => { 
           jValue2MongoValue(y) match { 
             case Some(z) => values.add(z)
             case _ => 

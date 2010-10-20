@@ -243,11 +243,11 @@ private[json] object Meta {
     def array_?(x: Any) = x != null && classOf[scala.Array[_]].isAssignableFrom(x.asInstanceOf[AnyRef].getClass)
 
     def mkJavaArray(x: Any, componentType: Class[_]) = {
-      val arr = x.asInstanceOf[scala.Array[_]]
-      val a = java.lang.reflect.Array.newInstance(componentType, arr.size)
+      val elements = x.asInstanceOf[scala.Array[_]]
+      val a = java.lang.reflect.Array.newInstance(componentType, elements.size)
       var i = 0
-      while (i < arr.size) {
-        java.lang.reflect.Array.set(a, i, arr(i))
+      while (i < elements.size) {
+        java.lang.reflect.Array.set(a, i, elements(i))
         i += 1
       }
       a

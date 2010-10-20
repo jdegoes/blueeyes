@@ -325,39 +325,39 @@ object JsonAST {
     type Values = Boolean
     def values = value
   }
-  case class JInt(num: BigInt) extends JValue {
+  case class JInt(value: BigInt) extends JValue {
     type Values = BigInt
-    def values = num
+    def values = value
   }
-  case class JDouble(num: Double) extends JValue {
+  case class JDouble(value: Double) extends JValue {
     type Values = Double
-    def values = num
+    def values = value
   }
-  case class JString(s: String) extends JValue {
+  case class JString(value: String) extends JValue {
     type Values = String
-    def values = s
+    def values = value
   }
   case class JField(name: String, value: JValue) extends JValue {
     type Values = (String, value.Values)
     def values = (name, value.values)
     override def apply(i: Int): JValue = value(i)
   }
-  case class JObject(obj: List[JField]) extends JValue {
+  case class JObject(fields: List[JField]) extends JValue {
     type Values = Map[String, Any]
-    def values = Map() ++ obj.map(_.values : (String, Any))
+    def values = Map() ++ fields.map(_.values : (String, Any))
     
     override def equals(that: Any): Boolean = that match {
-      case o: JObject => Set(obj.toArray: _*) == Set(o.obj.toArray: _*)
+      case o: JObject => Set(fields.toArray: _*) == Set(o.fields.toArray: _*)
       case _ => false
     }
   }
-  case class JArray(arr: List[JValue]) extends JValue {
+  case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
-    def values = arr.map(_.values)
-    override def apply(i: Int): JValue = arr(i)
+    def values = elements.map(_.values)
+    override def apply(i: Int): JValue = elements(i)
     
     override def equals(that: Any): Boolean = that match {
-      case a: JArray => Set(arr.toArray: _*) == Set(a.arr.toArray: _*)
+      case a: JArray => Set(elements.toArray: _*) == Set(a.elements.toArray: _*)
       case _ => false
     }
   }
@@ -376,7 +376,7 @@ object JsonAST {
     case JNothing      => error("can't render 'nothing'")
     case JString(null) => text("null")
     case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(arr)   => text("[") :: series(trimArr(arr).map(render)) :: text("]")
+    case JArray(elements)   => text("[") :: series(trimArr(elements).map(render)) :: text("]")
     case JField(n, v)  => text("\"" + n + "\":") :: render(v)
     case JObject(obj)  =>
       val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
@@ -409,7 +409,7 @@ object JsonAST {
         case JInt(n)       => text(n.toString)
         case JString(null) => text("null")
         case JString(s)    => text(scalaQuote(s))
-        case JArray(arr)   => fold(intersperse(arr.map(renderScala) ::: List(text("Nil")), text("::")))
+        case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
         case JField(n, v)  => text(scalaQuote(n) + ",") :: renderScala(v)
         case JObject(obj)  =>
           val nested = break :: fold(intersperse(intersperse(obj.map(renderScala) ::: List(text("Nil")), text("::")), break))
@@ -502,7 +502,7 @@ trait JsonDSL extends Implicits {
   implicit def symbol2jvalue(x: Symbol) = JString(x.name)
   implicit def pair2jvalue[A <% JValue](t: (String, A)) = JObject(List(JField(t._1, t._2)))
   implicit def list2jvalue(l: List[JField]) = JObject(l)
-  implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.obj)
+  implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.fields)
   implicit def pair2Assoc[A <% JValue](t: (String, A)) = new JsonAssoc(t)
 
   class JsonAssoc[A <% JValue](left: (String, A)) {
@@ -514,13 +514,13 @@ trait JsonDSL extends Implicits {
 
     def ~(right: JObject) = {
       val l: JValue = left._2
-      JObject(JField(left._1, l) :: right.obj)
+      JObject(JField(left._1, l) :: right.fields)
     }
   }
 
   class JsonListAssoc(left: List[JField]) {
     def ~(right: (String, JValue)) = JObject(left ::: List(JField(right._1, right._2)))
-    def ~(right: JObject) = JObject(left ::: right.obj)
+    def ~(right: JObject) = JObject(left ::: right.fields)
   }
 }
 
