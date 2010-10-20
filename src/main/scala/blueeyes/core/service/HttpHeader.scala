@@ -27,6 +27,7 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
 }
 
 object HttpHeaders {
+  /* Requests */
   class Accept(val value: String) extends HttpHeader 
   object Accept {
     def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(","))
@@ -203,15 +204,16 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning") Some(keyValue._2) else None
   }
 
-  class Age(val value: String) extends HttpHeader {
-  }
+  /* Responses */
+  class Age(val value: String) extends HttpHeader 
   object Age {
+    def apply(age: Int) = new Age(age.toString)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age") Some(keyValue._2) else None
   }
 
-  class Allow(val value: String) extends HttpHeader {
-  }
+  class Allow(val value: String) extends HttpHeader 
   object Allow {
+    def apply(methods: HttpMethod*) = new Allow(methods.map(_.value).mkString(","))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow") Some(keyValue._2) else None
   }
 
