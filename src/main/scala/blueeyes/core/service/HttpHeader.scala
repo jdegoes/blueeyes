@@ -53,7 +53,7 @@ trait HttpHeaders {
 
   class `Accept-Ranges`(val value: String) extends HttpHeader 
   object `Accept-Ranges` {
-    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit.value.mkString(","));
+    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit.value);
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
   }
 
