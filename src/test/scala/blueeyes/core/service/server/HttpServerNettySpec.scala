@@ -12,7 +12,7 @@ import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
 
 class HttpServerNettySpec extends Specification{
   @volatile
-  private var port = 8080
+  private var port = 8585
   @volatile
   private var server: Option[TestServer] = None
   "HttpServer" should{
