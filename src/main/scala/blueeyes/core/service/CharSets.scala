@@ -11,7 +11,6 @@ sealed trait CharSet {
 }
 
 object CharSets {
-
   trait GenericCharSet extends Product with CharSet{
     def charName = productPrefix
   }
@@ -39,6 +38,5 @@ object CharSets {
   case object `ISO-8859-9` extends StandardCharSet("iso-ir-148" :: "ISO_8859-9" :: "ISO-8859-9" :: "latin5" :: "l5" :: "csISOLatin5" :: Nil)
 
   case object `ISO-8859-10` extends StandardCharSet("iso-ir-157" :: "l6" :: "ISO_8859-10" :: "csISOLatin6" :: "latin6" :: Nil)
-
 }
 

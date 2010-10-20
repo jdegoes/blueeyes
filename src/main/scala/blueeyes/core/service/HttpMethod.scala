@@ -6,7 +6,7 @@ sealed trait HttpMethod extends Product {
   override def toString = value
 }
 
-trait HttpMethods {
+object HttpMethods {
   case object GET extends HttpMethod
 
   case object PUT extends HttpMethod
@@ -29,4 +29,3 @@ trait HttpMethods {
     override def toString = method
   }
 }
-object HttpMethods extends HttpMethods

@@ -22,7 +22,7 @@ sealed abstract class Redirection(val value: Int, val defaultMessage: String) ex
 sealed abstract class ClientError(val value: Int, val defaultMessage: String) extends HttpFailure
 sealed abstract class ServerError(val value: Int, val defaultMessage: String) extends HttpFailure
 
-trait HttpStatusCodes {  
+object HttpStatusCodes {  
   case object Continue            extends Informational(100, "The server has received the request headers, and the client should proceed to send the request body.")
   case object SwitchingProtocols  extends Informational(101, "The server is switching protocols, because the client requested the switch.")
   case object Processing          extends Informational(102, "The server is processing the request, but no response is available yet.")
@@ -82,7 +82,6 @@ trait HttpStatusCodes {
   case object NotExtended               extends ServerError(510, "Further extensions to the request are required for the server to fulfill it.")
   case object UserAccessDenied          extends ServerError(530, "User access is denied to the specified resource.")
 }
-object HttpStatusCodes extends HttpStatusCodes
 
 trait HttpStatusCodeImplicits {
 	implicit def int2HttpStatusCode(statusCode: Int): HttpStatusCode = statusCode match {
