@@ -137,7 +137,7 @@ object JsonAST {
       case _ => false
     }
     
-    /** Gets the specified value using JSON syntax.
+    /** Gets the specified value located at the terminal of the specified path.
      * <p>
      * Example:<pre>
      * json.get("foo[0].bar.baz[123]")
