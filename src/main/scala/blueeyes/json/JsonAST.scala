@@ -143,7 +143,7 @@ object JsonAST {
      * json.get("foo[0].bar.baz[123]")
      * </pre>
      */
-    def get(path: String): JValue = JPath(path).extract(this)
+    def get(path: JPath): JValue = path.extract(this)
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
