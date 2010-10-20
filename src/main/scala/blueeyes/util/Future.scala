@@ -244,6 +244,6 @@ object Future {
 }
 
 trait FutureImplicits {
-  implicit def any2Future[T](any: T): Future[T] = new Future[T].deliver(any)
+  implicit def any2Future[T, S >: T](any: T): Future[S] = new Future[S].deliver(any: T)
 }
 object FutureImplicits extends FutureImplicits
