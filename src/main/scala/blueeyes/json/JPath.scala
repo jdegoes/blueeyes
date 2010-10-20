@@ -76,3 +76,8 @@ object JPath {
     apply(parse0(NodePatterns.split(path).toList.filter(_.length > 0)): _*)
   }
 }
+
+trait JPathImplicits {
+  implicit def stringToJPath(s: String): JPath = JPath(s)
+}
+object JPathImplicits extends JPathImplicits
