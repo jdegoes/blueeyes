@@ -41,9 +41,9 @@ object Converters {
     nettyResponse
   }
 
-  implicit def fromNettyRequest[T](request: NettyHttpRequest, transcoder: DataTranscoder[String, T]): HttpRequest[T] = {
+  implicit def fromNettyRequest[T](request: NettyHttpRequest, pathParameters: Map[Symbol, String], transcoder: DataTranscoder[String, T]): HttpRequest[T] = {
     val queryStringDecoder = new QueryStringDecoder(request.getUri())
-    val params             = queryStringDecoder.getParameters().map(param => (param._1, if (!param._2.isEmpty) param._2.head else "")).toMap
+    val params             = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
     val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
     val nettyContent       = request.getContent()
     val content            = if (nettyContent.readable()) Some(transcoder.transcode(nettyContent.toString(CharsetUtil.UTF_8))) else None

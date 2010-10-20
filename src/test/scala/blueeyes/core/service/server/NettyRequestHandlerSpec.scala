@@ -16,7 +16,7 @@ import blueeyes.core.service.MimeTypes._
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
-  private val handler       = mock[(Map[Symbol, String], HttpRequest[String]) => Future[HttpResponse[String]]]
+  private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
@@ -34,7 +34,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
     future.deliver(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
-    when(handler.apply(Map('adId -> "1"), Converters.fromNettyRequest(nettyRequest, transcoder))).thenReturn(future, future)
+    when(handler.apply(Converters.fromNettyRequest(nettyRequest, Map('adId -> "1"), transcoder))).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
     when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNettyResponse(response, transcoder))))).thenReturn(channelFuture, channelFuture)
 

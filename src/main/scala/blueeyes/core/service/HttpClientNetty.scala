@@ -47,7 +47,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     def setParameters(requestBuilder: Option[AsyncHttpClient#BoundRequestBuilder]): Option[AsyncHttpClient#BoundRequestBuilder] = {
       requestBuilder.map(rb => { 
         rb.setParameters(request.parameters.foldLeft(new FluentStringsMap()) { (fsMap, pair) => 
-          fsMap.add(pair._1, pair._2)
+          fsMap.add(pair._1.name, pair._2)
         })
       })
     }

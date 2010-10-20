@@ -2,7 +2,7 @@ package blueeyes.core.service.server
 
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.core.service.{RestHierarchy, RestHierarchyBuilder}
+import blueeyes.core.service.{RestHierarchy, HttpVersions, RestHierarchyBuilder}
 
 class ServiceSpec extends Specification with BlueEyesServiceSpecification[String] {
   var service = new SpecTestService()
@@ -11,14 +11,15 @@ class ServiceSpec extends Specification with BlueEyesServiceSpecification[String
 //    "/path/to/something should return 'hi!'" in {
 //      path("/") {
 //        println("CALLED 1")
-//        get{
+//        get({
 //          println("CALLED")
+//          Converters.toNettyVersion(HttpVersions.`HTTP/1.1`) mustEqual(org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1)
 ////          status mustEqual (200)
 ////
 ////          body mustEqual ("hi!")
-//          2 must be (1)
+//          1 must be (1)
 //          null
-//        }
+//        })
 //      }
 //    }
 //  }

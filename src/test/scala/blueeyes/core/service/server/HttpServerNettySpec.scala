@@ -33,7 +33,6 @@ class HttpServerNettySpec extends Specification{
         }
       }while(!success)
 
-      println("PORT=" + port)
       server = Some(testServer)
     }
 
@@ -67,8 +66,8 @@ class TestServer extends TestService with HttpServerNetty[String]{
 class TestService extends RestHierarchyBuilder[String]{
   path("bar/'adId/adCode.html"){get(new Handler())}
 }
-class Handler extends Function2[Map[Symbol, String], HttpRequest[String], Future[HttpResponse[String]]]{
-  def apply(params: Map[Symbol, String], request: HttpRequest[String]) = {
+class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
+  def apply(request: HttpRequest[String]) = {
     val future = new Future[HttpResponse[String]]()
     future.deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
 

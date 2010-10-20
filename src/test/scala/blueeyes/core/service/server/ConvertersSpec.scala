@@ -40,11 +40,11 @@ class ConvertersSpec extends Specification {
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
-    val request = fromNettyRequest(nettyRequest, transcoder)
+    val request = fromNettyRequest(nettyRequest, Map('pathParam1 -> "value"), transcoder)
     
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
-    request.parameters  mustEqual(Map("param1" -> "value1"))
+    request.parameters  mustEqual(Map('param1 -> "value1", 'pathParam1 -> "value"))
     request.headers     mustEqual(Map("retry-after" -> "1"))
     request.content     mustEqual(Some("12"))
     request.version     mustEqual(`HTTP/1.0`)
