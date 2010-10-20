@@ -28,7 +28,7 @@ object Converters{
 
   implicit def toNetty[T](response: HttpResponse[T], transcoder: DataTranscoder[String, T]): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(toNetty(response.version), toNetty(response.status))
-    val contentType   = (for (ContentType(t) <- response.headers) yield t).headOption.getOrElse(transcoder.mimeType.value)
+    val contentType   = (for (`Content-Type`(t) <- response.headers) yield t).headOption.getOrElse(transcoder.mimeType.value)
     val headers       = response.headers + ("Content-Type" -> transcoder.mimeType.value)
 
     response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(transcoder.transcode.unapply(content), CharsetUtil.UTF_8)))
