@@ -1,5 +1,7 @@
 package blueeyes.core.service
 
+/* For use in the Accept-Ranges Http Header */
+
 sealed trait RangeUnit extends Product {
   def value: String = productPrefix
   

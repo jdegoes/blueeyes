@@ -27,6 +27,7 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
 }
 
 object HttpHeaders {
+  /* Requests */
   class Accept(val value: String) extends HttpHeader 
   object Accept {
     def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(","))
@@ -57,20 +58,19 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
   }
 
-  class Authorization(val value: String) extends HttpHeader {
-  }
+  class Authorization(val value: String) extends HttpHeader 
   object Authorization {
+    def appply(credentials: String) = new Authorization(credentials) // can we do better here?
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
   }
 
-  class Connection(val value: String) extends HttpHeader {
-  }
+  class Connection(val value: String) extends HttpHeader 
   object Connection {
+    def apply(connectionToken: ConnectionToken) = new Connection(connectionToken.value)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection") Some(keyValue._2) else None
   }
 
-  class Cookie(val value: String) extends HttpHeader {
-  }
+  class Cookie(val value: String) extends HttpHeader
   object Cookie {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
   }
@@ -203,15 +203,16 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning") Some(keyValue._2) else None
   }
 
-  class Age(val value: String) extends HttpHeader {
-  }
+  /* Responses */
+  class Age(val value: String) extends HttpHeader 
   object Age {
+    def apply(age: Int) = new Age(age.toString)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age") Some(keyValue._2) else None
   }
 
-  class Allow(val value: String) extends HttpHeader {
-  }
+  class Allow(val value: String) extends HttpHeader 
   object Allow {
+    def apply(methods: HttpMethod*) = new Allow(methods.map(_.value).mkString(","))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow") Some(keyValue._2) else None
   }
 
