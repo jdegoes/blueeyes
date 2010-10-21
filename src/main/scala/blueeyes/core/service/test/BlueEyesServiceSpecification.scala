@@ -37,7 +37,7 @@ trait BlueEyesServiceSpecification[T]  {
   def head(f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
           version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(HEAD, queryParameters, headers, None, version, f, timeout)
 
-  def connect(f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
+  def connect(f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T],
           version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(CONNECT, queryParameters, headers, content, version, f, timeout)
 
   def trace(f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
