@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
-sealed trait ConnectionToken extends Product {
-  def value = productPrefix
+sealed trait ConnectionToken extends ProductPrefixUnmangler {
+  def value = unmangledName 
 
   override def toString = value
 

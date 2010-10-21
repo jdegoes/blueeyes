@@ -3,8 +3,8 @@ package blueeyes.core.service
   Encodings for AcceptEncoding
 */
 
-sealed trait Encoding extends Product {
-  def value: String = productPrefix
+sealed trait Encoding extends ProductPrefixUnmangler {
+  def value: String = unmangledName 
 
   override def toString = value
 }
