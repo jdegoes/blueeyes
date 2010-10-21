@@ -1,5 +1,6 @@
 package blueeyes.core.service
 
+import scala.util.matching.Regex
 /*
 Usage: 
 
@@ -21,8 +22,23 @@ sealed trait MimeType {
 }
 
 object MimeTypes {
-  trait GenericType extends Product {
-    def subtype = productPrefix 
+
+  def parseMimeTypes(inString: String): Array[MimeType] = {
+    def MimeTypeRegex = new Regex("""([a-z\-]+)/([.+a-z\-]+)""")
+
+    /* Split the string on commas, which separate the mimes */
+    var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
+      .flatMap(MimeTypeRegex findFirstIn _).map(_.split("/"))
+      .flatMap ( mimeType =>  mimeType match {
+        case Array("application" , "javascript") => Array(application / javascript)
+        case _ => Nil
+      }
+    )
+    return outMimes 
+  }
+
+  trait GenericType extends ProductPrefixUnmangler {
+    def subtype = unmangledName
   }
 
   sealed abstract class ApplicationType(val extensions: List[String]) extends GenericType

@@ -11,8 +11,8 @@ sealed trait CharSet {
 }
 
 object CharSets {
-  trait GenericCharSet extends Product with CharSet{
-    def charName = productPrefix
+  trait GenericCharSet extends ProductPrefixUnmangler with CharSet{
+    def charName = unmangledName 
   }
 
   sealed abstract class StandardCharSet(val aliases: List[String]) extends GenericCharSet 

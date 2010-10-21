@@ -27,11 +27,15 @@ sealed trait HttpHeader extends Product2[String, String] { self =>
 }
 
 object HttpHeaders {
-  /* Requests */
-  class Accept(val value: String) extends HttpHeader 
+
+  /************ Requests ************/
+
+  class Accept(val mimeTypes: MimeType*) extends HttpHeader {
+    def value = mimeTypes.map(_.value).mkString(",")
+  }
   object Accept {
-    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(","))
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(keyValue._2) else None
+    def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes :_*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
   
   class `Accept-Charset`(val value: String) extends HttpHeader 
@@ -70,8 +74,10 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection") Some(keyValue._2) else None
   }
 
-  class Cookie(val value: String) extends HttpHeader
+  class Cookie(val value: String) extends HttpHeader {
+  }
   object Cookie {
+    def apply(cookie: HttpCookie) = new Cookie(cookie.toString)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
   }
 
@@ -86,7 +92,7 @@ object HttpHeaders {
 
   class `Content-Type`(val value: String) extends HttpHeader 
   object `Content-Type` {
-    def apply(mimeTypes: MimeType*) = new Accept(mimeTypes.map(_.value).mkString(";"))
+    def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes.map(_.value).mkString(";"))
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(keyValue._2) else None
   }
 
@@ -204,7 +210,8 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning") Some(keyValue._2) else None
   }
 
-  /* Responses */
+  /*********** Responses ************/
+
   class Age(val value: String) extends HttpHeader 
   object Age {
     def apply(age: Int) = new Age(age.toString)
@@ -389,7 +396,7 @@ trait HttpHeaderImplicits {
   implicit def httpHeader2Tuple(httpHeader: HttpHeader) = (httpHeader._1, httpHeader._2)
   
   implicit def tuple2HttpHeader(keyValue: (String, String)): HttpHeader = keyValue match {
-    case Accept(value) => new Accept(value)
+    case Accept(value) => new Accept(value: _*)
     case `Accept-Charset`(value) => new `Accept-Charset`(value)
     case `Accept-Encoding`(value) => new `Accept-Encoding`(value)
     case `Accept-Language`(value) => new `Accept-Language`(value)
