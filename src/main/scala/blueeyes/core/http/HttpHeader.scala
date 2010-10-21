@@ -37,14 +37,16 @@ object HttpHeaders {
     def value = mimeTypes.map(_.value).mkString(",")
   }
   object Accept {
-    def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes :_*)
+    def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
   
-  class `Accept-Charset`(val value: String) extends HttpHeader 
+  class `Accept-Charset`(val charSets: CharSet*) extends HttpHeader {
+    def value = charSets.map(_.value).mkString(";")
+  }
   object `Accept-Charset` {
-    def apply(charSets: CharSet*) = new `Accept-Charset`(charSets.map(_.value).mkString(";"))
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(keyValue._2) else None
+    def apply(charSets: CharSet*): `Accept-Charset` = new `Accept-Charset`(charSets: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(CharSets.parseCharSets(keyValue._2)) else None
   }
 
   class `Accept-Encoding`(val value: String) extends HttpHeader 
@@ -93,10 +95,13 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2.toLong) else None
   }
 
-  class `Content-Type`(val value: String) extends HttpHeader 
+  class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeader {
+    def value = mimeTypes.map(_.value).mkString(";")
+  }
+
   object `Content-Type` {
-    def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes.map(_.value).mkString(";"))
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(keyValue._2) else None
+    def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes :_*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
 
   class Date(val value: String) extends HttpHeader {
@@ -400,7 +405,7 @@ trait HttpHeaderImplicits {
   
   implicit def tuple2HttpHeader(keyValue: (String, String)): HttpHeader = keyValue match {
     case Accept(value) => new Accept(value: _*)
-    case `Accept-Charset`(value) => new `Accept-Charset`(value)
+    case `Accept-Charset`(value) => new `Accept-Charset`(value: _*)
     case `Accept-Encoding`(value) => new `Accept-Encoding`(value)
     case `Accept-Language`(value) => new `Accept-Language`(value)
     case `Accept-Ranges`(value) => new `Accept-Ranges`(value)
@@ -408,7 +413,7 @@ trait HttpHeaderImplicits {
     case Connection(value) => new Connection(value)
     case Cookie(value) => new Cookie(value)
     case `Content-Length`(value) => new `Content-Length`(value)
-    case `Content-Type`(value) => new `Content-Type`(value)
+    case `Content-Type`(value) => new `Content-Type`(value: _*)
     case Date(value) => new Date(value)
     case Expect(value) => new Expect(value)
     case From(value) => new From(value)
