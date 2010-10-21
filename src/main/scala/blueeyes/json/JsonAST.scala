@@ -42,7 +42,7 @@ object JsonAST {
      * json \ "name"
      * </pre>
      */
-    def \(nameToFind: String): JValue = {
+    def \ (nameToFind: String): JValue = {
       def extractValue(jvalue: JValue): JValue = jvalue match {
         case JField(n, v) => v
         case _ => jvalue
@@ -54,7 +54,7 @@ object JsonAST {
       findDirect(children, p) match {
         case Nil => JNothing
         case x :: Nil => extractValue(x)
-        case x => JArray(x.map(extractValue))
+        case xs => JArray(xs.map(extractValue))
       }
     }
     
