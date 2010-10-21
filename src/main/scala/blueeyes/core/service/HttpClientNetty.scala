@@ -18,7 +18,7 @@ import java.util.concurrent.{ Future => JavaFuture }
 trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
   def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
     new Future[HttpResponse[T]]() {
-      prepareRequest(request).get.execute(
+      prepareRequest(request).foreach(r => r.execute(
         new AsyncCompletionHandler[Response] {
           def onCompleted(response: Response): Response = {
             val data = transcode.unapply(response.getResponseBody)
@@ -27,14 +27,13 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
           }
 
           override def onThrowable(t: Throwable) {
-            println(t.getMessage)
             val httpStatus = HttpStatus(t match {
-              case _:java.net.ConnectException => HttpStatusCodes.NotFound
+              case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
               case _ => HttpStatusCodes.InternalServerError
             })
-            deliver(HttpResponse[T](httpStatus));
+            cancel(new Error(t))
           }
-        })
+        }))
     }
   }
 
