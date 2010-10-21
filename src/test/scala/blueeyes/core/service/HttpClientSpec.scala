@@ -7,6 +7,7 @@ import blueeyes.util.Future
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.MimeType
 import blueeyes.core.http.HttpMethods
 import blueeyes.core.http.HttpStatusCodes
 

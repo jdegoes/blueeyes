@@ -1,12 +1,13 @@
 package blueeyes.core.service
 
-import blueeyes.core.http.Headers._
+import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.HttpStatusCode
 import blueeyes.core.http.HttpMethods
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.MimeType
 
 import blueeyes.core.data.{ Bijection, DataTranscoder }
 import blueeyes.util.Future
