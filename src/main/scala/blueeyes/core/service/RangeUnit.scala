@@ -2,8 +2,8 @@ package blueeyes.core.service
 
 /* For use in the Accept-Ranges Http Header */
 
-sealed trait RangeUnit extends Product {
-  def value: String = productPrefix
+sealed trait RangeUnit extends ProductPrefixUnmangler{
+  def value: String = unmangledName 
   
   override def toString = value
 }
