@@ -8,7 +8,8 @@ class Future[T] {
   var _isSet: Boolean = false
   var _isCanceled: Boolean = false
   var _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
-  var _canceled: ArrayBuffer[Unit => Unit] = new ArrayBuffer
+  var _canceled: ArrayBuffer[Option[Error] => Unit] = new ArrayBuffer
+  var _error: Option[Error] = None
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
@@ -31,7 +32,7 @@ class Future[T] {
   /** Installs the specified canceler on the future. Under ordinary
    * circumstances, the future will not be canceled unless all cancelers
    * return true. If the future is already done, this method has no effect.
-   * [p]
+   * <p>
    * This method does not normally need to be called. It's provided primarily
    * for the implementation of future primitives.
    */
@@ -43,15 +44,15 @@ class Future[T] {
 
   /** Installs a handler that will be called if and only if the future is
    * canceled.
-   * [p]
+   * <p>
    * This method does not normally need to be called, since there is no
    * difference between a future being canceled and a future taking an
    * arbitrarily long amount of time to evaluate. It's provided primarily
    * for implementation of future primitives to save resources when it's
    * explicitly known the result of a future will not be used.
    */
-  def ifCanceled(f: Unit => Unit): Future[T] = {
-    if (isCanceled) f()
+  def ifCanceled(f: Option[Error] => Unit): Future[T] = {
+    if (isCanceled) f(_error)
     else if (!isDone) _canceled.append(f)
 
     this
@@ -59,26 +60,14 @@ class Future[T] {
 
   /** Attempts to cancel the future. This may succeed only if the future is
    * not already delivered, and if all cancel conditions are satisfied.
-   * [p]
+   * <p>
    * If a future is canceled, the result will never be delivered.
    *
    * @return true if the future is canceled, false otherwise.
    */
-  def cancel(): Boolean = {
-    if (isDone) false           // [-- Already done, can't be canceled
-    else if (isCanceled) true   // <-- Already canceled, nothing to do
-    else {                      // <-- Ask to see if everyone's OK with canceling
+  def cancel(): Boolean = internalCancel(None)
 
-      var r = _cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
-
-      if (r) {
-        // Everyone's OK with canceling, mark state & notify:
-        forceCancel()
-      }
-
-      r
-    }
-  }
+  def cancel(e: Error): Boolean = internalCancel(Some(e))
 
   /** Determines if the future is "done" -- that is, delivered or canceled.
    */
@@ -111,12 +100,15 @@ class Future[T] {
    * urlLoader.load("image.png").map(data => return new Image(data)).deliverTo(image => imageContainer.add(image))
    */
   def map[S](f: T => S): Future[S] = {
-    var fut: Future[S] = new Future;
+    var fut: Future[S] = new Future
 
-    deliverTo((t: T) => fut.deliver(f(t)));
-    ifCanceled((t: Unit) => fut.forceCancel);
+    deliverTo { t =>
+      fut.deliver(f(t))
+    }
 
-    fut;
+    ifCanceled(fut.forceCancel)
+
+    fut
   }
   
   /** Simply returns the passed in future. Used when the result of a previous 
@@ -127,16 +119,16 @@ class Future[T] {
   /** Maps the result of this future to another future, and returns a future
    * of the result of that future. Useful when chaining together multiple
    * asynchronous operations that must be completed sequentially.
-   * [p]
-   * [pre]
-   * [code]
+   * <p>
+   * <pre>
+   * <code>
    * urlLoader.load("config.xml").flatMap(xml =>
    *   urlLoader.load(parse(xml).mediaUrl)
    * ).deliverTo(loadedMedia =>
    *   container.add(loadedMedia)
    * )
-   * [/code]
-   * [/pre]
+   * </code>
+   * </pre>
    */
   def flatMap[S](f: T => Future[S]): Future[S] = {
     var fut: Future[S] = new Future
@@ -144,10 +136,10 @@ class Future[T] {
     deliverTo { t =>
       f(t).deliverTo(s => {
         fut.deliver(s)
-      }).ifCanceled((t: Unit) => fut.forceCancel())
+      }).ifCanceled(fut.forceCancel)
     }
 
-    ifCanceled((t: Unit) => fut.forceCancel())
+    ifCanceled(fut.forceCancel)
 
     return fut
   }
@@ -161,9 +153,9 @@ class Future[T] {
   def filter(f: T => Boolean): Future[T] = {
     var fut: Future[T] = new Future
 
-    deliverTo(t => { if (f(t)) fut.deliver(t) else fut.forceCancel() })
+    deliverTo(t => { if (f(t)) fut.deliver(t) else fut.forceCancel(None) })
 
-    ifCanceled((t: Unit) => fut.forceCancel())
+    ifCanceled(fut.forceCancel)
 
     fut
   }
@@ -184,53 +176,55 @@ class Future[T] {
 
     def deliverZip = {
       if (f1.isDelivered && f2.isDelivered) {
-        zipped.deliver(
-          (f1.value.get, f2.value.get)
-        )
+        zipped.deliver((f1.value.get, f2.value.get))
       }
     }
 
     f1.deliverTo(v => deliverZip)
     f2.deliverTo(v => deliverZip)
 
-    zipped.allowCancelOnlyIf((t: Unit) => {f1.cancel || f2.cancel})
+    zipped.allowCancelOnlyIf { _ => f1.cancel || f2.cancel }
 
-    f1.ifCanceled((t: Unit) => zipped.forceCancel)
-    f2.ifCanceled((t: Unit) => zipped.forceCancel)
+    f1.ifCanceled(zipped.forceCancel)
+    f2.ifCanceled(zipped.forceCancel)
 
     zipped
   }
 
   /** Retrieves the value of the future, as an option.
    */
-  def value: Option[T] = {
-    _result
-  }
+  def value: Option[T] = _result
 
-  def toOption: Option[T] = {
-    value
-  }
+  def toOption: Option[T] = value
 
-  def toList: List[T] = {
-    value.toList
-  }
+  def toList: List[T] = value.toList
 
-  private def forceCancel(): Future[T] = {
+  private def forceCancel(error: Option[Error]): Future[T] = {
     if (!_isCanceled) {
       _isCanceled = true
 
-      _canceled.foreach(_())
+      _canceled.foreach(f => f(error))
     }
 
     return this
   }
+  
+  private def internalCancel(error: Option[Error]): Boolean = {
+    if (isDone) false           // [-- Already done, can't be canceled
+    else if (isCanceled) true   // <-- Already canceled, nothing to do
+    else {                      // <-- Ask to see if everyone's OK with canceling
+      _error = error
+      
+      var r = _cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
 
-  def withEffect(f: Future[T] => Unit): Future[T] = {
-    f(this);
+      if (r) {
+        // Everyone's OK with canceling, mark state & notify:
+        forceCancel(error)
+      }
 
-    this;
+      r
+    }
   }
-
 }
 
 object Future {

@@ -3,7 +3,7 @@ package blueeyes.core.service
 /**
  * An http service - the fundamental concept in Blue Eyes.
  */
-trait HttpService[T] extends RestHierarchyBuilder[T] {
+trait HttpService[T] extends RestHierarchy[T] {
   /** The short name of the service, e.g. "email"
    */
   def name: String
