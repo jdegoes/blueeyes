@@ -7,6 +7,9 @@ class RestPathPatternSpec extends Specification{
   "matches correct path" in {
     (RestPathPattern.Root / StringElement("foo")).isDefinedAt("foo") mustEqual(true)
   }
+  "matches correct path started with slash" in {
+    (RestPathPattern.Root / StringElement("foo")).isDefinedAt("/foo") mustEqual(true)
+  }
   "matches complex correct path" in {
     (RestPathPattern.Root / StringElement("foo") / StringElement("bar") / 'param).isDefinedAt("foo/bar/value") mustEqual(true)
   }
@@ -15,6 +18,9 @@ class RestPathPatternSpec extends Specification{
   }
   "create parameters" in {
     (RestPathPattern.Root / SymbolElement('param)).apply("value") mustEqual(Map[Symbol, String]('param -> "value"))
+  }
+  "create parameters when path started with slash" in {
+    (RestPathPattern.Root / SymbolElement('param)).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   "create parameters for complex path" in {
     (RestPathPattern.Root / StringElement("foo") / StringElement("bar") / 'param).apply("foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))

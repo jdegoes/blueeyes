@@ -1,13 +1,12 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
-import blueeyes.core.service._
 import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.{DataTranscoder}
-import blueeyes.core.service.HttpHeaders._
-import blueeyes.core.service.HttpVersions._
+import HttpHeaders._
+import HttpVersions._
 
 object Converters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -41,9 +40,9 @@ object Converters {
     nettyResponse
   }
 
-  implicit def fromNettyRequest[T](request: NettyHttpRequest, transcoder: DataTranscoder[String, T]): HttpRequest[T] = {
+  implicit def fromNettyRequest[T](request: NettyHttpRequest, pathParameters: Map[Symbol, String], transcoder: DataTranscoder[String, T]): HttpRequest[T] = {
     val queryStringDecoder = new QueryStringDecoder(request.getUri())
-    val params             = queryStringDecoder.getParameters().map(param => (param._1, if (!param._2.isEmpty) param._2.head else "")).toMap
+    val params             = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
     val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
     val nettyContent       = request.getContent()
     val content            = if (nettyContent.readable()) Some(transcoder.transcode(nettyContent.toString(CharsetUtil.UTF_8))) else None

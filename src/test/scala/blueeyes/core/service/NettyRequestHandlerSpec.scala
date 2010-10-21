@@ -1,4 +1,4 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
 import blueeyes.util.Future
@@ -7,16 +7,15 @@ import org.scalatest.mock.MockitoSugar
 import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest
-import blueeyes.core.service._
 import org.jboss.netty.channel._
 import org.mockito.Mockito.{when, times}
 import org.jboss.netty.util.CharsetUtil
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
-import blueeyes.core.service.MimeTypes._
-import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
+import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
+import MimeTypes._
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
-  private val handler       = mock[(Map[Symbol, String], HttpRequest[String]) => Future[HttpResponse[String]]]
+  private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
@@ -30,11 +29,10 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   "write OK responce service when path is match" in {
     val event  = mock[MessageEvent]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
-    val future = new Future[HttpResponse[String]]()
-    future.deliver(response)
+    val future       = new Future[HttpResponse[String]]().deliver(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
-    when(handler.apply(Map('adId -> "1"), Converters.fromNettyRequest(nettyRequest, transcoder))).thenReturn(future, future)
+    when(handler.apply(Converters.fromNettyRequest(nettyRequest, Map('adId -> "1"), transcoder))).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
     when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNettyResponse(response, transcoder))))).thenReturn(channelFuture, channelFuture)
 

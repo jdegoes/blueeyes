@@ -1,16 +1,14 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.ChannelBuffers
-import blueeyes.core.service._
-import blueeyes.core.service.HttpVersions._
 import org.jboss.netty.util.CharsetUtil;
 import scala.collection.JavaConversions._
-import blueeyes.core.service.MimeTypes._
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
 import Converters._
-
+import HttpVersions._
+import MimeTypes._
 
 class ConvertersSpec extends Specification {
   private val transcoder = new DataTranscoderImpl(TextToTextBijection, text / html)
@@ -40,11 +38,11 @@ class ConvertersSpec extends Specification {
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
-    val request = fromNettyRequest(nettyRequest, transcoder)
+    val request = fromNettyRequest(nettyRequest, Map('pathParam1 -> "value"), transcoder)
     
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
-    request.parameters  mustEqual(Map("param1" -> "value1"))
+    request.parameters  mustEqual(Map('param1 -> "value1", 'pathParam1 -> "value"))
     request.headers     mustEqual(Map("retry-after" -> "1"))
     request.content     mustEqual(Some("12"))
     request.version     mustEqual(`HTTP/1.0`)

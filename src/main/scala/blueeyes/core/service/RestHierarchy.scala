@@ -4,13 +4,13 @@ import HttpMethods._
 import blueeyes.util.Future
 
 trait RestHierarchy[T] {
-  def hierarchy: List[(RestPathPattern, HttpMethod, (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]])]
+  def hierarchy: List[(RestPathPattern, HttpMethod, (HttpRequest[T]) => Future[HttpResponse[T]])]
 }
 
 trait RestHierarchyBuilder[T] extends RestHierarchy[T] {
   import scala.collection.mutable.{Stack, ArrayBuffer}
   
-  private type Handler[T] = (Map[Symbol, String], HttpRequest[T]) => Future[HttpResponse[T]]
+  private type Handler[T] = HttpRequest[T] => Future[HttpResponse[T]]
   
   private val pathStack: Stack[RestPathPattern] = new Stack[RestPathPattern].push(RestPathPattern.Root);
   private val _hierarchy: ArrayBuffer[(RestPathPattern, HttpMethod, Handler[T])] = new ArrayBuffer
