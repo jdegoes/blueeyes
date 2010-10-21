@@ -1,18 +1,18 @@
 package blueeyes.core.service
 
-import org.specs.Specification
-import blueeyes.util.Future
-import org.jboss.netty.handler.codec.http.{HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, HttpResponse => NettyHttpResponse}
 import org.scalatest.mock.MockitoSugar
-import blueeyes.util.Future
-import blueeyes.core.service.RestPathPatternImplicits._
+import org.specs.Specification
+import org.jboss.netty.handler.codec.http.{HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest
 import org.jboss.netty.channel._
-import org.mockito.Mockito.{when, times}
 import org.jboss.netty.util.CharsetUtil
+import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
+import blueeyes.util.Future
+import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
-import MimeTypes._
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.{HttpStatusCodes, HttpVersions, HttpMethods}
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]

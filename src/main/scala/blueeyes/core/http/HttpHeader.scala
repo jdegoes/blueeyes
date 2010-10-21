@@ -1,6 +1,9 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
-sealed trait HttpHeader extends Product2[String, String] { self =>
+import blueeyes.util.ProductPrefixUnmangler
+
+
+sealed trait HttpHeader extends Product2[String, String] with ProductPrefixUnmangler { self =>
   def _1 = productPrefix
   def _2 = value
   

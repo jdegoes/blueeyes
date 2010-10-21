@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 sealed trait HttpStatusCode {
   def name = productPrefix

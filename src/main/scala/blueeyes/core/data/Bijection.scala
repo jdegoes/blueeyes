@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import blueeyes.core.service.MimeType
+import blueeyes.core.http.MimeType
 
 trait Bijection[T, S] extends Function1[T, S] { self =>
   def apply(t: T): S

@@ -5,6 +5,8 @@ import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.{DataTranscoder}
+import blueeyes.core.http._
+
 import HttpHeaders._
 import HttpVersions._
 

@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 /* Language Ranges are used for the Accept-Language Http Header */
 

@@ -1,6 +1,7 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 import scala.util.matching.Regex
+import blueeyes.util.ProductPrefixUnmangler
 /*
 Usage: 
 

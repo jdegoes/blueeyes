@@ -1,12 +1,13 @@
 package blueeyes.core.service
 
+import java.net.URI
+import com.ning.http.client._
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.util.{Future}
-import java.net.URI
-import com.ning.http.client._
 import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
-import MimeTypes._
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
 
 class HttpServerNettySpec extends Specification{
   @volatile

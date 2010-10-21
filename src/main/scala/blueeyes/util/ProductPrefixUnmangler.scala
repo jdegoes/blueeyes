@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.util 
 
 trait ProductPrefixUnmangler extends Product {
  def unmangledName = unmangleName(productPrefix)

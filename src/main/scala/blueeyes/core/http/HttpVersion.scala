@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.core.http 
 
 sealed abstract class HttpVersion extends Product {
   override def toString = productPrefix

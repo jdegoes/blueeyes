@@ -1,4 +1,6 @@
-package blueeyes.core.service
+package blueeyes.core.http
+
+import blueeyes.util.ProductPrefixUnmangler
 
 sealed trait ConnectionToken extends ProductPrefixUnmangler {
   def value = unmangledName 

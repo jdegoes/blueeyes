@@ -4,6 +4,7 @@ import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.util.Future
+import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
 
 class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[String]{
   val serviceResponse = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some("context"), HttpVersions.`HTTP/1.1`)

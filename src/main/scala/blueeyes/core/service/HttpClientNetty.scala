@@ -1,6 +1,10 @@
 package blueeyes.core.service
 
-import HttpStatusCodeImplicits._
+import blueeyes.core.http.HttpStatusCodeImplicits._
+import blueeyes.core.http.HttpStatusCodes
+import blueeyes.core.http.HttpStatusCode
+import blueeyes.core.http.HttpMethods
+
 import blueeyes.core.data.{Bijection, DataTranscoder}
 import blueeyes.util.Future
 import com.ning.http.client.{ 

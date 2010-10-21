@@ -6,9 +6,12 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil;
 import scala.collection.JavaConversions._
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
+
 import Converters._
-import HttpVersions._
-import MimeTypes._
+import blueeyes.core.http.HttpVersions._
+import blueeyes.core.http.HttpMethods
+import blueeyes.core.http.HttpStatusCodes
+import blueeyes.core.http.MimeTypes._
 
 class ConvertersSpec extends Specification {
   private val transcoder = new DataTranscoderImpl(TextToTextBijection, text / html)

@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -38,6 +38,6 @@ trait HttpDateImplicits extends HttpDateTime {
   implicit def javaDate2HttpDateTime(javaDate: java.util.Date): HttpDateTime = {
     HttpDateConversion(new DateTime(javaDate)) 
   }
-
 }
+
 

@@ -1,9 +1,10 @@
-package blueeyes.core.service
+package blueeyes.core.http
+import blueeyes.util.ProductPrefixUnmangler
 
 /* For use in the Accept-Ranges Http Header */
 
 sealed trait RangeUnit extends ProductPrefixUnmangler{
-  def value: String = unmangledName 
+  def value: String = productPrefix 
   
   override def toString = value
 }

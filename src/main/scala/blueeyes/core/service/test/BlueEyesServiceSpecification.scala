@@ -1,12 +1,13 @@
 package blueeyes.core.service.test
 
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 import collection.mutable.Stack
 import util.DynamicVariable
-import blueeyes.core.service._
-import blueeyes.core.service.HttpVersions._
-import blueeyes.core.service.HttpMethods._
 import blueeyes.util.Future
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import blueeyes.core.service._
+import blueeyes.core.http.HttpVersions._
+import blueeyes.core.http.HttpMethods._
+import blueeyes.core.http.{HttpMethod, HttpVersion}
 
 trait BlueEyesServiceSpecification[T]  {
 

@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
-import HttpMethods._
+import blueeyes.core.http.HttpMethods._
+import blueeyes.core.http.{HttpMethod}
 import blueeyes.util.Future
 
 trait RestHierarchy[T] {

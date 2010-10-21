@@ -3,8 +3,9 @@ package blueeyes.core.service.test
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
-import blueeyes.core.service.HttpStatusCodes._
 import blueeyes.util.Future
+import blueeyes.core.http.HttpStatusCodes
+import blueeyes.core.http.HttpStatusCodes._
 
 class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
   val service = new SampleService()

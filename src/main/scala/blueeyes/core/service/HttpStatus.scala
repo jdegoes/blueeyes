@@ -1,5 +1,7 @@
 package blueeyes.core.service
 
+import blueeyes.core.http.{HttpStatusCode}
+
 case class HttpStatus(code: HttpStatusCode, reason: String)
 object HttpStatus {
   def apply(code: HttpStatusCode) = new HttpStatus(code, code.defaultMessage)

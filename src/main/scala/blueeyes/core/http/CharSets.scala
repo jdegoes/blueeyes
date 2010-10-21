@@ -1,4 +1,7 @@
-package blueeyes.core.service
+package blueeyes.core.http
+
+import blueeyes.util.ProductPrefixUnmangler
+
 /* From :
   IANA: 
   http://www.iana.org/assignments/character-sets

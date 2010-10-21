@@ -1,4 +1,4 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 import org.joda.time.DateTime
 

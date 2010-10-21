@@ -1,9 +1,10 @@
 package blueeyes.core.service
 
-import blueeyes.util.Future
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito.when
 import org.specs.Specification
+import blueeyes.util.Future
+import blueeyes.core.http.{HttpMethods}
 
 class RestPathHandlerSpec extends Specification with MockitoSugar {
   private val url         = "foo/bar"

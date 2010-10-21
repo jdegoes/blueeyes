@@ -1,10 +1,12 @@
 package blueeyes.core.service;
 
-import MimeTypes._
-import blueeyes.core.data.{Bijection, DataTranscoder}
-import blueeyes.util.Future
 import org.specs.Specification
 import org.specs.util._
+import blueeyes.core.data.{Bijection, DataTranscoder}
+import blueeyes.util.Future
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.HttpMethods
+import blueeyes.core.http.HttpStatusCodes
 
 class HttpClientSpec extends Specification {
   "Support get requests with status OK" in {
