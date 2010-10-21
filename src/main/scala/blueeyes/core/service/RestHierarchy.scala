@@ -18,6 +18,8 @@ trait RestHierarchyBuilder[T] extends RestHierarchy[T] {
   
   def hierarchy = _hierarchy.toList
   
+  def build = hierarchy
+  
   def path(path: RestPathPattern)(f: => Unit): Unit = {
     pathStack.push(path)
     
