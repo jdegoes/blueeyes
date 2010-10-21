@@ -75,12 +75,13 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
   }
 
-  class `Content-Length`(val value: String) extends HttpHeader {
+  class `Content-Length`(val length: Long) extends HttpHeader {
+    def value = length.toString
   }
   object `Content-Length` {
-    def apply(length: Long): `Content-Length` = new `Content-Length`(length.toString)
+    def apply(length: Long): `Content-Length` = new `Content-Length`(length)
     
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2.toLong) else None
   }
 
   class `Content-Type`(val value: String) extends HttpHeader 
