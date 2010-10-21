@@ -14,9 +14,15 @@ import blueeyes.core.http.HttpStatusCodes
 class HttpClientSpec extends Specification {
   val duration = 250
   val retries = 10
-
+  val skip = true
+  
+  def skipper(): () => Unit = skip match {
+    case true => skip("Will use Skalatra")
+    case _ => () => Unit
+  }
+  
   "Support GET requests with status OK" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -24,7 +30,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support GET requests with status Not Found" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/bogus"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -32,7 +38,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support GET requests with query params" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php?param1=a&param2=b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -41,7 +47,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support POST requests with query params" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php?param1=a&param2=b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -50,7 +56,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support POST requests with request params" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", parameters=Map('param1 -> "a", 'param2 -> "b")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -59,7 +65,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support POST requests with body" in {
-    skip("Will use Skalatra")
+    skipper()()
     val content = "Hello, world"
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content)))
     f.deliverTo((res: HttpResponse[String]) => {})
@@ -69,7 +75,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support POST requests with body and request params" in {
-    skip("Will use Skalatra")
+    skipper()()
     val content = "Hello, world"
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content), parameters=Map('param1 -> "a", 'param2 -> "b")))
     f.deliverTo((res: HttpResponse[String]) => {})
@@ -79,7 +85,7 @@ class HttpClientSpec extends Specification {
   }
 
   "Support GET requests with header" in {
-    skip("Will use Skalatra")
+    skipper()()
     val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
