@@ -27,8 +27,12 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
           }
 
           override def onThrowable(t: Throwable) {
-            t.printStackTrace
-            deliver(HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError)));
+            println(t.getMessage)
+            val httpStatus = HttpStatus(t match {
+              case _:java.net.ConnectException => HttpStatusCodes.NotFound
+              case _ => HttpStatusCodes.InternalServerError
+            })
+            deliver(HttpResponse[T](httpStatus));
           }
         })
     }
@@ -72,15 +76,16 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
       case _ => None
     }
 
-    // ("Content-Type", "text/javascript")
-    val newHeaders = request.headers ++ Map()
-//    val newHeaders = request.headers ++ Map(
-//      `Content-Type`((for (`Content-Type`(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType).asInstanceOf[MimeType]),
-//      `Content-Length`((for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
-//          transcode(request.content.getOrElse(0)).length)): _*
-//    )
-
-    //val contentType = 
+    val contentType: (String, String) = `Content-Type`(
+        (for (`Content-Type`(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType).asInstanceOf[MimeType])
+    val contentLength: (String, String) = `Content-Length`(
+        (for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
+            transcode(request.content.getOrElse(transcode.unapply(""))).length))
+         
+    val newHeaders = request.headers ++ Map(
+        contentType,
+        contentLength
+    )
 
     for (pair <- newHeaders; r <- requestBuilder)
       yield r.setHeader(pair._1, pair._2)
