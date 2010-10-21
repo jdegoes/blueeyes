@@ -72,11 +72,16 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath, newQueryParams, origURI.getFragment).toString
       
     var requestBuilder = request.method match {
+      case HttpMethods.CONNECT => Some(new AsyncHttpClient().prepareConnect(uri))
+      case HttpMethods.DELETE => Some(new AsyncHttpClient().prepareDelete(uri))
       case HttpMethods.GET => Some(new AsyncHttpClient().prepareGet(uri))
+      case HttpMethods.HEAD => Some(new AsyncHttpClient().prepareHead(uri))
+      case HttpMethods.OPTIONS => Some(new AsyncHttpClient().prepareOptions(uri))
       case HttpMethods.POST => Some(setBody(new AsyncHttpClient().preparePost(uri)))
       case HttpMethods.PUT => Some(setBody(new AsyncHttpClient().preparePut(uri)))
-      case HttpMethods.DELETE => Some(new AsyncHttpClient().prepareDelete(uri))
-      case HttpMethods.OPTIONS => Some(new AsyncHttpClient().prepareOptions(uri))
+      // TODO - CUSTOM
+      // TODO - PATCH
+      // TODO - TRACE
       case _ => None
     }
 

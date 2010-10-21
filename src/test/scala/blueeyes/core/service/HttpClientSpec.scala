@@ -92,6 +92,22 @@ class HttpClientSpec extends Specification {
     f.value.get.content.get.trim must equalIgnoreSpace("Fooblahblah: washere")
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
+
+  "Support HEAD requests" in {
+    skipper()()
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.HEAD, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+  }
+
+  "Support CONNECT requests" in {
+    skipper()()
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.CONNECT, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+  }
 }
 
 class HttpClientNettyString extends HttpClientNetty[String] with String2StringTranscoder
