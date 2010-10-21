@@ -1,6 +1,7 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
+import scala.util.matching.Regex
 
 /* From :
   IANA: 
@@ -14,11 +15,37 @@ sealed trait CharSet {
 }
 
 object CharSets {
+
+  def parseCharSets(inString: String): Array[CharSet] = {
+    def CharSetRegex = new Regex("""([a-zA-Z]\-_)+""")
+
+    var outCharSets: Array[CharSet] = inString.split(",").map(_.trim)
+        .flatMap(CharSetRegex findFirstIn _)
+        .map ( charSet =>  charSet match {
+            case "US-ASCII" => `US-ASCII`
+            case "ISO-8859-1" => `ISO-8859-1`
+            case "ISO-8859-2" => `ISO-8859-2`
+            case "ISO-8859-3" => `ISO-8859-3`
+            case "ISO-8859-4" => `ISO-8859-4`
+            case "ISO-8859-5" =>  `ISO-8859-5`
+            case "ISO-8859-6" =>  `ISO-8859-6`
+            case "ISO-8859-7" =>  `ISO-8859-7`
+            case "ISO-8859-8" =>  `ISO-8859-8`
+            case "ISO-8859-9" =>  `ISO-8859-9`
+            case "ISO-8859-10" =>  `ISO-8859-10`
+            case _ => new CustomCharSet(charSet)
+          }
+        )
+    return outCharSets
+  }
+
   trait GenericCharSet extends ProductPrefixUnmangler with CharSet{
     def charName = unmangledName 
   }
 
   sealed abstract class StandardCharSet(val aliases: List[String]) extends GenericCharSet 
+  
+  /* Probably we should include some standard unicode fonts as well */
 
   case object `US-ASCII` extends StandardCharSet("iso-ir-6" :: "ANSI_X3.4-1986" :: "ISO_646.irv:1991" :: "ASCII" :: "ISO646-US" :: "US-ASCII" :: "us" :: "IBM367" :: "cp367" :: "csASCII" :: Nil)
 
@@ -41,5 +68,10 @@ object CharSets {
   case object `ISO-8859-9` extends StandardCharSet("iso-ir-148" :: "ISO_8859-9" :: "ISO-8859-9" :: "latin5" :: "l5" :: "csISOLatin5" :: Nil)
 
   case object `ISO-8859-10` extends StandardCharSet("iso-ir-157" :: "l6" :: "ISO_8859-10" :: "csISOLatin6" :: "latin6" :: Nil)
+
+  sealed case class CustomCharSet(override val value: String) extends StandardCharSet(value :: Nil) {
+    override def toString = value;
+  }
+
 }
 
