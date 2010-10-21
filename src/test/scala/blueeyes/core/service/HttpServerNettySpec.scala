@@ -1,18 +1,16 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
-import blueeyes.core.service._
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.core.service.{HttpResponse, HttpRequest, RestHierarchyBuilder}
 import blueeyes.util.{Future}
 import java.net.URI
 import com.ning.http.client._
-import blueeyes.core.service.MimeTypes._
 import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
+import MimeTypes._
 
 class HttpServerNettySpec extends Specification{
   @volatile
-  private var port = 8080
+  private var port = 8585
   @volatile
   private var server: Option[TestServer] = None
   "HttpServer" should{
@@ -33,7 +31,6 @@ class HttpServerNettySpec extends Specification{
         }
       }while(!success)
 
-      println("PORT=" + port)
       server = Some(testServer)
     }
 
@@ -67,13 +64,8 @@ class TestServer extends TestService with HttpServerNetty[String]{
 class TestService extends RestHierarchyBuilder[String]{
   path("bar/'adId/adCode.html"){get(new Handler())}
 }
-class Handler extends Function2[Map[Symbol, String], HttpRequest[String], Future[HttpResponse[String]]]{
-  def apply(params: Map[Symbol, String], request: HttpRequest[String]) = {
-    val future = new Future[HttpResponse[String]]()
-    future.deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.Http_1_1))
-
-    future
-  }
+class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
+  def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
 }
 
 object Context{

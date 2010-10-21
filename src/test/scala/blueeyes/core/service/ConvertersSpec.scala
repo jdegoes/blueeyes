@@ -1,37 +1,32 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.ChannelBuffers
-import blueeyes.core.service._
-import org.jboss.netty.util.CharsetUtil
-import java.lang.String
-import blueeyes.core.data.{DataTranscoderImpl, Bijection};
+import org.jboss.netty.util.CharsetUtil;
 import scala.collection.JavaConversions._
-import blueeyes.core.service.MimeTypes._
+import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
 import Converters._
+import HttpVersions._
+import MimeTypes._
 
 class ConvertersSpec extends Specification {
-  private val textToInt = new DataTranscoderImpl(new Bijection[String, Int]{
-    def unapply(s: Int) = s.toString
-    def apply(t: String) = t.toInt
-  }, text / html)
-
+  private val transcoder = new DataTranscoderImpl(TextToTextBijection, text / html)
   "convert netty method to service method" in {
-    fromNetty(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
+    fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
   "convert netty version to service version" in {
-    fromNetty(NettyHttpVersion.HTTP_1_1) mustEqual(HttpVersions.Http_1_1)
+    fromNettyVersion(NettyHttpVersion.HTTP_1_1) mustEqual(`HTTP/1.1`)
   }
   "convert service version to netty version" in {
-    toNetty(HttpVersions.Http_1_1) mustEqual(NettyHttpVersion.HTTP_1_1)
+    toNettyVersion(`HTTP/1.1`) mustEqual(NettyHttpVersion.HTTP_1_1)
   }
   "convert service HttpStatus to netty HttpStatus" in {
-    toNetty(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
+    toNettyStatus(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
   }
   "convert service HttpResponse to netty HttpResponse" in {
-    val response      = HttpResponse[Int](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(12), HttpVersions.Http_1_0)
-    val nettyResponse = toNetty(response, textToInt)
+    val response      = HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some("12"), `HTTP/1.0`)
+    val nettyResponse = toNettyResponse(response, transcoder)
 
     nettyResponse.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     nettyResponse.getContent.toString(CharsetUtil.UTF_8)  mustEqual("12")
@@ -43,13 +38,13 @@ class ConvertersSpec extends Specification {
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
-    val request = fromNetty(nettyRequest, textToInt.transcode)
+    val request = fromNettyRequest(nettyRequest, Map('pathParam1 -> "value"), transcoder)
     
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
-    request.parameters  mustEqual(Map("param1" -> "value1"))
+    request.parameters  mustEqual(Map('param1 -> "value1", 'pathParam1 -> "value"))
     request.headers     mustEqual(Map("retry-after" -> "1"))
-    request.content     mustEqual(Some(12))
-    request.version     mustEqual(HttpVersions.Http_1_0)
+    request.content     mustEqual(Some("12"))
+    request.version     mustEqual(`HTTP/1.0`)
   }
 }

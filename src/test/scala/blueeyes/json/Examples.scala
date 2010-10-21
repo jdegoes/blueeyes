@@ -50,7 +50,7 @@ object Examples extends Specification {
 
   "Remove example" in {
     val json = parse(person) remove { _ == JField("name", "Marilyn") }
-    compact(render(json \\ "name")) mustEqual """Joe"""
+    compact(render(json \\ "name")) mustEqual "\"Joe\""
   }
 
   "Queries on person example" in {

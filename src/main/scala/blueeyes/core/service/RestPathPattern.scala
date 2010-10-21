@@ -14,7 +14,8 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   def elementPatterns: List[PathElement]
   
   def isDefinedAt(s: String) = {
-    var elementStrings = s.split('/').toList
+    var index = if (s.startsWith("/")) 1 else 0
+    var elementStrings = s.substring(index).split('/').toList
     
     elementPatterns.length == elementStrings.length && elementPatterns.zip(elementStrings).takeWhile(t => t._1.isDefinedAt(t._2)).length == elementPatterns.length
   }

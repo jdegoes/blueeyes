@@ -6,7 +6,7 @@ import org.scalatest.mock.MockitoSugar
 import blueeyes.util.Future
 
 class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
-  private val handler       = mock[(Map[Symbol, String], HttpRequest[Any]) => Future[HttpResponse[Any]]]
+  private val handler       = mock[HttpRequest[Any] => Future[HttpResponse[Any]]]
   private val service       = new TestService
   private val netsedService = new TestNestedService
 

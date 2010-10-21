@@ -45,7 +45,7 @@ class HttpClientSpec extends Specification {
 
   "Support POST requests with request params" in {
     skip("Will use Skalatra")
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", parameters=Map("param1" -> "a", "param2" -> "b")))
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", parameters=Map('param1 -> "a", 'param2 -> "b")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(20, new Duration(500))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -55,7 +55,7 @@ class HttpClientSpec extends Specification {
   "Support POST requests with body" in {
     skip("Will use Skalatra")
     val content = "Hello, world"
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content), headers=Map(ContentLength(content.length))))
+    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content), headers=Map(`Content-Length`(content.length))))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(20, new Duration(500))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))

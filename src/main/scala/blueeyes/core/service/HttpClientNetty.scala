@@ -27,6 +27,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
           }
 
           override def onThrowable(t: Throwable) {
+            t.printStackTrace
             deliver(HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError)));
           }
         })
@@ -49,7 +50,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
      */
     def setParameters(requestBuilder: AsyncHttpClient#BoundRequestBuilder): AsyncHttpClient#BoundRequestBuilder = {
         requestBuilder.setParameters(request.parameters.foldLeft(new FluentStringsMap()) { (fsMap, pair) =>
-          fsMap.add(pair._1, pair._2)
+          fsMap.add(pair._1.toString, pair._2)
         })
     }
 
@@ -74,8 +75,9 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     // ("Content-Type", "text/javascript")
     val newHeaders = request.headers ++ Map()
 //    val newHeaders = request.headers ++ Map(
-//      ContentType((for (ContentType(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType)),
-//      ContentLength(): _*
+//      `Content-Type`((for (`Content-Type`(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType).asInstanceOf[MimeType]),
+//      `Content-Length`((for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
+//          transcode(request.content.getOrElse(0)).length)): _*
 //    )
 
     //val contentType = 

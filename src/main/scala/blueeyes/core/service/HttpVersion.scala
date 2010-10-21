@@ -1,10 +1,12 @@
 package blueeyes.core.service
 
-sealed case class HttpVersion(value: String) {
-  override def toString = value
+sealed abstract class HttpVersion extends Product {
+  override def toString = productPrefix
+  
+  def value = productPrefix
 }
 
 object HttpVersions {
-  object Http_1_0 extends HttpVersion("HTTP/1.0")
-  object Http_1_1 extends HttpVersion("HTTP/1.1")
+  case object `HTTP/1.0` extends HttpVersion
+  case object `HTTP/1.1` extends HttpVersion
 }

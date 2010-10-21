@@ -12,6 +12,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val netty       = "org.jboss.netty"             % "netty"             % "3.2.2.Final" % "compile"
   val async       = "com.ning"                    % "async-http-client" % "1.1.0"       % "compile"
   val mongo       = "org.mongodb"                 % "mongo-java-driver" % "2.1"         % "compile"
+  val jodatime    = "joda-time"                   % "joda-time"         % "1.6.2"       % "compile"
 
   override def managedStyle = ManagedStyle.Maven
 
@@ -37,5 +38,6 @@ trait Repositories {
   val scalasnapshots  = MavenRepository("Scala-tools.org Repository", "http://scala-tools.org/repo-snapshots/")
   val jbossreleases   = MavenRepository("JBoss Releases",             "http://repository.jboss.org/nexus/content/groups/public/")
   val sonatyperelease = MavenRepository("Sonatype Releases",          "http://oss.sonatype.org/content/repositories/releases")
-  val nexusscalatools = MavenRepository("Nexus Scala Tols",           "http://nexus.scala-tools.org/content/repositories/releases")
+  val nexusscalatools = MavenRepository("Nexus Scala Tools",          "http://nexus.scala-tools.org/content/repositories/releases")
+  val mavenrepo1      = MavenRepository("Maven Repo 1",               "http://repo1.maven.org/maven2/")
 }

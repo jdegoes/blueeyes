@@ -137,7 +137,7 @@ object JsonAST {
       case _ => false
     }
     
-    /** Gets the specified value using JSON syntax.
+    /** Gets the specified value located at the terminal of the specified path.
      * <p>
      * Example:<pre>
      * json.get("foo[0].bar.baz[123]")
@@ -200,12 +200,21 @@ object JsonAST {
      */
     def map(f: JValue => JValue): JValue = {
       def rec(v: JValue): JValue = v match {
-        case JObject(l) => f(JObject(l.map(f => rec(f) match {
-          case x: JField => x
-          case x => JField(f.name, x)
+        case JObject(l) => f(JObject(l.flatMap(f => rec(f) match {
+          case JNothing => Nil
+          
+          case x: JField => x :: Nil
+          
+          case x => JField(f.name, x) :: Nil
         })))
-        case JArray(l) => f(JArray(l.map(rec)))
-        case JField(name, value) => f(JField(name, rec(value)))
+        case JArray(l) => f(JArray(l.flatMap(e => rec(e) match {
+          case JNothing => Nil
+          case x => x :: Nil
+        })))
+        case JField(name, value) => rec(value) match {
+          case JNothing => JNothing
+          case x => f(JField(name, x))
+        }
         case x => f(x)
       }
       rec(this)
@@ -256,6 +265,9 @@ object JsonAST {
      */
     def filter(p: JValue => Boolean): List[JValue] =
       fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
+
+    def flatten: List[JValue] =
+      fold(List[JValue]())((acc, e) => e :: acc).reverse
 
     /** Concatenate with another JSON.
      * This is a concatenation monoid: (JValue, ++, JNothing)
