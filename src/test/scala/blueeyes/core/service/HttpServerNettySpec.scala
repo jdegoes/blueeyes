@@ -1,14 +1,12 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
-import blueeyes.core.service._
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.core.service.{HttpResponse, HttpRequest, RestHierarchyBuilder}
 import blueeyes.util.{Future}
 import java.net.URI
 import com.ning.http.client._
-import blueeyes.core.service.MimeTypes._
 import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
+import MimeTypes._
 
 class HttpServerNettySpec extends Specification{
   @volatile
@@ -67,12 +65,7 @@ class TestService extends RestHierarchyBuilder[String]{
   path("bar/'adId/adCode.html"){get(new Handler())}
 }
 class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
-  def apply(request: HttpRequest[String]) = {
-    val future = new Future[HttpResponse[String]]()
-    future.deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
-
-    future
-  }
+  def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
 }
 
 object Context{

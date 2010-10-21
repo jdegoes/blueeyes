@@ -1,13 +1,12 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
-import blueeyes.core.service._
 import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import scala.collection.JavaConversions._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.{DataTranscoder}
-import blueeyes.core.service.HttpHeaders._
-import blueeyes.core.service.HttpVersions._
+import HttpHeaders._
+import HttpVersions._
 
 object Converters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {

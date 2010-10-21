@@ -1,16 +1,14 @@
-package blueeyes.core.service.server
+package blueeyes.core.service
 
 import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.ChannelBuffers
-import blueeyes.core.service._
-import blueeyes.core.service.HttpVersions._
 import org.jboss.netty.util.CharsetUtil;
 import scala.collection.JavaConversions._
-import blueeyes.core.service.MimeTypes._
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
 import Converters._
-
+import HttpVersions._
+import MimeTypes._
 
 class ConvertersSpec extends Specification {
   private val transcoder = new DataTranscoderImpl(TextToTextBijection, text / html)
