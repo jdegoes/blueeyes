@@ -32,7 +32,7 @@ class Future[T] {
   /** Installs the specified canceler on the future. Under ordinary
    * circumstances, the future will not be canceled unless all cancelers
    * return true. If the future is already done, this method has no effect.
-   * [p]
+   * <p>
    * This method does not normally need to be called. It's provided primarily
    * for the implementation of future primitives.
    */
@@ -44,7 +44,7 @@ class Future[T] {
 
   /** Installs a handler that will be called if and only if the future is
    * canceled.
-   * [p]
+   * <p>
    * This method does not normally need to be called, since there is no
    * difference between a future being canceled and a future taking an
    * arbitrarily long amount of time to evaluate. It's provided primarily
@@ -60,7 +60,7 @@ class Future[T] {
 
   /** Attempts to cancel the future. This may succeed only if the future is
    * not already delivered, and if all cancel conditions are satisfied.
-   * [p]
+   * <p>
    * If a future is canceled, the result will never be delivered.
    *
    * @return true if the future is canceled, false otherwise.
@@ -119,16 +119,16 @@ class Future[T] {
   /** Maps the result of this future to another future, and returns a future
    * of the result of that future. Useful when chaining together multiple
    * asynchronous operations that must be completed sequentially.
-   * [p]
-   * [pre]
-   * [code]
+   * <p>
+   * <pre>
+   * <code>
    * urlLoader.load("config.xml").flatMap(xml =>
    *   urlLoader.load(parse(xml).mediaUrl)
    * ).deliverTo(loadedMedia =>
    *   container.add(loadedMedia)
    * )
-   * [/code]
-   * [/pre]
+   * </code>
+   * </pre>
    */
   def flatMap[S](f: T => Future[S]): Future[S] = {
     var fut: Future[S] = new Future
@@ -176,16 +176,14 @@ class Future[T] {
 
     def deliverZip = {
       if (f1.isDelivered && f2.isDelivered) {
-        zipped.deliver(
-          (f1.value.get, f2.value.get)
-        )
+        zipped.deliver((f1.value.get, f2.value.get))
       }
     }
 
     f1.deliverTo(v => deliverZip)
     f2.deliverTo(v => deliverZip)
 
-    zipped.allowCancelOnlyIf((t: Unit) => {f1.cancel || f2.cancel})
+    zipped.allowCancelOnlyIf { _ => f1.cancel || f2.cancel }
 
     f1.ifCanceled(zipped.forceCancel)
     f2.ifCanceled(zipped.forceCancel)
@@ -195,17 +193,11 @@ class Future[T] {
 
   /** Retrieves the value of the future, as an option.
    */
-  def value: Option[T] = {
-    _result
-  }
+  def value: Option[T] = _result
 
-  def toOption: Option[T] = {
-    value
-  }
+  def toOption: Option[T] = value
 
-  def toList: List[T] = {
-    value.toList
-  }
+  def toList: List[T] = value.toList
 
   private def forceCancel(error: Option[Error]): Future[T] = {
     if (!_isCanceled) {
