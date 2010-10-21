@@ -49,10 +49,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(CharSets.parseCharSets(keyValue._2)) else None
   }
 
-  class `Accept-Encoding`(val value: String) extends HttpHeader 
+  class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeader  {
+    def value = encodings.map(_.value).mkString(",")
+  }
   object `Accept-Encoding` {
-    def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings.map(_.value).mkString(","))
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(keyValue._2) else None
+    def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
   class `Accept-Language`(val value: String) extends HttpHeader 
@@ -406,7 +408,7 @@ trait HttpHeaderImplicits {
   implicit def tuple2HttpHeader(keyValue: (String, String)): HttpHeader = keyValue match {
     case Accept(value) => new Accept(value: _*)
     case `Accept-Charset`(value) => new `Accept-Charset`(value: _*)
-    case `Accept-Encoding`(value) => new `Accept-Encoding`(value)
+    case `Accept-Encoding`(value) => new `Accept-Encoding`(value: _*)
     case `Accept-Language`(value) => new `Accept-Language`(value)
     case `Accept-Ranges`(value) => new `Accept-Ranges`(value)
     case Authorization(value) => new Authorization(value)

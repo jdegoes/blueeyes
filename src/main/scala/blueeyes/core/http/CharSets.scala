@@ -17,7 +17,7 @@ sealed trait CharSet {
 object CharSets {
 
   def parseCharSets(inString: String): Array[CharSet] = {
-    def CharSetRegex = new Regex("""(a-zA-Z\-_)""")
+    def CharSetRegex = new Regex("""([a-zA-Z]\-_)+""")
 
     var outCharSets: Array[CharSet] = inString.split(",").map(_.trim)
         .flatMap(CharSetRegex findFirstIn _)
