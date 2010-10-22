@@ -58,13 +58,13 @@ sealed case class MongoSimpleQuery(lhs: JPath, operator: MongoQueryOperator, rhs
   
   def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
   
-  def commutesWith(that: MongoSimpleQuery): Boolean = self.jpath != that.jpath
+  def commutesWith(that: MongoSimpleQuery): Boolean = self.lhs != that.lhs
   
-  def combinesWith(that: MongoSimpleQuery): Boolean = (self.jpath == that.jpath)
+  def combinesWith(that: MongoSimpleQuery): Boolean = (self.lhs == that.lhs)
   
   def combine (that: MongoSimpleQuery): MongoSimpleQuery = error("not implemented")
   
-  def * (that: MongoSimpleQuery): MongoSimpleQuery = combine
+  def * (that: MongoSimpleQuery): MongoSimpleQuery = combine(that)
   
   def unary_! : MongoQuery = MongoSimpleQuery(lhs, !operator, rhs)
 }
