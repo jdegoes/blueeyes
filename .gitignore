@@ -12,3 +12,4 @@ GTAGS
 *#*#
 .scala_dependencies
 classes
+*.swp
