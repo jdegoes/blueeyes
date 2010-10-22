@@ -89,13 +89,13 @@ case class MongoQueryBuilder(jpath: JPath) {
   
   def !== [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
   
-  def > (value: Long): MongoFieldQuery = error("not implemented")
+  def > [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
   
-  def >= (value: Long): MongoFieldQuery = error("not implemented")
+  def >= [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
   
-  def < (value: Long): MongoFieldQuery = error("not implemented")
+  def < [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
   
-  def <= (value: Long): MongoFieldQuery = error("not implemented")
+  def <= [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
   
   def in [T <: MongoPrimitive[T]](items: T*): MongoFieldQuery = error("not implemented")
   
