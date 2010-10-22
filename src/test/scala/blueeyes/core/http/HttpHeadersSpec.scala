@@ -11,5 +11,4 @@ class HttpHeadersSpec extends Specification {
     MimeTypes.parseMimeTypes(mimeTypeExample).map(_.value).mkString(", ") mustEqual mimeTypeExampleNoQ
   }
 
-
 }
