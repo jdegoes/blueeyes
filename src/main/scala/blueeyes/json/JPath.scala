@@ -26,7 +26,13 @@ sealed trait JPath extends Function1[JValue, JValue] { self =>
       case head :: tail => head match {
         case JPathField(name)  => extract0(tail, jvalue \ name)
         case JPathIndex(index) => extract0(tail, jvalue(index))
-        case JPathWildcard     => jvalue.children.flatMap(extract0(tail, _))
+        case JPathRegex(regex) => jvalue.children.flatMap { child => 
+          child match {
+            case JField(regex(name), value) => extract0(tail, value)
+            
+            case _ => Nil
+          }
+        }
       }
     }
   
@@ -51,13 +57,25 @@ sealed case class JPathField(name: String) extends JPathNode {
 sealed case class JPathIndex(index: Int) extends JPathNode {
   override def toString = "[" + index + "]"
 }
-case object JPathWildcard extends JPathNode {
-  override def toString = "*"
+sealed case class JPathRegex(regex: Regex) extends JPathNode {
+  override def toString = "/" + regex.pattern.toString + "/"
+  
+  override def hashCode = toString.hashCode
+  
+  override def equals(that: Any): Boolean = that match {
+    case x: JPathRegex => this.toString == that.toString
+    
+    case _ => false
+  }
 }
 
 object JPath {
-  private val IndexPattern = """\[(\d+)\]""".r
+  private val IndexPattern = """^\[(\d+)\]$""".r
+  private val WildPattern  = """^([*])$""".r
+  private val RegexPattern = """^/(.+)/([ixm]*)$""".r
+  
   private val NodePatterns = """\.|(?=\[\d+\])""".r
+  
   
   def apply(n: JPathNode*) = new JPath {
     lazy val nodes = n.toList
@@ -70,7 +88,14 @@ object JPath {
       case head :: tail =>
         (head match {
           case IndexPattern(index) => JPathIndex(index.toInt)
-          case "*" => JPathWildcard
+          
+          case WildPattern(star) => JPathRegex(".*".r)
+          
+          case RegexPattern(regex, flags)  => 
+            val prefix = Map("i" -> "(?i)", "x" -> "(?x)", "m" -> "(?m)").foldLeft("") { (str, rep) => (if (flags.contains(rep._1)) rep._2 else "") + str }
+            
+            JPathRegex(new Regex(prefix + regex))
+            
           case name => JPathField(name)
         }) :: parse0(tail)
     }

@@ -22,6 +22,8 @@ import _root_.org.specs.runner.{Runner, JUnit}
 
 import JsonAST._
 
+import scala.util.matching.Regex
+
 class JPathSpecTest extends Runner(JPathSpec) with JUnit
 
 object JPathSpec extends Specification {
@@ -35,6 +37,10 @@ object JPathSpec extends Specification {
   
   "Forgivingly parses initial field name without leading dot" in {
     JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
+  }
+  
+  "Accurately detects the wildcard operator" in {
+    JPath("foo.*").nodes mustEqual (JPathField("foo") :: JPathRegex(".*".r) :: Nil)
   }
 }
 
