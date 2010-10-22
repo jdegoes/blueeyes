@@ -115,10 +115,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(HttpDateData.HttpDateData(keyValue._2)) else None
   }
 
-  class Expect(val value: String) extends HttpHeader {
+  class Expect(val expectation: Expectation) extends HttpHeader {
+    def value = expectation.toString
   }
   object Expect {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect") Some(keyValue._2) else None
+    def apply(expectation: Expectation) = new Expect(expectation)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect") Some(Expectations.parseExpectations(keyValue._2)) else None
   }
 
   class From(val value: String) extends HttpHeader {
