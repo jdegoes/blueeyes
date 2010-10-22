@@ -78,8 +78,6 @@ sealed trait MongoSimpleQuery extends MongoQuery { self =>
   
   def lhs: JPath
   
-  def rhs: MongoPrimitive[_]
-  
   def combine (that: MongoSimpleQuery): MongoSimpleQuery
   
   def * (that: MongoSimpleQuery): MongoSimpleQuery = combine(that)
@@ -90,12 +88,20 @@ sealed trait MongoSimpleQuery extends MongoQuery { self =>
   
   def combinesWith(that: MongoSimpleQuery): Boolean = (self.lhs == that.lhs)
 }
+
 sealed case class MongoSimpleQuery1(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoSimpleQuery {
   override def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
   
   def combine (that: MongoSimpleQuery): MongoSimpleQuery = error("not implemented")
   
   def unary_! : MongoQuery = MongoSimpleQuery1(lhs, !operator, rhs)
+}
+sealed case class MongoSimpleQuery2(lhs: JPath, operator1: MongoQueryOperator, rhs1: MongoPrimitive[_], operator2: MongoQueryOperator, rhs2: MongoPrimitive[_]) extends MongoSimpleQuery {
+  override def query: JField = JField(lhs.path, JObject(JField(operator1.symbol, rhs1.toJValue) :: JField(operator2.symbol, rhs2.toJValue) :: Nil))
+  
+  def combine (that: MongoSimpleQuery): MongoSimpleQuery = error("not implemented")
+  
+  def unary_! : MongoQuery = MongoSimpleQuery2(lhs, !operator1, rhs1, !operator2, rhs2)
 }
 
 
