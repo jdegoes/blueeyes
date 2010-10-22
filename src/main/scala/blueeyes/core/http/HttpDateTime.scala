@@ -9,7 +9,7 @@ import java.util.Date;
 
 sealed trait HttpDateTime {
 
-  def storedDate: DateTime
+  def storedDate: DateTime  
    
   def rfc1123DateFormat: DateTimeFormatter = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZone(DateTimeZone.UTC)
 
@@ -19,25 +19,37 @@ sealed trait HttpDateTime {
 
 object HttpDateData {
 
-  case class HttpDateData (storedDate: DateTime) extends HttpDateTime {
+  def rfc1123DateFormat: DateTimeFormatter = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZone(DateTimeZone.UTC)
 
-    def apply(stringDate: String): HttpDateTime = new HttpDateData(rfc1123DateFormat.parseDateTime(stringDate))
-
+  case class HttpDateData (inDate: DateTime) extends HttpDateTime {
+    override def storedDate = inDate
   }
 
+  object HttpDateData {
+    def apply(stringDate: String): HttpDateTime = HttpDateData(rfc1123DateFormat.parseDateTime(stringDate))
+  }
+    
 }
 
-trait HttpDateImplicits extends HttpDateTime {
+trait HttpDateImplicits {
 
-  case class HttpDateConversion(storedDate: DateTime) extends HttpDateTime
+  //case class HttpDateConversion(storedDate: DateTime) extends HttpDateTime
 
   implicit def jodaDateTime2HttpDateTime(jodaDateTime: DateTime): HttpDateTime =  {
-    HttpDateConversion(jodaDateTime)
+    case class HttpDateConversionJoda(jodaTime: DateTime) extends HttpDateTime {
+      override def storedDate = jodaTime
+    }
+    return HttpDateConversionJoda(jodaDateTime)
   } 
 
   implicit def javaDate2HttpDateTime(javaDate: java.util.Date): HttpDateTime = {
-    HttpDateConversion(new DateTime(javaDate)) 
+    case class HttpDateConversionJava (javaTime: DateTime ) extends HttpDateTime {
+      override def storedDate = javaTime 
+    }
+    return HttpDateConversionJava(new DateTime(javaDate))
   }
 }
+
+object HttpDateImplicits extends HttpDateImplicits 
 
 

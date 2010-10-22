@@ -95,7 +95,6 @@ object HttpHeaders {
   }
   object `Content-Length` {
     def apply(length: Long): `Content-Length` = new `Content-Length`(length)
-    
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2.toLong) else None
   }
 
@@ -108,10 +107,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
 
-  class Date(val value: String) extends HttpHeader {
+  class Date(val httpDate: HttpDateTime) extends HttpHeader {
+    def value = httpDate.toString
   }
   object Date {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(keyValue._2) else None
+    def apply(httpDate: HttpDateTime) = new Date(httpDate)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(HttpDateData.HttpDateData(keyValue._2)) else None
   }
 
   class Expect(val value: String) extends HttpHeader {
