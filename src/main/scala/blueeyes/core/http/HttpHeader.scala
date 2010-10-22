@@ -57,10 +57,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
-  class `Accept-Language`(val value: String) extends HttpHeader 
+  class `Accept-Language`(val languageRanges: LanguageRange*) extends HttpHeader {
+    def value = languageRanges.map(_.value).mkString(",");
+  }
   object `Accept-Language` {
-    def apply(languageRange: LanguageRange*) = new `Accept-Language`(languageRange.map(_.value).mkString(","));
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(keyValue._2) else None
+    def apply(languageRanges: LanguageRange*) = new `Accept-Language`(languageRanges: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
   class `Accept-Ranges`(val value: String) extends HttpHeader 
@@ -71,7 +73,7 @@ object HttpHeaders {
 
   class Authorization(val value: String) extends HttpHeader 
   object Authorization {
-    def appply(credentials: String) = new Authorization(credentials) // can we do better here?
+    def appply(credentials: String) = new Authorization(credentials)  // can we do better here?
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
   }
 
@@ -409,7 +411,7 @@ trait HttpHeaderImplicits {
     case Accept(value) => new Accept(value: _*)
     case `Accept-Charset`(value) => new `Accept-Charset`(value: _*)
     case `Accept-Encoding`(value) => new `Accept-Encoding`(value: _*)
-    case `Accept-Language`(value) => new `Accept-Language`(value)
+    case `Accept-Language`(value) => new `Accept-Language`(value: _*)
     case `Accept-Ranges`(value) => new `Accept-Ranges`(value)
     case Authorization(value) => new Authorization(value)
     case Connection(value) => new Connection(value)

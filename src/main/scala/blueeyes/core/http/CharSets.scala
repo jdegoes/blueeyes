@@ -1,7 +1,7 @@
 package blueeyes.core.http
 
-import blueeyes.util.ProductPrefixUnmangler
 import scala.util.matching.Regex
+import blueeyes.util.ProductPrefixUnmangler
 
 /* From :
   IANA: 
