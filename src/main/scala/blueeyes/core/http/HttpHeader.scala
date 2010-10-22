@@ -101,7 +101,6 @@ object HttpHeaders {
   class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeader {
     def value = mimeTypes.map(_.value).mkString(";")
   }
-
   object `Content-Type` {
     def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes :_*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
@@ -131,11 +130,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from") Some(Emails.parseEmails(keyValue._2)) else None
   }
 
-  /* TO DO */
-  class Host(val value: String) extends HttpHeader {
+  class Host(val domain: HttpDomain) extends HttpHeader {
+    def value = domain.toString
   }
   object Host {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host") Some(keyValue._2) else None
+    def apply(domain: HttpDomain) = new Host(domain)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host") Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
   }
 
   class `If-Match`(val tags: EntityTag) extends HttpHeader {
@@ -181,10 +181,12 @@ object HttpHeaders {
       Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
-  class `Max-Forwards`(val value: String) extends HttpHeader {
+  class `Max-Forwards`(val maxf: Long) extends HttpHeader {
+    def value = maxf.toString 
   }
   object `Max-Forwards` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards") Some(keyValue._2) else None
+    def apply(maxf: Long) = new `Max-Forwards`(maxf)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards") Some(keyValue._2.toLong) else None
   }
 
   class Pragma(val value: String) extends HttpHeader {
@@ -205,10 +207,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "range") Some(keyValue._2) else None
   }
 
-  class Referer(val value: String) extends HttpHeader {
+  class Referer(val domain: HttpDomain) extends HttpHeader {
+    def value = domain.toString
   }
   object Referer {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer") Some(keyValue._2) else None
+    def apply(domain: HttpDomain) = new Referer(domain)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer") Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
   }
 
   class TE(val value: String) extends HttpHeader {
