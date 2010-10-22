@@ -17,14 +17,20 @@ object MongoQueryOperators {
     
     override def toString = symbol
   }
-  case object $gt     extends MongoQueryOperator  { def unary_! = $lte; }
-  case object $gte    extends MongoQueryOperator  { def unary_! = $lt; }
-  case object $lt     extends MongoQueryOperator  { def unary_! = $gte; }
-  case object $lte    extends MongoQueryOperator  { def unary_! = $gt; }
-  case object $eq     extends MongoQueryOperator { def unary_! = $ne; } // This is a virtual operator, it's not real!!!!
-  case object $ne     extends MongoQueryOperator { def unary_! = $eq; }
-  case object $in     extends MongoQueryOperator { def unary_! = $nin; }
-  case object $nin    extends MongoQueryOperator { def unary_! = $in; }
+  sealed trait MongoQueryOperatorBound extends MongoQueryOperator
+  case object $gt   extends MongoQueryOperatorBound  { def unary_! = $lte; }
+  case object $gte  extends MongoQueryOperatorBound  { def unary_! = $lt; }
+  case object $lt   extends MongoQueryOperatorBound  { def unary_! = $gte; }
+  case object $lte  extends MongoQueryOperatorBound  { def unary_! = $gt; }
+  
+  sealed trait MongoQueryOperatorEquality extends MongoQueryOperator
+  case object $eq extends MongoQueryOperatorEquality { def unary_! = $ne; } // This is a virtual operator, it's not real!!!!
+  case object $ne extends MongoQueryOperatorEquality { def unary_! = $eq; }
+  
+  sealed trait MongoQueryOperatorContainment extends MongoQueryOperator
+  case object $in   extends MongoQueryOperatorContainment { def unary_! = $nin; }
+  case object $nin  extends MongoQueryOperatorContainment { def unary_! = $in; }
+  
   case object $mod    extends MongoQueryOperator { def unary_! = error("The $mod operator does not have a negation"); }
   case object $all    extends MongoQueryOperator { def unary_! = error("The $all operator does not have a negation"); }
   case object $size   extends MongoQueryOperator { def unary_! = error("The $size operator does not have a negation"); }
@@ -32,6 +38,8 @@ object MongoQueryOperators {
   case object $type   extends MongoQueryOperator { def unary_! = error("The $type operator does not have a negation"); }
   case object $or     extends MongoQueryOperator { def unary_! = error("The $or operator does not have a negation"); }
 }
+
+import MongoQueryOperators._
 
 trait MongoQuery { self =>
   def query: JValue
@@ -45,21 +53,25 @@ trait MongoQuery { self =>
   def || (that: MongoQuery): MongoQuery = error("not implemented")
 }
 
-trait MongoSimpleQuery extends MongoQuery { self =>
+sealed case class MongoSimpleQuery(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoQuery { self =>
   def elements = self :: Nil
   
-  def jpath: JPath
+  def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
+  
+  def commutesWith(that: MongoSimpleQuery): Boolean = self.jpath != that.jpath
   
   def combinesWith(that: MongoSimpleQuery): Boolean = (self.jpath == that.jpath)
   
-  def * (that: MongoSimpleQuery): MongoSimpleQuery
+  def combine (that: MongoSimpleQuery): MongoSimpleQuery = error("not implemented")
   
-  def unary_! : MongoQuery = error("not implemented")
+  def * (that: MongoSimpleQuery): MongoSimpleQuery = combine
+  
+  def unary_! : MongoQuery = MongoSimpleQuery(lhs, !operator, rhs)
 }
 
 
 sealed trait MongoPrimitive[T] {
-  def toMongoValue: Any
+  def toJValue: JValue
 }
 
 sealed class MongoPrimitiveWitness[T]
@@ -99,7 +111,7 @@ trait MongoQueryImplicits {
   implicit def jpathToMongoQueryBuilder(jpath: JPath): MongoQueryBuilder = MongoQueryBuilder(jpath)
   
   case class MongoPrimitiveString(value: String) extends MongoPrimitive[String] {
-    def toMongoValue = new java.lang.String(value)
+    def toJValue = JString(value)
   }
   
   implicit def stringToMongoPrimitiveString(value: String) = MongoPrimitiveString(value)

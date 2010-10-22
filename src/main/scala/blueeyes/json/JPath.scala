@@ -37,7 +37,9 @@ sealed trait JPath extends Function1[JValue, JValue] { self =>
     }
   }
   
-  override def toString = nodes.mkString("")
+  def path = nodes.mkString("")
+  
+  override def toString = path
 }
 
 sealed trait JPathNode extends JPath { self =>
