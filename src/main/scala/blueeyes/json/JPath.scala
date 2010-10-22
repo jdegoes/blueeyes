@@ -71,7 +71,7 @@ sealed case class JPathRegex(regex: Regex) extends JPathNode {
 
 object JPath {
   private val IndexPattern = """^\[(\d+)\]$""".r
-  private val WildPattern  = """^([*])$""".r
+  private val WildPattern  = """\.([*])$""".r
   private val RegexPattern = """^/(.+)/([ixm]*)$""".r
   private val FieldPattern = """^\.(.+)$""".r
 
