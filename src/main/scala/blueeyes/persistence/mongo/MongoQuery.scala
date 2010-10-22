@@ -84,31 +84,6 @@ sealed trait MongoPrimitive[T] {
 
 sealed class MongoPrimitiveWitness[T]
 
-case class MongoQueryBuilder(jpath: JPath) {
-  def === [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
-  
-  def !== [T](value: MongoPrimitive[T]): MongoFieldQuery = error("not implemented")
-  
-  def > (value: Long): MongoFieldQuery = error("not implemented")
-  
-  def >= (value: Long): MongoFieldQuery = error("not implemented")
-  
-  def < (value: Long): MongoFieldQuery = error("not implemented")
-  
-  def <= (value: Long): MongoFieldQuery = error("not implemented")
-  
-  def in [T <: MongoPrimitive[T]](items: T*): MongoFieldQuery = error("not implemented")
-  
-  def contains [T <: MongoPrimitive[T]](items: T*): MongoFieldQuery = error("not implemented")
-  
-  def hasSize(length: Int): MongoFieldQuery = error("not implemented")
-  
-  def exists: MongoFieldQuery = error("not implemented")
-  
-  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldQuery = error("not implemented")
-}
-
-
 trait MongoQueryImplicits {
   import MongoQueryOperators._ 
   
@@ -121,9 +96,28 @@ trait MongoQueryImplicits {
   case class MongoPrimitiveString(value: String) extends MongoPrimitive[String] {
     def toJValue = JString(value)
   }
-  
-  implicit def stringToMongoPrimitiveString(value: String) = MongoPrimitiveString(value)
-  
+  case class MongoPrimitiveLong(value: Long) extends MongoPrimitive[Long] {
+    def toJValue = JInt(value)
+  }
+  case class MongoPrimitiveInt(value: Int) extends MongoPrimitive[Int] {
+    def toJValue = JInt(value)
+  }
+  case class MongoPrimitiveDouble(value: Double) extends MongoPrimitive[Double] {
+    def toJValue = JDouble(value)
+  }
+  case class MongoPrimitiveBoolean(value: Boolean) extends MongoPrimitive[Boolean] {
+    def toJValue = JBool(value)
+  }
+//  case class MongoPrimitiveArray[T](value: List[T]) extends MongoPrimitive[List[T]] {
+//    def toJValue = JArray(value)
+//  }
+
+  implicit def stringToMongoPrimitiveString(value: String)    = MongoPrimitiveString(value)
+  implicit def longToMongoPrimitiveLong(value: Long)          = MongoPrimitiveLong(value)
+  implicit def intToMongoPrimitiveInt(value: Int)             = MongoPrimitiveInt(value)
+  implicit def doubleToMongoPrimitiveDouble(value: Double)    = MongoPrimitiveDouble(value)
+  implicit def booleanToMongoPrimitiveBoolean(value: Boolean) = MongoPrimitiveBoolean(value)
+
   /*
   Double	 1
   String	 2
@@ -169,3 +163,28 @@ trait MongoQueryImplicits {
     // case class MongoPrimitiveByte      - def toMongoValue: byte[]
 }
 object MongoQueryImplicits extends MongoQueryImplicits
+
+case class MongoQueryBuilder(jpath: JPath) {
+  import MongoQueryImplicits._
+  def === [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $eq, value)
+
+  def !== [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $ne, value)
+
+  def > [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $gt, value)
+
+  def >= [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $gte, value)
+
+  def < [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $lt, value)
+
+  def <= [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $lt, value)
+
+  def in [T <: MongoPrimitive[T]](items: T*): MongoFieldQuery = error("not implemented")//MongoFieldQuery(jpath, $in, MongoPrimitiveArray(items))
+
+  def contains [T <: MongoPrimitive[T]](items: T*): MongoFieldQuery = error("not implemented")//MongoFieldQuery(jpath, $all, MongoPrimitiveArray(items))
+
+  def hasSize(length: Int): MongoFieldQuery =  MongoFieldQuery(jpath, $size, length)
+
+  def exists: MongoFieldQuery = MongoFieldQuery(jpath, $exists, true)
+
+  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldQuery = error("not implemented")
+}
