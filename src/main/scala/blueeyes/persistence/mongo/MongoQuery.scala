@@ -56,8 +56,12 @@ sealed trait MongoQuery { self =>
 }
 
 sealed case class MongoFieldQuery(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoQuery { self =>
-  def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
-  
+  def query: JField = operator match {
+    case $eq => JField(lhs.path, rhs.toJValue)
+    
+    case _ => JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
+  }
+    
   def unary_! : MongoQuery = MongoFieldQuery(lhs, !operator, rhs)
 }
 
