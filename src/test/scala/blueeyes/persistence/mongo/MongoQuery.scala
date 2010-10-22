@@ -46,31 +46,43 @@ sealed trait MongoQuery { self =>
   
   def query: JValue = elements.foldLeft(JObject(Nil): JValue) { (obj, e) => obj.merge(e.query) }
   
-  def & (that: MongoQuery): MongoQuery =  this && that
+  def & (that: MongoQuery): MongoQuery = new MongoQuery {
+    val elements = composeAnd(self, that)
+  }
   
-  def && (that: MongoQuery): MongoQuery = {
-    def merge(q: MongoSimpleQuery, before: List[MongoSimpleQuery], after: List[MongoSimpleQuery]): List[MongoSimpleQuery] = after match {
-      case Nil => before ::: q :: Nil
-      
-      case x :: xs => q.combinesWith(x) match {
-        case true  => before ::: q.combine(x) :: xs
-        
-        case false => q.commutesWith(x) match {
-          case true  => before ::: (x :: Nil) ::: merge(q, before, xs)
-          
-          case false => before ::: q :: after
-        }
-      }
-    }
-    
-    new MongoQuery {
-      val elements = that.elements.foldLeft(self.elements) { (list, e) => merge(e, list, Nil) }
-    }
+  def && (that: MongoQuery): MongoQuery = new MongoQuery {
+    lazy val elements = composeAnd(self, that)
   }
 
-  def | (that: MongoQuery): MongoQuery = this || that
+  def | (that: MongoQuery): MongoQuery = new MongoQuery {
+    def elements = Nil // TODO
+    
+    override val query = composeOrQuery(self, that)
+  }
   
-  def || (that: MongoQuery): MongoQuery = error("not implemented")
+  def || (that: MongoQuery): MongoQuery = new MongoQuery {
+    def elements = Nil // TODO
+    
+    override lazy val query = composeOrQuery(self, that)
+  }
+  
+  private def composeAnd(self: MongoQuery, that: MongoQuery): List[MongoSimpleQuery] = that.elements.foldLeft(self.elements) { (list, e) => merge(e, list, Nil) }
+  
+  private def composeOrQuery(self: MongoQuery, that: MongoQuery): JValue = JObject(JField($or.symbol, JArray(self.query :: that.query :: Nil)) :: Nil)
+  
+  private def merge(q: MongoSimpleQuery, before: List[MongoSimpleQuery], after: List[MongoSimpleQuery]): List[MongoSimpleQuery] = after match {
+    case Nil => before ::: q :: Nil
+    
+    case x :: xs => q.combinesWith(x) match {
+      case true  => before ::: q.combine(x) :: xs
+      
+      case false => q.commutesWith(x) match {
+        case true  => before ::: (x :: Nil) ::: merge(q, before, xs)
+        
+        case false => before ::: q :: after
+      }
+    }
+  }
 }
 
 sealed trait MongoSimpleQuery extends MongoQuery { self =>
