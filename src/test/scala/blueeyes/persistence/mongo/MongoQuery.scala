@@ -29,16 +29,16 @@ object MongoQueryOperators {
   case object $or     extends MongoQueryOperator { def unary_! = error("The $or operator does not have a negation"); }
 }
 
-trait MongoQuery {
+trait MongoQuery { self =>
   def query: JValue
   
-  def & (that: MongoQuery): MongoQuery = error("not implemented")
+  def & (that: MongoQuery): MongoQuery =  this && that
   
   def && (that: MongoQuery): MongoQuery = error("not implemented")
+
+  def | (that: MongoQuery): MongoQuery = this || that
   
   def || (that: MongoQuery): MongoQuery = error("not implemented")
-  
-  def | (that: MongoQuery): MongoQuery = error("not implemented")
   
   def unary_! : MongoQuery = error("not implemented")
 }
