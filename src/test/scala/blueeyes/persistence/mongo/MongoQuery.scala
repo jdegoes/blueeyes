@@ -5,6 +5,10 @@ import blueeyes.json.JsonAST._
 
 import blueeyes.util.ProductPrefixUnmangler
 
+sealed abstract class MongoSortOrder(val order: Int)
+case object MongoSortOrderAscending extends MongoSortOrder(1)
+case object MongoSortOrderDescending extends MongoSortOrder(-1)
+
 object MongoQueryOperators {
   sealed trait MongoQueryOperator extends Product with ProductPrefixUnmangler {
     def symbol: String = unmangledName
