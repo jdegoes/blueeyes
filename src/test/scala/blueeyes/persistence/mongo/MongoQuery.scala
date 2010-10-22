@@ -61,16 +61,16 @@ sealed case class MongoFieldQuery(lhs: JPath, operator: MongoQueryOperator, rhs:
   def unary_! : MongoQuery = MongoFieldQuery(lhs, !operator, rhs)
 }
 
-sealed case class MongoOrQuery(alternatives: List[MongoQuery]) extends MongoQuery {
-  def query: JObject = JObject(JField($or.symbol, JArray(alternatives.map(_.query))) :: Nil)
+sealed case class MongoOrQuery(queries: List[MongoQuery]) extends MongoQuery {
+  def query: JObject = JObject(JField($or.symbol, JArray(queries.map(_.query))) :: Nil)
   
-  def unary_! : MongoQuery = error("not implemented")
+  def unary_! : MongoQuery = MongoAndQuery(queries.map(!_))
 }
 
 sealed case class MongoAndQuery(queries: List[MongoQuery]) extends MongoQuery {
   def query: JValue = queries.foldLeft(JObject(Nil): JValue) { (obj, e) => obj.merge(e.query) }
   
-  def unary_! : MongoQuery = error("not implemented")
+  def unary_! : MongoQuery = MongoOrQuery(queries.map(!_))
 }
 
 
