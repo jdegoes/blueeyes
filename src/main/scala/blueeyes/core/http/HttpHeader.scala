@@ -123,10 +123,12 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect") Some(Expectations.parseExpectations(keyValue._2)) else None
   }
 
-  class From(val value: String) extends HttpHeader {
+  class From(val email: Email) extends HttpHeader {
+    def value = email.toString
   }
   object From {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from") Some(keyValue._2) else None
+    def apply(email: Email) = new From(email)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from") Some(Emails.parseEmails(keyValue._2)) else None
   }
 
   class Host(val value: String) extends HttpHeader {
