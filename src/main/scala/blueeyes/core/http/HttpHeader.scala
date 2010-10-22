@@ -112,7 +112,7 @@ object HttpHeaders {
   }
   object Date {
     def apply(httpDate: HttpDateTime) = new Date(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(HttpDateData.HttpDateData(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
   class Expect(val expectation: Expectation) extends HttpHeader {
@@ -131,40 +131,54 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from") Some(Emails.parseEmails(keyValue._2)) else None
   }
 
+  /* TO DO */
   class Host(val value: String) extends HttpHeader {
   }
   object Host {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host") Some(keyValue._2) else None
   }
 
-  class `If-Match`(val value: String) extends HttpHeader {
+  class `If-Match`(val tags: EntityTag) extends HttpHeader {
+    def value = tags.toString
   }
-  object `If-Match` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match") Some(keyValue._2) else None
+  object `If-Match` { // going to need a new typ here
+    def apply(tags: EntityTag) = new `If-Match`(tags)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match") Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
 
-  class `If-Modified-Since`(val value: String) extends HttpHeader {
+  class `If-Modified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
+    def value = httpDate.toString
   }
   object `If-Modified-Since` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since") Some(keyValue._2) else None
+    def apply(httpDate: HttpDateTime) = new `If-Modified-Since`(httpDate)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since") Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
-  class `If-None-Match`(val value: String) extends HttpHeader {
+  class `If-None-Match`(val tags: EntityTag) extends HttpHeader {
+    def value = tags.toString
   }
   object `If-None-Match` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match") Some(keyValue._2) else None
+    def apply(tags: EntityTag) = new `If-None-Match`(tags)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match") Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
 
-  class `If-Range`(val value: String) extends HttpHeader {
+  /* If-Range needs to add a way to include the date */
+  class `If-Range`(val tags: EntityTag) extends HttpHeader {
+    def value = tags.toString
   }
   object `If-Range` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range") Some(keyValue._2) else None
+    def apply(tags: EntityTag) = new `If-Range`(tags)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range") Some(EntityTags.parseEntityTags(keyValue._2))
+      else None
   }
 
-  class `If-Unmodified-Since`(val value: String) extends HttpHeader {
+  class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
+    def value = httpDate.toString
   }
   object `If-Unmodified-Since` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-unmodified-since") Some(keyValue._2) else None
+    def apply(httpDate: HttpDateTime) = new `If-Unmodified-Since`(httpDate)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-unmodified-since") 
+      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
   class `Max-Forwards`(val value: String) extends HttpHeader {

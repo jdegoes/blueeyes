@@ -7,31 +7,43 @@ import org.joda.time.format.DateTimeFormatter;
 import java.util.Date;
 
 
-sealed trait HttpDateTime {
+sealed trait HttpDateTime extends Rfc1123Standard {
 
   def storedDate: DateTime  
    
-  def rfc1123DateFormat: DateTimeFormatter = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZone(DateTimeZone.UTC)
-
   override def toString: String = rfc1123DateFormat.print(storedDate);
 }
 
-
-object HttpDateData {
-
+sealed trait Rfc1123Standard {
+  
   def rfc1123DateFormat: DateTimeFormatter = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZone(DateTimeZone.UTC)
 
-  case class HttpDateData (inDate: DateTime) extends HttpDateTime {
-    override def storedDate = inDate
+}
+
+object HttpDateTimes extends Rfc1123Standard{
+
+  /* Need to think about how to deal with poorly-formed dates */
+  def parseHttpDateTimes (inString: String): HttpDateTime = {
+    var initDate: DateTime = rfc1123DateFormat.parseDateTime(inString)
+    if (initDate == null) 
+      return NullDate(new DateTime)
+    else 
+      return StandardDateTime (initDate)
   }
 
-  object HttpDateData {
-    def apply(stringDate: String): HttpDateTime = HttpDateData(rfc1123DateFormat.parseDateTime(stringDate))
+  case class StandardDateTime (storedDate: DateTime) extends HttpDateTime 
+
+  case class NullDate(storedDate: DateTime) extends HttpDateTime {
+    override def toString = ""
+  }
+
+  object HttpDateTimes {
+    def apply(inString: String): HttpDateTime = parseHttpDateTimes(inString) 
   }
     
 }
 
-trait HttpDateImplicits {
+trait HttpDateImplicits extends Rfc1123Standard{
 
   //case class HttpDateConversion(storedDate: DateTime) extends HttpDateTime
 
