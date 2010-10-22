@@ -44,103 +44,33 @@ import MongoQueryOperators._
 sealed trait MongoQuery { self =>
   def query: JValue
   
-  def & (that: MongoQuery): MongoQuery = MongoAndQuery(self, that)
-  
-  def && (that: MongoQuery): MongoQuery = MongoAndQuery(self, that)
-
-  def | (that: MongoQuery): MongoQuery = MongoOrQuery(self, that)
-  
-  def || (that: MongoQuery): MongoQuery = MongoOrQuery(self, that)
-  
-  def combine (that: MongoQuery): MongoQuery
-  
-  def * (that: MongoQuery): MongoQuery = combine(that)
-  
-  def commutesWith(that: MongoQuery): Boolean
-  
-  def combinesWith(that: MongoQuery): Boolean
-  
   def unary_! : MongoQuery
+  
+  def & (that: MongoQuery): MongoQuery = MongoAndQuery(self :: that :: Nil)
+  
+  def && (that: MongoQuery): MongoQuery = MongoAndQuery(self :: that :: Nil)
+
+  def | (that: MongoQuery): MongoQuery = MongoOrQuery(self :: that :: Nil)
+  
+  def || (that: MongoQuery): MongoQuery = MongoOrQuery(self :: that :: Nil)
 }
 
-sealed trait MongoFieldQuery extends MongoQuery { self =>
-  def lhs: JPath
+sealed case class MongoFieldQuery(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoQuery { self =>
+  def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
   
-  def commutesWith(that: MongoQuery): Boolean = that match {
-    case that: MongoFieldQuery => self.lhs != that.lhs
-    
-    case _ => false
-  }
-  
-  def combinesWith(that: MongoQuery): Boolean = that match {
-    case that: MongoFieldQuery => self.lhs == that.lhs
-    
-    case _ => false
-  }
-}
-sealed case class MongoFieldQueryOp1(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoFieldQuery {
-  override def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
-  
-  def combine (that: MongoQuery): MongoQuery = error("not implemented")
-  
-  def unary_! : MongoQuery = MongoFieldQueryOp1(lhs, !operator, rhs)
-}
-sealed case class MongoFieldQueryOp2(lhs: JPath, operator1: MongoQueryOperator, rhs1: MongoPrimitive[_], operator2: MongoQueryOperator, rhs2: MongoPrimitive[_]) extends MongoFieldQuery {
-  override def query: JField = JField(lhs.path, JObject(JField(operator1.symbol, rhs1.toJValue) :: JField(operator2.symbol, rhs2.toJValue) :: Nil))
-  
-  def combine (that: MongoQuery): MongoQuery = error("not implemented")
-  
-  def unary_! : MongoQuery = MongoFieldQueryOp2(lhs, !operator1, rhs1, !operator2, rhs2)
+  def unary_! : MongoQuery = MongoFieldQuery(lhs, !operator, rhs)
 }
 
-sealed case class MongoOrQuery private (alternatives: List[MongoQuery]) extends MongoQuery {
-  override def query: JObject = JObject(JField($or.symbol, JArray(alternatives.map(_.query))) :: Nil)
-  
-  def combine (that: MongoQuery): MongoQuery = error("not implemented")
+sealed case class MongoOrQuery(alternatives: List[MongoQuery]) extends MongoQuery {
+  def query: JObject = JObject(JField($or.symbol, JArray(alternatives.map(_.query))) :: Nil)
   
   def unary_! : MongoQuery = error("not implemented")
-  
-  def commutesWith(that: MongoQuery): Boolean = true
-  
-  def combinesWith(that: MongoQuery): Boolean = false
-}
-object MongoOrQuery {
-  def apply(self: MongoQuery, that: MongoQuery): MongoOrQuery = MongoOrQuery(self :: that :: Nil)
 }
 
-sealed case class MongoAndQuery private (queries: List[MongoQuery]) extends MongoQuery {
+sealed case class MongoAndQuery(queries: List[MongoQuery]) extends MongoQuery {
   def query: JValue = queries.foldLeft(JObject(Nil): JValue) { (obj, e) => obj.merge(e.query) }
   
-  def combine (that: MongoQuery): MongoQuery = error("not implemented")
-  
   def unary_! : MongoQuery = error("not implemented")
-  
-  def commutesWith(that: MongoQuery): Boolean = true
-  
-  def combinesWith(that: MongoQuery): Boolean = false
-}
-object MongoAndQuery {
-  def apply(self: MongoQuery, that: MongoQuery): MongoAndQuery = new MongoAndQuery(flatten(that).foldLeft(flatten(self)) { (list, e) => merge(e, list, Nil) })
-  
-  private def merge(q: MongoQuery, before: List[MongoQuery], after: List[MongoQuery]): List[MongoQuery] = after match {
-    case Nil => before ::: q :: Nil
-    
-    case x :: xs => q.combinesWith(x) match {
-      case true  => before ::: q.combine(x) :: xs
-      
-      case false => q.commutesWith(x) match {
-        case true  => before ::: (x :: Nil) ::: merge(q, before, xs)
-        
-        case false => before ::: q :: after
-      }
-    }
-  }
-  
-  private def flatten(q: MongoQuery): List[MongoQuery] = q match {
-    case x: MongoAndQuery => x.queries
-    
-    case x => x :: Nil
-  }
 }
 
 
