@@ -43,8 +43,6 @@ trait MongoQuery { self =>
   def | (that: MongoQuery): MongoQuery = this || that
   
   def || (that: MongoQuery): MongoQuery = error("not implemented")
-  
-  def unary_! : MongoQuery = error("not implemented")
 }
 
 trait MongoSimpleQuery extends MongoQuery { self =>
@@ -55,6 +53,8 @@ trait MongoSimpleQuery extends MongoQuery { self =>
   def combinesWith(that: MongoSimpleQuery): Boolean = (self.jpath == that.jpath)
   
   def * (that: MongoSimpleQuery): MongoSimpleQuery
+  
+  def unary_! : MongoQuery = error("not implemented")
 }
 
 
@@ -65,27 +65,27 @@ sealed trait MongoPrimitive[T] {
 sealed class MongoPrimitiveWitness[T]
 
 case class MongoQueryBuilder(jpath: JPath) {
-  def === [T](value: MongoPrimitive[T]): MongoQuery = error("not implemented")
+  def === [T](value: MongoPrimitive[T]): MongoSimpleQuery = error("not implemented")
   
-  def !== [T](value: MongoPrimitive[T]): MongoQuery = error("not implemented")
+  def !== [T](value: MongoPrimitive[T]): MongoSimpleQuery = error("not implemented")
   
-  def > (value: Long): MongoQuery = error("not implemented")
+  def > (value: Long): MongoSimpleQuery = error("not implemented")
   
-  def >= (value: Long): MongoQuery = error("not implemented")
+  def >= (value: Long): MongoSimpleQuery = error("not implemented")
   
-  def < (value: Long): MongoQuery = error("not implemented")
+  def < (value: Long): MongoSimpleQuery = error("not implemented")
   
-  def <= (value: Long): MongoQuery = error("not implemented")
+  def <= (value: Long): MongoSimpleQuery = error("not implemented")
   
-  def in [T <: MongoPrimitive[T]](items: T*): MongoQuery = error("not implemented")
+  def in [T <: MongoPrimitive[T]](items: T*): MongoSimpleQuery = error("not implemented")
   
-  def contains [T <: MongoPrimitive[T]](items: T*): MongoQuery = error("not implemented")
+  def contains [T <: MongoPrimitive[T]](items: T*): MongoSimpleQuery = error("not implemented")
   
-  def hasSize(length: Int): MongoQuery = error("not implemented")
+  def hasSize(length: Int): MongoSimpleQuery = error("not implemented")
   
-  def exists: MongoQuery = error("not implemented")
+  def exists: MongoSimpleQuery = error("not implemented")
   
-  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoQuery = error("not implemented")
+  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoSimpleQuery = error("not implemented")
 }
 
 
