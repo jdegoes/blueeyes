@@ -42,11 +42,31 @@ object MongoQueryOperators {
 import MongoQueryOperators._
 
 trait MongoQuery { self =>
-  def query: JValue
+  def elements: List[MongoSimpleQuery]
+  
+  def query: JValue = elements.foldLeft(JObject(Nil)) { (obj, e) => (obj ++ e.query).asInstanceOf[JObject] }
   
   def & (that: MongoQuery): MongoQuery =  this && that
   
-  def && (that: MongoQuery): MongoQuery = error("not implemented")
+  def && (that: MongoQuery): MongoQuery = {
+    def merge(q: MongoSimpleQuery, before: List[MongoSimpleQuery], after: List[MongoSimpleQuery]): List[MongoSimpleQuery] = after match {
+      case Nil => before ::: q :: Nil
+      
+      case x :: xs => q.combinesWith(x) match {
+        case true  => before ::: q.combine(x) :: xs
+        
+        case false => q.commutesWith(x) match {
+          case true  => before ::: (x :: Nil) ::: merge(q, before, xs)
+          
+          case false => before ::: q :: after
+        }
+      }
+    }
+    
+    new MongoQuery {
+      val elements = that.elements.foldLeft(self.elements) { (list, e) => merge(e, list, Nil) }
+    }
+  }
 
   def | (that: MongoQuery): MongoQuery = this || that
   
@@ -56,7 +76,7 @@ trait MongoQuery { self =>
 sealed case class MongoSimpleQuery(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoQuery { self =>
   def elements = self :: Nil
   
-  def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
+  override def query: JField = JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
   
   def commutesWith(that: MongoSimpleQuery): Boolean = self.lhs != that.lhs
   
