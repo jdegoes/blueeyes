@@ -186,9 +186,9 @@ case class MongoQueryBuilder(jpath: JPath) {
 
   def <= [T](value: MongoPrimitive[T]): MongoFieldQuery = MongoFieldQuery(jpath, $lt, value)
 
-  def in [T <: MongoPrimitive[_]](items: T*): MongoFieldQuery = MongoFieldQuery(jpath, $in, MongoPrimitiveArray[T](List(items: _*)))
+  def in [T <: MongoPrimitive[_]](items: T*): MongoFieldQuery = MongoFieldQuery(jpath, $in, List(items: _*))
 
-  def contains [T <: MongoPrimitive[_]](items: T*): MongoFieldQuery = MongoFieldQuery(jpath, $all, MongoPrimitiveArray[T](List(items: _*)))
+  def contains [T <: MongoPrimitive[_]](items: T*): MongoFieldQuery = MongoFieldQuery(jpath, $all, List(items: _*))
 
   def hasSize(length: Int): MongoFieldQuery =  MongoFieldQuery(jpath, $size, length)
 
