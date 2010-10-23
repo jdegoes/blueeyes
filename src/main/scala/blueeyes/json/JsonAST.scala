@@ -168,7 +168,7 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
      * </pre>
      */
-    def children = this match {
+    def children: List[JValue] = this match {
       case JObject(l) => l
       case JArray(l) => l
       case JField(n, v) => List(v)

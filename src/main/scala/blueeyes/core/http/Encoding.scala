@@ -21,7 +21,6 @@ object Encodings {
     var outEncodings: Array[Encoding] = inString.split(",").map(_.trim)
         .flatMap(EncodingRegex findFirstIn _)
         .map ( encoding =>  encoding match { 
-
             case "compress" => compress  
             case "gzip" => gzip 
             case "identity" => identity 

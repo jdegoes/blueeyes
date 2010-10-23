@@ -32,7 +32,59 @@ object MimeTypes {
     var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
       .flatMap(MimeTypeRegex findFirstIn _).map(_.split("/"))
       .flatMap ( mimeType =>  mimeType match {
-        case Array("application" , "javascript") => Array(application / javascript)
+
+        case Array("*" , "*")                     => Array(anymaintype / anysubtype)
+
+        case Array("application", "javascript")   => Array(application / javascript)
+        case Array("application", "x-javascript") => Array(application / `x-javascript`)
+        case Array("application", "soap+xml")     => Array(application / `soap+xml`) 
+        case Array("application", "xhtml+xml")    => Array(application / `xhtml+xml`)
+        case Array("application", "xml-dtd")      => Array(application / `xml-dtd`)
+        case Array("application", "json")         => Array(application / json)
+        case Array("application", "x-latex")      => Array(application / `x-latex`) 
+        case Array("application", "octet-stream") => Array(application / `octet-stream`)
+        case Array("application", "ogg" )         => Array(application / ogg)
+        case Array("application", "pdf" )         => Array(application / `pdf`)
+        case Array("application", "postscript" )  => Array(application / `postscript`)
+        case Array("application", "x-dvi")        => Array(application / `x-dvi`)
+        case Array("application", "x-shockwave-flash") => Array(application / `x-shockwave-flash`)
+        case Array("application", "x-tar")        => Array(application / `x-tar`)
+        case Array("application", "x-ttf")        => Array(application / `x-ttf`)
+        case Array("application", "zip")          => Array(application / `zip`)
+
+        /* Audio */
+        case Array("audio", "basic")              => Array(audio / basic)
+        case Array("audio", "mp4")                => Array(audio / mp4)
+        case Array("audio", "midi")               => Array(audio / midi)
+        case Array("audio", "mpeg")               => Array(audio / mpeg)
+        case Array("audio", "vorbis")             => Array(audio / vorbis)
+        case Array("audio", "x-ms-wma")           => Array(audio / `x-ms-wma`)
+        case Array("audio", "x-ms-wax")           => Array(audio / `x-ms-wax`)
+        case Array("audio", "x-realaudio")        => Array(audio / `x-realaudio`)
+        case Array("audio", "x-wav")              => Array(audio / `x-wav`)
+
+        /* Image */
+        case Array("image", "gif")                => Array(image / gif)
+        case Array("image", "png")                => Array(image / png)
+        case Array("image", "jpeg")               => Array(image / jpeg)
+        case Array("image", "svg+xml")            => Array(image / `svg+xml`)
+        case Array("image", "tiff")               => Array(image / tiff)
+        case Array("image", "vnd.microsoft.icon") => Array(image / `vnd.microsoft.icon`)
+
+        /* Text */
+        case Array("text", "css")                 => Array(text / css)
+        case Array("text", "csv")                 => Array(text / csv)
+        case Array("text", "html")                => Array(text / html)
+        case Array("text", "plain")               => Array(text / plain)
+        case Array("text", "x-c")                 => Array(text / `x-c`)
+        case Array("text", "xml")                 => Array(text / xml)
+
+        /* Video */
+        case Array("video", "quicktime")          => Array(video / quicktime)
+        case Array("video", "x-msvideo")          => Array(video / `x-msvideo`)
+
+        /* Star */
+
         case _ => Nil
       }
     )
@@ -43,6 +95,7 @@ object MimeTypes {
     def subtype = unmangledName
   }
 
+  sealed abstract class StarType(val extensions: List[String]) extends GenericType
   sealed abstract class ApplicationType(val extensions: List[String]) extends GenericType
   sealed abstract class AudioType(val extensions: List[String]) extends GenericType
   sealed abstract class ImageType(val extensions: List[String]) extends GenericType
@@ -51,6 +104,11 @@ object MimeTypes {
   sealed abstract class PrsType(val extensions: List[String]) extends GenericType
   sealed abstract class TextType(val extensions: List[String]) extends GenericType
   sealed abstract class VideoType(val extensions: List[String]) extends GenericType
+
+  /* Star Type */
+  case object anysubtype extends StarType(Nil) {
+    override def subtype = "*"
+  }
 
   /* Application Types */
   sealed abstract class JavaScriptApplicationType extends ApplicationType("js" :: Nil)
@@ -64,7 +122,7 @@ object MimeTypes {
 
   case object json extends ApplicationType("json" :: Nil)
   case object `x-latex` extends ApplicationType("latex" :: Nil)
-  case object `octect-stream` extends ApplicationType("bin" :: "class" :: "dms" :: "exe" :: "lha" :: "lzh" :: Nil)
+  case object `octet-stream` extends ApplicationType("bin" :: "class" :: "dms" :: "exe" :: "lha" :: "lzh" :: Nil)
   case object ogg extends JavaScriptApplicationType
   case object pdf extends ApplicationType("pdf" :: Nil)
   case object postscript extends ApplicationType("ai" :: Nil)
@@ -113,6 +171,7 @@ object MimeTypes {
   case object csv extends TextType("csv" :: Nil)
   case object html extends TextType("html" :: "htm" :: Nil)
   case object plain extends TextType("c" :: "c++" :: "cc" :: "com" :: "conf" :: "f" :: "h" :: "jav" :: "pl" :: "text" :: "txt" :: Nil)
+  case object `x-c` extends TextType("c" :: Nil)
   case object xml extends TextType("xml" :: Nil)
 
   /* Video Types */
@@ -122,40 +181,107 @@ object MimeTypes {
   /* Implicit Conversions */
   implicit def applicationTypeJavaScript2TextTypeJavaScript(appType: JavaScriptApplicationType): TextType = {
     case object TextTypeJavaScript extends TextType(appType.extensions) { 
-      override def productPrefix = appType.subtype 
+      override def subtype = appType.subtype 
     }
     return TextTypeJavaScript
   }
 
   implicit def applicationTypeOgg2AudioTypeOgg(appType: OggApplicationType ): AudioType = {
     case object AudioTypeOgg extends AudioType(appType.extensions) {
-      override def productPrefix = appType.subtype
+      override def subtype = appType.subtype
     }
     return AudioTypeOgg
   }
 
   implicit def applicationTypeOgg2VideoTypeOgg(appType: OggApplicationType): VideoType = {
     case object VideoTypeOgg extends VideoType(appType.extensions) {
-      override def productPrefix = appType.subtype 
+      override def subtype = appType.subtype 
     }
     return VideoTypeOgg
   }
 
   implicit def audioTypeMpeg2VideoTypeMpeg (audioType: MpegAudioType): VideoType = {
     case object VideoTypeMpeg extends VideoType(audioType.extensions) {
-      override def productPrefix = audioType.subtype
+      override def subtype = audioType.subtype
     }
     return VideoTypeMpeg
   }
 
   implicit def audioTypeMp42VideoTypeMp4 (audioType: Mp4AudioType): VideoType = {
     case object VideoTypeMp4 extends VideoType(audioType.extensions) {
-      override def productPrefix = audioType.subtype
+      override def subtype = audioType.subtype
     }
     return VideoTypeMp4
   }
 
+  /* Implicit conversions for Star (*) */
+
+  implicit def starTypeStar2ApplicationTypeStar (starType: StarType): ApplicationType = {
+    case object ApplicationTypeStar extends ApplicationType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return ApplicationTypeStar 
+  }
+
+  implicit def starTypeStar2AudioTypeStar (starType: StarType): AudioType = {
+    case object AudioTypeStar extends AudioType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return AudioTypeStar 
+  }
+
+  implicit def starTypeStar2ImageTypeStar (starType: StarType): ImageType = {
+    case object ImageTypeStar extends ImageType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return ImageTypeStar 
+  }
+
+  implicit def starTypeStar2MessageTypeStar (starType: StarType): MessageType = {
+    case object MessageTypeStar extends MessageType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return MessageTypeStar 
+  }
+
+  implicit def starTypeStar2MultipartTypeStar (starType: StarType): MultipartType = {
+    case object MultipartTypeStar extends MultipartType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return MultipartTypeStar 
+  }
+
+  implicit def starTypeStar2PrsTypeStar (starType: StarType): PrsType = {
+    case object PrsTypeStar extends PrsType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return PrsTypeStar 
+  }
+
+  implicit def starTypeStar2TextTypeStar (starType: StarType): TextType = {
+    case object TextTypeStar extends TextType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return TextTypeStar 
+  }
+
+  implicit def starTypeStar2VideoTypeStar (starType: StarType): VideoType = {
+    case object VideoTypeStar extends VideoType(starType.extensions) {
+      override def subtype = starType.subtype
+    }
+    return VideoTypeStar 
+  }
+
+
   /* Constructor Methods */
+  object anymaintype {
+    def / (starType: StarType) = new MimeType {
+      def maintype = "*"
+      def subtype = starType.subtype
+      override def extensions = starType.extensions
+    }
+  }
+
   object application {
     def / (applicationType: ApplicationType) = new MimeType {
       def maintype = "application"
@@ -201,6 +327,14 @@ object MimeTypes {
       def maintype = "text"
       def subtype = textType.subtype 
       override def extensions = textType.extensions
+    }
+  }
+
+  object video {
+    def / (videoType: VideoType) = new MimeType {
+      def maintype = "text"
+      def subtype = videoType.subtype
+      override def extensions = videoType.extensions
     }
   }
 }
