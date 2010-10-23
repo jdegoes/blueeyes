@@ -42,7 +42,7 @@ object MongoQueryOperators {
 import MongoQueryOperators._
 
 sealed trait MongoQuery { self =>
-  def query: JValue
+  def query: JObject
   
   def unary_! : MongoQuery
   
@@ -50,16 +50,20 @@ sealed trait MongoQuery { self =>
   
   def && (that: MongoQuery): MongoQuery = MongoAndQuery(self :: that :: Nil)
 
-  def | (that: MongoQuery): MongoQuery = MongoOrQuery(self :: that :: Nil)
+  def | (that: MongoQuery): MongoQuery  = MongoOrQuery(self :: that :: Nil)
   
   def || (that: MongoQuery): MongoQuery = MongoOrQuery(self :: that :: Nil)
 }
 
 sealed case class MongoFieldQuery(lhs: JPath, operator: MongoQueryOperator, rhs: MongoPrimitive[_]) extends MongoQuery { self =>
-  def query: JField = operator match {
-    case $eq => JField(lhs.path, rhs.toJValue)
+  def query: JObject = {
+    val path  = if (lhs.path.startsWith(".")) lhs.path.substring(1) else lhs.path
+    val field = operator match {
+      case $eq => JField(path, rhs.toJValue)
     
-    case _ => JField(lhs.path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
+      case _ => JField(path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
+    }
+    JObject(field :: Nil)
   }
     
   def unary_! : MongoQuery = MongoFieldQuery(lhs, !operator, rhs)
@@ -72,7 +76,7 @@ sealed case class MongoOrQuery(queries: List[MongoQuery]) extends MongoQuery {
 }
 
 sealed case class MongoAndQuery(queries: List[MongoQuery]) extends MongoQuery {
-  def query: JValue = queries.foldLeft(JObject(Nil): JValue) { (obj, e) => obj.merge(e.query) }
+  def query: JObject = queries.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.query).asInstanceOf[JObject] }
   
   def unary_! : MongoQuery = MongoOrQuery(queries.map(!_))
 }
