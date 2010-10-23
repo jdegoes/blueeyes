@@ -69,6 +69,8 @@ sealed case class JPathRegex(regex: Regex) extends JPathNode {
   }
 }
 
+sealed case class CompositeJPath(nodes: List[JPathNode]) extends JPath
+
 object JPath {
   private val IndexPattern = """^\[(\d+)\]$""".r
   private val WildPattern  = """\.([*])$""".r
@@ -77,9 +79,7 @@ object JPath {
 
   private val NodePatterns = """\.|(?=\[\d+\])""".r
 
-  def apply(n: JPathNode*) = new JPath {
-    lazy val nodes = n.toList
-  }
+  def apply(n: JPathNode*) = CompositeJPath(n.toList)
 
   private[this] sealed trait Index
   private[this] case class Start(index: Int) extends Index
