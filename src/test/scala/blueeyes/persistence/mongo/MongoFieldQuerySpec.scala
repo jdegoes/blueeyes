@@ -23,4 +23,9 @@ class MongoFieldQuerySpec extends Specification{
     import MongoQueryImplicits._
     MongoFieldQuery("author.name", $ne, "joe").query mustEqual (JObject(JField("author.name", JObject(JField("$ne", JString("joe")) :: Nil)) :: Nil))
   }
+
+  "unary_! use negative operator" in{
+    import MongoQueryImplicits._
+    MongoFieldQuery("foo", $eq, "bar").unary_! mustEqual(MongoFieldQuery("foo", $ne, "bar"))    
+  }
 }
