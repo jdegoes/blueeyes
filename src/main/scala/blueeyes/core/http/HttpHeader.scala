@@ -65,29 +65,37 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
-  class `Accept-Ranges`(val value: String) extends HttpHeader 
+  class `Accept-Ranges`(val rangeUnit: RangeUnit) extends HttpHeader {
+    def value = rangeUnit.toString
+  }
   object `Accept-Ranges` {
-    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit.value);
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") Some(keyValue._2) else None
+    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit);
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") 
+      Some(RangeUnits.parseRangeUnits(keyValue._2)) else None
   }
 
   class Authorization(val value: String) extends HttpHeader 
   object Authorization {
-    def appply(credentials: String) = new Authorization(credentials)  // can we do better here?
+    def apply(credentials: String) = new Authorization(credentials)  // can we do better here?
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
   }
 
-  class Connection(val value: String) extends HttpHeader 
+  class Connection(val connectionToken: ConnectionToken) extends HttpHeader {
+    def value = connectionToken.toString 
+  }
   object Connection {
-    def apply(connectionToken: ConnectionToken) = new Connection(connectionToken.value)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection") Some(keyValue._2) else None
+    def apply(connectionToken: ConnectionToken) = new Connection(connectionToken)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection")
+      Some(ConnectionTokens.parseConnectionTokens(keyValue._2)) else None
   }
 
-  class Cookie(val value: String) extends HttpHeader {
+  class Cookie(val cookie: HttpCookie) extends HttpHeader {
+    val value = cookie.toString
   }
   object Cookie {
-    def apply(cookie: HttpCookie) = new Cookie(cookie.toString)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie") Some(keyValue._2) else None
+    def apply(cookie: HttpCookie) = new Cookie(cookie)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie")
+      Some(HttpCookies.parseHttpCookies(keyValue._2)) else None
   }
 
   class `Content-Length`(val length: Long) extends HttpHeader {

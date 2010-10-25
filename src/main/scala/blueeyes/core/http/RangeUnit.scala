@@ -10,6 +10,17 @@ sealed trait RangeUnit extends ProductPrefixUnmangler{
 }
 
 object RangeUnits {
+
+  def parseRangeUnits(inString: String): RangeUnit = {
+    def outRangeUnits: RangeUnit = ("[a-z]+").r.findFirstIn(inString.toLowerCase.trim)
+      .getOrElse("bytes") match {
+      case "none" => none
+      case "bytes" => bytes
+      case x => CustomToken(x)
+    }
+    return outRangeUnits
+  }
+
   case object none extends RangeUnit
   case object bytes extends RangeUnit
 

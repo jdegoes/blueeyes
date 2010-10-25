@@ -5,7 +5,6 @@ import scala.util.matching.Regex
 
 sealed trait ConnectionToken extends ProductPrefixUnmangler {
   def value = unmangledName 
-
   override def toString = value
 
 }
