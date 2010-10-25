@@ -75,46 +75,55 @@ object MongoQueryBuilder{
   def upsertMany( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection, true, true)
 }
 
-object MongoUpdateModifiersOperators {
-  sealed trait MongoUpdateModifierOperator extends Product with ProductPrefixUnmangler {
+object MongoUpdateOperators {
+  sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
     def symbol: String = unmangledName
 
     override def toString = symbol
   }
 
-  case object $inc      extends MongoUpdateModifierOperator
-  case object $set      extends MongoUpdateModifierOperator
-  case object $unset    extends MongoUpdateModifierOperator
-  case object $push     extends MongoUpdateModifierOperator
-  case object $pushAll  extends MongoUpdateModifierOperator
-  case object $addToSet extends MongoUpdateModifierOperator
-  case object $pop      extends MongoUpdateModifierOperator
-  case object $pull     extends MongoUpdateModifierOperator
-  case object $pullAll  extends MongoUpdateModifierOperator
+  case object $inc      extends MongoUpdateOperator
+  case object $set      extends MongoUpdateOperator
+  case object $unset    extends MongoUpdateOperator
+  case object $push     extends MongoUpdateOperator
+  case object $pushAll  extends MongoUpdateOperator
+  case object $addToSet extends MongoUpdateOperator
+  case object $pop      extends MongoUpdateOperator
+  case object $pull     extends MongoUpdateOperator
+  case object $pullAll  extends MongoUpdateOperator
 }
 
-import MongoUpdateModifiersOperators._
-sealed case class MongoUpdateModifiersQuery(lhs: JPath, operator: MongoUpdateModifierOperator, value: JValue){
+import MongoUpdateOperators._
+sealed trait MongoUpdateCritieria{ self =>
+  def  toJValue: JObject;
+  def & (that: MongoUpdateCritieria): MongoUpdateCritieria = MongoUpdateFieldsCriteria(self :: that :: Nil)
+}
+
+sealed case class MongoUpdateFieldCriteria(lhs: JPath, operator: MongoUpdateOperator, value: JValue) extends MongoUpdateCritieria{
   def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(lhs.toMongoField, value) :: Nil)) :: Nil)
+}
+
+sealed case class MongoUpdateFieldsCriteria(criteria: List[MongoUpdateCritieria]) extends MongoUpdateCritieria{
+  def toJValue: JObject = criteria.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 
 case class MongoUpdateBuilder(jpath: JPath) {
   import MongoFilterImplicits._
-  def inc [T](value: MongoPrimitive[T]) : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $inc, value.toJValue)
-  def set [T](value: MongoPrimitive[T]) : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $set, value.toJValue)
-  def unset                             : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $unset, MongoPrimitiveInt(1).toJValue)
-  def popLast                           : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pop, MongoPrimitiveInt(1).toJValue)
-  def popFirst                          : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pop,MongoPrimitiveInt(-1).toJValue)
-  def push [T](value: MongoPrimitive[T]): MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $push, value.toJValue)
-  def pull [T](value: MongoPrimitive[T]): MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pull, value.toJValue)
-  def pull (value: JObject)             : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pull, value)
+  def inc [T](value: MongoPrimitive[T]) : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $inc, value.toJValue)
+  def set [T](value: MongoPrimitive[T]) : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $set, value.toJValue)
+  def unset                             : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $unset, MongoPrimitiveInt(1).toJValue)
+  def popLast                           : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pop, MongoPrimitiveInt(1).toJValue)
+  def popFirst                          : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pop,MongoPrimitiveInt(-1).toJValue)
+  def push [T](value: MongoPrimitive[T]): MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $push, value.toJValue)
+  def pull [T](value: MongoPrimitive[T]): MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pull, value.toJValue)
+  def pull (value: JObject)             : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pull, value)
 
-  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pushAll, MongoPrimitiveArray(List(items: _*)).toJValue)
-  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateModifiersQuery = MongoUpdateModifiersQuery(jpath, $pullAll, MongoPrimitiveArray(List(items: _*)).toJValue)
-  def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateModifiersQuery = {
+  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pushAll, MongoPrimitiveArray(List(items: _*)).toJValue)
+  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldCriteria = MongoUpdateFieldCriteria(jpath, $pullAll, MongoPrimitiveArray(List(items: _*)).toJValue)
+  def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateFieldCriteria = {
     val itemsList = List(items: _*)
     val value     = if (itemsList.size == 1) itemsList.head.toJValue
                     else JObject(JField("$each", MongoPrimitiveArray(itemsList).toJValue) :: Nil)
-    MongoUpdateModifiersQuery(jpath, $addToSet, value)
+    MongoUpdateFieldCriteria(jpath, $addToSet, value)
   }  
 }
