@@ -1,9 +1,9 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
-import MongoQueryOperators._
+import MongoFilterOperators._
 
-class MongoQueryOperatorSpec extends Specification{
+class MongoFilterOperatorSpec extends Specification{
   "$gt opposite operator is $lte" in {
     $gt.unary_! must be ($lte)
   }

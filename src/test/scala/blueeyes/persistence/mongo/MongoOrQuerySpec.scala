@@ -1,22 +1,22 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import MongoQueryOperators._
+import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 
-class MongoOrQuerySpec extends Specification{
-  private val query1  = MongoQueryBuilder(JPath("foo")).>(MongoQueryImplicits.MongoPrimitiveInt(1))
-  private val query2  = MongoQueryBuilder(JPath("bar")).<(MongoQueryImplicits.MongoPrimitiveInt(5))
-  private val orQuery = query1 || query2
+class MongoOrFilterSpec extends Specification{
+  private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoFilterImplicits.MongoPrimitiveInt(1))
+  private val filter2  = MongoFilterBuilder(JPath("bar")).<(MongoFilterImplicits.MongoPrimitiveInt(5))
+  private val orFilter = filter1 || filter2
   
-  "create valid json for or query" in {
-    (orQuery).query mustEqual (JObject(JField("$or", JArray(query1.query :: query2.query :: Nil)) :: Nil))
+  "create valid json for or filter" in {
+    (orFilter).filter mustEqual (JObject(JField("$or", JArray(filter1.filter :: filter2.filter :: Nil)) :: Nil))
   }
-  "unary_! use 'and' use with negative operators of subquerys " in{
-    (orQuery).unary_! mustEqual (query1.unary_! && query2.unary_!)
+  "unary_! use 'and' use with negative operators of subfilters " in{
+    (orFilter).unary_! mustEqual (filter1.unary_! && filter2.unary_!)
   }  
-  "2 unary_! results to the same query" in{
-    (orQuery).unary_!.unary_! mustEqual (orQuery)
+  "2 unary_! results to the same filter" in{
+    (orFilter).unary_!.unary_! mustEqual (orFilter)
   }
 }
