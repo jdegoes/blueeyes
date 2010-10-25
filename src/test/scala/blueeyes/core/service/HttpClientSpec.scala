@@ -23,7 +23,7 @@ class HttpClientSpec extends Specification {
   
   "Support GET requests with status OK" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php"))
+    val f = new HttpClientNettyString().get("http://localhost/test/echo.php")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
@@ -31,7 +31,7 @@ class HttpClientSpec extends Specification {
 
   "Support GET requests with status Not Found" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/bogus"))
+    val f = new HttpClientNettyString().get("http://localhost/bogus")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.NotFound)
@@ -39,7 +39,7 @@ class HttpClientSpec extends Specification {
 
   "Support GET requests with query params" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php?param1=a&param2=b"))
+    val f = new HttpClientNettyString()get("http://localhost/test/echo.php?param1=a&param2=b")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -48,7 +48,7 @@ class HttpClientSpec extends Specification {
 
   "Support POST requests with query params" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php?param1=a&param2=b"))
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php?param1=a&param2=b")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -57,7 +57,7 @@ class HttpClientSpec extends Specification {
 
   "Support POST requests with request params" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", parameters=Map('param1 -> "a", 'param2 -> "b")))
+    val f = new HttpClientNettyString().get("http://localhost/test/echo.php", parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -67,7 +67,7 @@ class HttpClientSpec extends Specification {
   "Support POST requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content)))
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", content=Some(content))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))
@@ -77,33 +77,42 @@ class HttpClientSpec extends Specification {
   "Support POST requests with body and request params" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content), parameters=Map('param1 -> "a", 'param2 -> "b")))
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", content=Some(content), parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must equalIgnoreSpace("param1=a&param2=b" + content)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 
-  "Support GET requests with header" in {
+  "Support PUT requests with body" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.GET, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
+    val content = "Hello, world"
+    val f = new HttpClientNettyString().put("http://localhost/test/echo.php", content=Some(content))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
-    f.value.get.content.get.trim must equalIgnoreSpace("Fooblahblah: washere")
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+  }
+
+  "Support GET requests with header" in {
+    skipper()()
+    val f = new HttpClientNettyString().get("http://localhost/test/echo.php?headers=true", headers=Map("Fooblahblah" -> "washere"))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.content.get.trim must include("Fooblahblah: washere")
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 
   "Support HEAD requests" in {
     skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.HEAD, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
+    val f = new HttpClientNettyString().head("http://localhost/test/echo.php")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 
   "Support CONNECT requests" in {
-    skipper()()
-    val f = new HttpClientNettyString()(HttpRequest(HttpMethods.CONNECT, "http://localhost/test/echo.php?headers", headers=Map("Fooblahblah" -> "washere")))
+    skip("CONNECT method TBD")
+    val f = new HttpClientNettyString().connect("http://localhost/test/echo.php?headers=true", headers=Map("Fooblahblah" -> "washere"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
