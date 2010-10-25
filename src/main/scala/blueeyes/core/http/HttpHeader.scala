@@ -4,7 +4,7 @@ import blueeyes.util.ProductPrefixUnmangler
 
 
 sealed trait HttpHeader extends Product2[String, String] with ProductPrefixUnmangler { self =>
-  def _1 = productPrefix
+  def _1 = unmangledName
   def _2 = value
   
   def name: String = _1
@@ -257,13 +257,17 @@ object HttpHeaders {
   }
   object `User-Agent` {
     def apply(product: String) = new `User-Agent`(product)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "user-agent") Some(keyValue._2) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "user-agent")
+      Some(keyValue._2) else None
   }
 
-  class Via(val value: String) extends HttpHeader {
+  class Via(val info: ViaInfo*) extends HttpHeader {
+    def value = info.map(_.toString).mkString(", ")
   }
   object Via {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "via") Some(keyValue._2) else None
+    def apply(info: ViaInfo*) = new Via(info: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "via")
+      Some(ViaInfos.parseViaInfos(keyValue._2)) else None
   }
 
   class Warning(val value: String) extends HttpHeader {
@@ -485,7 +489,7 @@ trait HttpHeaderImplicits {
     case TE(value) => new TE(value: _*)
     case Upgrade(value) => new Upgrade(value: _*)
     case `User-Agent`(value) => new `User-Agent`(value)
-    case Via(value) => new Via(value)
+    case Via(value) => new Via(value: _*)
     case Warning(value) => new Warning(value)
 
     /** Responses **/
