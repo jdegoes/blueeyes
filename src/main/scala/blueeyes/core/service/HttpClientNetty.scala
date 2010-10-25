@@ -14,8 +14,6 @@ import blueeyes.util.Future
 import com.ning.http.client.{
   AsyncHttpClient,
   AsyncCompletionHandler,
-  FluentStringsMap,
-  FluentCaseInsensitiveStringsMap,
   Response,
   RequestBuilderBase
 }
