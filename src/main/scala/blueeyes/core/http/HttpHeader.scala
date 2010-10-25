@@ -34,7 +34,7 @@ object HttpHeaders {
   /************ Requests ************/
 
   class Accept(val mimeTypes: MimeType*) extends HttpHeader {
-    def value = mimeTypes.map(_.value).mkString(",")
+    def value = mimeTypes.map(_.value).mkString(", ")
   }
   object Accept {
     def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes: _*)
@@ -50,7 +50,7 @@ object HttpHeaders {
   }
 
   class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeader  {
-    def value = encodings.map(_.value).mkString(",")
+    def value = encodings.map(_.value).mkString(", ")
   }
   object `Accept-Encoding` {
     def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings: _*)
@@ -58,7 +58,7 @@ object HttpHeaders {
   }
 
   class `Accept-Language`(val languageRanges: LanguageRange*) extends HttpHeader {
-    def value = languageRanges.map(_.value).mkString(",");
+    def value = languageRanges.map(_.value).mkString(", ");
   }
   object `Accept-Language` {
     def apply(languageRanges: LanguageRange*) = new `Accept-Language`(languageRanges: _*)
@@ -167,7 +167,8 @@ object HttpHeaders {
   }
   object `If-None-Match` {
     def apply(tags: EntityTag) = new `If-None-Match`(tags)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match") Some(EntityTags.parseEntityTags(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match")
+      Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
 
   /* If-Range needs to add a way to include the date */
@@ -176,8 +177,8 @@ object HttpHeaders {
   }
   object `If-Range` {
     def apply(tags: EntityTag) = new `If-Range`(tags)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range") Some(EntityTags.parseEntityTags(keyValue._2))
-      else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range")
+      Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
 
   class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
@@ -194,25 +195,34 @@ object HttpHeaders {
   }
   object `Max-Forwards` {
     def apply(maxf: Long) = new `Max-Forwards`(maxf)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards") Some(keyValue._2.toLong) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards")
+      Some(keyValue._2.toLong) else None
   }
 
-  class Pragma(val value: String) extends HttpHeader {
+  class Pragma(val primeDirective: PragmaDirective) extends HttpHeader {
+    def value = primeDirective.toString
   }
   object Pragma {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "pragma") Some(keyValue._2) else None
+    def apply(primeDirective: PragmaDirective) = new Pragma(primeDirective)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "pragma")
+      Some(PragmaDirectives.parsePragmaDirectives(keyValue._2)) else None
   }
 
   class `Proxy-Authorization`(val value: String) extends HttpHeader {
   }
   object `Proxy-Authorization` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authorization") Some(keyValue._2) else None
+    def apply(auth: String) = new `Proxy-Authorization`(auth)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authorization")
+      Some(keyValue._2) else None
   }
 
-  class Range(val value: String) extends HttpHeader {
+  class Range(val byteRange: ByteRange) extends HttpHeader {
+    def value = byteRange.toString
   }
   object Range {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "range") Some(keyValue._2) else None
+    def apply(byteRange: ByteRange) = new Range(byteRange)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "range")
+      Some(ByteRanges.parseByteRange(keyValue._2)) else None
   }
 
   class Referer(val domain: HttpDomain) extends HttpHeader {
@@ -220,24 +230,33 @@ object HttpHeaders {
   }
   object Referer {
     def apply(domain: HttpDomain) = new Referer(domain)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer") Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer")
+      Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
   }
 
-  class TE(val value: String) extends HttpHeader {
+  class TE(val tcodings: TCoding*) extends HttpHeader {
+    def value = tcodings.map(_.toString).mkString(", ")
   }
   object TE {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "te") Some(keyValue._2) else None
+    def apply(tcodings: TCoding*) = new TE(tcodings: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "te")
+      Some(TCodings.parseTCodings(keyValue._2)) else None
   }
 
-  class Upgrade(val value: String) extends HttpHeader {
+  class Upgrade(val products: UpgradeProduct*) extends HttpHeader {
+    def value = products.map(_.toString).mkString(", ")
   }
   object Upgrade {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade") Some(keyValue._2) else None
+    def apply(products: UpgradeProduct*) = new Upgrade(products: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade")
+      Some(UpgradeProducts.parseUpgradeProducts(keyValue._2)) else None
   }
 
-  class `User-Agent`(val value: String) extends HttpHeader {
+  class `User-Agent`(val product: String) extends HttpHeader {
+    def value = product
   }
   object `User-Agent` {
+    def apply(product: String) = new `User-Agent`(product)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "user-agent") Some(keyValue._2) else None
   }
 
@@ -463,11 +482,13 @@ trait HttpHeaderImplicits {
     case `Proxy-Authorization`(value) => new `Proxy-Authorization`(value)
     case Range(value) => new Range(value)
     case Referer(value) => new Referer(value)
-    case TE(value) => new TE(value)
-    case Upgrade(value) => new Upgrade(value)
+    case TE(value) => new TE(value: _*)
+    case Upgrade(value) => new Upgrade(value: _*)
     case `User-Agent`(value) => new `User-Agent`(value)
     case Via(value) => new Via(value)
     case Warning(value) => new Warning(value)
+
+    /** Responses **/
     case Age(value) => new Age(value)
     case Allow(value) => new Allow(value)
     case `Cache-Control`(value) => new `Cache-Control`(value)
