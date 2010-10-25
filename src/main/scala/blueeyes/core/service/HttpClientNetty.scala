@@ -76,7 +76,8 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     }
 
     val contentType: (String, String) = `Content-Type`(
-        (for (`Content-Type`(contentType) <- request.headers) yield contentType).headOption.getOrElse(mimeType).asInstanceOf[MimeType])
+      (for (`Content-Type`(contentType) <- request.headers) yield contentType.apply(0)).headOption.getOrElse[MimeType](mimeType))
+
     val contentLength: (String, String) = `Content-Length`(
         (for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
             transcode(request.content.getOrElse(transcode.unapply(""))).length))
@@ -85,6 +86,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
         contentType,
         contentLength
     )
+    println(newHeaders)
 
     for (pair <- newHeaders; r <- requestBuilder) 
       yield r.setHeader(pair._1, pair._2)

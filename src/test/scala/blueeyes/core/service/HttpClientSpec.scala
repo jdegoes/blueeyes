@@ -57,7 +57,8 @@ class HttpClientSpec extends Specification {
 
   "Support POST requests with request params" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/test/echo.php", parameters=Map('param1 -> "a", 'param2 -> "b"))
+    val f = new HttpClientNettyString().get("http://localhost/test/echo.php", 
+                                            parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -77,7 +78,9 @@ class HttpClientSpec extends Specification {
   "Support POST requests with body and request params" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", content=Some(content), parameters=Map('param1 -> "a", 'param2 -> "b"))
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+                                             content=Some(content), 
+                                             parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must equalIgnoreSpace("param1=a&param2=b" + content)
@@ -87,7 +90,9 @@ class HttpClientSpec extends Specification {
   "Support PUT requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString().put("http://localhost/test/echo.php", content=Some(content))
+    val f = new HttpClientNettyString().put("http://localhost/test/echo.php", 
+                                            content=Some(content), 
+                                            headers=Map(`Content-Length`(100)))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -95,10 +100,34 @@ class HttpClientSpec extends Specification {
 
   "Support GET requests with header" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/test/echo.php?headers=true", headers=Map("Fooblahblah" -> "washere"))
+    val f = new HttpClientNettyString().get("http://localhost/test/echo.php?headers=true", 
+                                            headers=Map("Fooblahblah" -> "washere", "param2" -> "1"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must include("Fooblahblah: washere")
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+  }
+
+  "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
+    skipper()()
+    val content = "<html></html>"
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+                                             content=Some(content), 
+                                             headers=Map(`Content-Type`(text/html), `Content-Length`(100)))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.content.get.trim must beEqual(content)
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+  }
+
+  "Support POST requests with large payload" in {
+    skipper()()
+    val content = Array.fill(1024*1000)(0).toList.mkString("")
+    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+                                             content=Some(content))
+    f.deliverTo((res: HttpResponse[String]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.content.get.trim must beEqual(content)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 
@@ -112,7 +141,8 @@ class HttpClientSpec extends Specification {
 
   "Support CONNECT requests" in {
     skip("CONNECT method TBD")
-    val f = new HttpClientNettyString().connect("http://localhost/test/echo.php?headers=true", headers=Map("Fooblahblah" -> "washere"))
+    val f = new HttpClientNettyString().connect("http://localhost/test/echo.php?headers=true", 
+                                                headers=Map("Fooblahblah" -> "washere"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
