@@ -31,12 +31,12 @@ object MongoQueryOperators {
   case object $in   extends MongoQueryOperatorContainment { def unary_! = $nin; }
   case object $nin  extends MongoQueryOperatorContainment { def unary_! = $in; }
   
-  case object $mod    extends MongoQueryOperator { def unary_! = error("The $mod operator does not have a negation"); }
-  case object $all    extends MongoQueryOperator { def unary_! = error("The $all operator does not have a negation"); }
-  case object $size   extends MongoQueryOperator { def unary_! = error("The $size operator does not have a negation"); }
-  case object $exists extends MongoQueryOperator { def unary_! = error("The $exists operator does not have a negation"); }
-  case object $type   extends MongoQueryOperator { def unary_! = error("The $type operator does not have a negation"); }
-  case object $or     extends MongoQueryOperator { def unary_! = error("The $or operator does not have a negation"); }
+  case object $mod    extends MongoQueryOperator { def unary_! : MongoQueryOperator = error("The $mod operator does not have a negation"); }
+  case object $all    extends MongoQueryOperator { def unary_! : MongoQueryOperator  = error("The $all operator does not have a negation"); }
+  case object $size   extends MongoQueryOperator { def unary_! : MongoQueryOperator  = error("The $size operator does not have a negation"); }
+  case object $exists extends MongoQueryOperator { def unary_! : MongoQueryOperator  = error("The $exists operator does not have a negation"); }
+  case object $type   extends MongoQueryOperator { def unary_! : MongoQueryOperator  = error("The $type operator does not have a negation"); }
+  case object $or     extends MongoQueryOperator { def unary_! : MongoQueryOperator  = error("The $or operator does not have a negation"); }
 }
 
 import MongoQueryOperators._
