@@ -3,7 +3,7 @@
 (
 :project-package "blueeyes"
 :use-sbt t
-:target "target/scala_2.8.1.RC3"
+:target "target/scala_2.8.0"
 :sbt-compile-on-save nil
 :formatting-prefs (:alignParameters nil)
 )
