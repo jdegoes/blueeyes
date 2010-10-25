@@ -5,10 +5,6 @@ import blueeyes.json.JsonAST._
 
 import blueeyes.util.ProductPrefixUnmangler
 
-sealed abstract class MongoSortOrder(val order: Int)
-case object MongoSortOrderAscending extends MongoSortOrder(1)
-case object MongoSortOrderDescending extends MongoSortOrder(-1)
-
 object MongoFilterOperators {
   sealed trait MongoFilterOperator extends Product with ProductPrefixUnmangler {
     def symbol: String = unmangledName
@@ -56,16 +52,12 @@ sealed trait MongoFilter { self =>
 }
 
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>
-  def filter: JObject = {
-    val path  = if (lhs.path.startsWith(".")) lhs.path.substring(1) else lhs.path
-    val field = operator match {
-      case $eq => JField(path, rhs.toJValue)
-    
-      case _ => JField(path, JObject(JField(operator.symbol, rhs.toJValue) :: Nil))
-    }
-    JObject(field :: Nil)
+  def filter: JObject = operator match {
+    case $eq => JObject(JField(lhs.toMongoField, rhs.toJValue) :: Nil)
+
+    case _ => JObject(JField(lhs.toMongoField, JObject(JField(operator.symbol, rhs.toJValue) :: Nil)) :: Nil)
   }
-    
+
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
