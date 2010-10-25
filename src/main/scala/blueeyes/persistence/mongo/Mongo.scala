@@ -46,10 +46,8 @@ case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFil
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, value: JObject) extends MongoQuery[Unit]
-case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = true, multi: Boolean = true) extends MongoQuery[Unit]{
+case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false, multi: Boolean = false) extends MongoQuery[Unit]{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
-  def upsert (newUpsert: Boolean)     : MongoUpdateQuery = MongoUpdateQuery(collection, value, filter, newUpsert, multi)
-  def multi  (newMulti: Boolean)      : MongoUpdateQuery = MongoUpdateQuery(collection, value, filter, upsert, newMulti)
 }
 
 object MongoQueryBuilder{
@@ -64,14 +62,17 @@ object MongoQueryBuilder{
   case class MongoInsertQueryEntryPoint(value: JObject) extends MongoQueryEntryPoint{
     def into(collection: MongoCollection) = MongoInsertQuery(collection, value)
   }
-  case class MongoUpdateQueryEntryPoint(collection: MongoCollection) extends MongoQueryEntryPoint{
-    def set(value: JObject) = MongoUpdateQuery(collection, value)
+  case class MongoUpdateQueryEntryPoint(collection: MongoCollection, upsert: Boolean = false, multi: Boolean = false) extends MongoQueryEntryPoint{
+    def set(value: JObject) = MongoUpdateQuery(collection, value, None, upsert, multi)
   }
 
   def select(selection: JPath*) = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
   def remove                    = MongoRemoveQueryEntryPoint()
   def insert( value: JObject)   = MongoInsertQueryEntryPoint(value)
-  def update( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection)
+  def update( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection)
+  def updateMany( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection, false, true)  
+  def upsert( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection, true, false)
+  def upsertMany( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection, true, true)
 }
 
 object MongoUpdateModifiersOperators {
