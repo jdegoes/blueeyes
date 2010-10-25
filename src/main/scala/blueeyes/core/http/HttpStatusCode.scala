@@ -1,7 +1,7 @@
 package blueeyes.core.http
 
 sealed trait HttpStatusCode {
-  def name = productPrefix
+  def name = productPrefix.toLowerCase
       
   def productPrefix: String
   
@@ -14,10 +14,13 @@ sealed trait HttpStatusCode {
 
 sealed trait HttpSuccess extends HttpStatusCode
 sealed trait HttpFailure extends HttpStatusCode
+sealed trait HttpWarning extends HttpStatusCode
 
 sealed abstract class Informational(val value: Int, val defaultMessage: String) extends HttpSuccess
 sealed abstract class Success(val value: Int, val defaultMessage: String) extends HttpSuccess
 sealed abstract class Redirection(val value: Int, val defaultMessage: String) extends HttpSuccess
+
+sealed abstract class Warning(val value: Int, val defaultMessage: String) extends HttpWarning
 
 sealed abstract class ClientError(val value: Int, val defaultMessage: String) extends HttpFailure
 sealed abstract class ServerError(val value: Int, val defaultMessage: String) extends HttpFailure
@@ -26,6 +29,14 @@ object HttpStatusCodes {
   case object Continue            extends Informational(100, "The server has received the request headers, and the client should proceed to send the request body.")
   case object SwitchingProtocols  extends Informational(101, "The server is switching protocols, because the client requested the switch.")
   case object Processing          extends Informational(102, "The server is processing the request, but no response is available yet.")
+
+  case object Response                  extends Warning(110, "The returned response is stale.")
+  case object Revalidation              extends Warning(111, "A cache returned a stale response because an attempt to revalidate the response failed, due to an inability to reach the server.")
+  case object Disconnected              extends Warning(112, "The cache was intentionally disconnected from the rest of the network for a period of time.")
+  case object Heuristic                 extends Warning(113, "The cache heuristically chose a freshness lifetime greater than 24 hours and the response's age was greater than 24 hours.")
+  case object Miscellaneous             extends Warning(119, "Miscellaneous warning.")
+  case object Transformation            extends Warning(214, "A transformation changed the content-coding of the response, or the entity-body of the response.")
+  case object MiscellaneousPersistent   extends Warning(299, "Miscellaneous persistent warning.")
   
   case object OK              extends Success(200, "The request was successful.")
   case object Created         extends Success(201, "The request has been fulfilled and resulted in a new resource being created.")
