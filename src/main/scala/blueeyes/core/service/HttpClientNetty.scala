@@ -15,6 +15,7 @@ import com.ning.http.client.{
   AsyncHttpClient,
   AsyncCompletionHandler,
   FluentStringsMap,
+  FluentCaseInsensitiveStringsMap,
   Response,
   RequestBuilderBase
 }
@@ -53,15 +54,6 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
         yield requestBuilder.setBody(transcode(content))).getOrElse(requestBuilder)
     }
 
-    /**
-     * Netty does not allow parameters to be set for non-POST/PUT requests
-     */
-    def setParameters(requestBuilder: AsyncHttpClient#BoundRequestBuilder): AsyncHttpClient#BoundRequestBuilder = {
-        requestBuilder.setParameters(request.parameters.foldLeft(new FluentStringsMap()) { (fsMap, pair) =>
-          fsMap.add(pair._1.toString, pair._2)
-        })
-    }
-
     import blueeyes.util.QueryParser
     import java.net.URI
     import scala.collection.mutable.LinkedHashMap
@@ -70,7 +62,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     val origURI = URI.create(request.uri)
     val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")))
     val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath, newQueryParams, origURI.getFragment).toString
-      
+
     var requestBuilder = request.method match {
       case HttpMethods.CONNECT => Some(new AsyncHttpClient().prepareConnect(uri))
       case HttpMethods.DELETE => Some(new AsyncHttpClient().prepareDelete(uri))
@@ -96,7 +88,7 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
         contentLength
     )
 
-    for (pair <- newHeaders; r <- requestBuilder)
+    for (pair <- newHeaders; r <- requestBuilder) 
       yield r.setHeader(pair._1, pair._2)
 
     requestBuilder
