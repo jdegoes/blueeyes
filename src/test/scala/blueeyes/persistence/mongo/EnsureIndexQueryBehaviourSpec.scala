@@ -10,9 +10,8 @@ import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.JsonAST._
 
 class EnsureIndexQueryBehaviourSpec extends Specification {
+  private val collection  = mock[DatabaseCollection]
   "Call collection method" in{
-    val collection  = mock[DatabaseCollection]
-
     val query = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
     query(collection)    
 

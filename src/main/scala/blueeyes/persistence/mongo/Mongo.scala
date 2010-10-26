@@ -18,6 +18,7 @@ trait DatabaseCollectionSource{
 
 trait DatabaseCollection{
   def insert(dbObjects: List[com.mongodb.DBObject])
+  def remove(filter: com.mongodb.DBObject)
   def ensureIndex(name: String, keys: com.mongodb.DBObject, unique: Boolean)
 }
 
@@ -48,6 +49,15 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def objects: List[JObject]
 }
 
+
+trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection): JNothing.type = {
+    collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))
+    JNothing
+  }
+  def filter: Option[MongoFilter]
+}
+
 trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def apply(collection: DatabaseCollection): List[JObject] = {
     Nil
@@ -67,12 +77,6 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
   def filter    : Option[MongoFilter]
 }
 
-trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
-  def apply(collection: DatabaseCollection): JNothing.type = {
-    JNothing
-  }
-  def filter: Option[MongoFilter]
-}
 
 trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
@@ -86,7 +90,7 @@ trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
 
 object RealMongo{
   class RealMongo(host: String, port: Int) extends Mongo{
-    private lazy val mongo = new com.mongodb.Mongo( host , port )    
+    private lazy val mongo = new com.mongodb.Mongo(host , port)
     def database(databaseName: String) = new MongoDatabase(new RealDatabaseCollectionSource(mongo.getDB(databaseName)))
   }
 
@@ -95,10 +99,9 @@ object RealMongo{
   }
 
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
-    def insert(dbObjects: List[DBObject]) = {
-      val result = collection.insert(dbObjects)
-      checkWriteResult(result)
-    }
+    def insert(dbObjects: List[DBObject]) = checkWriteResult(collection.insert(dbObjects))
+    
+    def remove(filter: DBObject)        = checkWriteResult(collection.remove(filter))
 
     def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
 
