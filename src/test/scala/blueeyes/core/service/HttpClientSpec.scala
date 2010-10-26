@@ -3,6 +3,10 @@ package blueeyes.core.service;
 import org.specs.Specification
 import org.specs.util._
 import blueeyes.core.data.{ Bijection, DataTranscoder }
+import blueeyes.json.JsonAST._
+import blueeyes.json.Printer._
+import blueeyes.json.JsonParser
+import blueeyes.json.JsonAST.JValue
 import blueeyes.util.Future
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
@@ -147,9 +151,43 @@ class HttpClientSpec extends Specification {
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
+
+  "Support POST requests with JValue" in {
+    skipper()()
+    val person = """
+    { 
+      "person": {
+        "name": "John Doe",
+        "age": 37,
+        "spouse": {
+          "person": {
+            "name": "Jane Doe",
+            "age": 35
+          }
+        }
+      }
+    }
+    """
+    val jvalue = JsonParser.parse(person)
+    val f = new HttpClientNettyJValue().post("http://localhost/test/echo.php", content=Some(jvalue))
+    f.deliverTo((res: HttpResponse[JValue]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.status.code must be(HttpStatusCodes.OK)
+    f.value.get.content.get must beEqual(jvalue)
+  }
 }
 
 class HttpClientNettyString extends HttpClientNetty[String] with String2StringTranscoder
+
+class HttpClientNettyJValue extends HttpClientNetty[JValue] with Json2StringTranscoder
+
+trait Json2StringTranscoder extends DataTranscoder[JValue, String] {
+  def transcode: Bijection[JValue, String] = new Bijection[JValue, String] {
+    def apply(s: JValue)   = compact(render(s))
+    def unapply(t: String) = JsonParser.parse(t)
+  }
+  def mimeType:MimeType = application/json
+}
 
 trait String2StringTranscoder extends DataTranscoder[String, String] {
   def transcode: Bijection[String, String] = new Bijection[String, String] {
@@ -158,3 +196,4 @@ trait String2StringTranscoder extends DataTranscoder[String, String] {
   }
   def mimeType:MimeType = text/plain
 }
+
