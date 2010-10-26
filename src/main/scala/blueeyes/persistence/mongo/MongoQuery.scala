@@ -51,6 +51,7 @@ case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFil
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath]) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false,
                             multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
@@ -71,6 +72,9 @@ object MongoQueryBuilder{
   case class MongoInsertQueryEntryPoint(value: List[JObject]) extends MongoQueryEntryPoint{
     def into(collection: MongoCollection) = MongoInsertQuery(collection, value)
   }
+  case class MongoMongoEnsureIndexQueryEntryPoint(name: String) extends MongoQueryEntryPoint{
+    def on(collection: MongoCollection, keys: JPath*) = MongoEnsureIndexQuery(collection, name, List(keys: _*))
+  }
   case class MongoUpdateQueryEntryPoint(collection: MongoCollection, upsert: Boolean = false, multi: Boolean = false) extends MongoQueryEntryPoint{
     def set(value: JObject) = MongoUpdateQuery(collection, value, None, upsert, multi)
   }
@@ -79,6 +83,7 @@ object MongoQueryBuilder{
   def selectOne(selection: JPath*)  = MongoSelectOneQueryEntryPoint(MongoSelection(List(selection: _*)))
   def remove                        = MongoRemoveQueryEntryPoint()
   def insert( value: JObject*)      = MongoInsertQueryEntryPoint(List(value: _*))
+  def ensureIndex(name: String)     = MongoMongoEnsureIndexQueryEntryPoint(name)
   def update( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection)
   def updateMany( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection, false, true)  
   def upsert( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection, true, false)

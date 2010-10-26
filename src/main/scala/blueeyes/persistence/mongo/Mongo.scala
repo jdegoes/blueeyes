@@ -5,6 +5,7 @@ import collection.immutable.List
 import blueeyes.persistence.mongo.json.MongoJson._
 import scala.collection.JavaConversions._
 import com.mongodb.{MongoException, DBObject, DB, DBCollection}
+import blueeyes.json.JPath
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
@@ -35,6 +36,13 @@ trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def sort      : Option[MongoSort]
   def skip      : Option[Int]
   def limit     : Option[Int]
+}
+trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection): JNothing.type = {
+    JNothing
+  }
+  def keys: List[JPath]
+  def name: String
 }
 trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
   def apply(collection: DatabaseCollection): Option[JObject] = {
