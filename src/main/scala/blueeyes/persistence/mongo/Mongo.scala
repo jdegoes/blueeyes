@@ -127,7 +127,13 @@ case class MongoUpdateBuilder(jpath: JPath) {
   def popLast                           : MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $pop, MongoPrimitiveInt(1).toJValue)
   def popFirst                          : MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $pop,MongoPrimitiveInt(-1).toJValue)
   def push [T](value: MongoPrimitive[T]): MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $push, value.toJValue)
-  def pull [T](value: MongoPrimitive[T], operator: MongoFilterOperator = $eq): MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $pull, MongoFieldFilter(jpath, operator, value).filter)
+  def pull [T](value: MongoPrimitive[T], operator: MongoFilterOperator = $eq): MongoUpdateFieldValue = {
+    val jValue = operator match {
+      case $eq => value.toJValue
+      case _ => JObject(JField(operator.symbol, value.toJValue) :: Nil)
+    }
+    MongoUpdateFieldValue(jpath, $pull, jValue)
+  }
   def pull (matchingCriteria: JObject)  : MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $pull, matchingCriteria)
 
   def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue(jpath, $pushAll, MongoPrimitiveArray(List(items: _*)).toJValue)
