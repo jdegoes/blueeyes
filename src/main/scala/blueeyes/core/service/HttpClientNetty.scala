@@ -86,7 +86,6 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
         contentType,
         contentLength
     )
-    println(newHeaders)
 
     for (pair <- newHeaders; r <- requestBuilder) 
       yield r.setHeader(pair._1, pair._2)
