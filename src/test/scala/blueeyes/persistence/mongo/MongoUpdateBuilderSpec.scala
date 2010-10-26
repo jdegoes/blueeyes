@@ -7,7 +7,7 @@ import MongoUpdateOperators._
 import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 
-class MongoUpdateBuilderSpec  extends Specification{
+class MongoUpdateBuilderSpec extends Specification{
   "builds $inc operation" in {
     import MongoFilterImplicits._
     ("n" inc (1) toJValue) mustEqual (JObject(JField("$inc", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
