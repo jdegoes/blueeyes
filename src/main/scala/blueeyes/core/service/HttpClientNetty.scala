@@ -59,7 +59,10 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     // Merge request.parameters and original query params (in uri)
     val origURI = URI.create(request.uri)
     val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")))
-    val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath, newQueryParams, origURI.getFragment).toString
+    // URI expects nulls for undefined params, hence the conditional for the uri param
+    val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath, 
+                      if(newQueryParams.length == 0) null else newQueryParams, 
+                      origURI.getFragment).toString
 
     var requestBuilder = request.method match {
       case HttpMethods.CONNECT => Some(new AsyncHttpClient().prepareConnect(uri))
