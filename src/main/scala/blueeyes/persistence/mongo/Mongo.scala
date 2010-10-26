@@ -3,13 +3,35 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST.{JValue, JField, JObject, JNothing}
+import com.mongodb.DB
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
-trait MongoDatabase{
-  def apply[T](query: MongoQuery[T]): T    
+class MongoDatabase(database: DB){
+  def apply[T](query: MongoQuery[T]): T = query match{
+    case x: MongoInsertQuery => insert(x).asInstanceOf[T]
+    case x: MongoSelectQuery => select(x).asInstanceOf[T]
+    case x: MongoSelectOneQuery => selectOne(x).asInstanceOf[T]
+    case x: MongoUpdateQuery => update(x).asInstanceOf[T]
+    case x: MongoRemoveQuery => remove(x).asInstanceOf[T]
+  } 
+  private def insert(query: MongoInsertQuery) = {
+    JNothing
+  }
+  private def update(query: MongoUpdateQuery) = {
+    JNothing
+  }
+  private def remove(query: MongoRemoveQuery) = {
+    JNothing
+  }
+  private def select(query: MongoSelectQuery) = {
+    List[JObject]()
+  }
+  private def selectOne(query: MongoSelectOneQuery) = {
+    None
+  }
 }
 
 case class MongoCollection(name: String)
@@ -35,7 +57,6 @@ trait MongoImplicits {
   implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
 
   implicit def mongoUpdateValueToJValue(value: MongoUpdateValue): JObject = value.toJValue
-
 }
 
 object MongoImplicits extends MongoImplicits
@@ -46,25 +67,33 @@ sealed trait MongoQuery[T]{
   def collection: MongoCollection;
 }
 
-case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, selectOne: Boolean = false, filter: Option[MongoFilter] = None, sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[List[JValue]]{
-  def where (newFilter: MongoFilter): MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, Some(newFilter), sort, skip, limit)
-  def sortBy(newSort: MongoSort)    : MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, filter, Some(newSort), skip, limit)
-  def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, filter, sort, Some(newSkip), limit)
-  def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, filter, sort, skip, Some(newLimit))
+case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[List[JObject]]{
+  def where (newFilter: MongoFilter): MongoSelectQuery = MongoSelectQuery(selection, collection, Some(newFilter), sort, skip, limit)
+  def sortBy(newSort: MongoSort)    : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, Some(newSort), skip, limit)
+  def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, Some(newSkip), limit)
+  def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, skip, Some(newLimit))
+}
+case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[Option[JObject]]{
+  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter))
 }
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type]{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, value: JObject) extends MongoQuery[JNothing.type]
-case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false, multi: Boolean = false) extends MongoQuery[JNothing.type]{
+case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false,
+                            multi: Boolean = false) extends MongoQuery[JNothing.type]{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
 }
 
 object MongoQueryBuilder{
 
   sealed trait MongoQueryEntryPoint
-  case class MongoSelectQueryEntryPoint(selection: MongoSelection, selectOne: Boolean = false) extends MongoQueryEntryPoint{
-    def from(collection: MongoCollection) = MongoSelectQuery(selection, collection, selectOne)
+  case class MongoSelectQueryEntryPoint(selection: MongoSelection) extends MongoQueryEntryPoint{
+    def from(collection: MongoCollection) = MongoSelectQuery(selection, collection)
+  }
+  case class MongoSelectOneQueryEntryPoint(selection: MongoSelection) extends MongoQueryEntryPoint{
+    def from(collection: MongoCollection) = MongoSelectOneQuery(selection, collection)
   }
   case class MongoRemoveQueryEntryPoint() extends MongoQueryEntryPoint{
     def from(collection: MongoCollection) = MongoRemoveQuery(collection)
@@ -77,7 +106,7 @@ object MongoQueryBuilder{
   }
 
   def select(selection: JPath*)     = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
-  def selectOne(selection: JPath*)  = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)), true)
+  def selectOne(selection: JPath*)  = MongoSelectOneQueryEntryPoint(MongoSelection(List(selection: _*)))
   def remove                        = MongoRemoveQueryEntryPoint()
   def insert( value: JObject)       = MongoInsertQueryEntryPoint(value)
   def update( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection)
