@@ -3,13 +3,19 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST.{JValue, JField, JObject, JNothing}
-import com.mongodb.DB
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
-class MongoDatabase(database: DB){
+trait CollectionSource{
+  def getCollection(collectionName: String): Collection
+}
+
+trait Collection{
+}
+
+class MongoDatabase(database: CollectionSource){
   def apply[T](query: MongoQuery[T]): T = query match{
     case x: MongoInsertQuery => insert(x).asInstanceOf[T]
     case x: MongoSelectQuery => select(x).asInstanceOf[T]
