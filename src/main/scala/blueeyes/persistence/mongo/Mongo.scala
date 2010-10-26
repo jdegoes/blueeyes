@@ -3,10 +3,10 @@ package blueeyes.persistence.mongo
 import collection.immutable.List
 import blueeyes.persistence.mongo.json.MongoJson._
 import scala.collection.JavaConversions._
-import com.mongodb.{MongoException, DBObject, DB, DBCollection}
 import blueeyes.json.JPath
 import java.lang.String
 import blueeyes.json.JsonAST.{JInt, JField, JObject, JNothing}
+import com.mongodb._
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
@@ -51,20 +51,20 @@ trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def unique: Boolean
 }
 
-trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
-  def apply(collection: DatabaseCollection): Option[JObject] = {
-    None
-  }
-  def selection : MongoSelection
-  def filter    : Option[MongoFilter]
-}
-
 trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     collection.insert(objects.map(jObject2MongoObject(_)))
     JNothing
   }
   def objects: List[JObject]
+}
+
+trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
+  def apply(collection: DatabaseCollection): Option[JObject] = {
+    None
+  }
+  def selection : MongoSelection
+  def filter    : Option[MongoFilter]
 }
 
 trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
@@ -85,8 +85,9 @@ trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
 }
 
 object RealMongo{
-  class RealMongo(database: DB) extends Mongo{
-    def database(databaseName: String) = new MongoDatabase(new RealDatabaseCollectionSource(database))
+  class RealMongo(host: String, port: Int) extends Mongo{
+    private lazy val mongo = new com.mongodb.Mongo( host , port )    
+    def database(databaseName: String) = new MongoDatabase(new RealDatabaseCollectionSource(mongo.getDB(databaseName)))
   }
 
   class RealDatabaseCollectionSource(database: DB) extends DatabaseCollectionSource{
@@ -95,9 +96,10 @@ object RealMongo{
 
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
     def insert(dbObjects: List[DBObject]) = {
-      val result = collection.insert(dbObjects).getLastError
-      if (!result.ok){
-        result.throwOnError
+      val result = collection.insert(dbObjects)
+      val error  = result.getLastError
+      if (error != null && error.get("err") != null){
+       throw new MongoException(error)
       }
     }
 

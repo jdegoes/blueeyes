@@ -12,7 +12,7 @@ import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpStatusCodes, HttpVersions, HttpMethods}
+import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
