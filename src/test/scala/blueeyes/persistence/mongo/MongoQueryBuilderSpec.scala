@@ -22,6 +22,12 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates insert query" in{
     insert(jObject).into("collection") mustEqual ( MongoInsertQuery(MongoCollection("collection"), jObject :: Nil) )
   }
+  "creates ensureIndex query" in{
+    ensureIndex("index").on("collection", "address.city") mustEqual ( MongoEnsureIndexQuery(MongoCollection("collection"), "index", JPath("address.city") :: Nil, false) )
+  }
+  "creates ensureUniqueIndex query" in{
+    ensureUniqueIndex("index").on("collection", "address.city") mustEqual ( MongoEnsureIndexQuery(MongoCollection("collection"), "index", JPath("address.city") :: Nil, true) )
+  }
   "creates update query" in{
     update("collection").set(jObject) mustEqual ( MongoUpdateQuery(MongoCollection("collection"), jObject) )
   }

@@ -1,10 +1,12 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JsonAST.{JObject, JNothing}
 import collection.immutable.List
 import blueeyes.persistence.mongo.json.MongoJson._
 import scala.collection.JavaConversions._
 import com.mongodb.{MongoException, DBObject, DB, DBCollection}
+import blueeyes.json.JPath
+import java.lang.String
+import blueeyes.json.JsonAST.{JInt, JField, JObject, JNothing}
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
@@ -16,6 +18,7 @@ trait DatabaseCollectionSource{
 
 trait DatabaseCollection{
   def insert(dbObjects: List[com.mongodb.DBObject])
+  def ensureIndex(name: String, keys: com.mongodb.DBObject, unique: Boolean)
 }
 
 class MongoDatabase(collectionSource: DatabaseCollectionSource){
@@ -36,6 +39,18 @@ trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def skip      : Option[Int]
   def limit     : Option[Int]
 }
+
+trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection): JNothing.type = {
+    val keysObject = JObject(keys.map(key => JField(key.toMongoField, JInt(1))))
+    collection.ensureIndex(name, keysObject, unique)
+    JNothing
+  }
+  def keys: List[JPath]
+  def name: String
+  def unique: Boolean
+}
+
 trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
   def apply(collection: DatabaseCollection): Option[JObject] = {
     None
@@ -43,6 +58,7 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
   def selection : MongoSelection
   def filter    : Option[MongoFilter]
 }
+
 trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     collection.insert(objects.map(jObject2MongoObject(_)))
@@ -50,12 +66,14 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   }
   def objects: List[JObject]
 }
+
 trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     JNothing
   }
   def filter: Option[MongoFilter]
 }
+
 trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     JNothing
@@ -82,6 +100,8 @@ object RealMongo{
         result.throwOnError
       }
     }
+
+    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
   }
 }
 
