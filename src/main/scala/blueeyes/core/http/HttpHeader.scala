@@ -270,24 +270,33 @@ object HttpHeaders {
       Some(ViaInfos.parseViaInfos(keyValue._2)) else None
   }
 
-  class Warning(val value: String) extends HttpHeader {
+  class Warning(val warnings: WarningInfo*) extends HttpHeader {
+    def value = warnings.map(_.toString).mkString(", ")
   }
   object Warning {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning") Some(keyValue._2) else None
+    def apply(warnings: WarningInfo*) = new Warning(warnings: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning")
+      Some(WarningInfos.parseWarnings(keyValue._2)) else None
   }
 
   /*********** Responses ************/
 
-  class Age(val value: String) extends HttpHeader 
+  class Age(val age: Long) extends HttpHeader {
+    def value = age.toString
+  }
   object Age {
-    def apply(age: Int) = new Age(age.toString)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age") Some(keyValue._2) else None
+    def apply(age: Long) = new Age(age)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age")
+      Some(keyValue._2.toLong) else None
   }
 
-  class Allow(val value: String) extends HttpHeader 
+  class Allow(val methods: HttpMethod*) extends HttpHeader {
+    def value = methods.map(_.value).mkString(",")
+  }
   object Allow {
-    def apply(methods: HttpMethod*) = new Allow(methods.map(_.value).mkString(","))
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow") Some(keyValue._2) else None
+    def apply(methods: HttpMethod*) = new Allow(methods: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow")
+      Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
   }
 
   class `Cache-Control`(val value: String) extends HttpHeader {
@@ -490,11 +499,11 @@ trait HttpHeaderImplicits {
     case Upgrade(value) => new Upgrade(value: _*)
     case `User-Agent`(value) => new `User-Agent`(value)
     case Via(value) => new Via(value: _*)
-    case Warning(value) => new Warning(value)
+    case Warning(value) => new Warning(value: _*)
 
     /** Responses **/
     case Age(value) => new Age(value)
-    case Allow(value) => new Allow(value)
+    case Allow(value) => new Allow(value: _*)
     case `Cache-Control`(value) => new `Cache-Control`(value)
     case `Content-Encoding`(value) => new `Content-Encoding`(value)
     case `Content-Language`(value) => new `Content-Language`(value)
