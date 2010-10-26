@@ -29,17 +29,6 @@ class MongoDatabase(collectionSource: DatabaseCollectionSource){
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
 
-trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
-  def apply(collection: DatabaseCollection): List[JObject] = {
-    Nil
-  }
-  def selection : MongoSelection
-  def filter    : Option[MongoFilter]
-  def sort      : Option[MongoSort]
-  def skip      : Option[Int]
-  def limit     : Option[Int]
-}
-
 trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     val keysObject = JObject(keys.map(key => JField(key.toMongoField, JInt(1))))
@@ -57,6 +46,17 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
     JNothing
   }
   def objects: List[JObject]
+}
+
+trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
+  def apply(collection: DatabaseCollection): List[JObject] = {
+    Nil
+  }
+  def selection : MongoSelection
+  def filter    : Option[MongoFilter]
+  def sort      : Option[MongoSort]
+  def skip      : Option[Int]
+  def limit     : Option[Int]
 }
 
 trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
@@ -97,13 +97,17 @@ object RealMongo{
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
     def insert(dbObjects: List[DBObject]) = {
       val result = collection.insert(dbObjects)
+      checkWriteResult(result)
+    }
+
+    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
+
+    private def checkWriteResult(result: WriteResult){
       val error  = result.getLastError
       if (error != null && error.get("err") != null){
        throw new MongoException(error)
       }
-    }
-
-    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
+    }    
   }
 }
 
