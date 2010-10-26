@@ -51,7 +51,7 @@ case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFil
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
-case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath]) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false,
                             multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
@@ -72,18 +72,19 @@ object MongoQueryBuilder{
   case class MongoInsertQueryEntryPoint(value: List[JObject]) extends MongoQueryEntryPoint{
     def into(collection: MongoCollection) = MongoInsertQuery(collection, value)
   }
-  case class MongoMongoEnsureIndexQueryEntryPoint(name: String) extends MongoQueryEntryPoint{
-    def on(collection: MongoCollection, keys: JPath*) = MongoEnsureIndexQuery(collection, name, List(keys: _*))
+  case class MongoMongoEnsureIndexQueryEntryPoint(name: String, unique: Boolean) extends MongoQueryEntryPoint{
+    def on(collection: MongoCollection, keys: JPath*) = MongoEnsureIndexQuery(collection, name, List(keys: _*), unique)
   }
   case class MongoUpdateQueryEntryPoint(collection: MongoCollection, upsert: Boolean = false, multi: Boolean = false) extends MongoQueryEntryPoint{
     def set(value: JObject) = MongoUpdateQuery(collection, value, None, upsert, multi)
   }
 
-  def select(selection: JPath*)     = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
-  def selectOne(selection: JPath*)  = MongoSelectOneQueryEntryPoint(MongoSelection(List(selection: _*)))
-  def remove                        = MongoRemoveQueryEntryPoint()
-  def insert( value: JObject*)      = MongoInsertQueryEntryPoint(List(value: _*))
-  def ensureIndex(name: String)     = MongoMongoEnsureIndexQueryEntryPoint(name)
+  def select(selection: JPath*)                 = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
+  def selectOne(selection: JPath*)              = MongoSelectOneQueryEntryPoint(MongoSelection(List(selection: _*)))
+  def remove                                    = MongoRemoveQueryEntryPoint()
+  def insert( value: JObject*)                  = MongoInsertQueryEntryPoint(List(value: _*))
+  def ensureIndex(name: String)                 = MongoMongoEnsureIndexQueryEntryPoint(name, false)
+  def ensureUniqueIndex(name: String)           = MongoMongoEnsureIndexQueryEntryPoint(name, true)
   def update( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection)
   def updateMany( collection: MongoCollection)  = MongoUpdateQueryEntryPoint(collection, false, true)  
   def upsert( collection: MongoCollection)      = MongoUpdateQueryEntryPoint(collection, true, false)
