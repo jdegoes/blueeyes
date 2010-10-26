@@ -34,6 +34,8 @@ trait MongoImplicits {
 
   implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
 
+  implicit def mongoUpdateValueToJValue(value: MongoUpdateValue): JObject = value.toJValue
+
 }
 
 object MongoImplicits extends MongoImplicits
