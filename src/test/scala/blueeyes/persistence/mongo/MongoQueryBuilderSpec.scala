@@ -14,13 +14,13 @@ class MongoQueryBuilderSpec  extends Specification{
     select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection")) )
   }
   "creates selectOne query" in{
-    selectOne("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), true) )
+    selectOne("foo", "bar").from("collection") mustEqual ( MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection")) )
   }
   "creates remove query" in{
     remove.from("collection") mustEqual ( MongoRemoveQuery(MongoCollection("collection")) )
   }
   "creates insert query" in{
-    insert(jObject).into("collection") mustEqual ( MongoInsertQuery(MongoCollection("collection"), jObject) )
+    insert(jObject).into("collection") mustEqual ( MongoInsertQuery(MongoCollection("collection"), jObject :: Nil) )
   }
   "creates update query" in{
     update("collection").set(jObject) mustEqual ( MongoUpdateQuery(MongoCollection("collection"), jObject) )
