@@ -19,14 +19,16 @@ case object MongoSortOrderAscending extends MongoSortOrder(1)
 case object MongoSortOrderDescending extends MongoSortOrder(-1)
 
 case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
-  def > : MongoSort = MongoSort(sortField, MongoSortOrderAscending)
-  def < : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
+  def >> : MongoSort = MongoSort(sortField, MongoSortOrderAscending)
+  def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
 }
 
 trait MongoImplicits {
   implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollection(string)
 
   implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
+
+  implicit def stringToMongoSort(string: String): MongoSort = MongoSort(JPath(string), MongoSortOrderAscending)
 
   implicit def stringToMongoUpdateBuilder(string: String): MongoUpdateBuilder = MongoUpdateBuilder(JPath(string))
 
@@ -48,11 +50,11 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, filter, sort, Some(newSkip), limit)
   def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, selectOne, filter, sort, skip, Some(newLimit))
 }
-case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[Unit]{
+case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type]{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
-case class MongoInsertQuery(collection: MongoCollection, value: JObject) extends MongoQuery[Unit]
-case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false, multi: Boolean = false) extends MongoQuery[Unit]{
+case class MongoInsertQuery(collection: MongoCollection, value: JObject) extends MongoQuery[JNothing.type]
+case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false, multi: Boolean = false) extends MongoQuery[JNothing.type]{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
 }
 
