@@ -5,8 +5,6 @@ import MongoQueryBuilder._
 import MongoFilterOperators._
 import MongoImplicits._
 import blueeyes.json.JPathImplicits._
-import blueeyes.json.JPath
-
 
 class MongoRemoveQuerySpec extends Specification{
   private val query = remove.from("collection")
