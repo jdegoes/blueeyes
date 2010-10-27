@@ -12,6 +12,7 @@ object MongoDemo{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
+  private val jObject3 = JObject(JField("address", JObject( JField("city", JString("E")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
 
   private val collection = "my-collection"
 
@@ -24,11 +25,13 @@ object MongoDemo{
 
     database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 
-    demoSelectOne
+//    demoSelectOne
+//
+//    demoSelect
+    
+    demoUpdate
 
-    demoSelect    
-
-    demoRemove
+//    demoRemove
   }
 
   private def demoSelect{
@@ -45,6 +48,23 @@ object MongoDemo{
 
     database(remove.from(collection))
     println("------------demoSelect------------------")
+  }
+  private def demoUpdate{
+    import MongoUpdateBuilder._
+    println("------------demoUpdate------------------")
+    insertObjects
+
+    println(database(update(collection).set("address.city" set ("F")).where("address.city" === "B")))
+    printObjects(database(select().from(collection)))
+    println(database(update(collection).set(("address.city" set ("Y")) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
+    printObjects(database(select().from(collection)))
+    println(database(update(collection).set(jObject3).where("address.city" === "A")))
+    printObjects(database(select().from(collection)))
+    println(database(updateMany(collection).set("address.street" set ("New Street"))))
+    printObjects(database(select().from(collection)))
+
+    database(remove.from(collection))
+    println("------------demoUpdate------------------")
   }
   private def demoSelectOne{
     println("------------demoSelectOne------------------")
