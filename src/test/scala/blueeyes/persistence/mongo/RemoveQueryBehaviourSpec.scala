@@ -14,15 +14,15 @@ class RemoveQueryBehaviourSpec extends Specification {
 
   "Call collection method" in{
     import MongoFilterImplicits._
-    val jobject     = JObject(JField("name", JString("Joe")) :: Nil)
-    val mongoObject = jObject2MongoObject(jobject)
+
+    val filter = jObject2MongoObject(JObject(JField("name", JString("Joe")) :: Nil))
     
-    when(collection.remove(mongoObject)).thenReturn(2)
+    when(collection.remove(filter)).thenReturn(2)
 
     val query  = remove.from("collection").where("name" === "Joe")
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).remove(mongoObject)
+    Mockito.verify(collection, times(1)).remove(filter)
 
     result mustEqual(JInt(2))
   }

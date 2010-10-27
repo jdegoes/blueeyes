@@ -14,9 +14,11 @@ class InsertQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
   "Call collection method" in{
-    val query = insert(jObject).into("collection")
-    query(collection)
+    val query  = insert(jObject).into("collection")
+    val result = query(collection)
 
     Mockito.verify(collection, times(1)).insert(jObject2MongoObject(jObject) :: Nil)
+
+    result must be (JNothing)
   }
 }

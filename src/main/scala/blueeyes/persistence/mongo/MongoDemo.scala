@@ -8,14 +8,14 @@ import blueeyes.json.JsonAST._
 import MongoFilterImplicits._
 
 object MongoDemo{
-  private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
+  private val jObject  = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road 1")) ::  Nil)) :: Nil)
 
   private val collection = "my-collection"
   
   def main(args: Array[String]){
     val realMongo = new RealMongo( "localhost" , 27017 )
-    val database        = realMongo.database( "mydb" );
+    val database  = realMongo.database( "mydb" );
 
     database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 

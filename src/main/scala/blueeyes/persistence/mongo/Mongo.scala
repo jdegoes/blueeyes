@@ -17,9 +17,10 @@ trait DatabaseCollectionSource{
 }
 
 trait DatabaseCollection{
-  def insert(dbObjects: List[com.mongodb.DBObject])
+  def insert(dbObjects: List[DBObject])
+  def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject]
   def remove(filter: com.mongodb.DBObject): Int
-  def ensureIndex(name: String, keys: com.mongodb.DBObject, unique: Boolean)
+  def ensureIndex(name: String, keys: DBObject, unique: Boolean)
 }
 
 class MongoDatabase(collectionSource: DatabaseCollectionSource){
@@ -55,7 +56,10 @@ trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
 
 trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def apply(collection: DatabaseCollection): List[JObject] = {
-    Nil
+    val keysObject   = JObject(selection.selection.map(key => JField(key.toMongoField, JInt(1))))
+    val filterObject = filter.map(_.filter).getOrElse(JObject(Nil))
+    val sortObject   = sort.map(v => JObject(JField(v.sortField.toMongoField, JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
+    collection.select(keysObject, filterObject, sortObject, skip, limit).map(mongoObject2JObject(_))
   }
   def selection : MongoSelection
   def filter    : Option[MongoFilter]
@@ -99,6 +103,16 @@ object RealMongo{
     def remove(filter: DBObject)          = checkWriteResult(collection.remove(filter)).getN
 
     def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
+
+
+    def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject] = {
+      val cursor        = collection.find(filter, keys)
+      val sortedCursor  = sort.map(cursor.sort(_)).getOrElse(cursor)
+      val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
+      val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
+
+      List(limitedCursor.toArray: _*)
+    }
 
     private def checkWriteResult(result: WriteResult) = {
       val error  = result.getLastError
