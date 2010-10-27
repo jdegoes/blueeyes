@@ -19,8 +19,9 @@ trait DatabaseCollectionSource{
 trait DatabaseCollection{
   def insert(dbObjects: List[DBObject])
   def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject]
-  def remove(filter: com.mongodb.DBObject): Int
+  def remove(filter: DBObject): Int
   def ensureIndex(name: String, keys: DBObject, unique: Boolean)
+  def update(filter: DBObject, dbObject: DBObject, upsert: Boolean, multi: Boolean): Int
 }
 
 class MongoDatabase(collectionSource: DatabaseCollectionSource){
@@ -84,10 +85,9 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
 }
 
 
-trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
-  def apply(collection: DatabaseCollection): JNothing.type = {
-    JNothing
-  }
+trait UpdateQueryBehaviour extends QueryBehaviour[JInt]{
+  def apply(collection: DatabaseCollection): JInt = JInt(collection.update(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))), value, upsert, multi))
+  
   def value : JObject
   def filter: Option[MongoFilter]
   def upsert: Boolean
@@ -109,8 +109,9 @@ object RealMongo{
     
     def remove(filter: DBObject)          = checkWriteResult(collection.remove(filter)).getN
 
-    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
+    def update(filter: DBObject, dbObject: DBObject, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(filter, dbObject, upsert, multi)).getN
 
+    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
 
     def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject] = {
       val cursor        = collection.find(filter, keys)
