@@ -51,7 +51,7 @@ object ParserSpec extends Specification with JValueGen with ScalaCheck {
   }
 
   "All valid string escape characters can be parsed" in {
-    parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0")::Nil)
+    parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
   }
 
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)

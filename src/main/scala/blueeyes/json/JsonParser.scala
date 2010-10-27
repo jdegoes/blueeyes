@@ -75,53 +75,58 @@ object JsonParser {
       astParser(new Parser(buf))
     } catch {
       case e: ParseException => throw e
-      case e: Exception => throw new ParseException("parsing failed", e)
+      case e: Exception => e.printStackTrace(); throw new ParseException("parsing failed", e)
     } finally { buf.release }
   }
   
   private[json] def unquote(string: String): String = unquote(new JsonParser.Buffer(new java.io.StringReader(string)))
   
   private[json] def unquote(buf: JsonParser.Buffer): String = {
-    val EOF = (-1).asInstanceOf[Char]
-    
+
     def unquote0(buf: JsonParser.Buffer, base: String): String = {
       val s = new java.lang.StringBuilder(base)
-      var c = '\\'
-      while (c != EOF) {
+      var cOpt: Option[Char] = Some('\\')
+      while (cOpt.isDefined) {
+        val c = cOpt.get
         if (c == '"') {
           return s.toString
         }
 
         if (c == '\\') {
-          buf.next match {
-            case '"'  => s.append('"')
-            case '\\' => s.append('\\')
-            case '/'  => s.append('/')
-            case 'b'  => s.append('\b')
-            case 'f'  => s.append('\f')
-            case 'n'  => s.append('\n')
-            case 'r'  => s.append('\r')
-            case 't'  => s.append('\t')
-            case 'u' =>
-              val chars = Array(buf.next, buf.next, buf.next, buf.next)
-              val codePoint = Integer.parseInt(new String(chars), 16)
-              s.appendCodePoint(codePoint)
-            case _ => s.append('\\')
+          buf.next match{
+            case Some(c) =>
+              c match {
+                case '"'  => s.append('"')
+                case '\\' => s.append('\\')
+                case '/'  => s.append('/')
+                case 'b'  => s.append('\b')
+                case 'f'  => s.append('\f')
+                case 'n'  => s.append('\n')
+                case 'r'  => s.append('\r')
+                case 't'  => s.append('\t')
+                case 'u' =>
+                  val chars = Array(buf.next, buf.next, buf.next, buf.next).filter(_.isDefined).map(_.get)
+                  val codePoint = Integer.parseInt(new String(chars), 16)
+                  s.appendCodePoint(codePoint)
+                case _ => s.append('\\')
+              }
+            case None =>              
           }
         } else s.append(c)
-        c = buf.next
+        cOpt = buf.next
       }
       error("expected string end")
     }
     
     buf.mark
-    var c = buf.next
-    while (c != EOF) {
+    var cOpt = buf.next
+    while (cOpt.isDefined) {
+      val c = cOpt.get
       if (c == '"') return buf.substring
       if (c == '\\') {
         return unquote0(buf, buf.substring)
       }
-      c = buf.next
+      cOpt = buf.next
     }
     error("expected string end")
   }
@@ -188,8 +193,6 @@ object JsonParser {
     root.getOrElse(throw new ParseException("expected object or array", null))
   }
 
-  private val EOF = (-1).asInstanceOf[Char]
-
   private class ValStack(parser: Parser) {
     import java.util.LinkedList
     private[this] val stack = new LinkedList[JValue]()
@@ -222,10 +225,11 @@ object JsonParser {
 
       def parseFieldName: String = {
         buf.mark
-        var c = buf.next
-        while (c != EOF) {
+        var cOpt = buf.next
+        while (cOpt.isDefined) {
+          val c = cOpt.get
           if (c == '"') return buf.substring
-          c = buf.next
+          cOpt = buf.next
         }
         fail("expected string end")
       }
@@ -245,67 +249,80 @@ object JsonParser {
         val s = new StringBuilder
         s.append(first)
         while (wasInt) {
-          val c = buf.next
-          if (c == '.' || c == 'e' || c == 'E') {
-            doubleVal = true
-            s.append(c)
-          } else if (!(Character.isDigit(c) || c == '.' || c == 'e' || c == 'E' || c == '-')) {
-            wasInt = false
-            buf.back
-          } else s.append(c)
+          buf.next match{
+            case Some(c) =>{
+              if (c == '.' || c == 'e' || c == 'E') {
+                doubleVal = true
+                s.append(c)
+              } else if (!(Character.isDigit(c) || c == '.' || c == 'e' || c == 'E' || c == '-')) {
+                wasInt = false
+                buf.back
+              } else s.append(c)
+            }
+            case None => wasInt = false
+          }
         }
         val value = s.toString
         if (doubleVal) DoubleVal(value.toDouble) else IntVal(BigInt(value))
       }
 
+      def readString(charCount: Int) = {
+        val chars = for (i <- 1 to charCount) yield buf.next
+        chars.filter(_.isDefined).map(_.get).mkString("")
+      }
+
       while (true) {
-        buf.next match {
-          case c if EOF == c => return End
-          case '{' =>
-            blocks.addFirst(OBJECT)
-            fieldNameMode = true
-            return OpenObj
-          case '}' =>
-            blocks.poll
-            return CloseObj
-          case '"' =>
-            if (fieldNameMode && blocks.peek == OBJECT) return FieldStart(parseFieldName)
-            else {
+        val cOpt = buf.next
+        cOpt match{
+          case None => return End
+          case Some(c) =>
+          c match {
+            case '{' =>
+              blocks.addFirst(OBJECT)
               fieldNameMode = true
-              return StringVal(parseString)
-            }
-          case 't' =>
-            fieldNameMode = true
-            if (buf.next == 'r' && buf.next == 'u' && buf.next == 'e') {
-              return BoolVal(true)
-            }
-            fail("expected boolean")
-          case 'f' =>
-            fieldNameMode = true
-            if (buf.next == 'a' && buf.next == 'l' && buf.next == 's' && buf.next == 'e') {
-              return BoolVal(false)
-            }
-            fail("expected boolean")
-          case 'n' =>
-            fieldNameMode = true
-            if (buf.next == 'u' && buf.next == 'l' && buf.next == 'l') {
-              return NullVal
-            }
-            fail("expected null")
-          case ':' =>
-            fieldNameMode = false
-          case '[' =>
-            blocks.addFirst(ARRAY)
-            return OpenArr
-          case ']' =>
-            fieldNameMode = true
-            blocks.poll
-            return CloseArr
-          case c if Character.isDigit(c) || c == '-' =>
-            fieldNameMode = true
-            return parseValue(c)
-          case c if isDelimiter(c) =>
-          case c => fail("unknown token " + c)
+              return OpenObj
+            case '}' =>
+              blocks.poll
+              return CloseObj
+            case '"' =>
+              if (fieldNameMode && blocks.peek == OBJECT) return FieldStart(parseFieldName)
+              else {
+                fieldNameMode = true
+                return StringVal(parseString)
+              }
+            case 't' =>
+              fieldNameMode = true
+              if (readString(3) == "rue") {
+                return BoolVal(true)
+              }
+              fail("expected boolean")
+            case 'f' =>
+              fieldNameMode = true
+              if (readString(4) == "alse") {
+                return BoolVal(false)
+              }
+              fail("expected boolean")
+            case 'n' =>
+              fieldNameMode = true
+              if (readString(3) == "ull") {
+                return NullVal
+              }
+              fail("expected null")
+            case ':' =>
+              fieldNameMode = false
+            case '[' =>
+              blocks.addFirst(ARRAY)
+              return OpenArr
+            case ']' =>
+              fieldNameMode = true
+              blocks.poll
+              return CloseArr
+            case c if Character.isDigit(c) || c == '-' =>
+              fieldNameMode = true
+              return parseValue(c)
+            case c if isDelimiter(c) =>
+            case c => fail("unknown token " + c)
+          }
         }
       }
       End
@@ -332,17 +349,17 @@ object JsonParser {
     def mark = { curMark = cur; curMarkSegment = curSegmentIdx }
     def back = cur = cur-1
 
-    def next: Char = {
+    def next: Option[Char] = {
       try {
         val c = segment(cur)
-        if (cur >= length) return EOF
+        if (cur >= length) return None
         cur = cur+1
-        c
+        Some(c)
       } catch {
         // suprisingly catching IndexOutOfBounds is faster than: if (cur == segment.length)
         case e =>
           read
-          if (length == -1) EOF else next
+          if (length == -1) None else next
       }
     }
 
