@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
-import blueeyes.json.JsonAST.{JValue, JField, JObject, JNothing}
+import blueeyes.json.JsonAST._
 
 case class MongoCollection(name: String)
 
@@ -47,7 +47,7 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter))
 }
-case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
+case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour

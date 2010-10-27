@@ -18,14 +18,12 @@ trait DatabaseCollectionSource{
 
 trait DatabaseCollection{
   def insert(dbObjects: List[com.mongodb.DBObject])
-  def remove(filter: com.mongodb.DBObject)
+  def remove(filter: com.mongodb.DBObject): Int
   def ensureIndex(name: String, keys: com.mongodb.DBObject, unique: Boolean)
 }
 
 class MongoDatabase(collectionSource: DatabaseCollectionSource){
-  def apply[T](query: MongoQuery[T]): T = {
-    query(collectionSource.getCollection(query.collection.name))
-  }
+  def apply[T](query: MongoQuery[T]): T = query(collectionSource.getCollection(query.collection.name))
 }
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
@@ -49,12 +47,9 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def objects: List[JObject]
 }
 
+trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
+  def apply(collection: DatabaseCollection): JInt = JInt(collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil)))))
 
-trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
-  def apply(collection: DatabaseCollection): JNothing.type = {
-    collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))
-    JNothing
-  }
   def filter: Option[MongoFilter]
 }
 
@@ -101,15 +96,16 @@ object RealMongo{
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
     def insert(dbObjects: List[DBObject]) = checkWriteResult(collection.insert(dbObjects))
     
-    def remove(filter: DBObject)        = checkWriteResult(collection.remove(filter))
+    def remove(filter: DBObject)          = checkWriteResult(collection.remove(filter)).getN
 
     def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
 
-    private def checkWriteResult(result: WriteResult){
+    private def checkWriteResult(result: WriteResult) = {
       val error  = result.getLastError
       if (error != null && error.get("err") != null){
        throw new MongoException(error)
       }
+      result
     }    
   }
 }
