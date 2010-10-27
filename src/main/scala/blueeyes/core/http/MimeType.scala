@@ -26,7 +26,7 @@ sealed trait MimeType {
 object MimeTypes {
 
   def parseMimeTypes(inString: String): Array[MimeType] = {
-    def MimeTypeRegex = new Regex("""([a-z\-]+)/([.+a-z\-]+)""")
+    def MimeTypeRegex = new Regex("""([a-z\-]+)/(([.+a-z\-]+)|\*)|\*/\*""")
 
     /* Split the string on commas, which separate the mimes */
     var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
@@ -36,6 +36,8 @@ object MimeTypes {
         case Array("*" , "*")                     => Array(anymaintype / anysubtype)
 
         case Array("application", "javascript")   => Array(application / javascript)
+        case Array("text", "javascript")          => Array(text / javascript)
+
         case Array("application", "x-javascript") => Array(application / `x-javascript`)
         case Array("application", "soap+xml")     => Array(application / `soap+xml`) 
         case Array("application", "xhtml+xml")    => Array(application / `xhtml+xml`)
@@ -82,8 +84,6 @@ object MimeTypes {
         /* Video */
         case Array("video", "quicktime")          => Array(video / quicktime)
         case Array("video", "x-msvideo")          => Array(video / `x-msvideo`)
-
-        /* Star */
 
         case _ => Nil
       }
@@ -332,7 +332,7 @@ object MimeTypes {
 
   object video {
     def / (videoType: VideoType) = new MimeType {
-      def maintype = "text"
+      def maintype = "video"
       def subtype = videoType.subtype
       override def extensions = videoType.extensions
     }

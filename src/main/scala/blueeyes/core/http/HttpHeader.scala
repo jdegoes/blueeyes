@@ -38,15 +38,17 @@ object HttpHeaders {
   }
   object Accept {
     def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept") 
+      Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
   
   class `Accept-Charset`(val charSets: CharSet*) extends HttpHeader {
-    def value = charSets.map(_.value).mkString(";")
+    def value = charSets.map(_.value).mkString(", ")
   }
   object `Accept-Charset` {
     def apply(charSets: CharSet*): `Accept-Charset` = new `Accept-Charset`(charSets: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset") Some(CharSets.parseCharSets(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset")
+      Some(CharSets.parseCharSets(keyValue._2)) else None
   }
 
   class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeader  {
@@ -71,10 +73,12 @@ object HttpHeaders {
   object `Accept-Ranges` {
     def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit);
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges") 
-      Some(RangeUnits.parseRangeUnits(keyValue._2)) else None
+      RangeUnits.parseRangeUnits(keyValue._2) else None
   }
 
-  class Authorization(val value: String) extends HttpHeader 
+  class Authorization(val credentials: String) extends HttpHeader {
+    def value = credentials
+  }
   object Authorization {
     def apply(credentials: String) = new Authorization(credentials)  // can we do better here?
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None

@@ -4,19 +4,19 @@ import blueeyes.util.ProductPrefixUnmangler
 /* For use in the Accept-Ranges Http Header */
 
 sealed trait RangeUnit extends ProductPrefixUnmangler{
-  def value: String = productPrefix 
+  def value: String = unmangledName 
   
   override def toString = value
 }
 
 object RangeUnits {
 
-  def parseRangeUnits(inString: String): RangeUnit = {
-    def outRangeUnits: RangeUnit = ("""[a-z]+""").r.findFirstIn(inString.toLowerCase.trim)
+  def parseRangeUnits(inString: String): Option[RangeUnit] = {
+    def outRangeUnits: Option[RangeUnit] = ("""([a-z])+""").r.findFirstIn(inString.toLowerCase.trim)
       .getOrElse("bytes") match {
-      case "none" => none
-      case "bytes" => bytes
-      case x => CustomToken(x)
+      case "none" => Some(none)
+      case "bytes" => Some(bytes)
+      case x => None
     }
     return outRangeUnits
   }

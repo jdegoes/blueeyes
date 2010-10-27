@@ -17,22 +17,24 @@ sealed trait CharSet {
 object CharSets {
 
   def parseCharSets(inString: String): Array[CharSet] = {
-    def CharSetRegex = new Regex("""([a-zA-Z]\-_)+""")
+    def CharSetRegex = new Regex("""([a-zA-Z\-_\d])+""")
 
-    var outCharSets: Array[CharSet] = inString.split(",").map(_.trim)
-        .flatMap(CharSetRegex findFirstIn _)
-        .map ( charSet =>  charSet match {
-            case "US-ASCII" => `US-ASCII`
-            case "ISO-8859-1" => `ISO-8859-1`
-            case "ISO-8859-2" => `ISO-8859-2`
-            case "ISO-8859-3" => `ISO-8859-3`
-            case "ISO-8859-4" => `ISO-8859-4`
-            case "ISO-8859-5" =>  `ISO-8859-5`
-            case "ISO-8859-6" =>  `ISO-8859-6`
-            case "ISO-8859-7" =>  `ISO-8859-7`
-            case "ISO-8859-8" =>  `ISO-8859-8`
-            case "ISO-8859-9" =>  `ISO-8859-9`
-            case "ISO-8859-10" =>  `ISO-8859-10`
+    var outCharSets: Array[CharSet] = inString.toLowerCase.split(",")
+        .map(x => CharSetRegex.findFirstIn(x.trim)).map(_.getOrElse(""))
+        .map(str => str.replace("_", "-"))
+        .map( charSet =>  charSet match {
+            case "us-ascii"     => `US-ASCII`
+            case "ascii"        => `US-ASCII`
+            case "iso-8859-1"   => `ISO-8859-1`
+            case "iso-8859-2"   => `ISO-8859-2`
+            case "iso-8859-3"   => `ISO-8859-3`
+            case "iso-8859-4"   => `ISO-8859-4`
+            case "iso-8859-5"   =>  `ISO-8859-5`
+            case "iso-8859-6"   =>  `ISO-8859-6`
+            case "iso-8859-7"   =>  `ISO-8859-7`
+            case "iso-8859-8"   =>  `ISO-8859-8`
+            case "iso-8859-9"   =>  `ISO-8859-9`
+            case "iso-8859-10"  =>  `ISO-8859-10`
             case _ => new CustomCharSet(charSet)
           }
         )
