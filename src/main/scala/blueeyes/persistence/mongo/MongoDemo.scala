@@ -24,19 +24,19 @@ object MongoDemo{
 
     database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 
-//    checkRemove
+    demoRemove
 
-    checkSelect
+    demoSelect
   }
 
-  private def checkSelect{
+  private def demoSelect{
     insertObjects
 
     printObjects(database(select().from(collection).sortBy("address.city" <<)))
     printObjects(database(select().from(collection).sortBy("address.city" >>)))
     printObjects(database(select().from(collection).sortBy("address.city" >>).skip(1).limit(1)))
     printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
-    printObjects(database(select("address").from(collection).sortBy("address.city" >>)))
+    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
 
     database(remove.from(collection))
   }
@@ -47,7 +47,7 @@ object MongoDemo{
     println("------------------------------------------------")
   }
 
-  private def checkRemove{
+  private def demoRemove{
     println("------------------------------------------------")
 
     insertObjects
