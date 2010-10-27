@@ -17,6 +17,7 @@ sealed trait HttpDomain {
 object HttpDomains {
 
   def parseHttpDomains(inString: String): Option[HttpDomain] = {
+
     def domain: URI = new URI(inString.split(":")(0))
     if (domain == null)
       return None

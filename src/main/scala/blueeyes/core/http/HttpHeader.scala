@@ -245,13 +245,13 @@ object HttpHeaders {
       Some(TCodings.parseTCodings(keyValue._2)) else None
   }
 
-  class Upgrade(val products: UpgradeProduct*) extends HttpHeader {
+  class Upgrade(val products: Product*) extends HttpHeader {
     def value = products.map(_.toString).mkString(", ")
   }
   object Upgrade {
-    def apply(products: UpgradeProduct*) = new Upgrade(products: _*)
+    def apply(products: Product*) = new Upgrade(products: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade")
-      Some(UpgradeProducts.parseUpgradeProducts(keyValue._2)) else None
+      Products.parseProducts(keyValue._2) else None
   }
 
   class `User-Agent`(val product: String) extends HttpHeader {
@@ -441,10 +441,13 @@ object HttpHeaders {
   }
 
   /* Will take a while to implement */
-  class Trailer(val value: String) extends HttpHeader {
+  class Trailer(val fields: HttpHeaderField*) extends HttpHeader {
+    def value = fields.map(_.toString).mkString(", ")
   }
   object Trailer {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer") Some(keyValue._2) else None
+    def apply(fields: HttpHeaderField*) = new Trailer(fields: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer")
+      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, true) else None
   }
 
   class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeader {
@@ -471,7 +474,6 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "www-authenticate") Some(keyValue._2) else None
   }
 
-  /* DENY - no rendering within a frame, SAMEORIGIN - no rendering if origin mismatch */
   class `X-Frame-Options`(val option: FrameOption) extends HttpHeader {
     def value = option.toString
   }
@@ -481,7 +483,7 @@ object HttpHeaders {
       FrameOptions.parseFrameOptions(keyValue._2) else None
   }
 
-  /* Seems to only primarily in IE8 */
+  /* Seems to be primarily used by IE8 */
   class `X-XSS-Protection`(val xss: String) extends HttpHeader {
     def value = xss;
   }
@@ -491,38 +493,50 @@ object HttpHeaders {
         Some(keyValue._2) else None
   }
 
-  /* Only possible options : "nosniff" */
-  class `X-Content-Type-Options`(val value: String) extends HttpHeader {
+  class `X-Content-Type-Options`(val option: ContentTypeOption) extends HttpHeader {
+    def value = option.toString
   }
   object `X-Content-Type-Options` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-content-type-options") Some(keyValue._2) else None
+    def apply(option: ContentTypeOption) = new `X-Content-Type-Options`(option)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-content-type-options")
+      ContentTypeOptions.parseContentTypeOptions(keyValue._2) else None
   }
 
-  /* XMLHttpRequest or Other */
-  class `X-Requested-With`(val value: String) extends HttpHeader {
+  class `X-Requested-With`(val requested: RequestedWith) extends HttpHeader {
+    def value = requested.toString
   }
   object `X-Requested-With` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-requested-with") Some(keyValue._2) else None
+    def apply(requested: RequestedWith) = new `X-Requested-With`(requested)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-requested-with")
+      RequestedWiths.parseRequestedWiths(keyValue._2) else None
   }
 
-  /* Maybe just string for now */
-  class `X-Forwarded-For`(val value: String) extends HttpHeader {
+  class `X-Forwarded-For`(val ips: HttpIp*) extends HttpHeader {
+    def value = ips.map(_.toString).mkString(", ")
   }
   object `X-Forwarded-For` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-for") Some(keyValue._2) else None
+    def apply (ips: HttpIp*) = new `X-Forwarded-For`(ips: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-for") 
+      HttpIps.parseHttpIps(keyValue._2) else None
   }
 
-  class `X-Forwarded-Proto`(val value: String) extends HttpHeader {
+  class `X-Forwarded-Proto`(val proto: String) extends HttpHeader {
+    def value = proto
   }
   object `X-Forwarded-Proto` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-proto") Some(keyValue._2) else None
+    def apply(proto: String) = new `X-Forwarded-Proto`(proto)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-proto")
+      Some(keyValue._2) else None
   }
 
   /* List of products */
-  class `X-Powered-By`(val value: String) extends HttpHeader {
+  class `X-Powered-By`(val products: Product*) extends HttpHeader {
+    def value = products.map(_.toString).mkString(",")
   }
   object `X-Powered-By` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by") Some(keyValue._2) else None
+    def apply(products: Product*) = new `X-Powered-By`(products: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by") 
+      Products.parseProducts(keyValue._2) else None
   }  
   
   class CustomHeader(override val name: String, val value: String) extends HttpHeader {
@@ -584,7 +598,7 @@ trait HttpHeaderImplicits {
     case `Retry-After`(value) => new `Retry-After`(value)
     case Server(value) => new Server(value)
     case `Set-Cookie`(value) => new `Set-Cookie`(value)
-    case Trailer(value) => new Trailer(value)
+    case Trailer(value) => new Trailer(value: _*)
     case `Transfer-Encoding`(value) => new `Transfer-Encoding`(value: _*)
     case Vary(value) => new Vary(value)
     case `WWW-Authenticate`(value) => new `WWW-Authenticate`(value)
@@ -592,9 +606,9 @@ trait HttpHeaderImplicits {
     case `X-XSS-Protection`(value) => new `X-XSS-Protection`(value)
     case `X-Content-Type-Options`(value) => new `X-Content-Type-Options`(value)
     case `X-Requested-With`(value) => new `X-Requested-With`(value)
-    case `X-Forwarded-For`(value) => new `X-Forwarded-For`(value)
+    case `X-Forwarded-For`(value) => new `X-Forwarded-For`(value: _*)
     case `X-Forwarded-Proto`(value) => new `X-Forwarded-Proto`(value)
-    case `X-Powered-By`(value) => new `X-Powered-By`(value)
+    case `X-Powered-By`(value) => new `X-Powered-By`(value: _*)
     case (name, value) => new CustomHeader(name, value)
   }
 }
