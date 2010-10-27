@@ -24,21 +24,40 @@ object MongoDemo{
 
     database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 
-    demoRemove
+    demoSelectOne
 
-    demoSelect
+    demoSelect    
+
+    demoRemove
   }
 
   private def demoSelect{
+    println("------------demoSelect------------------")
     insertObjects
 
     printObjects(database(select().from(collection).sortBy("address.city" <<)))
     printObjects(database(select().from(collection).sortBy("address.city" >>)))
     printObjects(database(select().from(collection).sortBy("address.city" >>).skip(1).limit(1)))
+    printObjects(database(select().from(collection).where("address.city" === "B").sortBy("address.city" >>)))
+    printObjects(database(select().from(collection).where("address.city" === "Z").sortBy("address.city" >>)))
     printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
-    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
+    printObjects(database(select("address.city").from(collection).sortBy("address.city" <<)))
 
     database(remove.from(collection))
+    println("------------demoSelect------------------")
+  }
+  private def demoSelectOne{
+    println("------------demoSelectOne------------------")
+    insertObjects
+
+    printObject(database(selectOne().from(collection).sortBy("address.city" <<)))
+    printObject(database(selectOne().from(collection).sortBy("address.city" >>)))
+    printObject(database(selectOne().from(collection).where("address.city" === "B").sortBy("address.city" >>)))
+    printObject(database(selectOne("address.city").from(collection).sortBy("address.city" >>)))
+    printObject(database(selectOne("address.city").from(collection).sortBy("address.city" <<)))
+
+    database(remove.from(collection))
+    println("------------demoSelectOne------------------")
   }
 
   private def printObjects(objects: List[JObject]){
@@ -47,8 +66,14 @@ object MongoDemo{
     println("------------------------------------------------")
   }
 
-  private def demoRemove{
+  private def printObject(objects: Option[JObject]){
     println("------------------------------------------------")
+    println(objects.map(v => Printer.pretty(render(v))).mkString("\n"))
+    println("------------------------------------------------")
+  }
+
+  private def demoRemove{
+    println("------------demoRemove------------------")
 
     insertObjects
 
@@ -56,7 +81,7 @@ object MongoDemo{
 
     println("REMOVED=" + database(remove.from(collection)))
 
-    println("------------------------------------------------")
+    println("------------demoRemove------------------")
   }
 
   private def insertObjects{

@@ -44,8 +44,10 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, Some(newSkip), limit)
   def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, skip, Some(newLimit))
 }
-case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter))
+case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
+                              sort: Option[MongoSort] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
+  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter), sort)
+  def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, filter, Some(newSort))
 }
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))

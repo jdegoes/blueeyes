@@ -68,12 +68,19 @@ trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def limit     : Option[Int]
 }
 
-trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{
-  def apply(collection: DatabaseCollection): Option[JObject] = {
-    None
+trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
+  private val selectQuery = new SelectQueryBehaviour(){
+    def limit     = Some(1)
+    def skip      = None
+    def sort      = self.sort
+    def filter    = self.filter
+    def selection = self.selection
   }
+  def apply(collection: DatabaseCollection): Option[JObject] = selectQuery(collection).headOption
+  
   def selection : MongoSelection
   def filter    : Option[MongoFilter]
+  def sort      : Option[MongoSort]
 }
 
 
@@ -81,10 +88,10 @@ trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
     JNothing
   }
-  def value: JObject
+  def value : JObject
   def filter: Option[MongoFilter]
   def upsert: Boolean
-  def multi: Boolean
+  def multi : Boolean
 }
 
 object RealMongo{
