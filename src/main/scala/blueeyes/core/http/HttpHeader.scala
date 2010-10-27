@@ -130,6 +130,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect") Some(Expectations.parseExpectations(keyValue._2)) else None
   }
 
+  /* Could use the URI class here */
   class From(val email: Email) extends HttpHeader {
     def value = email.toString
   }
@@ -143,13 +144,14 @@ object HttpHeaders {
   }
   object Host {
     def apply(domain: HttpDomain) = new Host(domain)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host") Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host")
+      HttpDomains.parseHttpDomains(keyValue._2) else None
   }
 
   class `If-Match`(val tags: EntityTag) extends HttpHeader {
     def value = tags.toString
   }
-  object `If-Match` { // going to need a new typ here
+  object `If-Match` { // going to need a new type here
     def apply(tags: EntityTag) = new `If-Match`(tags)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match") Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
@@ -226,12 +228,12 @@ object HttpHeaders {
   }
 
   class Referer(val domain: HttpDomain) extends HttpHeader {
-    def value = domain.toString
+    def value = domain.absoluteUri
   }
   object Referer {
     def apply(domain: HttpDomain) = new Referer(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer")
-      Some(HttpDomains.parseHttpDomains(keyValue._2)) else None
+      HttpDomains.parseHttpDomains(keyValue._2) else None
   }
 
   class TE(val tcodings: TCoding*) extends HttpHeader {
@@ -326,7 +328,7 @@ object HttpHeaders {
       Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
-  /* Content-Location: An alternate location for the returned data */
+  /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?*/
   class `Content-Location`(val value: String) extends HttpHeader {
   }
   object `Content-Location` {
@@ -334,126 +336,176 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-location") Some(keyValue._2) else None
   }
 
-  class `Content-Disposition`(val value: String) extends HttpHeader {
+  class `Content-Disposition`(val disposition: DispositionType) extends HttpHeader {
+    def value = disposition.toString
   }
   object `Content-Disposition` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-disposition") Some(keyValue._2) else None
+    def apply(disposition: DispositionType) = new `Content-Disposition`(disposition)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-disposition")
+      Some(DispositionTypes.parseDispositionTypes(keyValue._2)) else None
   }
 
   class `Content-MD5`(val value: String) extends HttpHeader {
   }
   object `Content-MD5` {
+    def apply(hash: String) = new `Content-MD5`(hash)  
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-md5") Some(keyValue._2) else None
   }
 
-  class `Content-Range`(val value: String) extends HttpHeader {
+  class `Content-Range`(val byteRange: ContentByteRange) extends HttpHeader {
+    def value = byteRange.toString  
   }
   object `Content-Range` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-range") Some(keyValue._2) else None
+    def apply(byteRange: ContentByteRange) = new `Content-Range`(byteRange)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-range") 
+      ContentByteRanges.parseContentByteRanges(keyValue._2) else None
   }
 
-  class ETag(val value: String) extends HttpHeader {
+  class ETag(val tag: EntityTag) extends HttpHeader {
+    def value = tag.toString
   }
   object ETag {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "etag") Some(keyValue._2) else None
+    def apply(tag: EntityTag) = new ETag(tag)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "etag")
+      Some(EntityTags.parseEntityTags(keyValue._2)) else None
   }
 
-  class Expires(val value: String) extends HttpHeader {
+  class Expires(val date: HttpDateTime) extends HttpHeader {
+    def value = date.toString
   }
   object Expires {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expires") Some(keyValue._2) else None
+    def apply(date: HttpDateTime) = new Expires(date)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expires")
+      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
-  class `Last-Modified`(val value: String) extends HttpHeader {
+  class `Last-Modified`(val date: HttpDateTime) extends HttpHeader {
+    def value = date.toString
   }
   object `Last-Modified` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "last-modified") Some(keyValue._2) else None
+    def apply(date: HttpDateTime) = new `Last-Modified`(date)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "last-modified")
+      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
   }
 
-  class Location(val value: String) extends HttpHeader {
+  class Location(val domain: HttpDomain) extends HttpHeader {
+    def value = domain.absoluteUri
   }
   object Location {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location") Some(keyValue._2) else None
+    def apply(domain: HttpDomain) = new Location(domain)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location")
+      HttpDomains.parseHttpDomains(keyValue._2) else None
   }
 
-  class `Proxy-Authenticate`(val value: String) extends HttpHeader {
+  class `Proxy-Authenticate`(val challenge: String) extends HttpHeader {
+    def value = challenge
   }
   object `Proxy-Authenticate` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authenticate") Some(keyValue._2) else None
+    def apply(challenge: String) = new `Proxy-Authenticate`(challenge)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authenticate") 
+      Some(keyValue._2) else None
   }
 
-  class Refresh(val value: String) extends HttpHeader {
+  /* Sometimes contains a Url --  Will need to change this */
+  class Refresh(val time: Long) extends HttpHeader {
+    def value = time.toString
   }
   object Refresh {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "refresh") Some(keyValue._2) else None
+    def apply(time: Long) = new Refresh(time)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "refresh")
+      Some(keyValue._2.toLong) else None
   }
 
+  /* Could also be a date -- will need to change this */
   class `Retry-After`(val value: String) extends HttpHeader {
   }
   object `Retry-After` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "retry-after") Some(keyValue._2) else None
   }
 
-  class Server(val value: String) extends HttpHeader {
+  class Server(val comment: String) extends HttpHeader {
+    def value = comment
   }
   object Server {
+    def apply(comment: String) = new Server(comment)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
   }
 
-  class `Set-Cookie`(val value: String) extends HttpHeader {
+  class `Set-Cookie`(val cookie: HttpCookie) extends HttpHeader {
+    def value = cookie.toString
   }
   object `Set-Cookie` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "set-cookie") Some(keyValue._2) else None
+    def apply(cookie: HttpCookie) = new `Set-Cookie`(cookie)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "set-cookie")
+      Some(HttpCookies.parseHttpCookies(keyValue._2)) else None
   }
 
+  /* Will take a while to implement */
   class Trailer(val value: String) extends HttpHeader {
   }
   object Trailer {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer") Some(keyValue._2) else None
   }
 
-  class `Transfer-Encoding`(val value: String) extends HttpHeader {
+  class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeader {
+    def value = encodings.map(_.toString).mkString(", ")
   }
   object `Transfer-Encoding` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "transfer-encoding") Some(keyValue._2) else None
+    def apply(encodings: Encoding*) = new `Transfer-Encoding`(encodings: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "transfer-encoding")
+      Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
+  /* There are problems with using Vary in IE.  */
   class Vary(val value: String) extends HttpHeader {
   }
   object Vary {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "vary") Some(keyValue._2) else None
   }
 
-  class `WWW-Authenticate`(val value: String) extends HttpHeader {
+  class `WWW-Authenticate`(val challenge: String) extends HttpHeader {
+    def value = challenge
   }
   object `WWW-Authenticate` {
+    def apply(challenge: String) = new `WWW-Authenticate`(challenge)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "www-authenticate") Some(keyValue._2) else None
   }
 
-  class `X-Frame-Options`(val value: String) extends HttpHeader {
+  /* DENY - no rendering within a frame, SAMEORIGIN - no rendering if origin mismatch */
+  class `X-Frame-Options`(val option: FrameOption) extends HttpHeader {
+    def value = option.toString
   }
   object `X-Frame-Options` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-frame-options") Some(keyValue._2) else None
+    def apply(option: FrameOption) = new `X-Frame-Options`(option)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-frame-options")
+      FrameOptions.parseFrameOptions(keyValue._2) else None
   }
 
-  class `X-XSS-Protection`(val value: String) extends HttpHeader {
+  /* Seems to only primarily in IE8 */
+  class `X-XSS-Protection`(val xss: String) extends HttpHeader {
+    def value = xss;
   }
   object `X-XSS-Protection` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-xss-protection") Some(keyValue._2) else None
+    def apply(xss: String) = new `X-XSS-Protection`(xss)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-xss-protection")
+        Some(keyValue._2) else None
   }
 
+  /* Only possible options : "nosniff" */
   class `X-Content-Type-Options`(val value: String) extends HttpHeader {
   }
   object `X-Content-Type-Options` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-content-type-options") Some(keyValue._2) else None
   }
 
+  /* XMLHttpRequest or Other */
   class `X-Requested-With`(val value: String) extends HttpHeader {
   }
   object `X-Requested-With` {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-requested-with") Some(keyValue._2) else None
   }
 
+  /* Maybe just string for now */
   class `X-Forwarded-For`(val value: String) extends HttpHeader {
   }
   object `X-Forwarded-For` {
@@ -466,6 +518,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-proto") Some(keyValue._2) else None
   }
 
+  /* List of products */
   class `X-Powered-By`(val value: String) extends HttpHeader {
   }
   object `X-Powered-By` {
@@ -532,7 +585,7 @@ trait HttpHeaderImplicits {
     case Server(value) => new Server(value)
     case `Set-Cookie`(value) => new `Set-Cookie`(value)
     case Trailer(value) => new Trailer(value)
-    case `Transfer-Encoding`(value) => new `Transfer-Encoding`(value)
+    case `Transfer-Encoding`(value) => new `Transfer-Encoding`(value: _*)
     case Vary(value) => new Vary(value)
     case `WWW-Authenticate`(value) => new `WWW-Authenticate`(value)
     case `X-Frame-Options`(value) => new `X-Frame-Options`(value)

@@ -22,6 +22,8 @@ object Encodings {
         .flatMap(EncodingRegex findFirstIn _)
         .map ( encoding =>  encoding match { 
             case "compress" => compress  
+            case "chunked" => chunked
+            case "deflate" => deflate
             case "gzip" => gzip 
             case "identity" => identity 
             case "x-compress" => `x-compress`
@@ -34,6 +36,8 @@ object Encodings {
   }
 
   case object compress extends Encoding
+  case object chunked extends Encoding
+  case object deflate extends Encoding
   case object gzip extends Encoding
   case object identity extends Encoding
   case object `x-compress` extends Encoding 

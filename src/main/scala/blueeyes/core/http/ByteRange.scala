@@ -1,6 +1,7 @@
 package blueeyes.core.http
 
 sealed trait ByteRange {
+
   def unit: String 
   def bytePairs: List[BytePair]
   def value: String = unit + "=" + bytePairs.map(_.toString).mkString(",")
@@ -21,6 +22,7 @@ object ByteRanges {
     })
     brb.constructByteRange 
   }
+
 
   case class ByteRangeList(bytePairs: List[BytePair], unit: String) extends ByteRange
 
