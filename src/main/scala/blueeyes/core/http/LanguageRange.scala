@@ -15,7 +15,7 @@ sealed trait LanguageRange {
 
 object LanguageRanges {
   def parseLanguageRanges(inString: String): Array[LanguageRange] = {
-    def ParseLanguageRegex = new Regex("""(?:\b|^)([a-z]{2}(\-[a-z]{2}){0,2})""")
+    def ParseLanguageRegex = new Regex("""(?:\b|^)([a-z]{2}(\-[a-z]+){0,2})""")
 
     var outLangRanges: Array[LanguageRange] = inString.toLowerCase.split(",").map(_.trim)
     .flatMap(ParseLanguageRegex.findFirstIn(_)).map(_.split("-")).map { languageRanges =>

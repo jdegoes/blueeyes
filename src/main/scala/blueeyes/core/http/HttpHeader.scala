@@ -299,27 +299,38 @@ object HttpHeaders {
       Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
   }
 
-  class `Cache-Control`(val value: String) extends HttpHeader {
+  class `Cache-Control`(val directives: CacheDirective*) extends HttpHeader {
+    def value = directives.map(_.toString).mkString(", ") 
   }
   object `Cache-Control` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cache-control") Some(keyValue._2) else None
+    def apply(directives: CacheDirective*) = new `Cache-Control`(directives: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cache-control")
+      Some(CacheDirectives.parseCacheDirectives(keyValue._2)) else None
   }
 
-  class `Content-Encoding`(val value: String) extends HttpHeader {
+  class `Content-Encoding`(val encodings: Encoding*) extends HttpHeader {
+    def value = encodings.map(_.toString).mkString(", ")
   }
   object `Content-Encoding` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-encoding") Some(keyValue._2) else None
+    def apply(encodings: Encoding*) = new `Content-Encoding`(encodings: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-encoding")
+      Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
-  class `Content-Language`(val value: String) extends HttpHeader {
+  class `Content-Language`(languageRanges: LanguageRange*) extends HttpHeader {
+    def value = languageRanges.map(_.toString).mkString(", ")
   }
   object `Content-Language` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-language") Some(keyValue._2) else None
+    def apply(languageRanges: LanguageRange*) = new `Content-Language`(languageRanges: _*)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-language")
+      Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
+  /* Content-Location: An alternate location for the returned data */
   class `Content-Location`(val value: String) extends HttpHeader {
   }
   object `Content-Location` {
+    def apply(location: String) = new `Content-Location`(location)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-location") Some(keyValue._2) else None
   }
 
@@ -504,9 +515,9 @@ trait HttpHeaderImplicits {
     /** Responses **/
     case Age(value) => new Age(value)
     case Allow(value) => new Allow(value: _*)
-    case `Cache-Control`(value) => new `Cache-Control`(value)
-    case `Content-Encoding`(value) => new `Content-Encoding`(value)
-    case `Content-Language`(value) => new `Content-Language`(value)
+    case `Cache-Control`(value) => new `Cache-Control`(value: _*)
+    case `Content-Encoding`(value) => new `Content-Encoding`(value: _*)
+    case `Content-Language`(value) => new `Content-Language`(value: _*)
     case `Content-Location`(value) => new `Content-Location`(value)
     case `Content-Disposition`(value) => new `Content-Disposition`(value)
     case `Content-MD5`(value) => new `Content-MD5`(value)
