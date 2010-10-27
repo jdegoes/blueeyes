@@ -9,7 +9,7 @@ import org.mockito.Mockito
 import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.JsonAST._
 
-class SelectQueryBehaviourSpec extends Specification {
+class SelectOneQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
 
   private val keys     = jObject2MongoObject(JObject(JField("foo", JInt(1)) :: JField("bar", JInt(1)) :: Nil))
@@ -21,27 +21,27 @@ class SelectQueryBehaviourSpec extends Specification {
   "Call collection method" in{
     import MongoFilterImplicits._
 
-    when(collection.select(keys, filter, sort, Some(2), Some(1))).thenReturn(jObject2MongoObject(jObject) :: jObject2MongoObject(jObject1) :: Nil)
+    when(collection.select(keys, filter, sort, None, Some(1))).thenReturn(jObject2MongoObject(jObject) :: jObject2MongoObject(jObject1) :: Nil)
 
-    val query  = select("foo", "bar").from("collection").where("name" === "Joe").sortBy("name" <<).skip(2).limit(1)
+    val query  = selectOne("foo", "bar").from("collection").where("name" === "Joe").sortBy("name" <<)
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).select(keys, filter, sort, Some(2), Some(1))
+    Mockito.verify(collection, times(1)).select(keys, filter, sort, None, Some(1))
 
-    result mustEqual(jObject :: jObject1 :: Nil)
+    result mustEqual(Some(jObject))
   }
 
   "Call collection method with dummy JObject when filter is not specified" in{
     import MongoFilterImplicits._
+    
+    when(collection.select(keys, jObject2MongoObject(JObject(Nil)), None, None, Some(1))).thenReturn(jObject2MongoObject(jObject1) :: Nil)
 
-    when(collection.select(keys, jObject2MongoObject(JObject(Nil)), None, None, None)).thenReturn(jObject2MongoObject(jObject) :: jObject2MongoObject(jObject1) :: Nil)
-
-    val query  = select("foo", "bar").from("collection")
+    val query  = selectOne("foo", "bar").from("collection")
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).select(keys, jObject2MongoObject(JObject(Nil)), None, None, None)
+    Mockito.verify(collection, times(1)).select(keys, jObject2MongoObject(JObject(Nil)), None, None, Some(1))
 
-    result mustEqual(jObject :: jObject1 :: Nil)
+    result mustEqual(Some(jObject1))
   }
 
 }

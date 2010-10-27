@@ -12,9 +12,11 @@ import blueeyes.json.JsonAST._
 class EnsureIndexQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
   "Call collection method" in{
-    val query = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
-    query(collection)    
+    val query  = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
+    val result = query(collection)
 
     Mockito.verify(collection, times(1)).ensureIndex("index", jObject2MongoObject(JObject(JField("address.city", JInt(1)) :: JField("address.street", JInt(1)) :: Nil)), true)
+
+    result must be (JNothing)
   }
 }

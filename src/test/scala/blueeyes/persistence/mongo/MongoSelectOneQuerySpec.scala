@@ -17,4 +17,9 @@ class MongoSelectOneQuerySpec extends Specification{
     import MongoFilterImplicits._
     query.where("name" === "Joe") mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
+
+  "'sortBy' method sets new sort" in {
+    import MongoFilterImplicits._
+    query.sortBy("name" << ) mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
+  }
 }

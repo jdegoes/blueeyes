@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
-import blueeyes.json.JsonAST.{JValue, JField, JObject, JNothing}
+import blueeyes.json.JsonAST._
 
 case class MongoCollection(name: String)
 
@@ -44,16 +44,18 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, Some(newSkip), limit)
   def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, skip, Some(newLimit))
 }
-case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter))
+case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
+                              sort: Option[MongoSort] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
+  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter), sort)
+  def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, filter, Some(newSort))
 }
-case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
+case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
 case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false,
-                            multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
+                            multi: Boolean = false) extends MongoQuery[JInt] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
 }
 
