@@ -5,7 +5,7 @@ import com.ning.http.client._
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.util.{Future}
-import blueeyes.core.data.{DataTranscoderImpl, TextToTextBijection}
+import blueeyes.core.data.{TextToTextBijection}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
 
@@ -13,10 +13,10 @@ class HttpServerNettySpec extends Specification{
   @volatile
   private var port = 8585
   @volatile
-  private var server: Option[TestServer] = None
+  private var server: Option[HttpServerNetty] = None
   "HttpServer" should{
     doFirst{
-      val testServer = new TestServer()
+      val testServer = new HttpServerNetty(classOf[TestService])
 
       var success = false
       do{
@@ -58,12 +58,13 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-class TestServer extends TestService with HttpServerNetty{
-  val service = new TestService()
-}
-class TestService extends RestHierarchyBuilder{
+class TestService extends RestHierarchyBuilder with HttpService{
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
   path("bar/'adId/adCode.html"){get[String, String](new Handler())}
+
+  def version = 1
+
+  def name = "test-service"
 }
 class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
   def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))

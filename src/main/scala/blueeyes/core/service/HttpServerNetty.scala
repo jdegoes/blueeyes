@@ -8,7 +8,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
 
-trait HttpServerNetty {
+class HttpServerNetty(val service: Class[_ <: HttpService]) {
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
@@ -18,7 +18,7 @@ trait HttpServerNetty {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(service))
+    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(service.newInstance()))
 
     bootstrap.bind(new InetSocketAddress(port))
 
@@ -30,8 +30,6 @@ trait HttpServerNetty {
     serverExecutor.foreach(ExecutorUtil.terminate(_))
     server.foreach(_.releaseExternalResources)
   }
-
-  def service: RestHierarchy
 }
 
 class HttpServerPipelineFactory(hierarchy: RestHierarchy) extends ChannelPipelineFactory {
