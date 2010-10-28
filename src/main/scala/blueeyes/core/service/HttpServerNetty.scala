@@ -7,9 +7,8 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
-import blueeyes.core.data.{DataTranscoder}
 
-trait HttpServerNetty[T] {
+trait HttpServerNetty {
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
@@ -19,7 +18,7 @@ trait HttpServerNetty[T] {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(hierarchies))
+    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(service))
 
     bootstrap.bind(new InetSocketAddress(port))
 
@@ -32,17 +31,17 @@ trait HttpServerNetty[T] {
     server.foreach(_.releaseExternalResources)
   }
 
-  def hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]
+  def service: RestHierarchy
 }
 
-class HttpServerPipelineFactory[T](hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory(hierarchy: RestHierarchy) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
     val pipeline = Channels.pipeline()
 
     pipeline.addLast("decoder", new HttpRequestDecoder())
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
-    pipeline.addLast("handler", new NettyRequestHandler(hierarchies))
+    pipeline.addLast("handler", new NettyRequestHandler(hierarchy))
 
     pipeline
   }

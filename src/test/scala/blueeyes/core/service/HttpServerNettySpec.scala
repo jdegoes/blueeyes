@@ -42,7 +42,6 @@ class HttpServerNettySpec extends Specification{
       val response = future.get
       response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
       response.getResponseBody mustEqual (Context.context)
-      
     }
 
     "return not found error by wrong URI" in{
@@ -59,11 +58,12 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-class TestServer extends TestService with HttpServerNetty[String]{
-  val hierarchies = (new TestService(), new DataTranscoderImpl(TextToTextBijection, text / html)) :: Nil
+class TestServer extends TestService with HttpServerNetty{
+  val service = new TestService()
 }
-class TestService extends RestHierarchyBuilder[String]{
-  path("bar/'adId/adCode.html"){get(new Handler())}
+class TestService extends RestHierarchyBuilder{
+  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+  path("bar/'adId/adCode.html"){get[String, String](new Handler())}
 }
 class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
   def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))

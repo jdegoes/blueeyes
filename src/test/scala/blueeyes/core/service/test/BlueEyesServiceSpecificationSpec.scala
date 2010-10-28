@@ -4,10 +4,14 @@ import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.util.Future
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.data.TextToTextBijection
 import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
 
-class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[String]{
+class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification{
   val serviceResponse = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some("context"), HttpVersions.`HTTP/1.1`)
+  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+
 
   "calls test function" in {
     var executed = false
@@ -21,23 +25,23 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
   "gets responce" in {
     path("/bar/'id/bar.html"){
       get{
-        response mustEqual (serviceResponse)
+        response[String] mustEqual (serviceResponse)
       }
     }
   }
   "gets responce when future is set asynchronously" in {
     path("/asynch/future"){
       get{
-        response mustEqual (serviceResponse)
+        response[String] mustEqual (serviceResponse)
       }
     }
   }
 
   val service = new Service()
 
-  class Service extends RestHierarchyBuilder[String] {
-    path("/bar/'foo/bar.html") {get(new Handler())}
-    path("/asynch/future") {get(new AsynchHandler())}
+  class Service extends RestHierarchyBuilder {
+    path("/bar/'foo/bar.html") {get[String, String](new Handler())}
+    path("/asynch/future")     {get[String, String](new AsynchHandler())}
   }
   class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
     def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(serviceResponse)

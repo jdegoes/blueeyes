@@ -4,10 +4,12 @@ import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.util.Future
+import blueeyes.core.data.TextToTextBijection
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.HttpStatusCodes._
 
-class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
+class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification{
   val service = new SampleService()
 
   "SampleService when using GET" should {
@@ -32,9 +34,11 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
   }
 }
 
-class SampleService extends RestHierarchyBuilder[String] {
-  path("/get/'foo") {get(new GetHandler())}
-  path("/post/foo") {post(new PutHandler())}
+class SampleService extends RestHierarchyBuilder {
+  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+
+  path("/get/'foo") {get[String, String](new GetHandler())}
+  path("/post/foo") {post[String, String](new PutHandler())}
 
   class GetHandler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
     def apply(request: HttpRequest[String]) = {

@@ -14,7 +14,7 @@ import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.MimeTypes._
 
 class ConvertersSpec extends Specification {
-  private val transcoder = new DataTranscoderImpl(TextToTextBijection, text / html)
+  private val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }

@@ -12,16 +12,26 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.{DataTranscoder}
 import blueeyes.util.{Future}
 
-class NettyRequestHandler[T](hierarchies: List[(RestHierarchy[T], DataTranscoder[String, T])]) extends SimpleChannelUpstreamHandler{
+class NettyRequestHandler(hierarchy: RestHierarchy) extends SimpleChannelUpstreamHandler{
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request        = e.getMessage().asInstanceOf[NettyHttpRequest]
     val method         = fromNettyMethod(request.getMethod())
     val requestUri     = if (request.getUri().startsWith("/")) request.getUri().substring(1) else request.getUri()
 
-    val builders       = hierarchies.map(v => new RequestBuilder(e, v._1, v._2))
-    val builder        = builders.find(_.isDefinedAt((requestUri, method))).getOrElse(new NotFoundBuilder())
+    val handler       = hierarchy.hierarchy.find(v => v._1.isDefinedAt(requestUri) && v._2 == method)
+    val builder       = handler.map(v => createResponse(requestUri, v) _).getOrElse(createNotFoundResponse _)
 
-    builder((requestUri, method)).deliverTo(writeResponse(e) _)
+    builder(e).deliverTo(writeResponse(e) _)
+  }
+
+  private def createNotFoundResponse(event: MessageEvent) = {
+    new Future[NettyHttpResponse]().deliver(new DefaultHttpResponse(NettyHttpVersion.HTTP_1_1, toNettyStatus(HttpStatus(HttpStatusCodes.NotFound))))
+  }
+  private def createResponse[T, S](requestUri: String, handler: (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S]))(event: MessageEvent) = {
+    val request     = event.getMessage().asInstanceOf[NettyHttpRequest]
+    val parameters  = handler._1(requestUri)
+
+    handler._3(fromNettyRequest(request, parameters, handler._4)).map(response => toNettyResponse(response, handler._4))
   }
 
   private def writeResponse(e: MessageEvent)(response: NettyHttpResponse){
@@ -45,20 +55,4 @@ class NettyRequestHandler[T](hierarchies: List[(RestHierarchy[T], DataTranscoder
       response.addHeader(Names.SET_COOKIE, cookieEncoder.encode())
     }
   }
-}
-
-class NotFoundBuilder extends Function1[(String, HttpMethod), Future[NettyHttpResponse]]{
-  def apply(uriAndMethod: (String, HttpMethod)) = new Future[NettyHttpResponse]().deliver(new DefaultHttpResponse(NettyHttpVersion.HTTP_1_1, toNettyStatus(HttpStatus(HttpStatusCodes.NotFound))))
-}
-
-class RequestBuilder[T](event: MessageEvent, hierarchy: RestHierarchy[T], transcoder: DataTranscoder[String, T]) extends PartialFunction[(String, HttpMethod), Future[NettyHttpResponse]]{
-  def isDefinedAt(uriAndMethod: (String, HttpMethod)) = findPattern(uriAndMethod._1, uriAndMethod._2).map(v => true).getOrElse(false)
-  def apply(uriAndMethod: (String, HttpMethod)) = {
-    def handler     = findPattern(uriAndMethod._1, uriAndMethod._2).get
-    val request     = event.getMessage().asInstanceOf[NettyHttpRequest]
-    val parameters  = handler._1(uriAndMethod._1)
-
-    handler._3(fromNettyRequest(request, parameters, transcoder)).map(response => toNettyResponse(response, transcoder))
-  }
-  private def findPattern(uri: String, method: HttpMethod) = hierarchy.hierarchy.find(handler => handler._1.isDefinedAt(uri) && method == handler._2)
 }

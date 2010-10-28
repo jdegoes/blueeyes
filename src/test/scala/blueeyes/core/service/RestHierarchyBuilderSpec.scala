@@ -3,12 +3,15 @@ package blueeyes.core.service
 import org.specs.Specification
 import RestPathPatternImplicits._
 import org.scalatest.mock.MockitoSugar
+import blueeyes.core.data.TextToTextBijection
+import blueeyes.core.http.MimeTypes._
 import blueeyes.util.Future
 
 class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
-  private val handler       = mock[HttpRequest[Any] => Future[HttpResponse[Any]]]
+  private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
   private val service       = new TestService
   private val netsedService = new TestNestedService
+  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
 
   "add service to the specified path" in {
     val serviceByPath = service.hierarchy.head
@@ -16,9 +19,9 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
     serviceByPath._1.elementPatterns mustEqual("ads" / 'adId / "adCode.html" elementPatterns)
   }
   "associate handler with specified path" in {
-    val serviceByPath = service.hierarchy.head
+    val serviceByPath = service.hierarchy.head._3.asInstanceOf[HttpRequest[String] => Future[HttpResponse[String]]]
 
-    serviceByPath._3 mustEqual(handler)
+    serviceByPath mustEqual(handler)
   }
   "add service to the specified nested path" in {
 
@@ -31,23 +34,23 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
   }
 
   "associate handler with specified nested path" in {
-    val serviceByPath = netsedService.hierarchy.head
+    val serviceByPath = netsedService.hierarchy.head._3.asInstanceOf[HttpRequest[String] => Future[HttpResponse[String]]]
 
-    serviceByPath._3 mustEqual(handler)
+    serviceByPath mustEqual(handler)
   }
 
-  class TestService extends RestHierarchyBuilder[Any]{
+  class TestService extends RestHierarchyBuilder{
     path("ads" / 'adId / "adCode.html") {
-      get {
+      get[String, String] {
         handler
       }
     }
   }
-  class TestNestedService extends RestHierarchyBuilder[Any]{
+  class TestNestedService extends RestHierarchyBuilder{
     path("blue/eyes") {
       path("api/v1") {
         path("ads/'adId/adCode.html") {
-          get {
+          get [String, String]{
             handler
           }
         }
