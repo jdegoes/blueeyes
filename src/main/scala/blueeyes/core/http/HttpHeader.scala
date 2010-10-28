@@ -249,13 +249,13 @@ object HttpHeaders {
       Some(TCodings.parseTCodings(keyValue._2)) else None
   }
 
-  class Upgrade(val products: Product*) extends HttpHeader {
+  class Upgrade(val products: ProductType*) extends HttpHeader {
     def value = products.map(_.toString).mkString(", ")
   }
   object Upgrade {
-    def apply(products: Product*) = new Upgrade(products: _*)
+    def apply(products: ProductType*) = new Upgrade(products: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade")
-      Products.parseProducts(keyValue._2) else None
+      ProductTypes.parseProductTypes(keyValue._2) else None
   }
 
   class `User-Agent`(val product: String) extends HttpHeader {
@@ -534,13 +534,13 @@ object HttpHeaders {
   }
 
   /* List of products */
-  class `X-Powered-By`(val products: Product*) extends HttpHeader {
+  class `X-Powered-By`(val products: ProductType*) extends HttpHeader {
     def value = products.map(_.toString).mkString(",")
   }
   object `X-Powered-By` {
-    def apply(products: Product*) = new `X-Powered-By`(products: _*)
+    def apply(products: ProductType*) = new `X-Powered-By`(products: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by") 
-      Products.parseProducts(keyValue._2) else None
+      ProductTypes.parseProductTypes(keyValue._2) else None
   }  
   
   class CustomHeader(override val name: String, val value: String) extends HttpHeader {
