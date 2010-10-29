@@ -7,8 +7,13 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
+import net.lag.logging.Logger
 
-class HttpServerNetty(val service: Class[_ <: HttpService[_]]) {
+class HttpServerNetty(val serviceClass: Class[_ <: HttpService[_]]) {
+  private val logger        = Logger.get
+
+  @volatile
+  private var service: Option[HttpService[_]] = None
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
@@ -18,9 +23,12 @@ class HttpServerNetty(val service: Class[_ <: HttpService[_]]) {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(service.newInstance()))
+    val serviceInstance = serviceClass.newInstance()
+    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(serviceInstance))
 
     bootstrap.bind(new InetSocketAddress(port))
+
+    logger.info("Service is started. {Name=%s; Version=%d; Class=%s}".format(serviceInstance.name, serviceInstance.version, serviceClass.getName()))
 
     server = Some(bootstrap)
     serverExecutor = Some(executor)
@@ -29,6 +37,9 @@ class HttpServerNetty(val service: Class[_ <: HttpService[_]]) {
   def stop = {
     serverExecutor.foreach(ExecutorUtil.terminate(_))
     server.foreach(_.releaseExternalResources)
+
+    service.foreach(serviceInstance => logger.info("Service is stopped. {Name=%s; Version=%d; Class=%s}".format(serviceInstance.name, serviceInstance.version, serviceClass.getName())))
+
   }
 }
 

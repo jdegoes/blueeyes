@@ -3,8 +3,8 @@ import de.element34.sbteclipsify._
 
 class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories with Eclipsify with IdeaProject {
 
-  val scalatest   = "org.scalatest"               % "scalatest"         % "1.2-for-scala-2.8.0.final-SNAPSHOT"    % "test"
-  val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.5"       % "test"
+  val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"    % "test"
+  val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "test"
   val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "test"
   val mockito     = "org.mockito"                 % "mockito-all"       % "1.8.4"       % "test"
   val paranamer   = "com.thoughtworks.paranamer"  % "paranamer"         % "2.0"
@@ -13,7 +13,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val async       = "com.ning"                    % "async-http-client" % "1.3.1"       % "compile"
   val mongo       = "org.mongodb"                 % "mongo-java-driver" % "2.1"         % "compile"
   val jodatime    = "joda-time"                   % "joda-time"         % "1.6.2"       % "compile"
-  val configgy    = "net.lag"                     % "configgy"          cv% "2.0.0"       % "compile"
+  val configgy    = "net.lag"                     % "configgy"          % "2.0.0"       % "compile"
   val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
 
   override def managedStyle = ManagedStyle.Maven
