@@ -55,7 +55,7 @@ trait RestHierarchyBuilder[S] extends RestHierarchy[S] {
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, Bijection}
 import blueeyes.core.http.MimeType
 
-sealed trait HttpResponseType[T]
+trait HttpResponseType[T]
 
 case object HttpResponseStringType extends HttpResponseType[String]
 case object HttpResponseBytesType  extends HttpResponseType[Array[Byte]]
