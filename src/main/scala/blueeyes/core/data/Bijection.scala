@@ -24,20 +24,19 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 import blueeyes.json.JsonAST.JValue
-object TextToJsonBijection extends Bijection[String, JValue]{
-  def unapply(s: JValue) = compact(render(s))
-  def apply(t: String)   = JsonParser.parse(t)
+object JsonToTextBijection extends Bijection[JValue, String]{
+  def unapply(t: String) = JsonParser.parse(t)
+  def apply(s: JValue)   = compact(render(s))
 }
 
 import xml.NodeSeq
 import xml.XML
-object TextToXMLBijection extends Bijection[String, NodeSeq]{
-  def unapply(s: NodeSeq) = s.toString
-  def apply(t: String)    = XML.loadString(t)
+object XMLToTextBijection extends Bijection[NodeSeq, String]{
+  def apply(s: NodeSeq)  = s.toString
+  def unapply(t: String) = XML.loadString(t)
 }
 
 object TextToTextBijection extends Bijection[String, String]{
   def unapply(s: String) = s
   def apply(t: String)   = t
 }
-

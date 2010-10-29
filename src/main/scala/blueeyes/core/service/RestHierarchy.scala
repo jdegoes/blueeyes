@@ -52,10 +52,12 @@ trait RestHierarchyBuilder[S] extends RestHierarchy[S] {
   //private def currentPath: RestPathPattern = { println(pathStack); pathStack.foldLeft[RestPathPattern](RestPathPattern.Root) { (path, element) => path / element } }
 }
 
-import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, Bijection}
+import blueeyes.core.data._
 import blueeyes.core.http.MimeType
+import blueeyes.core.http.MimeTypes._
+import blueeyes.json.JsonAST.JValue
 
-trait HttpResponseType[T]
+sealed trait HttpResponseType[T]
 
 case object HttpResponseStringType extends HttpResponseType[String]
 case object HttpResponseBytesType  extends HttpResponseType[Array[Byte]]
@@ -69,4 +71,8 @@ class HttpStringDataTranscoder[T](transcode: Bijection[T, String], mimeType: Mim
 }
 class HttpBytesDataTranscoder[T](transcode: Bijection[T, Array[Byte]], mimeType: MimeType) extends DataTranscoderImpl[T, Array[Byte]](transcode, mimeType) with HttpDataTranscoder[T, Array[Byte]]{
   val responseType: HttpResponseType[Array[Byte]] = HttpResponseBytesType
+}
+
+object Transcoders{
+  implicit val HttpJsonToText = new HttpStringDataTranscoder[JValue](JsonToTextBijection, application/json)
 }
