@@ -183,7 +183,7 @@ object HttpHeaders {
       EntityTags.parseEntityTags(keyValue._2) else None
   }
 
-  /* If-Range needs to add a way to include the date */
+  /* If-Range needs to add a way to include the date -- probably need new class */
   class `If-Range`(val tags: EntityTag) extends HttpHeader {
     def value = tags.toString
   }
@@ -202,13 +202,13 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class `Max-Forwards`(val maxf: Long) extends HttpHeader {
+  class `Max-Forwards`(val maxf: HttpNumber) extends HttpHeader {
     def value = maxf.toString 
   }
   object `Max-Forwards` {
-    def apply(maxf: Long) = new `Max-Forwards`(maxf)
+    def apply(maxf: HttpNumber) = new `Max-Forwards`(maxf)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards")
-      Some(keyValue._2.toLong) else None
+      HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
   class Pragma(val primeDirective: PragmaDirective) extends HttpHeader {
@@ -217,10 +217,11 @@ object HttpHeaders {
   object Pragma {
     def apply(primeDirective: PragmaDirective) = new Pragma(primeDirective)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "pragma")
-      Some(PragmaDirectives.parsePragmaDirectives(keyValue._2)) else None
+      PragmaDirectives.parsePragmaDirectives(keyValue._2) else None
   }
 
-  class `Proxy-Authorization`(val value: String) extends HttpHeader {
+  class `Proxy-Authorization`(val auth: String) extends HttpHeader {
+    def value = auth
   }
   object `Proxy-Authorization` {
     def apply(auth: String) = new `Proxy-Authorization`(auth)
@@ -234,7 +235,7 @@ object HttpHeaders {
   object Range {
     def apply(byteRange: ByteRange) = new Range(byteRange)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "range")
-      Some(ByteRanges.parseByteRange(keyValue._2)) else None
+      ByteRanges.parseByteRanges(keyValue._2) else None
   }
 
   class Referer(val domain: HttpUri) extends HttpHeader {
@@ -417,20 +418,23 @@ object HttpHeaders {
   }
 
   /* Sometimes contains a Url --  Will need to change this */
-  class Refresh(val time: Long) extends HttpHeader {
+  class Refresh(val time: HttpNumber) extends HttpHeader {
     def value = time.toString
   }
   object Refresh {
-    def apply(time: Long) = new Refresh(time)
+    def apply(time: HttpNumber) = new Refresh(time)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "refresh")
-      Some(keyValue._2.toLong) else None
+      HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
   /* Could also be a date -- will need to change this */
-  class `Retry-After`(val value: String) extends HttpHeader {
+  class `Retry-After`(val num: HttpNumber) extends HttpHeader {
+    def value = num.toString
   }
   object `Retry-After` {
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "retry-after") Some(keyValue._2) else None
+    def apply(num: HttpNumber) = new `Retry-After`(num)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "retry-after")
+      HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
   class Server(val comment: String) extends HttpHeader {

@@ -6,7 +6,7 @@ sealed trait ContentByteRange {
   
   def unit: String        // Usually "bytes 
 
-  def bytePair: BytePair  // From the ByteRange class
+  def bytePair: ByteRanges.BytePair  // From the ByteRange class
 
   def instanceLength: String  // either a number or *
 
@@ -22,12 +22,13 @@ object ContentByteRanges {
     def pair: Array[Int] = """\d+-\d+""".r.findFirstIn(inString).getOrElse("").split("-").map(_.toInt)
     if (pair.length != 2) 
       return None
-    def bpair: BytePair = new BytePair(Some(pair(0)), pair(1))
+    def bpair: ByteRanges.BytePair = new ByteRanges.BytePair(
+      Some(HttpNumbers.LongNumber(pair(0))), HttpNumbers.LongNumber(pair(1)))
     def length: String = """/\d+|/*""".r.findFirstIn(inString).getOrElse("")
 
     return Some(ByteInstance (unit, bpair, length))
   }
 
-  case class ByteInstance (unit: String, bytePair: BytePair, instanceLength: String) extends ContentByteRange
+  case class ByteInstance (unit: String, bytePair: ByteRanges.BytePair, instanceLength: String) extends ContentByteRange
 
 }

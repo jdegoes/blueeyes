@@ -147,7 +147,26 @@ class HttpHeadersSpec extends Specification {
     EntityTags.parseEntityTags("w%015") mustEqual None
   }
 
+  "Location: Should return correct url on parsed input" in {
+    HttpHeaders.`Location`(HttpUris.parseHttpUris("  http://www.socialmedia.com/index.html  ").get).value mustEqual "http://www.socialmedia.com/index.html"    
+  }
 
+  "Location: Parsing should return none on bad input" in {
+    HttpUris.parseHttpUris("&%*#(!)Thttp://.socialmedia.com") mustEqual None
+  }
+
+  "Pragma: Parsing should return 'no-cache' or None "  in {
+    HttpHeaders.Pragma(PragmaDirectives.parsePragmaDirectives(" No-Cache ").get).value mustEqual ("no-cache")
+    PragmaDirectives.parsePragmaDirectives(" zom ") mustEqual None
+  }
+
+  "Range: Should parse correctly on good input" in {
+    HttpHeaders.Range(ByteRanges.parseByteRanges("bytes=0-500, 699-2000, -4").get).value mustEqual "bytes=0-500, 699-2000, -4"
+  }
+
+  "Range: Should produce none on bad input" in {
+    ByteRanges.parseByteRanges("bytes=cats") mustEqual None
+  }
 
 }
 

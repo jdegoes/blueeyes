@@ -9,10 +9,10 @@ sealed trait PragmaDirective extends ProductPrefixUnmangler{
 
 object PragmaDirectives {
 
-  def parsePragmaDirectives(inString: String): PragmaDirective = {
-    def outPragma: PragmaDirective = inString.trim.toLowerCase match {
-      case "no-cache" => `no-cache`
-      case any => CustomPragmaDirective(any)
+  def parsePragmaDirectives(inString: String): Option[PragmaDirective] = {
+    def outPragma: Option[PragmaDirective] = inString.trim.toLowerCase match {
+      case "no-cache" => Some(`no-cache`)
+      case any => None
     }
     return outPragma
   }

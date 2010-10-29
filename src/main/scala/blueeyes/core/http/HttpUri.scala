@@ -9,7 +9,8 @@ sealed trait HttpUri {
   def uri: URI
   def port: Option[Int] 
   def host: String = ((uri.getHost :: Nil) ::: port.toList.map(_.toString)).mkString(":")
-  def absoluteUri = uri.getPath
+  def path: String = uri.getPath
+  def absoluteUri = uri.toString 
   override def toString = absoluteUri
 
 }
@@ -28,7 +29,7 @@ object HttpUris {
     if (uri == null)
       return None
 
-    def port: Option[Int] = """:\d+""".r.findFirstIn(inString).map(_.toInt)
+    def port: Option[Int] = """(?<=[a-z]):\d+""".r.findFirstIn(inString).map(_.toInt)
     return Some(CustomUri(uri, port))
   }
 
