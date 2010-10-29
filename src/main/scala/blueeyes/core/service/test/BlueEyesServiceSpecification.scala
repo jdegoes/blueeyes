@@ -9,7 +9,7 @@ import blueeyes.core.http.HttpVersions._
 import blueeyes.core.http.HttpMethods._
 import blueeyes.core.http.{HttpMethod, HttpVersion}
 
-trait BlueEyesServiceSpecification  {
+trait BlueEyesServiceSpecification[S]  {
 
   private val _response = new DynamicVariable[Option[HttpResponse[_]]](None)
   private val pathStack: Stack[String] = new Stack[String];
@@ -81,5 +81,5 @@ trait BlueEyesServiceSpecification  {
   def content  = response.content
   def version  = response.version
 
-  def service: RestHierarchy
+  def service: RestHierarchy[S]
 }

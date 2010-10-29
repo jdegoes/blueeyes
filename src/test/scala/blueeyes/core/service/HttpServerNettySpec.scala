@@ -58,9 +58,9 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-class TestService extends RestHierarchyBuilder with HttpService{
+class TestService extends RestHierarchyBuilder[String] with HttpService[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
-  path("bar/'adId/adCode.html"){get[String, String](new Handler())}
+  path("bar/'adId/adCode.html"){get(new Handler())}
 
   def version = 1
 

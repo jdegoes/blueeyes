@@ -8,7 +8,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
 
-class HttpServerNetty(val service: Class[_ <: HttpService]) {
+class HttpServerNetty(val service: Class[_ <: HttpService[_]]) {
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
@@ -32,7 +32,7 @@ class HttpServerNetty(val service: Class[_ <: HttpService]) {
   }
 }
 
-class HttpServerPipelineFactory(hierarchy: RestHierarchy) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory(hierarchy: RestHierarchy[_]) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
     val pipeline = Channels.pipeline()
 

@@ -39,18 +39,18 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
     serviceByPath mustEqual(handler)
   }
 
-  class TestService extends RestHierarchyBuilder{
+  class TestService extends RestHierarchyBuilder[String]{
     path("ads" / 'adId / "adCode.html") {
-      get[String, String] {
+      get {
         handler
       }
     }
   }
-  class TestNestedService extends RestHierarchyBuilder{
+  class TestNestedService extends RestHierarchyBuilder[String]{
     path("blue/eyes") {
       path("api/v1") {
         path("ads/'adId/adCode.html") {
-          get [String, String]{
+          get{
             handler
           }
         }

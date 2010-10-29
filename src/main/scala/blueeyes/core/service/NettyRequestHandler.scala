@@ -12,7 +12,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.{DataTranscoder}
 import blueeyes.util.{Future}
 
-class NettyRequestHandler(hierarchy: RestHierarchy) extends SimpleChannelUpstreamHandler{
+class NettyRequestHandler[S](hierarchy: RestHierarchy[S]) extends SimpleChannelUpstreamHandler{
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request        = e.getMessage().asInstanceOf[NettyHttpRequest]
     val method         = fromNettyMethod(request.getMethod())

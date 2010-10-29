@@ -4,19 +4,19 @@ import blueeyes.core.http.HttpMethods._
 import blueeyes.util.Future
 import blueeyes.core.http.HttpMethod
 
-trait RestHierarchy {
-  private type Parameters[T, S] = (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S])
-  def hierarchy: List[Parameters[_, _]]
+trait RestHierarchy[S] {
+  private type Parameters[T] = (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S])
+  def hierarchy: List[Parameters[_]]
 }
 
-trait RestHierarchyBuilder extends RestHierarchy {
+trait RestHierarchyBuilder[S] extends RestHierarchy[S] {
   import scala.collection.mutable.{Stack, ArrayBuffer}
   
   private type Handler[T] = HttpRequest[T] => Future[HttpResponse[T]]
-  private type Parameters[T, S] = (RestPathPattern, HttpMethod, Handler[T], HttpDataTranscoder[T, S])
+  private type Parameters[T] = (RestPathPattern, HttpMethod, Handler[T], HttpDataTranscoder[T, S])
   
   private val pathStack: Stack[RestPathPattern] = new Stack[RestPathPattern].push(RestPathPattern.Root);
-  private val _hierarchy: ArrayBuffer[Parameters[_, _]] = new ArrayBuffer
+  private val _hierarchy: ArrayBuffer[Parameters[_]] = new ArrayBuffer
   
   def hierarchy = _hierarchy.toList
   
@@ -28,23 +28,23 @@ trait RestHierarchyBuilder extends RestHierarchy {
     try { f } finally { pathStack.pop() }
   }
   
-  def get[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(GET, handler, t)
+  def get[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(GET, handler, t)
   
-  def put[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(PUT, handler, t)
+  def put[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(PUT, handler, t)
   
-  def post[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(POST, handler, t)
+  def post[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(POST, handler, t)
   
-  def delete[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(DELETE, handler, t)
+  def delete[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(DELETE, handler, t)
   
-  def options[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(OPTIONS, handler, t)
+  def options[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(OPTIONS, handler, t)
   
-  def head[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(HEAD, handler, t)
+  def head[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(HEAD, handler, t)
   
-  def connect[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(CONNECT, handler, t)
+  def connect[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(CONNECT, handler, t)
   
-  def trace[T, S](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(TRACE, handler, t)
+  def trace[T](handler: Handler[T])(implicit t: HttpDataTranscoder[T, S]) = custom(TRACE, handler, t)
   
-  def custom[T, S](method: HttpMethod, handler: Handler[T], t: HttpDataTranscoder[T, S]) = {
+  def custom[T](method: HttpMethod, handler: Handler[T], t: HttpDataTranscoder[T, S]) = {
     _hierarchy += ((currentPath, method, handler, t))
   }
   

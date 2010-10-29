@@ -23,7 +23,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
   
   private val response     = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
-  private val hierarchy: RestHierarchy  = new TestService()
+  private val hierarchy: RestHierarchy[String]  = new TestService()
   private val nettyHandler = new NettyRequestHandler(hierarchy)
 
   "write OK responce service when path is match" in {
@@ -58,8 +58,8 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
     assert(true)    
   }
 
-  class TestService extends RestHierarchyBuilder{
-    path("bar" / 'adId / "adCode.html"){get[String, String](handler)}
+  class TestService extends RestHierarchyBuilder[String]{
+    path("bar" / 'adId / "adCode.html"){get(handler)}
   }
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {

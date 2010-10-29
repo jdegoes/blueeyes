@@ -9,7 +9,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.HttpStatusCodes._
 
-class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification{
+class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
   val service = new SampleService()
 
   "SampleService when using GET" should {
@@ -34,11 +34,11 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
   }
 }
 
-class SampleService extends RestHierarchyBuilder {
+class SampleService extends RestHierarchyBuilder[String] {
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
 
-  path("/get/'foo") {get[String, String](new GetHandler())}
-  path("/post/foo") {post[String, String](new PutHandler())}
+  path("/get/'foo") {get(new GetHandler())}
+  path("/post/foo") {post(new PutHandler())}
 
   class GetHandler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
     def apply(request: HttpRequest[String]) = {
