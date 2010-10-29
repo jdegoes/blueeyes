@@ -16,7 +16,7 @@ class HttpServerNettySpec extends Specification{
   private var server: Option[HttpServerNetty] = None
   "HttpServer" should{
     doFirst{
-      val testServer = new HttpServerNetty(classOf[TestService])
+      val testServer = new HttpServerNetty(classOf[TestService] :: Nil)
 
       var success = false
       do{
