@@ -9,48 +9,52 @@ import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
 import net.lag.logging.Logger
 
-class HttpServerNetty(val serviceClass: Class[_ <: HttpService[_]]) {
+class HttpServerNetty(val servicesClasses: List[Class[_ <: HttpService[_]]]) {
+  if (servicesClasses.isEmpty) error("No services are specified.")
+
   private val logger        = Logger.get
 
-  @volatile
-  private var service: Option[HttpService[_]] = None
   @volatile
   private var server: Option[ServerBootstrap] = None
   @volatile
   private var serverExecutor: Option[Executor] = None
 
   def start(port: Int) = {
+
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-    val serviceInstance = serviceClass.newInstance()
-    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(serviceInstance))
+    val services = servicesClasses.map(_.newInstance())
+
+    bootstrap.setPipelineFactory(new HttpServerPipelineFactory(services))
 
     bootstrap.bind(new InetSocketAddress(port))
 
-    logger.info("Service is started. {Name=%s; Version=%d; Class=%s}".format(serviceInstance.name, serviceInstance.version, serviceClass.getName()))
+    logger.info("Services are started: " + format(services))
 
-    server = Some(bootstrap)
-    serverExecutor = Some(executor)
+    server          = Some(bootstrap)
+    serverExecutor  = Some(executor)
   }
 
   def stop = {
     serverExecutor.foreach(ExecutorUtil.terminate(_))
     server.foreach(_.releaseExternalResources)
 
-    service.foreach(serviceInstance => logger.info("Service is stopped. {Name=%s; Version=%d; Class=%s}".format(serviceInstance.name, serviceInstance.version, serviceClass.getName())))
-
+    val services = server.map(bootstrap => bootstrap.getPipelineFactory().asInstanceOf[HttpServerPipelineFactory].services).getOrElse(Nil)
+    logger.info("Services are stopped: " + format(services))
   }
+
+  private def format(services: List[HttpService[_]]) = services.map(service => "[Name=%s; Version=%d; Class=%s]".format(service.name, service.version, service.getClass)).mkString(" ")
 }
 
-class HttpServerPipelineFactory(hierarchy: RestHierarchy[_]) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory(val services: List[HttpService[_]]) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
     val pipeline = Channels.pipeline()
 
     pipeline.addLast("decoder", new HttpRequestDecoder())
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
-    pipeline.addLast("handler", new NettyRequestHandler(hierarchy))
+    pipeline.addLast("handler", new NettyRequestHandler(services))
 
     pipeline
   }
