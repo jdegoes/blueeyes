@@ -3,7 +3,7 @@ package blueeyes.util
 /**
  * This object only deals with the query portion of the URI.  A URI can be decomposed into
  * constituant components using the java.lang.URI class.
- * Not:  The individual parameters/values are assumed to be encoded, if neccesary
+ * Note:  The individual parameters/values are assumed to be encoded, if neccesary
  */
 object QueryParser {
   val encoding = "UTF-8"
