@@ -13,6 +13,8 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val async       = "com.ning"                    % "async-http-client" % "1.3.1"       % "compile"
   val mongo       = "org.mongodb"                 % "mongo-java-driver" % "2.1"         % "compile"
   val jodatime    = "joda-time"                   % "joda-time"         % "1.6.2"       % "compile"
+  val configgy    = "net.lag"                     % "configgy"          cv% "2.0.0"       % "compile"
+  val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
 
   override def managedStyle = ManagedStyle.Maven
 
