@@ -6,35 +6,29 @@ import scala.util.matching.Regex
 
 sealed trait EntityTag {
 
-  def tags: List[String]
-  def value = tags.mkString(",")
+  def tags: Array[String]
+  def value = tags.mkString(", ")
   override def toString = value
 }
 
 object EntityTags {
 
-  def parseEntityTags(inString: String): EntityTag = {
-    def EntityTagRegex = new Regex("""(\"([a-z]\d)+\")(, \"([a-z]\d)+\")*|\*""")
-    def outTags: EntityTag = EntityTagRegex.findFirstIn(inString.trim.toLowerCase).getOrElse("").split(", ") match {
-      case Array("*") => Star
-      case Array("") => NullTag
-      case arr => CustomEntityTags(arr: _*)
+  def parseEntityTags(inString: String): Option[EntityTag] = {
+    def EntityTagRegex = new Regex("""\*|((\")[a-z\d]+(\")(,\ (\")[a-z\d]+(\"))*)""")
+    def outString: Option[String] = EntityTagRegex.findFirstIn(inString.trim.toLowerCase)
+
+    def outTags: Option[EntityTag] = outString match {
+      case Some("*") => Some(Star)
+      case Some(any) => Some(CustomEntityTags(any.split(",").map(_.trim)))
+      case None => None
     }
     return outTags
   }
 
   case object Star extends EntityTag {
-    override def tags =  "*" :: Nil
+    override def tags =  Array("*")
   }
 
-  sealed case class CustomEntityTags(inTags: String*) extends EntityTag {
-    var outTags: List[String] = Nil
-    inTags.map("\"" + _ +"\"" :: outTags)
-    override def tags = outTags
-  }
-
-  case object NullTag extends EntityTag {
-    override def tags = Nil 
-  }
+  sealed case class CustomEntityTags(tags: Array[String]) extends EntityTag 
 
 }

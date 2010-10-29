@@ -10,12 +10,12 @@ sealed trait Expectation {
 
 object Expectations {
 
-  def parseExpectations(inString: String): Expectation = {
+  def parseExpectations(inString: String): Option[Expectation] = {
     def CodeRegex = new Regex("""\d{3}""")
-    def outExpectation = CodeRegex.findFirstIn(inString.trim).getOrElse("") match {
-      case "100"  => continue 
-      case "417"  => failure 
-      case _      => failure 
+    def outExpectation: Option[Expectation] = CodeRegex.findFirstIn(inString.trim).getOrElse("") match {
+      case "100"  => Some(continue)
+      case "417"  => Some(failure)
+      case _      => return None
     }
     return outExpectation
   }

@@ -1,37 +1,63 @@
 package blueeyes.core.http
 
 import org.joda.time.DateTime
+import scala.util.matching.Regex
 
 /* For use in the Cookie HTTP Header */
+
+/* Example of a cookie (src Wikipedia):
+
+RMID=732423sdfs73242; expires=Fri, 31-Dec-2010 23:59:59 GMT; path=/;
+domain=.example.net
+
+Note that a cookie can have multiple name-value pairs
+
+*/
+
 
 sealed trait HttpCookie {
   def name: String
   def cookieValue: String
-  def expires: Option[HttpDateTime] //... Probably should be an Option[Date] object 
+  def expires: Option[HttpDateTime] 
   def stringExpires = expires.toString
   def domain: Option[String]
   def path: Option[String]
-  def value: String = List(List(name, cookieValue).mkString("=") ::
-    stringExpires.map(List("expires", _)).mkString("=") ::
-    path.map(List("path", _)).mkString("=") ::
-    domain.map(List("domain",_)).mkString("=") :: Nil).mkString("; ")
+  def value: String = name + "=" + cookieValue +
+                      expires.map(x => "; expires="+x).getOrElse("") +
+                      path.map(x => "; path="+x).getOrElse("") +
+                      domain.map(x => "; domain="+x).getOrElse("")
+    
   override def toString = value
 
 }
 
 object HttpCookies {
 
-  def parseHttpCookies(inString: String): HttpCookie = {
-    def cb = new CookieBuilder() 
+  def parseHttpCookies(inString: String): Option[HttpCookie] = {
+    def NameRegex = """([a-zA-Z\d])+=[^;]*""".r
 
-    def outCookie = inString.trim.split(";").map(_.trim).map(_.split("=")).map(x => x match {
-      case Array("path", any) => cb.path = any
-      case Array("expires", any) => cb.expires = HttpDateTimes.parseHttpDateTimes(any)
-      case Array("domain", any) => cb.domain = any
-      case Array(name, value) => cb.name = name; cb.cookieValue = value
-    })
-    return cb.buildCookie;
+    /* Ex of date: expires=Mon, 01-Jan-2001 00:00:00 GMT */
+    def DateRegex = """expires=[^;]+""".r
+
+    /* Example of Path: path=/ */
+    def PathRegex = """path=[^;]+""".r
+
+    /* Example of domain: domain=.example.nets/kittens */
+    def DomainRegex = """domain=[^;]+""".r
+
+    def nameValuePair: List[String] = NameRegex.findFirstIn(inString.trim).getOrElse("").split("=").toList
+    if (nameValuePair.length != 2)
+      return None
+    
+    def date: Option[HttpDateTime] = HttpDateTimes.parseHttpDateTimes(DateRegex.findFirstIn(inString).getOrElse("").split("=")(1))
+
+    def path: Option[String] = PathRegex.findFirstIn(inString.trim).map(_.replaceFirst("path=",""))
+
+    def domain: Option[String] = DomainRegex.findFirstIn(inString.trim).map(_.replaceFirst("domain=",""))
+
+    return Some(CookieData(nameValuePair(0), nameValuePair(1), date, path, domain))
   }
+
 
   case class CookieData (name: String, cookieValue: String, expires: Option[HttpDateTime], path: Option[String], domain: Option[String]) extends HttpCookie
 
@@ -50,32 +76,6 @@ object HttpCookies {
 
     def apply(name: String, cookieValue: String, expires: HttpDateTime, path: String, domain: String): HttpCookie = 
       new CookieData (name, cookieValue, Some(expires), Some(path), Some(domain))
-  }
-
-  private class CookieBuilder() {
- 
-    private[this] var n: String = "" 
-    private[this] var cv: String = ""
-    private[this] var exp: Option[HttpDateTime] = None
-    private[this] var dom: Option[String] = None
-    private[this] var pat: Option[String] = None
-
-    def name: String = n
-    def name_=(name: String) { n = name }
-
-    def cookieValue: String = cv
-    def cookieValue_=(inCookieValue: String) { cv = inCookieValue }
-
-    def expires: Option[HttpDateTime] = exp
-    def expires_=(date: HttpDateTime) { exp = Some(date) }
-
-    def domain: Option[String] = dom
-    def domain_=(inDomain: String) { dom = Some(inDomain) }
-
-    def path: Option[String] = pat 
-    def path_=(inPath: String) { pat = Some(inPath) }
-
-    def buildCookie: HttpCookie = new CookieData(name, cookieValue, expires, path, domain)
   }
 
 }

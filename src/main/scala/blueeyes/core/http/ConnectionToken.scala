@@ -6,17 +6,18 @@ import scala.util.matching.Regex
 sealed trait ConnectionToken extends ProductPrefixUnmangler {
   def value = unmangledName 
   override def toString = value
-
 }
+
 
 object ConnectionTokens {
 
-  def parseConnectionTokens(inString: String): ConnectionToken = {
-    def ConnectionRegex = new Regex("""([a-z]\-)+""") 
-    var outConnectionTokens: ConnectionToken = ConnectionRegex.findFirstIn(inString.trim).getOrElse("") match {
-      case "close" => close
-      case "" => error("Shouldn't be able to create empty connection token")
-      case _ => new CustomConnectionToken(inString)
+  def parseConnectionTokens(inString: String): Option[ConnectionToken] = {
+    def ConnectionRegex = new Regex("""([a-zA-Z-])+""") 
+    var outConnectionTokens: Option[ConnectionToken] = ConnectionRegex.findFirstIn(inString.trim).getOrElse("")
+    match {
+      case "close" => Some(close)
+      case "" => None
+      case default => Some(CustomConnectionToken(default))
     }
     return outConnectionTokens
   }

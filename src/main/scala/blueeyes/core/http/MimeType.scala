@@ -35,6 +35,7 @@ object MimeTypes {
 
         case Array("*" , "*")                     => Array(anymaintype / anysubtype)
 
+        case Array("application", "*")            => Array(application / anysubtype)
         case Array("application", "javascript")   => Array(application / javascript)
         case Array("text", "javascript")          => Array(text / javascript)
 
@@ -72,6 +73,14 @@ object MimeTypes {
         case Array("image", "svg+xml")            => Array(image / `svg+xml`)
         case Array("image", "tiff")               => Array(image / tiff)
         case Array("image", "vnd.microsoft.icon") => Array(image / `vnd.microsoft.icon`)
+
+        /* Multipart */
+        case Array("multipart", "mixed")            => Array(multipart / mixed)
+        case Array("multipart", "alternative")    => Array(multipart / alternative)
+        case Array("multipart", "related")        => Array(multipart / related)
+        case Array("multipart", "form-data")      => Array(multipart / `form-data`)
+        case Array("multipart", "signed")         => Array(multipart / signed)
+        case Array("multipart", "encrypted")      => Array(multipart / encrypted)
 
         /* Text */
         case Array("text", "css")                 => Array(text / css)

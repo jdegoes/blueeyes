@@ -90,7 +90,7 @@ object HttpHeaders {
   object Connection {
     def apply(connectionToken: ConnectionToken) = new Connection(connectionToken)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection")
-      Some(ConnectionTokens.parseConnectionTokens(keyValue._2)) else None
+      ConnectionTokens.parseConnectionTokens(keyValue._2) else None
   }
 
   class Cookie(val cookie: HttpCookie) extends HttpHeader {
@@ -99,23 +99,25 @@ object HttpHeaders {
   object Cookie {
     def apply(cookie: HttpCookie) = new Cookie(cookie)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie")
-      Some(HttpCookies.parseHttpCookies(keyValue._2)) else None
+      HttpCookies.parseHttpCookies(keyValue._2) else None
   }
 
-  class `Content-Length`(val length: Long) extends HttpHeader {
+  class `Content-Length`(val length: HttpNumber) extends HttpHeader {
     def value = length.toString
   }
   object `Content-Length` {
-    def apply(length: Long): `Content-Length` = new `Content-Length`(length)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length") Some(keyValue._2.toLong) else None
+    def apply(length: HttpNumber): `Content-Length` = new `Content-Length`(length)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length")
+      HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
   class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeader {
-    def value = mimeTypes.map(_.value).mkString(";")
+    def value = mimeTypes.map(_.value).mkString(", ")
   }
   object `Content-Type` {
     def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes :_*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type") Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type")
+      Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
 
   class Date(val httpDate: HttpDateTime) extends HttpHeader {
@@ -123,7 +125,8 @@ object HttpHeaders {
   }
   object Date {
     def apply(httpDate: HttpDateTime) = new Date(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date") Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date")
+      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
   class Expect(val expectation: Expectation) extends HttpHeader {
@@ -131,25 +134,26 @@ object HttpHeaders {
   }
   object Expect {
     def apply(expectation: Expectation) = new Expect(expectation)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect") Some(Expectations.parseExpectations(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect")
+      Expectations.parseExpectations(keyValue._2) else None
   }
 
-  /* Could use the URI class here */
-  class From(val email: Email) extends HttpHeader {
+  class From(val email: HttpUri) extends HttpHeader {
     def value = email.toString
   }
   object From {
-    def apply(email: Email) = new From(email)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from") Some(Emails.parseEmails(keyValue._2)) else None
+    def apply(email: HttpUri) = new From(email)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from")
+      HttpUris.parseEmails(keyValue._2) else None
   }
 
-  class Host(val domain: HttpDomain) extends HttpHeader {
-    def value = domain.toString
+  class Host(val domain: HttpUri) extends HttpHeader {
+    def value = domain.host 
   }
   object Host {
-    def apply(domain: HttpDomain) = new Host(domain)
+    def apply(domain: HttpUri) = new Host(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host")
-      HttpDomains.parseHttpDomains(keyValue._2) else None
+      HttpUris.parseHttpUris(keyValue._2) else None
   }
 
   class `If-Match`(val tags: EntityTag) extends HttpHeader {
@@ -157,7 +161,8 @@ object HttpHeaders {
   }
   object `If-Match` { // going to need a new type here
     def apply(tags: EntityTag) = new `If-Match`(tags)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match") Some(EntityTags.parseEntityTags(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match")
+      EntityTags.parseEntityTags(keyValue._2) else None
   }
 
   class `If-Modified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
@@ -165,7 +170,8 @@ object HttpHeaders {
   }
   object `If-Modified-Since` {
     def apply(httpDate: HttpDateTime) = new `If-Modified-Since`(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since") Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since")
+      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
   class `If-None-Match`(val tags: EntityTag) extends HttpHeader {
@@ -174,7 +180,7 @@ object HttpHeaders {
   object `If-None-Match` {
     def apply(tags: EntityTag) = new `If-None-Match`(tags)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match")
-      Some(EntityTags.parseEntityTags(keyValue._2)) else None
+      EntityTags.parseEntityTags(keyValue._2) else None
   }
 
   /* If-Range needs to add a way to include the date */
@@ -184,7 +190,7 @@ object HttpHeaders {
   object `If-Range` {
     def apply(tags: EntityTag) = new `If-Range`(tags)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range")
-      Some(EntityTags.parseEntityTags(keyValue._2)) else None
+      EntityTags.parseEntityTags(keyValue._2) else None
   }
 
   class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
@@ -193,7 +199,7 @@ object HttpHeaders {
   object `If-Unmodified-Since` {
     def apply(httpDate: HttpDateTime) = new `If-Unmodified-Since`(httpDate)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-unmodified-since") 
-      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
+      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
   class `Max-Forwards`(val maxf: Long) extends HttpHeader {
@@ -231,13 +237,13 @@ object HttpHeaders {
       Some(ByteRanges.parseByteRange(keyValue._2)) else None
   }
 
-  class Referer(val domain: HttpDomain) extends HttpHeader {
+  class Referer(val domain: HttpUri) extends HttpHeader {
     def value = domain.absoluteUri
   }
   object Referer {
-    def apply(domain: HttpDomain) = new Referer(domain)
+    def apply(domain: HttpUri) = new Referer(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer")
-      HttpDomains.parseHttpDomains(keyValue._2) else None
+      HttpUris.parseHttpUris(keyValue._2) else None
   }
 
   class TE(val tcodings: TCoding*) extends HttpHeader {
@@ -371,7 +377,7 @@ object HttpHeaders {
   object ETag {
     def apply(tag: EntityTag) = new ETag(tag)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "etag")
-      Some(EntityTags.parseEntityTags(keyValue._2)) else None
+      EntityTags.parseEntityTags(keyValue._2) else None
   }
 
   class Expires(val date: HttpDateTime) extends HttpHeader {
@@ -380,7 +386,7 @@ object HttpHeaders {
   object Expires {
     def apply(date: HttpDateTime) = new Expires(date)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expires")
-      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
+      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
   class `Last-Modified`(val date: HttpDateTime) extends HttpHeader {
@@ -389,16 +395,16 @@ object HttpHeaders {
   object `Last-Modified` {
     def apply(date: HttpDateTime) = new `Last-Modified`(date)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "last-modified")
-      Some(HttpDateTimes.parseHttpDateTimes(keyValue._2)) else None
+      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class Location(val domain: HttpDomain) extends HttpHeader {
+  class Location(val domain: HttpUri) extends HttpHeader {
     def value = domain.absoluteUri
   }
   object Location {
-    def apply(domain: HttpDomain) = new Location(domain)
+    def apply(domain: HttpUri) = new Location(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location")
-      HttpDomains.parseHttpDomains(keyValue._2) else None
+      HttpUris.parseHttpUris(keyValue._2) else None
   }
 
   class `Proxy-Authenticate`(val challenge: String) extends HttpHeader {
@@ -441,7 +447,7 @@ object HttpHeaders {
   object `Set-Cookie` {
     def apply(cookie: HttpCookie) = new `Set-Cookie`(cookie)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "set-cookie")
-      Some(HttpCookies.parseHttpCookies(keyValue._2)) else None
+      HttpCookies.parseHttpCookies(keyValue._2) else None
   }
 
   /* Will take a while to implement */
@@ -467,6 +473,7 @@ object HttpHeaders {
   class Vary(val value: String) extends HttpHeader {
   }
   object Vary {
+    def apply(value: String) = new Vary(value)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "vary") Some(keyValue._2) else None
   }
 
