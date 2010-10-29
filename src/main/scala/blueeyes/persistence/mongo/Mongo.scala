@@ -12,7 +12,8 @@ trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
-trait DatabaseCollectionSource{
+trait MongoDatabase{
+  def apply[T](query: MongoQuery[T]): T
   def getCollection(collectionName: String): DatabaseCollection
 }
 
@@ -22,10 +23,6 @@ trait DatabaseCollection{
   def remove(filter: DBObject): Int
   def ensureIndex(name: String, keys: DBObject, unique: Boolean)
   def update(filter: DBObject, dbObject: DBObject, upsert: Boolean, multi: Boolean): Int
-}
-
-class MongoDatabase(collectionSource: DatabaseCollectionSource){
-  def apply[T](query: MongoQuery[T]): T = query(collectionSource.getCollection(query.collection.name))
 }
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
@@ -95,12 +92,37 @@ trait UpdateQueryBehaviour extends QueryBehaviour[JInt]{
 }
 
 object RealMongo{
-  class RealMongo(host: String, port: Int) extends Mongo{
-    private lazy val mongo = new com.mongodb.Mongo(host , port)
-    def database(databaseName: String) = new MongoDatabase(new RealDatabaseCollectionSource(mongo.getDB(databaseName)))
+  import net.lag.configgy.Config
+  import com.google.inject.{Provider, Inject, AbstractModule}
+
+  object MongoConfiguration {
+    val MongoHost = "mongo.host"
+    val MongoPort = "mongo.port"
   }
 
-  class RealDatabaseCollectionSource(database: DB) extends DatabaseCollectionSource{
+  class RealMongoModule extends AbstractModule {
+    override def configure(): Unit = {
+      bind(classOf[Mongo]).toProvider(classOf[RealMongoProvider])
+    }
+  }
+
+  @com.google.inject.Singleton
+  class RealMongoProvider @Inject() (config: Config) extends Provider[Mongo]{
+    private val factory = new RealMongo(config)
+    def get = factory
+  }
+
+  @com.google.inject.Singleton
+  class RealMongo(config: Config) extends Mongo{
+    import MongoConfiguration._
+
+    private lazy val mongo = new com.mongodb.Mongo(config.getString(MongoHost).getOrElse("MongoHost is not configured. Configure the value '%s'".format(MongoHost)) , config.getInt(MongoPort, ServerAddress.defaultPort()))
+
+    def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))
+  }
+
+  class RealMongoDatabase(database: DB) extends MongoDatabase{
+    def apply[T](query: MongoQuery[T]): T     = query(getCollection(query.collection.name))
     def getCollection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
   }
 

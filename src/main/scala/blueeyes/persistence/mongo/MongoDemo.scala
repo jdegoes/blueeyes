@@ -7,6 +7,8 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.json.JsonAST._
 import MongoFilterImplicits._
 import blueeyes.json.Printer
+import blueeyes.config.{ConfiggyModule, FilesystemConfiggyModule}
+import com.google.inject.Guice
 
 object MongoDemo{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -16,8 +18,11 @@ object MongoDemo{
 
   private val collection = "my-collection"
 
-  val realMongo = new RealMongo( "localhost" , 27017 )
-  val database  = realMongo.database( "mydb" );  
+  lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
+
+  val realMongo = injector.getInstance(classOf[Mongo])
+
+  val database  = realMongo.database( "mydb" );
   
   def main(args: Array[String]){
 
