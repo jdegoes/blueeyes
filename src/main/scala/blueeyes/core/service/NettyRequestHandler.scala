@@ -52,9 +52,7 @@ class NotFoundBuilder extends Function1[(String, HttpMethod), Future[NettyHttpRe
 
 class RequestBuilder[S](event: MessageEvent, hierarchy: RestHierarchy[S]) extends PartialFunction[(String, HttpMethod), Future[NettyHttpResponse]]{
   def isDefinedAt(uriAndMethod: (String, HttpMethod)) = findPattern(uriAndMethod._1, uriAndMethod._2).map(v => true).getOrElse(false)
-  def apply(uriAndMethod: (String, HttpMethod)) = {
-    createResponse(uriAndMethod._1, event, findPattern(uriAndMethod._1, uriAndMethod._2).get)
-  }
+  def apply(uriAndMethod: (String, HttpMethod)) = createResponse(uriAndMethod._1, event, findPattern(uriAndMethod._1, uriAndMethod._2).get)
 
   private def createResponse[T, S](requestUri: String, event: MessageEvent, handler: (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S])) = {
     val request     = event.getMessage().asInstanceOf[NettyHttpRequest]
