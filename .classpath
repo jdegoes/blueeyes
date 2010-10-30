@@ -3,17 +3,21 @@
 	<classpathentry including="**/*.scala" kind="src" output="target/scala_2.8.0/test-classes" path="src/test/scala"/>
 	<classpathentry including="**/*.scala" kind="src" path="src/main/scala"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/mockito-all-1.8.4.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/mongo-java-driver-2.1.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/junit-4.7.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/scalatest-1.2-for-scala-2.8.0.final-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/paranamer-2.0.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/scalacheck_2.8.0-1.7.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/test-interface-0.3.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/specs_2.8.0-1.6.5.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/netty-3.2.2.Final.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/mongo-java-driver-2.1.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/scalacheck_2.8.0-1.7.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/joda-time-1.6.2.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/test-interface-0.3.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/async-http-client-1.3.1.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/junit-4.7.jar"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/joda-time-1.6.2.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/async-http-client-1.3.0.jar"/>
-	<classpathentry kind="output" path="classes"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/aopalliance-1.0.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/configgy-2.0.0.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/guice-2.0.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/vscaladoc-1.1-md-3.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/scalatest-1.2.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/test/specs_2.8.0-1.6.6-SNAPSHOT.jar"/>
+	<classpathentry kind="output" path="target/scala_2.8.0/classes"/>
 </classpath>
