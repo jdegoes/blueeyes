@@ -23,16 +23,33 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   
   val sourceArtifact = Artifact.sources(artifactID)
   val docsArtifact = Artifact.javadoc(artifactID)
+  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
 
+  Credentials(Path.userHome / ".ivy2" / ".credentials", log)
+
   override def pomExtra =
-  <licenses>
-    <license>
-      <name>Apache 2</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
+    <parent>
+      <groupId>org.sonatype.oss</groupId>
+      <artifactId>oss-parent</artifactId>
+      <version>5</version>
+    </parent> ++
+    <name>BlueEyes</name> ++
+    <description>A lightweight Web 3.0 framework for Scala</description> ++
+    <url>http://github.com/jdegoes/blueeyes</url> ++
+    <licenses>
+      <license>
+	<name>Apache 2</name>
+	<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+	 <distribution>repo</distribution>
+      </license>
+    </licenses> ++
+    <scm>
+      <connection>scm:git:git@github.com:jdegoes/blueeyes.git</connection>
+      <developerConnection>scm:git:git@github.com:jdegoes/blueeyes.git</developerConnection>
+      <url>git@github.com:jdegoes/blueeyes.git</url>
+    </scm> ++
+    <developers></developers>
 }
 
 trait Repositories {
