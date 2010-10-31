@@ -23,7 +23,10 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   
   val sourceArtifact = Artifact.sources(artifactID)
   val docsArtifact = Artifact.javadoc(artifactID)
-  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
+  // Can't publish to snapshots
+//  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
+  // Staging seems to publish though
+  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
 
   Credentials(Path.userHome / ".ivy2" / ".credentials", log)
