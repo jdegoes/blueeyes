@@ -40,7 +40,30 @@ object JPathSpec extends Specification {
   }
   
   "Accurately detects the wildcard operator" in {
-    JPath("foo.*").nodes mustEqual (JPathField("foo") :: JPathRegex(".*".r) :: Nil)
+    JPath("foo.*").nodes mustEqual (JPathField("foo") :: JPathRegex("(.*)".r) :: Nil)
+  }
+  
+  "Detects a basic regular expression in between two fields" in {
+    JPath("foo./bar/.baz").nodes mustEqual(JPathField("foo") :: JPathRegex("(bar)".r) :: JPathField("baz") :: Nil)
+  }
+  
+  "Detects a basic leading regular expression" in {
+    JPath("./ba[rz]/").nodes mustEqual(JPathRegex("(ba[rz])".r) :: Nil)
+  }
+  
+  "Can extract a first-level regular expression" in {
+    val j = JObject(JField("baz", JNull) :: JField("bar", JNull) :: JField("foo", JNull) :: Nil)
+    
+    JPath("./ba[rz]/").extract(j) mustEqual(JNull :: JNull :: Nil)
+  }
+  
+  "Expand will accurately convert regular expressions for an object with depth = 1" in {
+    val j = JObject(JField("baz", JNull) :: JField("bar", JNull) :: JField("foo", JNull) :: Nil)
+    
+    JPath("./ba[rz]/").expand(j) mustEqual (
+      JPath(JPathField("baz")) :: 
+      JPath(JPathField("bar")) :: Nil
+    )
   }
 }
 

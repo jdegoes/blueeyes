@@ -4,7 +4,7 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath extends Function1[JValue, JValue] { self =>
+sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
   def nodes: List[JPathNode]
   
   def \ (that: JPath): JPath = new JPath {
@@ -17,9 +17,9 @@ sealed trait JPath extends Function1[JValue, JValue] { self =>
   
   def apply(index: Int): JPath = this \ JPathIndex(index)
   
-  def apply(jvalue: JValue): JValue = extract(jvalue)
+  def apply(jvalue: JValue): List[JValue] = extract(jvalue)
   
-  def extract(jvalue: JValue): JValue = {
+  def extract(jvalue: JValue): List[JValue] = {
     def extract0(path: List[JPathNode], d: JValue): List[JValue] = path match {
       case Nil => d :: Nil
       
@@ -36,11 +36,30 @@ sealed trait JPath extends Function1[JValue, JValue] { self =>
       }
     }
   
-    extract0(nodes, jvalue) match {
-      case Nil => JNothing
-      case x :: Nil => x
-      case xs => JArray(xs)
+    extract0(nodes, jvalue)
+  }
+  
+  def expand(jvalue: JValue): List[JPathConcrete] = {
+    def expand0(current: List[JPathNodeConcrete], right: List[JPathNode], d: JValue): List[JPathConcrete] = right match {
+      case Nil => JPath(current: _*) :: Nil
+      
+      case head :: tail => head match {
+        case x @ JPathField(name)  => expand0(current :+ x, tail, jvalue \ name)
+        case x @ JPathIndex(index) => expand0(current :+ x, tail, jvalue(index))
+        case JPathRegex(regex) => jvalue.children.flatMap { child => 
+          child match {
+            case JField(regex(name), value) => 
+              val expandedNode = JPathField(name)
+              
+              expand0(current :+ expandedNode, tail, value)
+            
+            case _ => Nil
+          }
+        }
+      }
     }
+  
+    expand0(Nil, nodes, jvalue)
   }
   
   def path = nodes.mkString("")
@@ -49,14 +68,20 @@ sealed trait JPath extends Function1[JValue, JValue] { self =>
 
   override def toString = path
 }
-
+sealed trait JPathConcrete extends JPath {
+  override def nodes: List[JPathNodeConcrete]
+}
+object JPathConcrete {
+  def apply(n: JPathNodeConcrete*): JPathConcrete = CompositeJPathConcrete(n.toList)
+}
 sealed trait JPathNode extends JPath { self =>
   def nodes = this :: Nil
 }
-sealed case class JPathField(name: String) extends JPathNode {
+sealed trait JPathNodeConcrete extends JPathNode
+sealed case class JPathField(name: String) extends JPathNodeConcrete {
   override def toString = "." + name
 }
-sealed case class JPathIndex(index: Int) extends JPathNode {
+sealed case class JPathIndex(index: Int) extends JPathNodeConcrete {
   override def toString = "[" + index + "]"
 }
 sealed case class JPathRegex(regex: Regex) extends JPathNode {
@@ -72,6 +97,7 @@ sealed case class JPathRegex(regex: Regex) extends JPathNode {
 }
 
 sealed case class CompositeJPath(nodes: List[JPathNode]) extends JPath
+sealed case class CompositeJPathConcrete(nodes: List[JPathNodeConcrete]) extends JPathConcrete
 
 object JPath {
   private val IndexPattern = """^\[(\d+)\]$""".r
@@ -81,7 +107,9 @@ object JPath {
 
   private val NodePatterns = """\.|(?=\[\d+\])""".r
 
-  def apply(n: JPathNode*) = CompositeJPath(n.toList)
+  def apply(n: JPathNode*): JPath = CompositeJPath(n.toList)
+  
+  def apply(n: JPathNodeConcrete*): JPathConcrete = CompositeJPathConcrete(n.toList)
 
   private[this] sealed trait Index
   private[this] case class Start(index: Int) extends Index
@@ -95,12 +123,12 @@ object JPath {
         (head match {
           case IndexPattern(index) => JPathIndex(index.toInt)
           
-          case WildPattern(star) => JPathRegex(".*".r)
+          case WildPattern(star) => JPathRegex("(.*)".r)
           
           case RegexPattern(regex, flags)  => 
             val prefix = Map("i" -> "(?i)", "x" -> "(?x)", "m" -> "(?m)").foldLeft("") { (str, rep) => (if (flags.contains(rep._1)) rep._2 else "") + str }
             
-            JPathRegex(new Regex(prefix + regex))
+            JPathRegex(new Regex(prefix + "(" + regex + ")"))
             
           case FieldPattern(name) => JPathField(name)
         }) :: parse0(tail)

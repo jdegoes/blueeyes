@@ -140,10 +140,12 @@ object JsonAST {
     /** Gets the specified value located at the terminal of the specified path.
      * <p>
      * Example:<pre>
-     * json.get("foo[0].bar.baz[123]")
+     * json(".foo[0].bar.baz[123]")
      * </pre>
      */
-    def get(path: JPath): JValue = path.extract(this)
+    def apply(path: JPath): List[JValue] = path.extract(this)
+    
+    def get(path: JPath): List[JValue] = apply(path)    
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
@@ -231,12 +233,51 @@ object JsonAST {
       if (f.isDefinedAt(x)) f(x) else x
     }
 
-    /*
-    // TODO:
-    def replace(target: JPath, replacement: JValue): JValue = {
-    
+    /** Replaces the matched path values with the result of calling the 
+     * replacer function on the matches. If the path has no values, the
+     * method has no effect -- i.e. it is not an error to specify paths
+     * which do not exist.
+     * <p>
+     * Example:<pre>
+     * jvalue.replace("./ba[rz]/", value => JObject("indent", value))
+     * </pre>
+     */
+    def replace(target: JPath, replacer: JValue => JValue): JValue = {
+      def replace0(target: JPathConcrete, j: JValue): JValue = target.nodes match {
+        case Nil => replacer(j)
+        
+        case head :: tail => head match {
+          case JPathField(name1) => this match { 
+            case JObject(fields) => JObject(fields.map {
+              case JField(name2, value) if (name1 == name2) => JField(name1, replace0(JPath(tail: _*), value))
+              
+              case field => field
+            })
+            
+            case jvalue => jvalue
+          }
+          
+          case JPathIndex(index) => this match {
+            case JArray(elements) =>
+              val split = elements.splitAt(index)
+            
+              val prefix = split._1
+              val middle = replace0(JPath(tail: _*), split._2.head)
+              val suffix = split._2.drop(1)
+              
+              JArray(prefix ++ (middle :: suffix))
+              
+            case jvalue => jvalue
+          }
+        }
+      }
+      
+      target.expand(this).foldLeft(this) { (jvalue, expansion) =>
+        replace0(expansion, jvalue)
+      }
     }
-    */
+    
+    def replace(target: JPath, replacement: JValue): JValue = replace(target, r => replacement)
 
     /** Return the first element from JSON which matches the given predicate.
      * <p>
