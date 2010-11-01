@@ -63,8 +63,6 @@ sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
   }
   
   def path = nodes.mkString("")
-  
-  def toMongoField = if (path.startsWith(".")) path.substring(1) else path
 
   override def toString = path
 }

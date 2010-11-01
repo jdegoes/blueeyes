@@ -53,9 +53,9 @@ sealed trait MongoFilter { self =>
 
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>
   def filter: JObject = operator match {
-    case $eq => JObject(JField(lhs.toMongoField, rhs.toJValue) :: Nil)
+    case $eq => JObject(JField(JPathExtension.toMongoField(lhs), rhs.toJValue) :: Nil)
 
-    case _ => JObject(JField(lhs.toMongoField, JObject(JField(operator.symbol, rhs.toJValue) :: Nil)) :: Nil)
+    case _ => JObject(JField(JPathExtension.toMongoField(lhs), JObject(JField(operator.symbol, rhs.toJValue) :: Nil)) :: Nil)
   }
 
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
@@ -191,4 +191,9 @@ case class MongoFilterBuilder(jpath: JPath) {
   def exists: MongoFieldFilter = MongoFieldFilter(jpath, $exists, true)
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
+}
+
+object JPathExtension{
+  def toMongoField(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
+
 }

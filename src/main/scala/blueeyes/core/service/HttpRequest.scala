@@ -6,4 +6,4 @@ import blueeyes.core.http.HttpVersions._
 
 //import HttpVersions._
 
-sealed case class HttpRequest[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T] = None, version: HttpVersion = `HTTP/1.1`)
+sealed case class HttpRequest[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T] = None, remoteHost: Option[String] = None, version: HttpVersion = `HTTP/1.1`)

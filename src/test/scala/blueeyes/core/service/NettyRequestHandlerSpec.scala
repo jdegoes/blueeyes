@@ -13,6 +13,7 @@ import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.data.TextToTextBijection
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
+import java.net.InetSocketAddress
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
@@ -25,6 +26,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val response     = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
   private val hierarchy: RestHierarchy[_]  = new TestService()
   private val nettyHandler = new NettyRequestHandler(hierarchy :: Nil)
+  private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
 
   "write OK responce service when path is match" in {
     val event  = mock[MessageEvent]
@@ -32,7 +34,8 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
     val future       = new Future[HttpResponse[String]]().deliver(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
-    when(handler.apply(Converters.fromNettyRequest(nettyRequest, Map('adId -> "1"), transcoder))).thenReturn(future, future)
+    when(event.getRemoteAddress()).thenReturn(remoteAddress)
+    when(handler.apply(Converters.fromNettyRequest(nettyRequest, Map('adId -> "1"), remoteAddress, transcoder))).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
     when(channel.write(Matchers.argThat(new RequestMatcher(Converters.toNettyResponse(response, transcoder))))).thenReturn(channelFuture, channelFuture)
 
