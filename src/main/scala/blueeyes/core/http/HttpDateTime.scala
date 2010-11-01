@@ -23,7 +23,7 @@ sealed trait Rfc1123Standard {
 
 object HttpDateTimes extends Rfc1123Standard{
 
-  /* Need to think about how to deal with poorly-formed dates */
+  /* It might be good to add more timezones than just UTC/GMT */
   def parseHttpDateTimes (inString: String): Option[HttpDateTime] = {
     def modString = inString.trim.replaceFirst("UTC", "GMT").replace("-", " ")
     var initDate: Option[DateTime] = None

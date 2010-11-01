@@ -18,7 +18,7 @@ sealed trait HttpHeaderField extends ProductPrefixUnmangler {
  * those in HttpHeader */
 object HttpHeaderFields {
 
-  def parseHttpHeaderFields(inString: String, forTrailer: Boolean): Option[Array[HttpHeaderField]] = {
+  def parseHttpHeaderFields(inString: String, parseType: String): Option[Array[HttpHeaderField]] = {
     def outFields = inString.toLowerCase.trim.split(",").toList.map(_.trim match {
         case "accept" => Accept 
         case "accept-charset" => `Accept-Charset` 
@@ -95,7 +95,7 @@ object HttpHeaderFields {
       }
     }
 
-    if (forTrailer) 
+    if (parseType == "trailer") 
       return Some(outFields.filterNot(notInTrailer(_)).toArray)
     else 
       return Some(outFields.filterNot(_ match {

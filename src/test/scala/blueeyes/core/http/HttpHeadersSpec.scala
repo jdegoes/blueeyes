@@ -102,49 +102,58 @@ class HttpHeadersSpec extends Specification {
     HttpHeaders.Cookie(HttpCookies.parseHttpCookies("Cat=Mittens; expires=Mon, 01-Jan-2001 00:00:00 UTC; path=/; domain=.kittens.com").get).value mustEqual "Cat=Mittens; expires=Mon, 01 Jan 2001 00:00:00 GMT; path=/; domain=.kittens.com"
   }
 
-  "Content-Length: Should return ContentLength or parse to None on bad input" in {
+  "Content-Length:  Should return ContentLength or parse to None on bad input" in {
     HttpHeaders.`Content-Length`(HttpNumbers.parseHttpNumbers("5").get).value mustEqual "5"
     HttpNumbers.parseHttpNumbers("bees") mustEqual None
   }
 
-  "Content-Type: Should return a Content Type with MimeType inputs" in {
+  "Content-Type:  Should return a Content Type with MimeType inputs" in {
     HttpHeaders.`Content-Type`(MimeTypes.parseMimeTypes("multipart/mixed, application/*"): _*).value mustEqual "multipart/mixed, application/*"
   }
 
-  "Date: Should return an HttpDate object with correct inputs" in {
+  "Date:  Should return an HttpDate object with correct inputs" in {
     HttpHeaders.Date(HttpDateTimes.parseHttpDateTimes("  MON, 01-JAN-2001 00:00:00 UTC  ").get).value mustEqual "Mon, 01 Jan 2001 00:00:00 GMT"
     HttpHeaders.Date(HttpDateTimes.parseHttpDateTimes("tue, 29 dec 2009 12:12:12 GMT  ").get).value mustEqual "Tue, 29 Dec 2009 12:12:12 GMT"
   }
 
-  "Date: Should return none for badly formatted date" in {
+  "Date:  Should return none for badly formatted date" in {
     HttpDateTimes.parseHttpDateTimes("Mon, 01-Jan-2001 00:00:00 UTC fooo baaaaar") mustEqual None
   }
 
-  "Expectation: Should return (Some of) continue or failure on good Inputs and parse to None on bad input" in {
+  "Expectation:  Should return (Some of) continue or failure on good Inputs and parse to None on bad input" in {
     HttpHeaders.Expect(Expectations.parseExpectations("100").get).value mustEqual "100-continue"
     HttpHeaders.Expect(Expectations.parseExpectations("417").get).value mustEqual "417-expectationfailed"
     Expectations.parseExpectations("asdf4s17") mustEqual None
   }
 
-  "From: Should return the correct email name with a well-formed email and parse to None otherwise" in {
+  "From:  Should return the correct email name with a well-formed email and parse to None otherwise" in {
     HttpHeaders.From(HttpUris.parseEmails("johnsmith@socialmedia.com").get).value mustEqual "johnsmith@socialmedia.com"
     HttpHeaders.From(HttpUris.parseEmails(" j.o.n.Sm.ith@so.cia.lmedia.com ").get).value mustEqual "j.o.n.Sm.ith@so.cia.lmedia.com"
     HttpUris.parseEmails("209h3094)(it092jom") mustEqual None
   }
 
-  "Host: Should return correct host uri and parse to None otherwise" in {
+  "Host:  Should return correct host uri and parse to None otherwise" in {
     HttpHeaders.Host(HttpUris.parseHttpUris("http://www.socialmedia.com/coolServer/index.html").get).value mustEqual "www.socialmedia.com"
     HttpHeaders.Host(HttpUris.parseHttpUris("http://maps.google.com/coolmap.html").get).value mustEqual "maps.google.com"
     HttpUris.parseHttpUris("@^#&(!_") mustEqual None
   }
 
-  "If-Match: Should return strings on well-formed input" in {
+  /* Perhaps some more work should be done on entity tags */
+  "If-Match:  Should return strings on well-formed input" in {
     HttpHeaders.`If-Match`(EntityTags.parseEntityTags("\"c4tattack\", \"cyberTiger\"").get).value mustEqual "\"c4tattack\", \"cybertiger\"" 
     }
 
-  "If-Match: Should return * string on presence of *; also, parser returns None on malformed input" in {
+  "If-Match:  Should return * string on presence of *; also, parser returns None on malformed input" in {
     HttpHeaders.`If-Match`(EntityTags.parseEntityTags("*, \"c4tattack\", \"cyberTiger\"").get).value mustEqual "*"
     EntityTags.parseEntityTags("w%015") mustEqual None
+  }
+
+  "If-Range:  should return an HttpDateTime from an HttpDateTime input" in {
+    HttpHeaders.`If-Range`(IfRanges.parseIfRanges("Tue, 29 Dec 2009 12:12:12 GMT").get).value mustEqual "Tue, 29 Dec 2009 12:12:12 GMT"
+  }
+
+  "If-Range:  should return an HttpDateTime from an HttpDateTime input" in {
+    HttpHeaders.`If-Range`(IfRanges.parseIfRanges("\"e-tag content\"").get).value mustEqual "\"e-tag content\""
   }
 
   "Location: Should return correct url on parsed input" in {
@@ -169,5 +178,16 @@ class HttpHeadersSpec extends Specification {
     ByteRanges.parseByteRanges("bytes=1-29, cats").get.toString mustEqual "bytes=1-29"
   }
 
+  "Trailer/HttpHeaderFields: Should parse correctly, if parsing for trailer" in {
+    HttpHeaders.Trailer(HttpHeaderFields.parseHttpHeaderFields("Accept, Age, Date, Max-Forwards, Content-Length", "trailer").get: _*).value mustEqual "Accept, Age, Date, Max-Forwards"
+  }
+
+  "Trailer/HttpHeaderFields: Should also prarse correctly if not parsing fo the trailer" in {
+    HttpHeaderFields.parseHttpHeaderFields("Accept, Age, Date, Max-Forwards, Cats, Content-Length", "").get.map(_.toString).mkString(", ") mustEqual "Accept, Age, Date, Max-Forwards, Content-Length"
+  }
+
+  "Cache Directives: ..." in { }
+
+  "Expectation ..." in {}
 }
 

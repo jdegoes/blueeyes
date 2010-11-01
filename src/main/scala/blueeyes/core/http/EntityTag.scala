@@ -13,8 +13,9 @@ sealed trait EntityTag {
 
 object EntityTags {
 
+  /* Should be an array of EntityTags */
   def parseEntityTags(inString: String): Option[EntityTag] = {
-    def EntityTagRegex = new Regex("""\*|((\")[a-z\d]+(\")(,\ (\")[a-z\d]+(\"))*)""")
+    def EntityTagRegex = new Regex("""\*|(\".*\")""")
     def outString: Option[String] = EntityTagRegex.findFirstIn(inString.trim.toLowerCase)
 
     def outTags: Option[EntityTag] = outString match {

@@ -156,6 +156,7 @@ object HttpHeaders {
       HttpUris.parseHttpUris(keyValue._2) else None
   }
 
+  /* Need to add parsing to array */
   class `If-Match`(val tags: EntityTag) extends HttpHeader {
     def value = tags.toString
   }
@@ -174,6 +175,7 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
+  /* Need to add parsing to array */
   class `If-None-Match`(val tags: EntityTag) extends HttpHeader {
     def value = tags.toString
   }
@@ -184,14 +186,15 @@ object HttpHeaders {
   }
 
   /* If-Range needs to add a way to include the date -- probably need new class */
-  class `If-Range`(val tags: EntityTag) extends HttpHeader {
-    def value = tags.toString
+  class `If-Range`(val tag: IfRange) extends HttpHeader {
+    def value = tag.toString 
   }
   object `If-Range` {
-    def apply(tags: EntityTag) = new `If-Range`(tags)
+    def apply(tag: IfRange) = new `If-Range`(tag)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range")
-      EntityTags.parseEntityTags(keyValue._2) else None
+      IfRanges.parseIfRanges(keyValue._2) else None
   }
+
 
   class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
     def value = httpDate.toString
@@ -294,13 +297,13 @@ object HttpHeaders {
 
   /*********** Responses ************/
 
-  class Age(val age: Long) extends HttpHeader {
+  class Age(val age: HttpNumber) extends HttpHeader {
     def value = age.toString
   }
   object Age {
-    def apply(age: Long) = new Age(age)
+    def apply(age: HttpNumber) = new Age(age)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age")
-      Some(keyValue._2.toLong) else None
+      HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
   class Allow(val methods: HttpMethod*) extends HttpHeader {
@@ -339,7 +342,9 @@ object HttpHeaders {
       Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
-  /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?*/
+  /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?
+   * .. I Think this is referring to the path of the URL
+   */
   class `Content-Location`(val value: String) extends HttpHeader {
   }
   object `Content-Location` {
@@ -437,6 +442,7 @@ object HttpHeaders {
       HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
+  /* Server comments can be almost anything */
   class Server(val comment: String) extends HttpHeader {
     def value = comment
   }
@@ -461,7 +467,7 @@ object HttpHeaders {
   object Trailer {
     def apply(fields: HttpHeaderField*) = new Trailer(fields: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer")
-      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, true) else None
+      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "trailer") else None
   }
 
   class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeader {
