@@ -166,6 +166,7 @@ class HttpHeadersSpec extends Specification {
 
   "Range: Should produce none on bad input" in {
     ByteRanges.parseByteRanges("bytes=cats") mustEqual None
+    ByteRanges.parseByteRanges("bytes=1-29, cats").get.toString mustEqual "bytes=1-29"
   }
 
 }
