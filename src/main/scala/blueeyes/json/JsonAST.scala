@@ -277,6 +277,9 @@ object JsonAST {
       }
     }
     
+    /** A shorthand for the other replacement in the case that the replacement
+     * does not depend on the value being replaced.
+     */
     def replace(target: JPath, replacement: JValue): JValue = replace(target, r => replacement)
 
     /** Return the first element from JSON which matches the given predicate.
