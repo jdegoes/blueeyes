@@ -6,7 +6,6 @@ import MongoImplicits._
 import blueeyes.json.JPathImplicits._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
-import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.JsonAST._
 
 class UpdateQueryBehaviourSpec  extends Specification {

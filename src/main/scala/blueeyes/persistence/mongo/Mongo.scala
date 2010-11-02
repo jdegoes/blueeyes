@@ -11,7 +11,7 @@ trait Mongo{
 
 trait MongoDatabase{
   def apply[T](query: MongoQuery[T]): T
-  def getCollection(collectionName: String): DatabaseCollection
+  def collection(collectionName: String): DatabaseCollection
 }
 
 trait DatabaseCollection{
