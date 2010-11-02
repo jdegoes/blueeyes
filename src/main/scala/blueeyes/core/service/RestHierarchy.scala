@@ -11,7 +11,9 @@ trait RestHierarchy[S] {
   def hierarchy: List[Parameters[_]]
 }
 
-trait HttpService2[Base] {
+trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] {
+  private type Handler = PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]]
+  
   def name:             String
   def version:          String = majorVersion.toString + "." + String.format("%02d", int2Integer(minorVersion))
   def majorVersion:     Int = version.split(".")(0).toInt
@@ -19,8 +21,32 @@ trait HttpService2[Base] {
   
   def startupHooks:     List[() => Future[_]] = Nil
   def shutdownHooks:    List[() => Future[_]] = Nil
-  def notFoundHandler:  Option[HttpNotFoundMethodHandler[_, _, Base]] = None
-  def requestHandlers:  List[HttpPathMethodHandler[_, _, Base]] = Nil
+  def notFoundHandler:  Option[HttpNotFoundHandler[_, _, Base]] = None
+  def pathMethodHandlers:  List[HttpPathMethodHandler[_, _, Base]] = Nil
+  
+  def start = {
+    startupHooks.foreach { f => f() }
+  }
+  
+  def shutdown = {
+    shutdownHooks.foreach { f => f() }
+  }
+  
+  def allHandlers: List[Handler] = {
+    val collector: PartialFunction[AnyRef, Handler] = { case e: Handler => e }
+    
+    pathMethodHandlers.collect(collector) ++ notFoundHandler.toList.collect(collector)
+  }
+  
+  def isDefinedAt(request: HttpRequest[Base]) = masterHandler.isDefinedAt(request)
+  
+  def apply(request: HttpRequest[Base]) = masterHandler.apply(request)
+  
+  override def toString = name + "-" + version
+  
+  private lazy val masterHandler: PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] = {
+    allHandlers.foldLeft[Handler](HttpNoHandler()) { (composite, cur) => composite.orElse(cur: Handler) }
+  }
 }
 
 trait HttpServiceBuilder[Base] {
@@ -64,16 +90,16 @@ trait HttpServiceBuilderComposable[Base] { self =>
     
     self.services += this
     
-    private var _notFoundHandler: Option[HttpNotFoundMethodHandler[_, _, Base]] = None
+    private var _notFoundHandler: Option[HttpNotFoundHandler[_, _, Base]] = None
     
     private val _startupHooks     = new ListBuffer[() => Future[_]]
     private val _shutdownHooks    = new ListBuffer[() => Future[_]]
-    private val _requestHandlers  = new ListBuffer[HttpPathMethodHandler[_, _, Base]]
+    private val _pathMethodHandlers  = new ListBuffer[HttpPathMethodHandler[_, _, Base]]
     
     override def startupHooks    = _startupHooks.toList
     override def shutdownHooks   = _shutdownHooks.toList
     override def notFoundHandler = _notFoundHandler
-    override def requestHandlers = _requestHandlers.toList
+    override def pathMethodHandlers = _pathMethodHandlers.toList
     
     def path(path: RestPathPattern)(f: => Unit): Unit = {
       pathStack.push(path)
@@ -82,7 +108,7 @@ trait HttpServiceBuilderComposable[Base] { self =>
     }
 
     def custom[T](method: HttpMethod, handler: MethodHandler[T], transcoder: HttpDataTranscoder[T, Base]) = {
-      _requestHandlers += HttpPathMethodHandler(currentPathPattern, method, handler, transcoder.inverse, transcoder)
+      _pathMethodHandlers += HttpPathMethodHandler(currentPathPattern, method, handler, transcoder.inverse, transcoder)
     }
     
     def startup(f: => Future[_]) = {
@@ -98,7 +124,7 @@ trait HttpServiceBuilderComposable[Base] { self =>
     }
     
     def notFound[In, Out](handler: RequestHandler[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): Unit = _notFoundHandler match {
-      case None => _notFoundHandler = Some(HttpNotFoundMethodHandler[In, Out, Base](handler, in, out))
+      case None => _notFoundHandler = Some(HttpNotFoundHandler[In, Out, Base](handler, in, out))
       
       case _ => error("Not found handler already specified")
     }
