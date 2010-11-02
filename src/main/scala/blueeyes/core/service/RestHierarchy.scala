@@ -48,8 +48,7 @@ sealed trait HttpMethodHandler[In, Out, Base] extends PartialFunction[HttpReques
 }
 
 trait HttpService2[Base] {
-  protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
-  protected type NotFoundHandler[In, Out] = (RequestHandler[In, Out], HttpDataTranscoder[Out, Base])
+  protected type NotFoundHandler[In, Out] = (HttpRequest[In] => Future[HttpResponse[Out]], HttpDataTranscoder[Out, Base])
   
   def name:             String
   def version:          String = majorVersion.toString + "." + String.format("%02d", int2Integer(minorVersion))
@@ -62,15 +61,44 @@ trait HttpService2[Base] {
   def requestHandlers:  List[HttpMethodHandler[_, _, Base]] = Nil
 }
 
-trait HttpServiceBuilder[Base] { self =>
+trait HttpServiceBuilder[Base] {
+  protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
+  protected type MethodHandler[T] = RequestHandler[T, T]
+  
+  def path(path: RestPathPattern)(f: => Unit): Unit
+  
+  def get[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(GET, handler, t)
+
+  def put[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(PUT, handler, t)
+
+  def post[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(POST, handler, t)
+
+  def delete[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(DELETE, handler, t)
+
+  def options[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(OPTIONS, handler, t)
+
+  def head[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(HEAD, handler, t)
+
+  def connect[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(CONNECT, handler, t)
+
+  def trace[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(TRACE, handler, t)
+
+  def custom[T](method: HttpMethod, handler: MethodHandler[T], transcoder: HttpDataTranscoder[T, Base])
+  
+  def startup(f: => Future[_])
+  
+  def shutdown(f: => Future[_])
+  
+  def notFound[In, Out](handler: RequestHandler[In, Out])(implicit transcoder: HttpDataTranscoder[Out, Base]): Unit
+}
+
+trait HttpServiceBuilderComposable[Base] { self =>
   import scala.collection.mutable.{Buffer, ListBuffer, Stack}
   
   def services: Buffer[HttpService2[Base]]
   
-  case class service(name: String) extends HttpService2[Base] {
+  case class service(name: String) extends HttpService2[Base] with HttpServiceBuilder[Base] {
     private val pathStack: Stack[RestPathPattern] = new Stack[RestPathPattern].push(RestPathPattern.Root);
-    
-    private type MethodHandler[T] = RequestHandler[T, T]
     
     self.services += this
     
@@ -90,22 +118,6 @@ trait HttpServiceBuilder[Base] { self =>
 
       try { f } finally { pathStack.pop() }
     }
-    
-    def get[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(GET, handler, t)
-
-    def put[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(PUT, handler, t)
-
-    def post[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(POST, handler, t)
-
-    def delete[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(DELETE, handler, t)
-
-    def options[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(OPTIONS, handler, t)
-
-    def head[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(HEAD, handler, t)
-
-    def connect[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(CONNECT, handler, t)
-
-    def trace[T](handler: MethodHandler[T])(implicit t: HttpDataTranscoder[T, Base]) = custom(TRACE, handler, t)
 
     def custom[T](method: HttpMethod, handler: MethodHandler[T], transcoder: HttpDataTranscoder[T, Base]) = {
       _requestHandlers += RestMethodCall(currentPathPattern, method, handler, transcoder)
