@@ -10,8 +10,7 @@ import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijecti
 
 import Converters._
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.http.HttpMethods
-import blueeyes.core.http.HttpStatusCodes
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes}
 import blueeyes.core.http.MimeTypes._
 
 class ConvertersSpec extends Specification {

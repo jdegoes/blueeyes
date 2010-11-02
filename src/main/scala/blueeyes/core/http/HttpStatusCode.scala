@@ -69,7 +69,7 @@ object HttpStatusCodes {
   case object LengthRequired                      extends ClientError(411, "The request did not specify the length of its content, which is required by the requested resource.")
   case object PreconditionFailed                  extends ClientError(412, "The server does not meet one of the preconditions that the requester put on the request.")
   case object RequestEntityTooLarge               extends ClientError(413, "The request is larger than the server is willing or able to process.")
-  case object Request                             extends ClientError(414, "The URI provided was too long for the server to process.")
+  case object RequestTooLong                      extends ClientError(414, "The URI provided was too long for the server to process.")
   case object UnsupportedMediaType                extends ClientError(415, "The request entity has a media type which the server or resource does not support.")
   case object RequestedRangeNotSatisfiable        extends ClientError(416, "The client has asked for a portion of the file, but the server cannot supply that portion.")
   case object ExpectationFailed                   extends ClientError(417, "The server cannot meet the requirements of the Expect request-header field.")
@@ -95,68 +95,68 @@ object HttpStatusCodes {
 }
 
 trait HttpStatusCodeImplicits {
-	implicit def int2HttpStatusCode(statusCode: Int): HttpStatusCode = statusCode match {
-	  case HttpStatusCodes.OK.value								=> HttpStatusCodes.OK
-	  case HttpStatusCodes.Continue.value						=> HttpStatusCodes.Continue
-	  case HttpStatusCodes.SwitchingProtocols.value				=> HttpStatusCodes.SwitchingProtocols
-	  case HttpStatusCodes.Processing.value						=> HttpStatusCodes.Processing
-	  
-	  case HttpStatusCodes.OK.value								=> HttpStatusCodes.OK
-	  case HttpStatusCodes.Created.value						=> HttpStatusCodes.Created
-	  case HttpStatusCodes.Accepted.value						=> HttpStatusCodes.Accepted
-	  case HttpStatusCodes.Non.value							=> HttpStatusCodes.Non
-	  case HttpStatusCodes.NoContent.value						=> HttpStatusCodes.NoContent
-	  case HttpStatusCodes.ResetContent.value					=> HttpStatusCodes.ResetContent
-	  case HttpStatusCodes.PartialContent.value					=> HttpStatusCodes.PartialContent
-	  case HttpStatusCodes.Multi.value							=> HttpStatusCodes.Multi
-	  
-	  case HttpStatusCodes.MultipleChoices.value				=> HttpStatusCodes.MultipleChoices
-	  case HttpStatusCodes.MovedPermanently.value				=> HttpStatusCodes.MovedPermanently
-	  case HttpStatusCodes.Found.value							=> HttpStatusCodes.Found
-	  case HttpStatusCodes.SeeOther.value						=> HttpStatusCodes.SeeOther
-	  case HttpStatusCodes.NotModified.value					=> HttpStatusCodes.NotModified
-	  case HttpStatusCodes.UseProxy.value						=> HttpStatusCodes.UseProxy
-	  case HttpStatusCodes.TemporaryRedirect.value				=> HttpStatusCodes.TemporaryRedirect
-	  
-	  case HttpStatusCodes.BadRequest.value						=> HttpStatusCodes.BadRequest
-	  case HttpStatusCodes.Unauthorized.value					=> HttpStatusCodes.Unauthorized
-	  case HttpStatusCodes.PaymentRequired.value				=> HttpStatusCodes.PaymentRequired
-	  case HttpStatusCodes.Forbidden.value						=> HttpStatusCodes.Forbidden
-	  case HttpStatusCodes.NotFound.value						=> HttpStatusCodes.NotFound
-	  case HttpStatusCodes.MethodNotAllowed.value				=> HttpStatusCodes.MethodNotAllowed
-	  case HttpStatusCodes.NotAcceptable.value					=> HttpStatusCodes.NotAcceptable
-	  case HttpStatusCodes.ProxyAuthenticationRequired.value	=> HttpStatusCodes.ProxyAuthenticationRequired
-	  case HttpStatusCodes.RequestTimeout.value					=> HttpStatusCodes.RequestTimeout
-	  case HttpStatusCodes.Conflict.value						=> HttpStatusCodes.Conflict
-	  case HttpStatusCodes.Gone.value							=> HttpStatusCodes.Gone
-	  case HttpStatusCodes.LengthRequired.value					=> HttpStatusCodes.LengthRequired
-	  case HttpStatusCodes.PreconditionFailed.value				=> HttpStatusCodes.PreconditionFailed
-	  case HttpStatusCodes.RequestEntityTooLarge.value			=> HttpStatusCodes.RequestEntityTooLarge
-	  case HttpStatusCodes.Request.value						=> HttpStatusCodes.Request
-	  case HttpStatusCodes.UnsupportedMediaType.value			=> HttpStatusCodes.UnsupportedMediaType
-	  case HttpStatusCodes.RequestedRangeNotSatisfiable.value	=> HttpStatusCodes.RequestedRangeNotSatisfiable
-	  case HttpStatusCodes.ExpectationFailed.value				=> HttpStatusCodes.ExpectationFailed
-	  case HttpStatusCodes.TooManyConnections.value				=> HttpStatusCodes.TooManyConnections
-	  case HttpStatusCodes.UnprocessableEntity.value			=> HttpStatusCodes.UnprocessableEntity
-	  case HttpStatusCodes.Locked.value							=> HttpStatusCodes.Locked
-	  case HttpStatusCodes.FailedDependency.value				=> HttpStatusCodes.FailedDependency
-	  case HttpStatusCodes.UnorderedCollection.value			=> HttpStatusCodes.UnorderedCollection
-	  case HttpStatusCodes.UpgradeRequired.value				=> HttpStatusCodes.UpgradeRequired
-	  case HttpStatusCodes.RetryWith.value						=> HttpStatusCodes.RetryWith
-	  
-	  case HttpStatusCodes.InternalServerError.value			=> HttpStatusCodes.InternalServerError
-	  case HttpStatusCodes.NotImplemented.value					=> HttpStatusCodes.NotImplemented
-	  case HttpStatusCodes.BadGateway.value						=> HttpStatusCodes.BadGateway
-	  case HttpStatusCodes.ServiceUnavailable.value				=> HttpStatusCodes.ServiceUnavailable
-	  case HttpStatusCodes.GatewayTimeout.value					=> HttpStatusCodes.GatewayTimeout
-	  case HttpStatusCodes.HTTPVersionNotSupported.value		=> HttpStatusCodes.HTTPVersionNotSupported
-	  case HttpStatusCodes.VariantAlsoNegotiates.value			=> HttpStatusCodes.VariantAlsoNegotiates
-	  case HttpStatusCodes.InsufficientStorage.value			=> HttpStatusCodes.InsufficientStorage
-	  case HttpStatusCodes.BandwidthLimitExceeded.value			=> HttpStatusCodes.BandwidthLimitExceeded
-	  case HttpStatusCodes.NotExtended.value					=> HttpStatusCodes.NotExtended
-	  case HttpStatusCodes.UserAccessDenied.value				=> HttpStatusCodes.UserAccessDenied
+  implicit def int2HttpStatusCode(statusCode: Int): HttpStatusCode = statusCode match {
+    case HttpStatusCodes.OK.value                             => HttpStatusCodes.OK
+    case HttpStatusCodes.Continue.value                       => HttpStatusCodes.Continue
+    case HttpStatusCodes.SwitchingProtocols.value             => HttpStatusCodes.SwitchingProtocols
+    case HttpStatusCodes.Processing.value                     => HttpStatusCodes.Processing
+    
+    case HttpStatusCodes.OK.value                             => HttpStatusCodes.OK
+    case HttpStatusCodes.Created.value                        => HttpStatusCodes.Created
+    case HttpStatusCodes.Accepted.value                       => HttpStatusCodes.Accepted
+    case HttpStatusCodes.Non.value                            => HttpStatusCodes.Non
+    case HttpStatusCodes.NoContent.value                      => HttpStatusCodes.NoContent
+    case HttpStatusCodes.ResetContent.value                   => HttpStatusCodes.ResetContent
+    case HttpStatusCodes.PartialContent.value                 => HttpStatusCodes.PartialContent
+    case HttpStatusCodes.Multi.value                          => HttpStatusCodes.Multi
+    
+    case HttpStatusCodes.MultipleChoices.value                => HttpStatusCodes.MultipleChoices
+    case HttpStatusCodes.MovedPermanently.value               => HttpStatusCodes.MovedPermanently
+    case HttpStatusCodes.Found.value                          => HttpStatusCodes.Found
+    case HttpStatusCodes.SeeOther.value                       => HttpStatusCodes.SeeOther
+    case HttpStatusCodes.NotModified.value                    => HttpStatusCodes.NotModified
+    case HttpStatusCodes.UseProxy.value                       => HttpStatusCodes.UseProxy
+    case HttpStatusCodes.TemporaryRedirect.value              => HttpStatusCodes.TemporaryRedirect
+    
+    case HttpStatusCodes.BadRequest.value                     => HttpStatusCodes.BadRequest
+    case HttpStatusCodes.Unauthorized.value                   => HttpStatusCodes.Unauthorized
+    case HttpStatusCodes.PaymentRequired.value                => HttpStatusCodes.PaymentRequired
+    case HttpStatusCodes.Forbidden.value                      => HttpStatusCodes.Forbidden
+    case HttpStatusCodes.NotFound.value                       => HttpStatusCodes.NotFound
+    case HttpStatusCodes.MethodNotAllowed.value               => HttpStatusCodes.MethodNotAllowed
+    case HttpStatusCodes.NotAcceptable.value                  => HttpStatusCodes.NotAcceptable
+    case HttpStatusCodes.ProxyAuthenticationRequired.value    => HttpStatusCodes.ProxyAuthenticationRequired
+    case HttpStatusCodes.RequestTimeout.value                 => HttpStatusCodes.RequestTimeout
+    case HttpStatusCodes.Conflict.value                       => HttpStatusCodes.Conflict
+    case HttpStatusCodes.Gone.value                           => HttpStatusCodes.Gone
+    case HttpStatusCodes.LengthRequired.value                 => HttpStatusCodes.LengthRequired
+    case HttpStatusCodes.PreconditionFailed.value             => HttpStatusCodes.PreconditionFailed
+    case HttpStatusCodes.RequestEntityTooLarge.value          => HttpStatusCodes.RequestEntityTooLarge
+    case HttpStatusCodes.RequestTooLong.value                 => HttpStatusCodes.RequestTooLong
+    case HttpStatusCodes.UnsupportedMediaType.value           => HttpStatusCodes.UnsupportedMediaType
+    case HttpStatusCodes.RequestedRangeNotSatisfiable.value   => HttpStatusCodes.RequestedRangeNotSatisfiable
+    case HttpStatusCodes.ExpectationFailed.value              => HttpStatusCodes.ExpectationFailed
+    case HttpStatusCodes.TooManyConnections.value             => HttpStatusCodes.TooManyConnections
+    case HttpStatusCodes.UnprocessableEntity.value            => HttpStatusCodes.UnprocessableEntity
+    case HttpStatusCodes.Locked.value                         => HttpStatusCodes.Locked
+    case HttpStatusCodes.FailedDependency.value               => HttpStatusCodes.FailedDependency
+    case HttpStatusCodes.UnorderedCollection.value            => HttpStatusCodes.UnorderedCollection
+    case HttpStatusCodes.UpgradeRequired.value                => HttpStatusCodes.UpgradeRequired
+    case HttpStatusCodes.RetryWith.value                      => HttpStatusCodes.RetryWith
+    
+    case HttpStatusCodes.InternalServerError.value            => HttpStatusCodes.InternalServerError
+    case HttpStatusCodes.NotImplemented.value                 => HttpStatusCodes.NotImplemented
+    case HttpStatusCodes.BadGateway.value                     => HttpStatusCodes.BadGateway
+    case HttpStatusCodes.ServiceUnavailable.value             => HttpStatusCodes.ServiceUnavailable
+    case HttpStatusCodes.GatewayTimeout.value                 => HttpStatusCodes.GatewayTimeout
+    case HttpStatusCodes.HTTPVersionNotSupported.value        => HttpStatusCodes.HTTPVersionNotSupported
+    case HttpStatusCodes.VariantAlsoNegotiates.value          => HttpStatusCodes.VariantAlsoNegotiates
+    case HttpStatusCodes.InsufficientStorage.value            => HttpStatusCodes.InsufficientStorage
+    case HttpStatusCodes.BandwidthLimitExceeded.value         => HttpStatusCodes.BandwidthLimitExceeded
+    case HttpStatusCodes.NotExtended.value                    => HttpStatusCodes.NotExtended
+    case HttpStatusCodes.UserAccessDenied.value               => HttpStatusCodes.UserAccessDenied
 
-	  case _ 													=> HttpStatusCodes.InternalServerError
+    case _                                                    => HttpStatusCodes.InternalServerError
   }
 }
 object HttpStatusCodeImplicits extends HttpStatusCodeImplicits 

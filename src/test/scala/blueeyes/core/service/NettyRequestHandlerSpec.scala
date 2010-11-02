@@ -12,7 +12,7 @@ import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.data.TextToTextBijection
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 import java.net.InetSocketAddress
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar {

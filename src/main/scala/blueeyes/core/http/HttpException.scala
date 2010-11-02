@@ -1,10 +1,11 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
-import blueeyes.core.http.HttpStatusCode
-import blueeyes.core.http.HttpFailure
+import blueeyes.util.RichThrowableImplicits._
 
 case class HttpException(failure: HttpFailure, reason: String) extends Exception(reason)
 
 object HttpException {
   def apply(failure: HttpFailure): HttpException = new HttpException(failure, failure.defaultMessage)
+  
+  def apply(failure: HttpFailure, cause: Throwable): HttpException = new HttpException(failure, cause.fullStackTrace)
 }

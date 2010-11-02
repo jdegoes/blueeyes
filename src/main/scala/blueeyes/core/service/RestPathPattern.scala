@@ -2,6 +2,8 @@ package blueeyes.core.service
 
 import util.matching.Regex
 
+import blueeyes.core.http._
+
 private[service] object PathUtils {
   def sanitizePath(s: String) = ("/" + s + "/").replaceAll("/+", "/")
   

@@ -6,7 +6,8 @@ import blueeyes.core.service._
 import blueeyes.util.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.data.TextToTextBijection
-import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
+
 
 class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[String]{
   val serviceResponse = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some("context"), HttpVersions.`HTTP/1.1`)

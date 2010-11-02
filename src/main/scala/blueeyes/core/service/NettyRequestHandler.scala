@@ -7,7 +7,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders._
 import Converters._
 import org.jboss.netty.handler.codec.http.{CookieEncoder, CookieDecoder, HttpRequest => NettyHttpRequest, HttpResponse => NettyHttpResponse, DefaultHttpResponse, HttpVersion => NettyHttpVersion}
 
-import blueeyes.core.http.{HttpMethod, HttpStatusCodes}
+import blueeyes.core.http.{HttpMethod, HttpStatusCodes, HttpRequest, HttpResponse, HttpStatus}
 import org.jboss.netty.handler.codec.http._
 import blueeyes.util.Future
 

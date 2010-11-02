@@ -7,7 +7,7 @@ import blueeyes.util.Future
 import blueeyes.core.service._
 import blueeyes.core.http.HttpVersions._
 import blueeyes.core.http.HttpMethods._
-import blueeyes.core.http.{HttpMethod, HttpVersion}
+import blueeyes.core.http.{HttpStatusCodes, HttpRequest, HttpResponse, HttpStatus, HttpVersion, HttpMethod}
 
 trait BlueEyesServiceSpecification[S]  {
 

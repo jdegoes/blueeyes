@@ -7,7 +7,7 @@ import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.util.{Future}
 import blueeyes.core.data.{TextToTextBijection}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpStatusCodes, HttpVersions}
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
 class HttpServerNettySpec extends Specification{
   @volatile

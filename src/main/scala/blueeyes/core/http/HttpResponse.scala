@@ -1,6 +1,5 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
-import blueeyes.core.http.{HttpVersions, HttpVersion}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
 

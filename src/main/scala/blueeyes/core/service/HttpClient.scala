@@ -3,9 +3,8 @@ package blueeyes.core.service
 import blueeyes.util.Future
 //import blueeyes.core.http.{HttpVersion, HttpVersions, HttpMethod}
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.http.HttpVersion
 import blueeyes.core.http.HttpMethods._
-import blueeyes.core.http.HttpMethod
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpRequest, HttpResponse}
 
 trait HttpClient[T] {
   def apply(request: HttpRequest[T]): Future[HttpResponse[T]]

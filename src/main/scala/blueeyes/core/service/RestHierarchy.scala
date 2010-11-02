@@ -1,8 +1,8 @@
 package blueeyes.core.service
 
-import blueeyes.core.http.HttpMethods._
 import blueeyes.util.Future
-import blueeyes.core.http.HttpMethod
+import blueeyes.core.http._
+import blueeyes.core.http.HttpMethods._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 
@@ -11,45 +11,7 @@ trait RestHierarchy[S] {
   def hierarchy: List[Parameters[_]]
 }
 
-/** A handler for a particular http method (get/post/put/delete/etc.). A 
- * handler is a partial function from request to response. In order to 
- * create a method handler, four pieces of information are required:
- * a path pattern, a method, a request handler, and a transcoder.
- */
-sealed trait HttpMethodHandler[In, Out, Base] extends PartialFunction[HttpRequest[In], Future[HttpResponse[Base]]] { self =>
-  /** The pattern of paths handled by the request handler.
-   */
-  def pathPattern: RestPathPattern
-  
-  /** The HTTP method handled by the request handler.
-   */
-  def method: HttpMethod
-  
-  /** The request handler, which must return a future of the response.
-   */
-  def handler: HttpRequest[In] => Future[HttpResponse[Out]]
-  
-  /** The transcoder, which will convert data from the response type to a base
-   * type.
-   */
-  def transcoder: HttpDataTranscoder[Out, Base]
-  
-  def isDefinedAt(request: HttpRequest[In]): Boolean = pathPattern.isDefinedAt(request.path) && method == request.method
-    
-  def apply(request: HttpRequest[In]): Future[HttpResponse[Base]] = {
-    val pathParameters = pathPattern(request.path)
-    
-    val newRequest = request.copy(parameters = request.parameters ++ pathParameters)
-    
-    handler(newRequest).map { response =>
-      response.copy(headers = response.headers + `Content-Type`(transcoder.mimeType), content = response.content.map(transcoder.transcode))
-    }
-  }
-}
-
 trait HttpService2[Base] {
-  protected type NotFoundHandler[In, Out] = (HttpRequest[In] => Future[HttpResponse[Out]], HttpDataTranscoder[Out, Base])
-  
   def name:             String
   def version:          String = majorVersion.toString + "." + String.format("%02d", int2Integer(minorVersion))
   def majorVersion:     Int = version.split(".")(0).toInt
@@ -57,8 +19,8 @@ trait HttpService2[Base] {
   
   def startupHooks:     List[() => Future[_]] = Nil
   def shutdownHooks:    List[() => Future[_]] = Nil
-  def notFoundHandler:  Option[NotFoundHandler[_, _]] = None
-  def requestHandlers:  List[HttpMethodHandler[_, _, Base]] = Nil
+  def notFoundHandler:  Option[HttpNotFoundMethodHandler[_, _, Base]] = None
+  def requestHandlers:  List[HttpPathMethodHandler[_, _, Base]] = Nil
 }
 
 trait HttpServiceBuilder[Base] {
@@ -89,7 +51,7 @@ trait HttpServiceBuilder[Base] {
   
   def shutdown(f: => Future[_])
   
-  def notFound[In, Out](handler: RequestHandler[In, Out])(implicit transcoder: HttpDataTranscoder[Out, Base]): Unit
+  def notFound[In, Out](handler: RequestHandler[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): Unit
 }
 
 trait HttpServiceBuilderComposable[Base] { self =>
@@ -102,11 +64,11 @@ trait HttpServiceBuilderComposable[Base] { self =>
     
     self.services += this
     
-    private var _notFoundHandler: Option[NotFoundHandler[_, _]] = None
+    private var _notFoundHandler: Option[HttpNotFoundMethodHandler[_, _, Base]] = None
     
     private val _startupHooks     = new ListBuffer[() => Future[_]]
     private val _shutdownHooks    = new ListBuffer[() => Future[_]]
-    private val _requestHandlers  = new ListBuffer[HttpMethodHandler[_, _, Base]]
+    private val _requestHandlers  = new ListBuffer[HttpPathMethodHandler[_, _, Base]]
     
     override def startupHooks    = _startupHooks.toList
     override def shutdownHooks   = _shutdownHooks.toList
@@ -120,7 +82,7 @@ trait HttpServiceBuilderComposable[Base] { self =>
     }
 
     def custom[T](method: HttpMethod, handler: MethodHandler[T], transcoder: HttpDataTranscoder[T, Base]) = {
-      _requestHandlers += RestMethodCall(currentPathPattern, method, handler, transcoder)
+      _requestHandlers += HttpPathMethodHandler(currentPathPattern, method, handler, transcoder.inverse, transcoder)
     }
     
     def startup(f: => Future[_]) = {
@@ -135,8 +97,8 @@ trait HttpServiceBuilderComposable[Base] { self =>
       _shutdownHooks += thunk
     }
     
-    def notFound[In, Out](handler: RequestHandler[In, Out])(implicit transcoder: HttpDataTranscoder[Out, Base]): Unit = _notFoundHandler match {
-      case None => _notFoundHandler = Some((handler, transcoder))
+    def notFound[In, Out](handler: RequestHandler[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): Unit = _notFoundHandler match {
+      case None => _notFoundHandler = Some(HttpNotFoundMethodHandler[In, Out, Base](handler, in, out))
       
       case _ => error("Not found handler already specified")
     }
@@ -144,10 +106,6 @@ trait HttpServiceBuilderComposable[Base] { self =>
     private def currentPathPattern: RestPathPattern = pathStack.foldRight[RestPathPattern](RestPathPattern.Root) { (element, path) => path / element }
   }
 }
-
-
-
-case class RestMethodCall[T, S](pathPattern: RestPathPattern, method: HttpMethod, handler: HttpRequest[T] => Future[HttpResponse[T]], transcoder: HttpDataTranscoder[T, S]) extends HttpMethodHandler[T, T, S]
 
 trait RestHierarchyBuilder[S] extends RestHierarchy[S] {
   import scala.collection.mutable.{Stack, ArrayBuffer}
@@ -202,8 +160,16 @@ sealed trait HttpResponseType[T]
 case object HttpResponseStringType extends HttpResponseType[String]
 case object HttpResponseBytesType  extends HttpResponseType[Array[Byte]]
 
-trait HttpDataTranscoder[T, S] extends DataTranscoder[T, S]{
+trait HttpDataTranscoder[T, S] extends DataTranscoder[T, S] { self =>
   def responseType: HttpResponseType[S]
+  
+  def inverse = new HttpDataTranscoder[S, T] {
+    def transcode = self.transcode.inverse
+    
+    def responseType = error("bad design")
+    
+    def mimeType = self.mimeType
+  }
 }
 
 class HttpStringDataTranscoder[T](transcode: Bijection[T, String], mimeType: MimeType) extends DataTranscoderImpl[T, String](transcode, mimeType) with HttpDataTranscoder[T, String]{

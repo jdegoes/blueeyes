@@ -2,6 +2,7 @@ package blueeyes.core.service
 
 import blueeyes.util.Future
 import util.matching.Regex
+import blueeyes.core.http._
 
 case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, String]], 
                               handler: HttpRequest[T] => Future[HttpResponse[T]]) extends PartialFunction[String, HttpRequest[T] => Future[HttpResponse[T]]] {

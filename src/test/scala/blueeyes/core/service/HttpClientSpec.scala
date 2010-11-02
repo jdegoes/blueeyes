@@ -11,10 +11,8 @@ import blueeyes.util.Future
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.MimeType
-import blueeyes.core.http.HttpMethods
-import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.HttpNumberImplicits._
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
 class HttpClientSpec extends Specification {
   val duration = 250

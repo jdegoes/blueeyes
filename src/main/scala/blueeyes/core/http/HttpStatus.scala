@@ -1,6 +1,4 @@
-package blueeyes.core.service
-
-import blueeyes.core.http.{HttpStatusCode}
+package blueeyes.core.http
 
 case class HttpStatus(code: HttpStatusCode, reason: String)
 object HttpStatus {

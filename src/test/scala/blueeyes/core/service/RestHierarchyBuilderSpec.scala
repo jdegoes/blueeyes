@@ -5,6 +5,7 @@ import RestPathPatternImplicits._
 import org.scalatest.mock.MockitoSugar
 import blueeyes.core.data.TextToTextBijection
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 import blueeyes.util.Future
 
 class RestHierarchyBuilderSpec extends Specification with MockitoSugar {

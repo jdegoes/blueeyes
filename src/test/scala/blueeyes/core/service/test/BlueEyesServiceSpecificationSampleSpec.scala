@@ -6,8 +6,8 @@ import blueeyes.core.service._
 import blueeyes.util.Future
 import blueeyes.core.data.TextToTextBijection
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.HttpStatusCodes
 import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
 class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
   val service = new SampleService()

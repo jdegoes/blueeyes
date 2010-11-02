@@ -8,8 +8,8 @@ class Future[T] {
   var _isSet: Boolean = false
   var _isCanceled: Boolean = false
   var _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
-  var _canceled: ArrayBuffer[Option[Error] => Unit] = new ArrayBuffer
-  var _error: Option[Error] = None
+  var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
+  var _error: Option[Throwable] = None
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
@@ -51,7 +51,7 @@ class Future[T] {
    * for implementation of future primitives to save resources when it's
    * explicitly known the result of a future will not be used.
    */
-  def ifCanceled(f: Option[Error] => Unit): Future[T] = {
+  def ifCanceled(f: Option[Throwable] => Unit): Future[T] = {
     if (isCanceled) f(_error)
     else if (!isDone) _canceled.append(f)
 
@@ -67,7 +67,7 @@ class Future[T] {
    */
   def cancel(): Boolean = internalCancel(None)
 
-  def cancel(e: Error): Boolean = internalCancel(Some(e))
+  def cancel(e: Throwable): Boolean = internalCancel(Some(e))
 
   /** Determines if the future is "done" -- that is, delivered or canceled.
    */
@@ -199,7 +199,7 @@ class Future[T] {
 
   def toList: List[T] = value.toList
 
-  private def forceCancel(error: Option[Error]): Future[T] = {
+  private def forceCancel(error: Option[Throwable]): Future[T] = {
     if (!_isCanceled) {
       _isCanceled = true
 
@@ -209,7 +209,7 @@ class Future[T] {
     return this
   }
   
-  private def internalCancel(error: Option[Error]): Boolean = {
+  private def internalCancel(error: Option[Throwable]): Boolean = {
     if (isDone) false           // [-- Already done, can't be canceled
     else if (isCanceled) true   // <-- Already canceled, nothing to do
     else {                      // <-- Ask to see if everyone's OK with canceling
@@ -230,9 +230,15 @@ class Future[T] {
 object Future {
   /** Creates a "dead" future that is canceled and will never be delivered.
    */
-  def Dead[T]: Future[T] = {
+  def dead[T]: Future[T] = {
     val f = new Future[T]
     f.cancel
+    f
+  }
+  
+  def dead[T](e: Throwable): Future[T] = {
+    val f = new Future[T]
+    f.cancel(e)
     f
   }
 }
