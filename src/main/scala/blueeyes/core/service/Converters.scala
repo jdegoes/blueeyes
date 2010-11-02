@@ -62,7 +62,7 @@ object Converters {
     val nettyContent       = request.getContent()
     val content            = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
     val remoteHost         = remoteAddres match {
-                              case x: InetSocketAddress => Some(x.getAddress().getHostAddress())
+                              case x: InetSocketAddress => Some(x.getAddress())
                               case _ => None
                             }
 
