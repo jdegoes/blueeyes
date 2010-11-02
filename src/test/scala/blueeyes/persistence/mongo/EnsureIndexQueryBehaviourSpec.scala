@@ -6,8 +6,8 @@ import MongoImplicits._
 import blueeyes.json.JPathImplicits._
 import org.mockito.Mockito.{times}
 import org.mockito.Mockito
-import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.JsonAST._
+import blueeyes.json.JPath
 
 class EnsureIndexQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
@@ -15,7 +15,7 @@ class EnsureIndexQueryBehaviourSpec extends Specification {
     val query  = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).ensureIndex("index", jObject2MongoObject(JObject(JField("address.city", JInt(1)) :: JField("address.street", JInt(1)) :: Nil)), true)
+    Mockito.verify(collection, times(1)).ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
 
     result must be (JNothing)
   }

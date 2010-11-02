@@ -18,19 +18,18 @@ trait MongoDatabase{
 }
 
 trait DatabaseCollection{
-  def insert(dbObjects: List[DBObject])
-  def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject]
-  def remove(filter: DBObject): Int
-  def ensureIndex(name: String, keys: DBObject, unique: Boolean)
-  def update(filter: DBObject, dbObject: DBObject, upsert: Boolean, multi: Boolean): Int
+  def insert(objects: List[JObject])
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): List[JObject]
+  def remove(filter: Option[MongoFilter]): Int
+  def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
+  def update(filter: Option[MongoFilter], value : JObject, upsert: Boolean, multi: Boolean): Int
 }
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
 
 trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
-    val keysObject = JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
-    collection.ensureIndex(name, keysObject, unique)
+    collection.ensureIndex(name, keys, unique)
     JNothing
   }
   def keys: List[JPath]
@@ -40,25 +39,21 @@ trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
 
 trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
-    collection.insert(objects.map(jObject2MongoObject(_)))
+    collection.insert(objects)
     JNothing
   }
   def objects: List[JObject]
 }
 
 trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
-  def apply(collection: DatabaseCollection): JInt = JInt(collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil)))))
+  def apply(collection: DatabaseCollection): JInt = JInt(collection.remove(filter))
 
   def filter: Option[MongoFilter]
 }
 
 trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
-  def apply(collection: DatabaseCollection): List[JObject] = {
-    val keysObject   = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
-    val filterObject = filter.map(_.filter).getOrElse(JObject(Nil))
-    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
-    collection.select(keysObject, filterObject, sortObject, skip, limit).map(mongoObject2JObject(_))
-  }
+  def apply(collection: DatabaseCollection): List[JObject] = collection.select(selection, filter, sort, skip, limit)
+
   def selection : MongoSelection
   def filter    : Option[MongoFilter]
   def sort      : Option[MongoSort]
@@ -83,7 +78,7 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
 
 
 trait UpdateQueryBehaviour extends QueryBehaviour[JInt]{
-  def apply(collection: DatabaseCollection): JInt = JInt(collection.update(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))), value, upsert, multi))
+  def apply(collection: DatabaseCollection): JInt = JInt(collection.update(filter, value, upsert, multi))
   
   def value : JObject
   def filter: Option[MongoFilter]
@@ -127,21 +122,26 @@ object RealMongo{
   }
 
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
-    def insert(dbObjects: List[DBObject]) = checkWriteResult(collection.insert(dbObjects))
+    def insert(objects: List[JObject])      = checkWriteResult(collection.insert(objects.map(jObject2MongoObject(_))))
     
-    def remove(filter: DBObject)          = checkWriteResult(collection.remove(filter)).getN
+    def remove(filter: Option[MongoFilter]) = checkWriteResult(collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))).getN
 
-    def update(filter: DBObject, dbObject: DBObject, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(filter, dbObject, upsert, multi)).getN
+    def update(filter: Option[MongoFilter], value : JObject, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))), value, upsert, multi)).getN
 
-    def ensureIndex(name: String, keys: DBObject, unique: Boolean) = collection.ensureIndex(keys, name, unique)
+    def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)
 
-    def select(keys: DBObject, filter: DBObject, sort: Option[DBObject], skip: Option[Int], limit: Option[Int]): List[DBObject] = {
-      val cursor        = collection.find(filter, keys)
-      val sortedCursor  = sort.map(cursor.sort(_)).getOrElse(cursor)
+    def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
+
+      val keysObject   = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+      val filterObject = filter.map(_.filter).getOrElse(JObject(Nil))
+      val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
+
+      val cursor        = collection.find(filterObject, keysObject)
+      val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
       val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
       val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
 
-      List(limitedCursor.toArray: _*)
+      List(limitedCursor.toArray: _*).map(mongoObject2JObject(_))
     }
 
     private def checkWriteResult(result: WriteResult) = {

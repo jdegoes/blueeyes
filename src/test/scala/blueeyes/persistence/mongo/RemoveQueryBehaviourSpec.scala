@@ -6,7 +6,6 @@ import MongoImplicits._
 import blueeyes.json.JPathImplicits._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
-import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.JsonAST._
 
 class RemoveQueryBehaviourSpec extends Specification {
@@ -15,8 +14,7 @@ class RemoveQueryBehaviourSpec extends Specification {
   "Call collection method" in{
     import MongoFilterImplicits._
 
-    val filter = jObject2MongoObject(JObject(JField("name", JString("Joe")) :: Nil))
-    
+    val filter = Some("name" === "Joe")
     when(collection.remove(filter)).thenReturn(2)
 
     val query  = remove.from("collection").where("name" === "Joe")
@@ -29,12 +27,12 @@ class RemoveQueryBehaviourSpec extends Specification {
   "Call collection method with dummy JObject when filter is not specified" in{
     import MongoFilterImplicits._
 
-    when(collection.remove(jObject2MongoObject(JObject(Nil)))).thenReturn(2)
+    when(collection.remove(None)).thenReturn(2)
 
     val query = remove.from("collection")
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).remove(jObject2MongoObject(JObject(Nil)))
+    Mockito.verify(collection, times(1)).remove(None)
     
     result mustEqual(JInt(2))
   }
