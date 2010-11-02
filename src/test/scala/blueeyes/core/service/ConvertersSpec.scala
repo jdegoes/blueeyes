@@ -3,7 +3,8 @@ package blueeyes.core.service
 import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.util.CharsetUtil;
+import org.jboss.netty.util.CharsetUtil
+import java.net.InetSocketAddress;
 import scala.collection.JavaConversions._
 import blueeyes.core.data.{DataTranscoder, DataTranscoderImpl, TextToTextBijection}
 
@@ -41,7 +42,7 @@ class ConvertersSpec extends Specification {
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
-    val request = fromNettyRequest(nettyRequest, Map('pathParam1 -> "value"), transcoder)
+    val request = fromNettyRequest(nettyRequest, Map('pathParam1 -> "value"), new InetSocketAddress("127.0.0.0", 8080), transcoder)
     
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
@@ -49,5 +50,6 @@ class ConvertersSpec extends Specification {
     request.headers     mustEqual(Map("retry-after" -> "1"))
     request.content     mustEqual(Some("12"))
     request.version     mustEqual(`HTTP/1.0`)
+    request.remoteHost  mustEqual(Some("127.0.0.0"))
   }
 }

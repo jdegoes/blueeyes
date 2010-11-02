@@ -20,36 +20,36 @@ trait BlueEyesServiceSpecification[S]  {
     try { f } finally { pathStack.pop() }
   }
 
-  def get[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(GET, queryParameters, headers, None, version, f, timeout)
+  def get[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(GET, queryParameters, headers, None, remoteHost, version, f, timeout)
 
-  def put[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T],
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(PUT, queryParameters, headers, content, version, f, timeout)
+  def put[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T], remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(PUT, queryParameters, headers, content, remoteHost, version, f, timeout)
 
-  def post[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T],
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(POST, queryParameters, headers, content, version, f, timeout)
+  def post[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T], remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(POST, queryParameters, headers, content, remoteHost, version, f, timeout)
 
-  def delete[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(DELETE, queryParameters, headers, None, version, f, timeout)
+  def delete[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(DELETE, queryParameters, headers, None, remoteHost, version, f, timeout)
 
-  def options[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T],
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(OPTIONS, queryParameters, headers, None, version, f, timeout)
+  def options[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T], remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(OPTIONS, queryParameters, headers, None, remoteHost, version, f, timeout)
 
-  def head[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(HEAD, queryParameters, headers, None, version, f, timeout)
+  def head[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(HEAD, queryParameters, headers, None, remoteHost, version, f, timeout)
 
-  def connect[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T],
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(CONNECT, queryParameters, headers, content, version, f, timeout)
+  def connect[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T], remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(CONNECT, queryParameters, headers, content, remoteHost, version, f, timeout)
 
-  def trace[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(),
-          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(TRACE, queryParameters, headers, None, version, f, timeout)
+  def trace[T](f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), remoteHost: Option[String] = None,
+          version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(TRACE, queryParameters, headers, None, remoteHost, version, f, timeout)
 
   def custom[T](method: HttpMethod, queryParameters: Map[Symbol, String], headers: Map[String, String],
-             content: Option[T], version: HttpVersion, f: => Unit, timeout: Long = 60000) = {
+             content: Option[T], remoteHost: Option[String] = None, version: HttpVersion, f: => Unit, timeout: Long = 60000) = {
     val uri         = currentPath
     val handler     = handlerForRequest[T](uri, method)
     val parameters  = handler._1(uri) ++ queryParameters
-    val future      = handler._3(HttpRequest[T](method, uri, parameters, headers, content, version))
+    val future      = handler._3(HttpRequest[T](method, uri, parameters, headers, content, remoteHost, version))
 
     withResponse(waitForResponse(future, timeout), f)
   }

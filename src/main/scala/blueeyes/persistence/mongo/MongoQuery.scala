@@ -118,7 +118,7 @@ sealed trait MongoUpdateValue{ self =>
 }
 
 sealed case class MongoUpdateFieldValue(lhs: JPath, operator: MongoUpdateOperator, value: JValue) extends MongoUpdateValue{
-  def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(lhs.toMongoField, value) :: Nil)) :: Nil)
+  def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)) :: Nil)
 }
 
 sealed case class MongoUpdateFieldsValues(criteria: List[MongoUpdateValue]) extends MongoUpdateValue{

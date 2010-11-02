@@ -29,7 +29,7 @@ trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
 
 trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection): JNothing.type = {
-    val keysObject = JObject(keys.map(key => JField(key.toMongoField, JInt(1))))
+    val keysObject = JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
     collection.ensureIndex(name, keysObject, unique)
     JNothing
   }
@@ -54,9 +54,9 @@ trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
 
 trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
   def apply(collection: DatabaseCollection): List[JObject] = {
-    val keysObject   = JObject(selection.selection.map(key => JField(key.toMongoField, JInt(1))))
+    val keysObject   = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
     val filterObject = filter.map(_.filter).getOrElse(JObject(Nil))
-    val sortObject   = sort.map(v => JObject(JField(v.sortField.toMongoField, JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
+    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
     collection.select(keysObject, filterObject, sortObject, skip, limit).map(mongoObject2JObject(_))
   }
   def selection : MongoSelection

@@ -9,6 +9,7 @@ import scala.collection.JavaConversions._
 import HttpHeaders._
 import HttpVersions._
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
+import java.net.{SocketAddress, InetSocketAddress}
 
 object Converters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -54,13 +55,17 @@ object Converters {
     }
   }
 
-  implicit def fromNettyRequest[T, S](request: NettyHttpRequest, pathParameters: Map[Symbol, String], transcoder: HttpDataTranscoder[T, S]): HttpRequest[T] = {
+  implicit def fromNettyRequest[T, S](request: NettyHttpRequest, pathParameters: Map[Symbol, String], remoteAddres: SocketAddress, transcoder: HttpDataTranscoder[T, S]): HttpRequest[T] = {
     val queryStringDecoder = new QueryStringDecoder(request.getUri())
     val params             = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
     val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
     val nettyContent       = request.getContent()
     val content            = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
+    val remoteHost         = remoteAddres match {
+                              case x: InetSocketAddress => Some(x.getAddress().getHostAddress())
+                              case _ => None
+                            }
 
-    HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, fromNettyVersion(request.getProtocolVersion()))
+    HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }
 }

@@ -10,7 +10,7 @@ case class RestPathHandler[T](pattern: PartialFunction[String, Map[Symbol, Strin
  def apply(url: String) = (request: HttpRequest[T]) => {
    val symbols = pattern(url)
 
-   handler(HttpRequest(request.method, request.uri, (symbols ++ request.parameters), request.headers, request.content, request.version))
+   handler(HttpRequest(request.method, request.uri, (symbols ++ request.parameters), request.headers, request.content, request.remoteHost, request.version))
  }
 }
 
