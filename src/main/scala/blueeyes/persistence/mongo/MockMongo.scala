@@ -77,8 +77,8 @@ trait MongoFieldEvaluator[T <: JValue] extends Function2[T, T, Boolean]
 object JObjectsFilter{
   def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
     case x: MongoFieldFilter => searchByField(jobjects, x)
-    case x: MongoOrFilter    => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects ++ JObjectsFilter(jobjects, filter0) } 
-    case x: MongoAndFilter   => Nil
+    case x: MongoOrFilter    => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.union(JObjectsFilter(jobjects, filter0)) }
+    case x: MongoAndFilter   => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.intersect(JObjectsFilter(jobjects, filter0)) }
   }
 
   private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {

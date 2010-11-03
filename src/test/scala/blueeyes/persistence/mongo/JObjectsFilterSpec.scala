@@ -22,5 +22,9 @@ class JObjectsFilterSpec extends Specification{
     val result = jObject1 :: jObject2 :: jObject3 :: Nil
     JObjectsFilter(jobjects, MongoFieldFilter("address.city", $eq,"B") || MongoFieldFilter("street.street", $eq,"4")).filterNot (result contains) mustEqual(Nil)
   }
-
+  "selects objects by 'and' query" in{
+    import MongoFilterImplicits._
+    val result = jObject2 :: Nil
+    JObjectsFilter(jobjects, MongoFieldFilter("address.city", $eq,"B") && MongoFieldFilter("street.street", $eq,"3")).filterNot (result contains) mustEqual(Nil)
+  }
 }
