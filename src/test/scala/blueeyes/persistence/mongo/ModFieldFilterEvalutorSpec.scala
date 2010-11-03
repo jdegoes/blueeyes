@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import blueeyes.json.JsonAST._
+import MockMongoImplementation._
 
 class ModFieldFilterEvalutorSpec  extends Specification {
   "returns true when int modular devision is true" in {

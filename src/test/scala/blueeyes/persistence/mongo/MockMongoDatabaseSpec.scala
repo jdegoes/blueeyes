@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
+import MockMongoImplementation._
 
 class MockMongoDatabaseSpec extends Specification{
   "create collection" in{

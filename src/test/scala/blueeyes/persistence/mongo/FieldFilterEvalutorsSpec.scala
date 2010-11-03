@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import MongoFilterOperators._
+import MockMongoImplementation._
 
 class FieldFilterEvalutorsSpec extends Specification {
   "creates $eq Evalutor" in {

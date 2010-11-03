@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import blueeyes.json.JsonAST.JString
-
+import MockMongoImplementation._
 
 class NeqFieldFilterEvalutorSpec  extends Specification {
   "returns false for the same JValues" in {

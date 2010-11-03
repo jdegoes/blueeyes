@@ -19,7 +19,7 @@ trait DatabaseCollection{
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): List[JObject]
   def remove(filter: Option[MongoFilter]): Int
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
-  def update(filter: Option[MongoFilter], value : JObject, upsert: Boolean, multi: Boolean): Int
+  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
 }
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
@@ -77,7 +77,7 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
 trait UpdateQueryBehaviour extends QueryBehaviour[JInt]{
   def apply(collection: DatabaseCollection): JInt = JInt(collection.update(filter, value, upsert, multi))
   
-  def value : JObject
+  def value : MongoUpdateValue
   def filter: Option[MongoFilter]
   def upsert: Boolean
   def multi : Boolean

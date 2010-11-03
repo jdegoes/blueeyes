@@ -42,12 +42,12 @@ object MongoDemo{
     println("------------demoSelect------------------")
     insertObjects
 
-    printObjects(database(select().from(collection).sortBy("address.street" <<)))
-    printObjects(database(select().from(collection).sortBy("address.street" >>)))
+//    printObjects(database(select().from(collection).sortBy("address.street" <<)))
+//    printObjects(database(select().from(collection).sortBy("address.street" >>)))
 //    printObjects(database(select().from(collection).sortBy("address.city" >>).skip(1).limit(1)))
 //    printObjects(database(select().from(collection).where("address.city" === "B").sortBy("address.city" >>)))
 //    printObjects(database(select().from(collection).where("address.city" === "Z").sortBy("address.city" >>)))
-//    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
+    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
 //    printObjects(database(select("address.city").from(collection).sortBy("address.city" <<)))
 
     database(remove.from(collection))

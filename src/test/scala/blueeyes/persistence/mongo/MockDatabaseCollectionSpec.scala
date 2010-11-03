@@ -6,6 +6,7 @@ import blueeyes.json.JPathImplicits._
 import MongoFilterOperators._
 import blueeyes.json.JPath
 import com.mongodb.MongoException
+import MockMongoImplementation._
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
