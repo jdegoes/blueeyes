@@ -7,6 +7,7 @@ import com.google.inject.{Provider, Inject, AbstractModule}
 import blueeyes.persistence.mongo.MongoFilterOperators.MongoFilterOperator
 import blueeyes.json.JsonAST._
 import JPathExtension._
+import com.mongodb.MongoException
 
 class MockMongoModule extends AbstractModule {
   override def configure(): Unit = {
@@ -53,33 +54,58 @@ class MockMongoDatabase() extends MongoDatabase{
 
 class MockDatabaseCollection() extends DatabaseCollection{
   private var container = JArray(Nil)
+  private var indexes   = Map[String, List[JPath]]()
 
-  def insert(objects: List[JObject]) = {container = JArray(container.elements ++ objects)}
+  def insert(objects: List[JObject]) = {
+    checkIndex(objects)
+    container = JArray(container.elements ++ objects)
+  }
+
+  private def checkIndex(objects: List[JObject]) = {
+    indexes.foreach(index => {
+      val selection = MongoSelection(index._2)
+      val newFields = selectFields(objects, selection)
+      if (newFields.distinct.size != newFields.size) throw new MongoException("Index contraint.")
+      objects.foreach(jobject => {
+        val existing  = selectFields(all, selection)
+        if ((existing filterNot (newFields contains)).size != existing.size) throw new MongoException("Index contraint.")
+      })
+    })
+  }
 
   def remove(filter: Option[MongoFilter]) = {
-    val foundObjects: List[JObject] = filter.map(search(_)).getOrElse(all)
+    val foundObjects: List[JObject] = filter.map(search(all, _)).getOrElse(all)
     foundObjects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
     foundObjects.size
   }
-  private def search(filter: MongoFilter): List[JObject] = JObjectsFilter(all, filter)
 
-  def update(filter: Option[MongoFilter], value : JObject, upsert: Boolean, multi: Boolean) = {0}
+  def update(filter: Option[MongoFilter], value : JObject, upsert: Boolean, multi: Boolean) = {
+    
+  0}
 
-  def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {}
+  def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
+    indexes = if (unique) indexes.get(name) match{
+      case None    => indexes + Tuple2(name, keys)
+      case Some(x) => indexes
+    } else indexes 
+  }
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
-    val objects = filter.map(search(_)).getOrElse(all)
+    val objects = filter.map(search(all, _)).getOrElse(all)
     val sorted  = sort.map(v => objects.sorted(new JObjectXPathBasedOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
     val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
     val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
+    selectFields(limited, selection)
+  }
+  private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
     if (!selection.selection.isEmpty) {
-      val allJFields = limited.map(jobject => selection.selection.map(selectByPath(jobject, _)))
+      val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(jobject, _)))
       allJFields.map(jfields => {
         val definedJFields = jfields.filter(_ != None).map(_.get)
         definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
       }).filter(_ != None).map(_.get)
-    } else limited
+    } else jobjects
   }
   private def selectByPath(jobject: JObject, selectionPath: JPath) = jobject.get(selectionPath) match{
     case JNothing :: Nil => None
@@ -90,6 +116,8 @@ class MockDatabaseCollection() extends DatabaseCollection{
     }
     case _        => error("jpath which is select more then one value is not supported")
   }
+
+  private def search(objects: List[JObject], filter: MongoFilter): List[JObject] = JObjectsFilter(objects, filter)
 
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 }

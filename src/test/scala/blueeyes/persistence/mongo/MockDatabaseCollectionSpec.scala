@@ -5,6 +5,7 @@ import blueeyes.json.JsonAST.{JString, JField, JObject}
 import blueeyes.json.JPathImplicits._
 import MongoFilterOperators._
 import blueeyes.json.JPath
+import com.mongodb.MongoException
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -20,6 +21,32 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
+  }
+  "does not store jobject when unique index exists and objects are the same" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+    collection.insert(jObject :: jObject :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
+  }
+  "does not store jobject when unique index exists and the same object exists" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: Nil, true)
+    collection.insert(jObject1 :: Nil)
+    collection.insert(jObject2 :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: Nil)
+  }
+  "store jobject when unique index exists and objects are different" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.insert(jObject2 :: jObject3 :: Nil)
+
+    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
   }
   "removes all jobjects when filter is not specified" in{
     val collection = newCollection
