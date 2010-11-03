@@ -20,7 +20,7 @@ class RequestCombinatorsSpec extends Specification with RequestCombinators {
   "refineContentType should refine content type when possible" in {
     jIntCaller { 
       refineContentType { jIntHandler }
-    }.value.get.content.get must be(JInt(123))
+    }.value.get.content.get mustEqual(JInt(123))
   }
   
   
