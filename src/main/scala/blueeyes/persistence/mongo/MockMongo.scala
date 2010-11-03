@@ -67,7 +67,7 @@ class MockDatabaseCollection() extends DatabaseCollection{
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {}
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
-    all
+    filter.map(search(_)).getOrElse(all)
   }
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 }
@@ -77,13 +77,16 @@ trait MongoFieldEvaluator[T <: JValue] extends Function2[T, T, Boolean]
 object JObjectsFilter{
   def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
     case x: MongoFieldFilter => searchByField(jobjects, x)
-    case x: MongoOrFilter    => Nil
+    case x: MongoOrFilter    => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects ++ JObjectsFilter(jobjects, filter0) } 
     case x: MongoAndFilter   => Nil
   }
 
   private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {
     val evaluator = FieldFilterEvalutors(filter.operator)
-    jobjects.filter(jobject => !jobject.get(filter.lhs).filter(v => evaluator(v, filter.rhs.toJValue)).isEmpty)
+    jobjects.filter(jobject => {
+      val value = jobject.get(filter.lhs)
+      !value.filter(v => evaluator(v, filter.rhs.toJValue)).isEmpty
+    })
   }
 }
 

@@ -56,7 +56,12 @@ object JPathSpec extends Specification {
     
     JPath("./ba[rz]/").extract(j) mustEqual(JNull :: JNull :: Nil)
   }
-  
+  "Can extract a second level node" in {
+    val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
+
+    JPath("address.city").extract(j) mustEqual(JString("B") :: Nil)
+  }
+
   "Expand will accurately convert regular expressions for an object with depth = 1" in {
     val j = JObject(JField("baz", JNull) :: JField("bar", JNull) :: JField("foo", JNull) :: Nil)
     
