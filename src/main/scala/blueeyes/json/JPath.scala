@@ -24,7 +24,7 @@ sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
       case Nil => d :: Nil
       
       case head :: tail => head match {
-        case JPathField(name)  => extract0(tail, jvalue \ name)
+        case JPathField(name)  => extract0(tail, d \ name)
         case JPathIndex(index) => extract0(tail, jvalue(index))
         case JPathRegex(regex) => jvalue.children.flatMap { child => 
           child match {
