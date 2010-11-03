@@ -17,11 +17,11 @@ object MongoConfiguration {
 
 class RealMongoModule extends AbstractModule {
   override def configure(): Unit = {
-    bind(classOf[Mongo]).toProvider(classOf[RealMongoImplelemntation.RealMongoProvider])
+    bind(classOf[Mongo]).toProvider(classOf[RealMongoImplementation.RealMongoProvider])
   }
 }
 
-private[mongo] object RealMongoImplelemntation{
+private[mongo] object RealMongoImplementation{
 
   @com.google.inject.Singleton
   class RealMongoProvider @Inject() (config: Config) extends Provider[Mongo]{
