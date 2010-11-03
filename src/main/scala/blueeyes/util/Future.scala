@@ -241,9 +241,11 @@ object Future {
     f.cancel(e)
     f
   }
+  
+  def apply[T, S >: T](t: T): Future[S] = new Future().deliver(t: S)
 }
 
 trait FutureImplicits {
-  implicit def any2Future[T, S >: T](any: T): Future[S] = new Future[S].deliver(any: S)
+  implicit def any2Future[T, S >: T](any: T): Future[S] = Future(any: S)
 }
 object FutureImplicits extends FutureImplicits

@@ -8,8 +8,8 @@ import blueeyes.util.Future
  *
  * <pre>
  * post {
- *   contentType[JObject] {
- *     contentSatisfies(!(_ \ "adId" -->? classOf[JString]).isEmpty) { request =>
+ *   refineContentType[JObject] {
+ *     requireContent(!(_ \ "adId" -->? classOf[JString]).isEmpty) { request =>
  *       val adId = (request.content \ "adId").deserialize[String]
  *     }
  *   }
@@ -20,7 +20,7 @@ import blueeyes.util.Future
 trait RequestCombinators {
   private type Handler[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
 
-  def contentType[S, T <: S](f: Handler[T, S])(implicit m: Manifest[T]): Handler[S, S] = {
+  def refineContentType[S, T <: S](f: Handler[T, S])(implicit m: Manifest[T]): Handler[S, S] = {
     (request: HttpRequest[S]) => {
       request.content match {
         case None => 
@@ -37,7 +37,7 @@ trait RequestCombinators {
     }
   }
   
-  def contentSatisfies[T, S](p: T => Boolean)(f: Handler[T, S])(implicit m: Manifest[T]): Handler[T, S] = {
+  def requireContent[T, S](p: T => Boolean)(f: Handler[T, S])(implicit m: Manifest[T]): Handler[T, S] = {
     (request: HttpRequest[T]) => {
       request.content match {
         case None => 
