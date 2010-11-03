@@ -20,7 +20,7 @@ import blueeyes.util.Future
 trait HttpRequestCombinators {
   private type Handler[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
 
-  def refineContentType[S, T <: S](f: Handler[T, S])(implicit m: Manifest[T]): Handler[S, S] = {
+  def refineContentType[S >: T forSome { type T }](f: Handler[T, S])(implicit m: Manifest[T]): Handler[S, S] = {
     (request: HttpRequest[S]) => {
       request.content match {
         case None => 
