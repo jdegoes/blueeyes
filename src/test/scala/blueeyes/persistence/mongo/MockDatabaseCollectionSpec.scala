@@ -4,6 +4,7 @@ import org.specs.Specification
 import blueeyes.json.JsonAST.{JString, JField, JObject}
 import blueeyes.json.JPathImplicits._
 import MongoFilterOperators._
+import blueeyes.json.JPath
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -69,6 +70,34 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, Some(sort), Some(2), Some(1)) mustEqual(jObject1:: Nil)
+  }
+
+  "select specified objects fields" in{
+    import MongoFilterImplicits._
+    val collection  = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+    collection.select(MongoSelection(JPath("address.city") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+  }
+  "select specified objects fields when some fields are missing" in{
+    import MongoFilterImplicits._
+    val collection  = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+    collection.select(MongoSelection(JPath("address.city") :: JPath("address.phone") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+  }
+  "select nothing when wwong selection is specified" in{
+    import MongoFilterImplicits._
+    val collection  = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+    collection.select(MongoSelection(JPath("address.town") :: Nil), None, Some(sort), None, None) mustEqual(Nil)
   }
 
   private def newCollection = new MockDatabaseCollection()

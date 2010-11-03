@@ -6,6 +6,7 @@ import collection.immutable.List
 import com.google.inject.{Provider, Inject, AbstractModule}
 import blueeyes.persistence.mongo.MongoFilterOperators.MongoFilterOperator
 import blueeyes.json.JsonAST._
+import JPathExtension._
 
 class MockMongoModule extends AbstractModule {
   override def configure(): Unit = {
@@ -71,8 +72,25 @@ class MockDatabaseCollection() extends DatabaseCollection{
     val sorted  = sort.map(v => objects.sorted(new JObjectXPathBasedOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
     val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
     val limited = limit.map(skipped.take(_)).getOrElse(skipped)
-    limited
+
+    if (!selection.selection.isEmpty) {
+      val allJFields = limited.map(jobject => selection.selection.map(selectByPath(jobject, _)))
+      allJFields.map(jfields => {
+        val definedJFields = jfields.filter(_ != None).map(_.get)
+        definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
+      }).filter(_ != None).map(_.get)
+    } else limited
   }
+  private def selectByPath(jobject: JObject, selectionPath: JPath) = jobject.get(selectionPath) match{
+    case JNothing :: Nil => None
+    case Nil             => None
+    case x :: Nil        => {
+      val elements = toMongoField(selectionPath).split("\\.").reverse
+      Some(elements.tail.foldLeft(JObject(JField(elements.head, x) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)})
+    }
+    case _        => error("jpath which is select more then one value is not supported")
+  }
+
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 }
 
