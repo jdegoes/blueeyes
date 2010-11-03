@@ -49,4 +49,4 @@ trait HttpRequestCombinators {
     }
   }
 }
-object RequestCombinators extends RequestCombinators
+object RequestCombinators extends HttpRequestCombinators
