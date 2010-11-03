@@ -17,7 +17,7 @@ import blueeyes.util.Future
  * </pre>
  *
  */
-trait RequestCombinators {
+trait HttpRequestCombinators {
   private type Handler[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
 
   def refineContentType[S, T <: S](f: Handler[T, S])(implicit m: Manifest[T]): Handler[S, S] = {
