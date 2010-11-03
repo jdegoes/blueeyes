@@ -67,13 +67,17 @@ class MockDatabaseCollection() extends DatabaseCollection{
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {}
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
-    filter.map(search(_)).getOrElse(all)
+    val objects = filter.map(search(_)).getOrElse(all)
+    val sorted  = sort.map(v => objects.sorted(new JObjectXPathBasedOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
+    val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
+    val limited = limit.map(skipped.take(_)).getOrElse(skipped)
+    limited
   }
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 }
 
 trait MongoFieldEvaluator[T <: JValue] extends Function2[T, T, Boolean]
-
+                             
 object JObjectsFilter{
   def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
     case x: MongoFieldFilter => searchByField(jobjects, x)
@@ -90,11 +94,33 @@ object JObjectsFilter{
   }
 }
 
+class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends Ordering[JObject]{
+  def compare(o1: JObject, o2: JObject) = (o1.get(path), o2.get(path)) match {
+    case (v1 :: Nil, v2 :: Nil) =>
+      (v1, v2) match {
+        case (JString(x1),  JString(x2)) => x1.compare(x2) * weight
+        case (JInt(x1),     JInt(x2))    => x1.compare(x2) * weight
+        case (JDouble(x1),  JDouble(x2)) => x1.compare(x2) * weight
+        case (JDouble(x1),  JInt(x2))    => x1.compare(x2.doubleValue) * weight
+        case (JInt(x1),     JDouble(x2)) => x1.doubleValue.compare(x2) * weight
+        case (JBool(x1),    JBool(x2))   => x1.compare(x2) * weight
+        case (JNull,        JNull)       => 0
+        case (v,            JNull)       => 1
+        case (JNull,        v)           => -1
+        case (JNothing,     JNothing)    => 0
+        case (v,            JNothing)       => 1
+        case (JNothing,     v)           => -1        
+        case _ => error("differents elements cannot be ordered")
+      }
+    case _ => error("lists cannot be ordered")
+  }
+}
+
 object FieldFilterEvalutors{
   def apply(operator: MongoFilterOperator): FieldFilterEvalutor = operator match{
     case $gt      => GtFieldFilterEvalutor
     case $gte     => GteFieldFilterEvalutor
-    case $lt      => LtFieldFilterEvalutor
+    case $lt      => LtFieldFilterEvalutor                                                                                       
     case $lte     => LteFieldFilterEvalutor
     case $eq      => EqFieldFilterEvalutor
     case $ne      => NeFieldFilterEvalutor
