@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import RealMongo._
 import MongoQueryBuilder._
 import MongoImplicits._
 import blueeyes.json.JPathImplicits._

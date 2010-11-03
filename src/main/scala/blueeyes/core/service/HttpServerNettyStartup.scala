@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.persistence.mongo.RealMongo.RealMongoModule
+import blueeyes.persistence.mongo.RealMongoModule
 import blueeyes.config.{FilesystemConfiggyModule, ConfiggyModule}
 import com.google.inject.Guice
 import net.lag.configgy.Config
