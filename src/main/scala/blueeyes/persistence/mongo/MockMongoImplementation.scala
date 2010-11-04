@@ -95,7 +95,7 @@ private[mongo] object MockMongoImplementation{
         val jfield = selectByPath(x.lhs, jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
-      case x: MongoUpdateFieldsValues => jobject
+      case x: MongoUpdateFieldsValues => x.values.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
     }
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
