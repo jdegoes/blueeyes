@@ -26,7 +26,7 @@ trait HttpServiceBuilder[Base] extends HttpServicesContainer[Base] { self =>
   
   protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
   
-  case class service(name: String, override val version: String) extends HttpService2[Base] {
+  abstract class service(val name: String, override val version: String) extends HttpService2[Base] {
     self.services += this
     
     override def startupHooks       = _startupHooks.toList

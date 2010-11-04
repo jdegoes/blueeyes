@@ -43,9 +43,9 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
   def notFoundHandler:      Option[HttpNotFoundHandler[_, _, Base]] = None
   def pathMethodHandlers:   List[HttpPathMethodHandler[_, _, Base]] = Nil
   
-  def start = { startupHooks.foreach { f => f() } }
+  def start: Future[Unit] = runAllHooks(startupHooks)
   
-  def shutdown = { shutdownHooks.foreach { f => f() } }
+  def shutdown: Future[Unit] = runAllHooks(shutdownHooks)
   
   def allHandlers: List[Handler] = {
     val collector: PartialFunction[AnyRef, Handler] = { case e: Handler => e }
@@ -61,5 +61,21 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
   
   private lazy val masterHandler: PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] = {
     allHandlers.foldLeft[Handler](HttpNoHandler()) { (composite, cur) => composite.orElse(cur: Handler) }
+  }
+  
+  private def runAllHooks(hooks: List[() => Future[_]]): Future[Unit] = {
+    var result = new Future[Unit]
+    
+    var hookCount: Int = hooks.length
+    
+    hooks.foreach {
+      f => f().deliverTo { _ =>
+        hookCount = hookCount - 1
+        
+        if (hookCount == 0) result.deliver(Unit)
+      }
+    }
+    
+    result
   }
 }
