@@ -16,3 +16,50 @@ trait HttpService[S] extends RestHierarchy[S] {
    */
   def rootPath: String = "/"
 }
+
+import blueeyes.core.http._
+import blueeyes.util.Future
+import net.lag.configgy.{Config, ConfigMap}
+import net.lag.logging.Logger
+
+/**
+ * An http service, which responds to http requests with http responses. 
+ * Services are typed in whatever type is required by the server implementation.
+ * For example, some server implementations might only deal with strings.
+ */
+trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] {
+  private type Handler = PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]]
+  
+  def name:     String
+  def config:   ConfigMap
+  def log:      Logger
+  def version:  String
+  
+  def majorVersion: Int = version.split(".").drop(0).headOption.map(_.toInt).getOrElse(0)
+  def minorVersion: Int = version.split(".").drop(1).headOption.map(_.toInt).getOrElse(0)
+  
+  def startupHooks:         List[() => Future[_]] = Nil
+  def shutdownHooks:        List[() => Future[_]] = Nil
+  def notFoundHandler:      Option[HttpNotFoundHandler[_, _, Base]] = None
+  def pathMethodHandlers:   List[HttpPathMethodHandler[_, _, Base]] = Nil
+  
+  def start = { startupHooks.foreach { f => f() } }
+  
+  def shutdown = { shutdownHooks.foreach { f => f() } }
+  
+  def allHandlers: List[Handler] = {
+    val collector: PartialFunction[AnyRef, Handler] = { case e: Handler => e }
+    
+    pathMethodHandlers.collect(collector) ++ notFoundHandler.toList.collect(collector)
+  }
+  
+  def isDefinedAt(request: HttpRequest[Base]) = masterHandler.isDefinedAt(request)
+  
+  def apply(request: HttpRequest[Base]) = masterHandler.apply(request)
+  
+  override def toString = name + "-" + version
+  
+  private lazy val masterHandler: PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] = {
+    allHandlers.foldLeft[Handler](HttpNoHandler()) { (composite, cur) => composite.orElse(cur: Handler) }
+  }
+}
