@@ -34,7 +34,12 @@ object JsonToJsonBijection extends Bijection[JValue, JValue] {
   def apply(s: JValue)   = s
 }
 
-object JsonToArrayBytesBijection extends Bijection[JValue, Array[Byte]] {
+object ByteArrayToByteArray extends Bijection[Array[Byte], Array[Byte]] {
+  def unapply(t: Array[Byte]) = t
+  def apply(s: Array[Byte])   = s
+}
+
+object JsonToByteArrayBijection extends Bijection[JValue, Array[Byte]] {
   def unapply(t: Array[Byte]) = JsonParser.parse(t.map(_.toChar).mkString)
   def apply(s: JValue)         = compact(render(s)).toArray.map(_.toByte)
 }
