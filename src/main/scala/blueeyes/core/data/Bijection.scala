@@ -29,6 +29,16 @@ object JsonToTextBijection extends Bijection[JValue, String]{
   def apply(s: JValue)   = compact(render(s))
 }
 
+object JsonToJsonBijection extends Bijection[JValue, JValue] {
+  def unapply(t: JValue) = t
+  def apply(s: JValue)   = s
+}
+
+object JsonToArrayBytesBijection extends Bijection[JValue, Array[Byte]] {
+  def unapply(t: Array[Byte]) = JsonParser.parse(t.map(_.toChar).mkString)
+  def apply(s: JValue)         = compact(render(s)).toArray.map(_.toByte)
+}
+
 import xml.NodeSeq
 import xml.XML
 object XMLToTextBijection extends Bijection[NodeSeq, String]{
