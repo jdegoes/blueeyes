@@ -88,10 +88,10 @@ private[mongo] object MockMongoImplementation{
       objects.size
     }
 
-    private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match{
+    private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match {
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
-        def updateValue(value: JValue) = UpdateFiledEvalutorFactory(x.operator)(value, x.value)
+        def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.value))
         val jfield = selectByPath(x.lhs, jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
@@ -115,17 +115,20 @@ private[mongo] object MockMongoImplementation{
     }
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {
-        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(_, jobject, (jobject) => {jobject})))
+        def updateValue(value: JValue) = value match{
+          case JNothing => None
+          case _ => Some(value)
+        }
+        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(_, jobject, updateValue _)))
         allJFields.map(jfields => {
           val definedJFields = jfields.filter(_ != None).map(_.get)
           definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
         }).filter(_ != None).map(_.get)
       } else jobjects
     }
-    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => JValue) = jobject.get(selectionPath) match{
-      case JNothing :: Nil => None
+    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue]) = jobject.get(selectionPath) match{
       case Nil             => None
-      case x :: Nil        => Some(jvalueToJObject(selectionPath, transformer(x)))
+      case x :: Nil        => transformer(x).map(jvalueToJObject(selectionPath, _))
       case _        => error("jpath which is select more then one value is not supported")
     }
 

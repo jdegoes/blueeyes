@@ -10,10 +10,11 @@ import blueeyes.config.{ConfiggyModule, FilesystemConfiggyModule}
 import com.google.inject.Guice
 
 object MongoDemo{
-  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
-  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
-  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
-  private val jObject3 = JObject(JField("address", JObject( JField("city", JString("E")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
+  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject3 = JObject(JField("address", JObject( JField("city", JString("E")) :: JField("street", JString("4")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject6 = JObject(JField("address", JString("ll")) :: Nil)
 
   private val collection = "my-collection"
 
@@ -31,9 +32,9 @@ object MongoDemo{
 
 //    demoSelectOne
 
-    demoSelect
+//    demoSelect
     
-//    demoUpdate
+    demoUpdate
 
 //    demoRemove
   }
@@ -58,14 +59,14 @@ object MongoDemo{
     println("------------demoUpdate------------------")
     insertObjects
 
-    println(database(update(collection).set("address.city" set ("F")).where("address.city" === "B")))
+    println(database(updateMany(collection).set("address" popFirst)))
     printObjects(database(select().from(collection)))
-    println(database(update(collection).set(("address.city" set ("Y")) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
-    printObjects(database(select().from(collection)))
-    println(database(update(collection).set(jObject3).where("address.city" === "A")))
-    printObjects(database(select().from(collection)))
-    println(database(updateMany(collection).set("address.street" set ("New Street"))))
-    printObjects(database(select().from(collection)))
+//    println(database(update(collection).set(("address.city" set ("Y")) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
+//    printObjects(database(select().from(collection)))
+//    println(database(update(collection).set(jObject3).where("address.city" === "A")))
+//    printObjects(database(select().from(collection)))
+//    println(database(updateMany(collection).set("address.street" set ("New Street"))))
+//    printObjects(database(select().from(collection)))
 
     database(remove.from(collection))
     println("------------demoUpdate------------------")
@@ -109,6 +110,6 @@ object MongoDemo{
   }
 
   private def insertObjects{
-    database[JNothing.type](insert(jObject2, jObject, jObject1).into(collection))
+    database[JNothing.type](insert(jObject6).into(collection))
   }
 }
