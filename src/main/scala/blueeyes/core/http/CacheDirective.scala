@@ -8,37 +8,33 @@ sealed trait CacheDirective extends ProductPrefixUnmangler {
   def name: String = unmangledName
   def delta: Option[HttpNumber] = None
   def fieldNames: Option[String] = None
-  def value = (name.toList ++ delta.toList ++ fieldNames.map("\"" + _ + "\"").toList).mkString("=")
+  def value = (List(name) ++ delta.toList.map(_.value) ++ fieldNames.toList).mkString("=")
+  override def toString = value;
 }
 
 object CacheDirectives {
 
   def parseCacheDirectives(inString: String): Array[CacheDirective] ={
-    def fieldRegex = new Regex("""([a-z\-]+)=("[a-zA-Z\-]+")""")
-    def noFieldRegex = new Regex("""([a-z\-]+)(=(\d)+)?""" )
-    def fieldDirectives: Array[CacheDirective] = (fieldRegex.findAllIn(inString)).toArray.map(_.trim.split("=")).map( _ match {
-      case Array("private", any) => `private`(Some(any))
-      case Array("no-cache", any) => `no-cache`(Some(any))
-      case Array("private") => `private`(None)
-      case Array("no-cache") => `no-cache`(None)
-      case default => NullDirective("null")
-    })
+    def noFieldRegex = new Regex("""([a-z\-]+)((=(\d)+)|(="[a-zA-Z-]+"))?""" )
 
-    def noFieldDirectives: Array[CacheDirective] = (noFieldRegex.findAllIn(inString)).toArray.map(_.trim.split("=")).map( _ match {
-      case Array("no-cache") => `no-cache` 
-      case Array("no-store") => `no-store` 
-      case Array("max-age", delta) => `max-age`(HttpNumbers.parseHttpNumbers(delta)) 
-      case Array("max-stale", delta) => `max-stale`(HttpNumbers.parseHttpNumbers(delta))
-      case Array("min-fresh", delta) => `min-fresh`(HttpNumbers.parseHttpNumbers(delta))
-      case Array("no-transform") => `no-transform` 
-      case Array("only-if-cached") => `only-if-cached` 
-      case Array("public") => `public` 
-      case Array("must-revalidate") => `must-revalidate` 
-      case Array("proxy-revalidate") => `proxy-revalidate` 
-      case Array("s-maxage", delta) => `s-maxage`(HttpNumbers.parseHttpNumbers(delta))
-      case default => NullDirective("null")
-    })
-    return (noFieldDirectives ++ fieldDirectives).filterNot(x => x == NullDirective)
+    def directives: Array[CacheDirective] = (noFieldRegex.findAllIn(inString)).toArray.map(_.trim.split("=")).map( _ match {
+      case Array("private", any)      => Some(`private`(Some(any)))
+      case Array("no-cache", any)     => Some(`no-cache`(Some(any)))
+      case Array("private")           => Some(`private`(None))
+      case Array("no-cache")          => Some(`no-cache`)
+      case Array("no-store")          => Some(`no-store`)
+      case Array("max-age", delta)    => Some(`max-age`(HttpNumbers.parseHttpNumbers(delta)))
+      case Array("max-stale", delta)  => Some(`max-stale`(HttpNumbers.parseHttpNumbers(delta)))
+      case Array("min-fresh", delta)  => Some(`min-fresh`(HttpNumbers.parseHttpNumbers(delta)))
+      case Array("no-transform")      => Some(`no-transform`)
+      case Array("only-if-cached")    => Some(`only-if-cached`)
+      case Array("public")            => Some(`public`)
+      case Array("must-revalidate")   => Some(`must-revalidate`)
+      case Array("proxy-revalidate")  => Some(`proxy-revalidate`)
+      case Array("s-maxage", delta)   => Some(`s-maxage`(HttpNumbers.parseHttpNumbers(delta)))
+      case default                    => None
+    }).filterNot(_ == None).map(_.get)
+    return directives
   }
 
   sealed abstract class RequestDirective extends CacheDirective 
