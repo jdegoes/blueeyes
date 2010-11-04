@@ -26,7 +26,8 @@ trait MongoImplicits {
 
   implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
 
-  implicit def mongoUpdateValueToJValue(value: MongoUpdateValue): JObject = value.toJValue
+  implicit def jvalueToMongoUpdateObject(value: JObject): MongoUpdateObject = MongoUpdateObject(value)
+
 }
 
 object MongoImplicits extends MongoImplicits
@@ -54,7 +55,7 @@ case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFil
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
 case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
-case class MongoUpdateQuery(collection: MongoCollection, value: JObject, filter: Option[MongoFilter] = None, upsert: Boolean = false,
+case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue, filter: Option[MongoFilter] = None, upsert: Boolean = false,
                             multi: Boolean = false) extends MongoQuery[JInt] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
 }
@@ -78,7 +79,7 @@ object MongoQueryBuilder{
     def on(collection: MongoCollection, keys: JPath*) = MongoEnsureIndexQuery(collection, name, List(keys: _*), unique)
   }
   case class MongoUpdateQueryEntryPoint(collection: MongoCollection, upsert: Boolean = false, multi: Boolean = false) extends MongoQueryEntryPoint{
-    def set(value: JObject) = MongoUpdateQuery(collection, value, None, upsert, multi)
+    def set(value: MongoUpdateValue) = MongoUpdateQuery(collection, value, None, upsert, multi)
   }
 
   def select(selection: JPath*)                 = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
@@ -114,14 +115,18 @@ object MongoUpdateOperators {
 import MongoUpdateOperators._
 sealed trait MongoUpdateValue{ self =>
   def  toJValue: JObject;
-  def & (that: MongoUpdateValue): MongoUpdateValue = MongoUpdateFieldsValues(self :: that :: Nil)
+  def & (that: MongoUpdateValue): MongoUpdateValue = MongoUpdateValues(self :: that :: Nil)
+}
+
+sealed case class MongoUpdateObject(newValue: JObject) extends MongoUpdateValue{
+  def toJValue = newValue
 }
 
 sealed case class MongoUpdateFieldValue(lhs: JPath, operator: MongoUpdateOperator, value: JValue) extends MongoUpdateValue{
   def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)) :: Nil)
 }
 
-sealed case class MongoUpdateFieldsValues(criteria: List[MongoUpdateValue]) extends MongoUpdateValue{
+sealed case class MongoUpdateValues(criteria: List[MongoUpdateValue]) extends MongoUpdateValue{
   def toJValue: JObject = criteria.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 

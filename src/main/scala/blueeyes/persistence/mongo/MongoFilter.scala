@@ -193,7 +193,7 @@ case class MongoFilterBuilder(jpath: JPath) {
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
 }
 
-object JPathExtension{
+private[mongo] object JPathExtension{
   def toMongoField(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
 
 }

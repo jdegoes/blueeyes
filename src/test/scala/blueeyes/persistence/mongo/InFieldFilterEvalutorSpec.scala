@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import blueeyes.json.JsonAST._
+import MockMongoImplementation._
 
 class InFieldFilterEvalutorSpec extends Specification {
   "returns true when value in array" in {
