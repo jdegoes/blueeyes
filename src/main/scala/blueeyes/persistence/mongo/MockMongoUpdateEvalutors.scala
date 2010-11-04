@@ -19,34 +19,34 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }
 
-  sealed trait UpdateFieldEvalutor extends Function2[JObject, JValue, JValue]
+  sealed trait UpdateFieldEvalutor extends Function2[JValue, JValue, JValue]
 
-  case object IncFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
-  }
   case object SetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = setValue
+  }  
+  case object IncFieldEvalutor extends UpdateFieldEvalutor{
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object UnsetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object PushFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object PushAllFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object AddToSetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object PopFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object PullFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
   case object PullAllFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JObject, setValue: JValue) = value
+    def apply(value: JValue, setValue: JValue) = value
   }
 
 }

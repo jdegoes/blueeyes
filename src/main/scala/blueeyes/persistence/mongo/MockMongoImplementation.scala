@@ -6,6 +6,7 @@ import com.google.inject.{Provider, Inject}
 import blueeyes.json.JsonAST._
 import JPathExtension._
 import MockMongoFiltersEvalutors._
+import MockMongoUpdateEvalutors._
 import com.mongodb.MongoException
 
 private[mongo] object MockMongoImplementation{
@@ -78,7 +79,6 @@ private[mongo] object MockMongoImplementation{
 
     def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int = {
       val objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
-
       val updated = objects.map(update(_, value))
 
       checkIndex(updated)
@@ -90,7 +90,11 @@ private[mongo] object MockMongoImplementation{
 
     private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match{
       case x: MongoUpdateObject       => x.value
-      case x: MongoUpdateFieldValue   => jobject
+      case x: MongoUpdateFieldValue   => {
+        def updateValue(value: JValue) = UpdateFiledEvalutorFactory(x.operator)(value, x.value)
+        val jfield = selectByPath(x.lhs, jobject, updateValue _)
+        jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
+      }
       case x: MongoUpdateFieldsValues => jobject
     }
 
@@ -111,21 +115,23 @@ private[mongo] object MockMongoImplementation{
     }
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {
-        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(jobject, _)))
+        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(_, jobject, (jobject) => {jobject})))
         allJFields.map(jfields => {
           val definedJFields = jfields.filter(_ != None).map(_.get)
           definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
         }).filter(_ != None).map(_.get)
       } else jobjects
     }
-    private def selectByPath(jobject: JObject, selectionPath: JPath) = jobject.get(selectionPath) match{
+    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => JValue) = jobject.get(selectionPath) match{
       case JNothing :: Nil => None
       case Nil             => None
-      case x :: Nil        => {
-        val elements = toMongoField(selectionPath).split("\\.").reverse
-        Some(elements.tail.foldLeft(JObject(JField(elements.head, x) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)})
-      }
+      case x :: Nil        => Some(jvalueToJObject(selectionPath, transformer(x)))
       case _        => error("jpath which is select more then one value is not supported")
+    }
+
+    private def jvalueToJObject(path: JPath, value: JValue) = {
+      val elements = toMongoField(path).split("\\.").reverse
+      elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
     }
 
     private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _)).getOrElse(all)
