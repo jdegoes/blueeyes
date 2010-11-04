@@ -111,7 +111,7 @@ private[mongo] object MockMongoImplementation{
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
-      selectFields(limited, selection)
+      selectFields(limited, selection).toStream
     }
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {

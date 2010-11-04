@@ -51,8 +51,11 @@ private[mongo] object RealMongoImplementation{
       val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
       val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
 
-      List(limitedCursor.toArray: _*).map(mongoObject2JObject(_))
+      stream(limitedCursor.iterator)
     }
+
+    def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
+      if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
 
     private def checkWriteResult(result: WriteResult) = {
       val error  = result.getLastError

@@ -21,7 +21,7 @@ class SelectOneQueryBehaviourSpec extends Specification {
   "Call collection method" in{
     import MongoFilterImplicits._
 
-    when(collection.select(keys, filter, sort, None, Some(1))).thenReturn(jObject :: jObject1 :: Nil)
+    when(collection.select(keys, filter, sort, None, Some(1))).thenReturn(List(jObject, jObject1).toStream)
 
     val query  = selectOne("foo", "bar").from("collection").where("name" === "Joe").sortBy("name" <<)
     val result = query(collection)
@@ -34,7 +34,7 @@ class SelectOneQueryBehaviourSpec extends Specification {
   "Call collection method with dummy JObject when filter is not specified" in{
     import MongoFilterImplicits._
     
-    when(collection.select(keys, None, None, None, Some(1))).thenReturn(jObject1 :: Nil)
+    when(collection.select(keys, None, None, None, Some(1))).thenReturn(List(jObject1).toStream)
 
     val query  = selectOne("foo", "bar").from("collection")
     val result = query(collection)

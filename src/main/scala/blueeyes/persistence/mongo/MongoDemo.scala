@@ -32,9 +32,9 @@ object MongoDemo{
 
 //    demoSelectOne
 
-//    demoSelect
+    demoSelect
     
-    demoUpdate
+//    demoUpdate
 
 //    demoRemove
   }
@@ -85,7 +85,7 @@ object MongoDemo{
     println("------------demoSelectOne------------------")
   }
 
-  private def printObjects(objects: List[JObject]){
+  private def printObjects(objects: Stream[JObject]){
     println("------------------------------------------------")
     println(objects.map(v => Printer.pretty(render(v))).mkString("\n"))
     println("------------------------------------------------")
@@ -110,6 +110,6 @@ object MongoDemo{
   }
 
   private def insertObjects{
-    database[JNothing.type](insert(jObject6).into(collection))
+    database[JNothing.type](insert(jObject, jObject1).into(collection))
   }
 }
