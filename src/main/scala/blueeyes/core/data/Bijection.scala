@@ -34,7 +34,7 @@ object JsonToJsonBijection extends Bijection[JValue, JValue] {
   def apply(s: JValue)   = s
 }
 
-object ByteArrayToByteArray extends Bijection[Array[Byte], Array[Byte]] {
+object ByteArrayToByteArrayBijection extends Bijection[Array[Byte], Array[Byte]] {
   def unapply(t: Array[Byte]) = t
   def apply(s: Array[Byte])   = s
 }
