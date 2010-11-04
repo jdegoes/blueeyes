@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import blueeyes.json.JsonAST._
-import MockMongoImplementation._
+import MockMongoFiltersEvalutors._
 
 class LteFieldFilterEvalutorSpec extends Specification {
   "returns false when one string greater then another string" in {
