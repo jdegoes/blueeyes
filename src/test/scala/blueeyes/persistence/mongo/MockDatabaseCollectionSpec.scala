@@ -17,116 +17,143 @@ class MockDatabaseCollectionSpec extends Specification{
 
   private val sort     = MongoSort("address.street", MongoSortOrderDescending)
 
-  "store jobjects" in{
+//  "store jobjects" in{
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
+//  }
+//  "does not store jobject when unique index exists and objects are the same" in{
+//    val collection = newCollection
+//
+//    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+//    collection.insert(jObject :: jObject :: Nil) must throwA[MongoException]
+//
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
+//  }
+//  "does not store jobject when unique index exists and the same object exists" in{
+//    val collection = newCollection
+//
+//    collection.ensureIndex("index", JPath("address.city") :: Nil, true)
+//    collection.insert(jObject1 :: Nil)
+//    collection.insert(jObject2 :: Nil) must throwA[MongoException]
+//
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: Nil)
+//  }
+//  "store jobject when unique index exists and objects are different" in{
+//    val collection = newCollection
+//
+//    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+//    collection.insert(jObject :: jObject1 :: Nil)
+//    collection.insert(jObject2 :: jObject3 :: Nil)
+//
+//    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
+//  }
+  "update all objects" in{
     val collection = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
-  }
-  "does not store jobject when unique index exists and objects are the same" in{
-    val collection = newCollection
-
-    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
-    collection.insert(jObject :: jObject :: Nil) must throwA[MongoException]
-
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
-  }
-  "does not store jobject when unique index exists and the same object exists" in{
-    val collection = newCollection
-
-    collection.ensureIndex("index", JPath("address.city") :: Nil, true)
-    collection.insert(jObject1 :: Nil)
-    collection.insert(jObject2 :: Nil) must throwA[MongoException]
-
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: Nil)
-  }
-  "store jobject when unique index exists and objects are different" in{
-    val collection = newCollection
-
-    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
-    collection.insert(jObject :: jObject1 :: Nil)
-    collection.insert(jObject2 :: jObject3 :: Nil)
-
-    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
-  }
-  "removes all jobjects when filter is not specified" in{
-    val collection = newCollection
-
-    collection.insert(jobjects)
-    collection.remove(None) mustEqual(4)
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
-  }
-  "removes jobjects which match filter" in{
-    import MongoFilterImplicits._
-    val collection = newCollection
-
-    collection.insert(jobjects)
-    collection.remove(Some(MongoFieldFilter("address.city", $eq,"A"))) mustEqual(1)
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
-  }
-  "select all jobjects when filter is not specified" in{
-    import MongoFilterImplicits._
-    val collection = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
-  }
-  "select jobjects by filter" in{
-    import MongoFilterImplicits._
-    val collection = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None) mustEqual(jObject :: Nil)
-  }
-  "select ordered objects" in{
-    import MongoFilterImplicits._
-    val collection  = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
-  }
-  "skip objects" in{
-    import MongoFilterImplicits._
-    val collection  = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), None, Some(sort), Some(2), None) mustEqual(jObject1 :: jObject:: Nil)
-  }
-  "limit objects" in{
-    import MongoFilterImplicits._
-    val collection  = newCollection
-
-    collection.insert(jobjects)
-    collection.select(MongoSelection(Nil), None, Some(sort), Some(2), Some(1)) mustEqual(jObject1:: Nil)
-  }
-
-  "select specified objects fields" in{
-    import MongoFilterImplicits._
-    val collection  = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
-    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
-    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
-    collection.select(MongoSelection(JPath("address.city") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+    collection.update(None, MongoUpdateObject(jObject2), false, true)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: jObject2:: Nil)
   }
-  "select specified objects fields when some fields are missing" in{
+  "update object by filter" in{
     import MongoFilterImplicits._
-    val collection  = newCollection
+    val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
-    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
-    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
-    collection.select(MongoSelection(JPath("address.city") :: JPath("address.phone") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+    collection.update(Some(MongoFieldFilter("address.city", $eq,"A")), MongoUpdateObject(jObject2), false, true)
+
+    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jObject2 :: jObject1  :: Nil)
   }
-  "select nothing when wwong selection is specified" in{
-    import MongoFilterImplicits._
-    val collection  = newCollection
+  "update only one object when multi is false" in{
+    val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
-    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
-    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
-    collection.select(MongoSelection(JPath("address.town") :: Nil), None, Some(sort), None, None) mustEqual(Nil)
+    collection.update(None, MongoUpdateObject(jObject2), false, false)
+
+    val result = collection.select(MongoSelection(Nil), None, None, None, None)
+    result.contains(jObject2) must be (true)
+    (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be (true)
   }
+//  "removes all jobjects when filter is not specified" in{
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.remove(None) mustEqual(4)
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
+//  }
+//  "removes jobjects which match filter" in{
+//    import MongoFilterImplicits._
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.remove(Some(MongoFieldFilter("address.city", $eq,"A"))) mustEqual(1)
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
+//  }
+//  "select all jobjects when filter is not specified" in{
+//    import MongoFilterImplicits._
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
+//  }
+//  "select jobjects by filter" in{
+//    import MongoFilterImplicits._
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None) mustEqual(jObject :: Nil)
+//  }
+//  "select ordered objects" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
+//  }
+//  "skip objects" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), None, Some(sort), Some(2), None) mustEqual(jObject1 :: jObject:: Nil)
+//  }
+//  "limit objects" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), None, Some(sort), Some(2), Some(1)) mustEqual(jObject1:: Nil)
+//  }
+//
+//  "select specified objects fields" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jObject :: jObject1 :: Nil)
+//    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+//    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+//    collection.select(MongoSelection(JPath("address.city") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+//  }
+//  "select specified objects fields when some fields are missing" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jObject :: jObject1 :: Nil)
+//    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+//    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+//    collection.select(MongoSelection(JPath("address.city") :: JPath("address.phone") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
+//  }
+//  "select nothing when wwong selection is specified" in{
+//    import MongoFilterImplicits._
+//    val collection  = newCollection
+//
+//    collection.insert(jObject :: jObject1 :: Nil)
+//    val fields  = JObject(JField("address", JObject(JField("city", JString("A")) :: Nil)) :: Nil)
+//    val fields1 = JObject(JField("address", JObject(JField("city", JString("B")) :: Nil)) :: Nil)
+//    collection.select(MongoSelection(JPath("address.town") :: Nil), None, Some(sort), None, None) mustEqual(Nil)
+//  }
 
   private def newCollection = new MockDatabaseCollection()
 }

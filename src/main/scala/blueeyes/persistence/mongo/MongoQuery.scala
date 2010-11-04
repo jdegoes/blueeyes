@@ -113,21 +113,22 @@ object MongoUpdateOperators {
 }
 
 import MongoUpdateOperators._
-sealed trait MongoUpdateValue{ self =>
+sealed trait MongoUpdateValue{
   def  toJValue: JObject;
-  def & (that: MongoUpdateValue): MongoUpdateValue = MongoUpdateValues(self :: that :: Nil)
 }
 
-sealed case class MongoUpdateObject(newValue: JObject) extends MongoUpdateValue{
-  def toJValue = newValue
+sealed case class MongoUpdateObject(value: JObject) extends MongoUpdateValue{
+  def toJValue = value
 }
 
-sealed case class MongoUpdateFieldValue(lhs: JPath, operator: MongoUpdateOperator, value: JValue) extends MongoUpdateValue{
+sealed case class MongoUpdateFieldValue(lhs: JPath, operator: MongoUpdateOperator, value: JValue) extends MongoUpdateValue{  self =>
   def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)) :: Nil)
+
+  def & (that: MongoUpdateFieldValue): MongoUpdateValue = MongoUpdateFieldsValues(self :: that :: Nil)
 }
 
-sealed case class MongoUpdateValues(criteria: List[MongoUpdateValue]) extends MongoUpdateValue{
-  def toJValue: JObject = criteria.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
+sealed case class MongoUpdateFieldsValues(values: List[MongoUpdateValue]) extends MongoUpdateValue{
+  def toJValue: JObject = values.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 
 case class MongoUpdateBuilder(jpath: JPath) {

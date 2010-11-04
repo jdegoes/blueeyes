@@ -52,8 +52,10 @@ private[mongo] object MockMongoImplementation{
 
     def insert(objects: List[JObject]) = {
       checkIndex(objects)
-      container = JArray(container.elements ++ objects)
+      insert0(objects)
     }
+
+    def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
 
     private def checkIndex(objects: List[JObject]) = {
       indexes.foreach(index => {
@@ -72,11 +74,24 @@ private[mongo] object MockMongoImplementation{
       objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
       objects.size
     }
+    def remove0(objects: List[JObject]) = objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
 
-    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = {
-      val objects = search(filter)
-      
+    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int = {
+      val objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
+
+      val updated = objects.map(update(_, value))
+
+      checkIndex(updated)
+      remove0(objects)
+      insert0(updated)
+
       objects.size
+    }
+
+    private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match{
+      case x: MongoUpdateObject       => x.value
+      case x: MongoUpdateFieldValue   => jobject
+      case x: MongoUpdateFieldsValues => jobject
     }
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
