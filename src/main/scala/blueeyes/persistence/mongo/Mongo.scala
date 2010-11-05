@@ -16,7 +16,7 @@ trait MongoDatabase{
 
 trait DatabaseCollection{
   def insert(objects: List[JObject])
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): List[JObject]
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
   def remove(filter: Option[MongoFilter]): Int
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
@@ -48,8 +48,8 @@ trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
   def filter: Option[MongoFilter]
 }
 
-trait SelectQueryBehaviour extends QueryBehaviour[List[JObject]]{
-  def apply(collection: DatabaseCollection): List[JObject] = collection.select(selection, filter, sort, skip, limit)
+trait SelectQueryBehaviour extends QueryBehaviour[Stream[JObject]]{
+  def apply(collection: DatabaseCollection) = collection.select(selection, filter, sort, skip, limit)
 
   def selection : MongoSelection
   def filter    : Option[MongoFilter]

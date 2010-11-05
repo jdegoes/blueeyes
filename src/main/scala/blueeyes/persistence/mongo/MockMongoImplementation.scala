@@ -5,7 +5,7 @@ import collection.immutable.List
 import com.google.inject.{Provider, Inject}
 import blueeyes.json.JsonAST._
 import JPathExtension._
-import MockMongoFiltersEvalutors._
+import MockMongoFiltersImplementation._
 import MockMongoUpdateEvalutors._
 import com.mongodb.MongoException
 
@@ -88,10 +88,10 @@ private[mongo] object MockMongoImplementation{
       objects.size
     }
 
-    private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match{
+    private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match {
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
-        def updateValue(value: JValue) = UpdateFiledEvalutorFactory(x.operator)(value, x.value)
+        def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.value))
         val jfield = selectByPath(x.lhs, jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
@@ -111,21 +111,24 @@ private[mongo] object MockMongoImplementation{
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
-      selectFields(limited, selection)
+      selectFields(limited, selection).toStream
     }
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {
-        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(_, jobject, (jobject) => {jobject})))
+        def updateValue(value: JValue) = value match{
+          case JNothing => None
+          case _ => Some(value)
+        }
+        val allJFields = jobjects.map(jobject => selection.selection.map(selectByPath(_, jobject, updateValue _)))
         allJFields.map(jfields => {
           val definedJFields = jfields.filter(_ != None).map(_.get)
           definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
         }).filter(_ != None).map(_.get)
       } else jobjects
     }
-    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => JValue) = jobject.get(selectionPath) match{
-      case JNothing :: Nil => None
+    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue]) = jobject.get(selectionPath) match{
       case Nil             => None
-      case x :: Nil        => Some(jvalueToJObject(selectionPath, transformer(x)))
+      case x :: Nil        => transformer(x).map(jvalueToJObject(selectionPath, _))
       case _        => error("jpath which is select more then one value is not supported")
     }
 
@@ -137,22 +140,6 @@ private[mongo] object MockMongoImplementation{
     private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _)).getOrElse(all)
 
     private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
-  }
-
-  object JObjectsFilter{
-    def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
-      case x: MongoFieldFilter => searchByField(jobjects, x)
-      case x: MongoOrFilter    => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.union(JObjectsFilter(jobjects, filter0)) }
-      case x: MongoAndFilter   => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.intersect(JObjectsFilter(jobjects, filter0)) }
-    }
-
-    private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {
-      val evaluator = FieldFilterEvalutorFactory(filter.operator)
-      jobjects.filter(jobject => {
-        val value = jobject.get(filter.lhs)
-        !value.filter(v => evaluator(v, filter.rhs.toJValue)).isEmpty
-      })
-    }
   }
 
   class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends Ordering[JObject]{

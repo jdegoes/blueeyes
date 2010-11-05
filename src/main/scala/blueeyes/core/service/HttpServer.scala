@@ -1,5 +1,8 @@
 package blueeyes.core.service
 
+import java.lang.reflect.{Method, Field}
+import scala.collection.mutable.{ListBuffer}
+
 import blueeyes.util.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
@@ -10,6 +13,25 @@ import net.lag.logging.Logger
  */
 trait HttpServer[T] extends HttpServicesContainer[T] { self =>
   var rootConfig: Config = null
+  
+  lazy val services: List[HttpService2[T]] = {
+    val c = self.getClass
+    
+    val allMethods: List[Method] = c.getDeclaredMethods.toList
+    
+    val serviceFields: List[Field] = c.getDeclaredFields.toList.reverse.filter { field => 
+      classOf[HttpService2[T]].isAssignableFrom(field.getType) &&
+      allMethods.exists(m => field.getName == m.getName && m.getReturnType == field.getType)
+    }
+    
+    val services: List[HttpService2[T]] = serviceFields.map { field =>
+      field.get(self).asInstanceOf[HttpService2[T]]
+    }
+     
+    //serviceFields.map(_.get(self))
+    
+    services
+  }
   
   /** Starts the server.
    */
@@ -33,6 +55,8 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
    * 8888.
    */
   lazy val port: Int = config.getInt("port", 8888)
+  
+  def installServices = services.foreach { s => s.install(this) }
   
   /** A default main function, which accepts the configuration file from the
    * command line, with flag "--configFile".

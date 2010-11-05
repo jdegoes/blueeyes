@@ -27,12 +27,12 @@ object MongoFilterOperators {
   case object $in   extends MongoFilterOperatorContainment { def unary_! = $nin; }
   case object $nin  extends MongoFilterOperatorContainment { def unary_! = $in; }
   
-  case object $mod    extends MongoFilterOperator { def unary_! : MongoFilterOperator = error("The $mod operator does not have a negation"); }
-  case object $all    extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $all operator does not have a negation"); }
-  case object $size   extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $size operator does not have a negation"); }
-  case object $exists extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $exists operator does not have a negation"); }
-  case object $type   extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $type operator does not have a negation"); }
-  case object $or     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $or operator does not have a negation"); }
+  case object $mod        extends MongoFilterOperator { def unary_! : MongoFilterOperator = error("The $mod operator does not have a negation"); }
+  case object $all        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $all operator does not have a negation"); }
+  case object $size       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $size operator does not have a negation"); }
+  case object $exists     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $exists operator does not have a negation"); }
+  case object $type       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $type operator does not have a negation"); }
+  case object $or         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $or operator does not have a negation"); }
 }
 
 import MongoFilterOperators._
@@ -42,13 +42,13 @@ sealed trait MongoFilter { self =>
   
   def unary_! : MongoFilter
   
-  def & (that: MongoFilter): MongoFilter = MongoAndFilter(self :: that :: Nil)
+  def & (that: MongoFilter)  = MongoAndFilter(self :: that :: Nil)
   
-  def && (that: MongoFilter): MongoFilter = MongoAndFilter(self :: that :: Nil)
+  def && (that: MongoFilter) = MongoAndFilter(self :: that :: Nil)
 
-  def | (that: MongoFilter): MongoFilter  = MongoOrFilter(self :: that :: Nil)
+  def | (that: MongoFilter)  = MongoOrFilter(self :: that :: Nil)
   
-  def || (that: MongoFilter): MongoFilter = MongoOrFilter(self :: that :: Nil)
+  def || (that: MongoFilter) = MongoOrFilter(self :: that :: Nil)
 }
 
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>
@@ -67,12 +67,19 @@ sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter 
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
 }
 
-sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter {
+sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter { self =>
   def filter: JObject = queries.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.filter).asInstanceOf[JObject] }
   
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))
+
+  def elemMatch(path: JPath) = MongoElementsMatchFilter(path, self)
 }
 
+sealed case class MongoElementsMatchFilter(lhs: JPath, elementsQuery: MongoAndFilter) extends MongoFilter{
+  def unary_! = error("The $elemMatch operator does not have a negation")
+
+  def filter = JObject(JField(JPathExtension.toMongoField(lhs), JObject(JField("$elemMatch", elementsQuery.filter) :: Nil)) :: Nil)
+}
 
 sealed trait MongoPrimitive[T] {
   def toJValue: JValue
