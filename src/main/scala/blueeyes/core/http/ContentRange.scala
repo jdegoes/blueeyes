@@ -10,21 +10,28 @@ sealed trait ContentByteRange {
 
   def instanceLength: String  // either a number or *
 
-  def value = unit + " " + bytePair.toString + "/" + instanceLength
+  def value = unit + "=" + bytePair.toString + "/" + instanceLength
 
-  def ToString = value
+  override def toString = value
 }
 
 object ContentByteRanges {
 
   def parseContentByteRanges(inString: String): Option[ContentByteRange] = {
-    def unit: String =  """([a-z]+)""".r.findFirstIn(inString.toLowerCase).getOrElse("byte")
+    def unit: String =  """([a-z]+)""".r.findFirstIn(inString.toLowerCase).getOrElse("none")
+    if (unit == "none") 
+      return None
+
     def pair: Array[Int] = """\d+-\d+""".r.findFirstIn(inString).getOrElse("").split("-").map(_.toInt)
     if (pair.length != 2) 
       return None
+
     def bpair: ByteRanges.BytePair = new ByteRanges.BytePair(
       Some(HttpNumbers.LongNumber(pair(0))), HttpNumbers.LongNumber(pair(1)))
-    def length: String = """/\d+|/*""".r.findFirstIn(inString).getOrElse("")
+
+    def length: String = """(?<=/)(\d+)|\*""".r.findFirstIn(inString).getOrElse("none")
+    if (length == "none") 
+      return None 
 
     return Some(ByteInstance (unit, bpair, length))
   }
