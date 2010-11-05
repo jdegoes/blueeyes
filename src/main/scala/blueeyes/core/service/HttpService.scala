@@ -47,6 +47,8 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
   
   def shutdown: Future[Unit] = runAllHooks(shutdownHooks)
   
+  def install(container: HttpServicesContainer[Base]): Unit
+  
   def allHandlers: List[Handler] = {
     val collector: PartialFunction[AnyRef, Handler] = { case e: Handler => e }
     

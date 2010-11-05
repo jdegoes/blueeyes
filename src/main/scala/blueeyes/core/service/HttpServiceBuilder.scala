@@ -7,12 +7,11 @@ import net.lag.configgy.{Config, ConfigMap}
 import net.lag.logging.Logger
 
 /**
- * An HttpServiceBuilder can be used to build any number of services. The trait
- * should ultimately be mixed into an HttpServicesContainer implementation.
+ * An HttpServiceBuilder can be used to build any number of services. 
  * <p>
  * <pre>
  * trait EmailService extends HttpServiceBuilder[String] {
- *   new service("email", "1.01") {
+ *   val emailService = new service("email", "1.01") {
  *     path("/outgoing") {
  *       get { request =>
  *       }
@@ -21,22 +20,29 @@ import net.lag.logging.Logger
  * }
  * </pre>
  */
-trait HttpServiceBuilder[Base] extends HttpServicesContainer[Base] { self =>
+trait HttpServiceBuilder[Base] { self =>
   import scala.collection.mutable.{ListBuffer, Stack}
   
   protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
   
   abstract class service(val name: String, override val version: String) extends HttpService2[Base] {
-    self.services += this
-    
     override def startupHooks       = _startupHooks.toList
     override def shutdownHooks      = _shutdownHooks.toList
     override def notFoundHandler    = _notFoundHandler
     override def pathMethodHandlers = _pathMethodHandlers.toList
     
-    lazy val config: ConfigMap = self.rootConfig.configMap("services." + name + "." + majorVersion)
+    private var _container: Option[HttpServicesContainer[Base]] = None
+    private def container = _container.getOrElse(error("The service " + this.toString + " has not been installed into a container"))
+    
+    lazy val config: ConfigMap = container.rootConfig.configMap("services." + name + ".v" + majorVersion)
     
     lazy val log: Logger = Logger.configure(config.configMap("log"), false, false)
+    
+    def install(container: HttpServicesContainer[Base]) = {
+      if (!_container.isEmpty) error("Service " + this.toString + " is already installed into " + container.toString)
+      
+      _container = Some(container)
+    }
     
     def path(path: RestPathPattern)(f: => Unit): Unit = {
       pathStack.push(path)
