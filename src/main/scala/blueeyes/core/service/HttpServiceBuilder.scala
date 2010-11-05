@@ -26,8 +26,8 @@ trait HttpServiceBuilder[Base] { self =>
   protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
   
   abstract class service(val name: String, override val version: String) extends HttpService2[Base] {
-    override def startupHooks       = _startupHooks.toList
-    override def shutdownHooks      = _shutdownHooks.toList
+    override def startHooks       = _startHooks.toList
+    override def stopHooks      = _stopHooks.toList
     override def notFoundHandler    = _notFoundHandler
     override def pathMethodHandlers = _pathMethodHandlers.toList
     
@@ -70,16 +70,16 @@ trait HttpServiceBuilder[Base] { self =>
       _pathMethodHandlers += HttpPathMethodHandler(currentPath, method, handler, in, out)
     }
 
-    def startup(f: => Future[_]) = {
+    def start(f: => Future[_]) = {
       val thunk = () => f
 
-      _startupHooks += thunk
+      _startHooks += thunk
     }
 
-    def shutdown(f: => Future[_]) = {
+    def stop(f: => Future[_]) = {
       val thunk = () => f
 
-      _shutdownHooks += thunk
+      _stopHooks += thunk
     }
 
     def notFound[In, Out](handler: RequestHandler[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): Unit = _notFoundHandler match {
@@ -88,8 +88,8 @@ trait HttpServiceBuilder[Base] { self =>
       case _ => error("Not found handler already specified")
     }
     
-    private val _startupHooks       = new ListBuffer[() => Future[_]]
-    private val _shutdownHooks      = new ListBuffer[() => Future[_]]
+    private val _startHooks       = new ListBuffer[() => Future[_]]
+    private val _stopHooks      = new ListBuffer[() => Future[_]]
     private val _pathMethodHandlers = new ListBuffer[HttpPathMethodHandler[_, _, Base]]
 
     private var _notFoundHandler: Option[HttpNotFoundHandler[_, _, Base]] = None

@@ -243,6 +243,45 @@ object Future {
   }
   
   def apply[T, S >: T](t: T): Future[S] = new Future().deliver(t: S)
+  
+  def apply[T](futures: Future[T]*): Future[List[T]] = {
+    import java.util.concurrent.ConcurrentHashMap
+    
+    val resultsMap = new ConcurrentHashMap[java.lang.Integer, T]
+    
+    val result = new Future[List[T]]
+    
+    val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
+    
+    (0 to futures.length).zip(futures).foreach { pair =>
+      val index  = pair._1
+      val future = pair._2
+      
+      future.deliverTo { result =>
+        resultsMap.put(index, result)
+      }
+    }
+    
+    futures.foreach { future =>
+      future.ifCanceled(_ => result.cancel())
+      
+      future.deliverTo { _ => 
+        val newCount = remaining.decrementAndGet
+      
+        if (newCount == 0) {
+          var list: List[T] = Nil
+          
+          for (i <- 0 to futures.length) {
+            list = resultsMap.get(i) :: list
+          }
+          
+          result.deliver(list)
+        }
+      }
+    }
+    
+    result
+  }
 }
 
 trait FutureImplicits {

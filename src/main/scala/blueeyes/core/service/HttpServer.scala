@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import java.lang.reflect.{Method, Field}
+import java.util.concurrent.CountDownLatch
 import scala.collection.mutable.{ListBuffer}
 
 import blueeyes.util.Future
@@ -24,22 +25,18 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
       allMethods.exists(m => field.getName == m.getName && m.getReturnType == field.getType)
     }
     
-    val services: List[HttpService2[T]] = serviceFields.map { field =>
+    serviceFields.map { field =>
       field.get(self).asInstanceOf[HttpService2[T]]
     }
-     
-    //serviceFields.map(_.get(self))
-    
-    services
   }
   
   /** Starts the server.
    */
-  def start: Future[Unit]
+  def start: Future[Unit] = Future(services.map(_.start): _*).map(_ => Unit)
   
   /** Stops the server.
    */
-  def stop: Future[Unit]
+  def stop: Future[Unit] = Future(services.map(_.stop): _*).map(_ => Unit)
   
   /** Retrieves the server configuration, which is always located in the 
    * "server" block of the root configuration object.
@@ -56,7 +53,9 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
    */
   lazy val port: Int = config.getInt("port", 8888)
   
-  def installServices = services.foreach { s => s.install(this) }
+  /** The status of the server.
+   */
+  def status: RunningStatus = _status
   
   /** A default main function, which accepts the configuration file from the
    * command line, with flag "--configFile".
@@ -74,23 +73,43 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
       
       rootConfig = Configgy.config
       
+      _status = RunningStatus.Starting
+      
       start.deliverTo { _ =>
         println("Server started")
         
+        _status = RunningStatus.Started
+        
         Runtime.getRuntime.addShutdownHook { new Thread {
+          _status = RunningStatus.Stopping
+          
           override def start() {
-            import java.util.concurrent.CountDownLatch
+            val doneSignal = new CountDownLatch(1)
             
-            val doneSignal = new CountDownLatch(1);
-            
-            self.stop.deliverTo { _ => doneSignal.countDown() }
+            self.stop.deliverTo { _ => 
+              doneSignal.countDown()
+              
+              println("Server stopped")
+              
+              _status = RunningStatus.Stopped
+            }.ifCanceled { e =>
+              doneSignal.countDown()
+              
+              _status = RunningStatus.Errored
+              
+              println("Unable to stop server: " + e)
+            }
             
             doneSignal.await()
-            
-            println("Server stopped")
           }
         }}
+      }.ifCanceled { e =>
+        _status = RunningStatus.Errored
+        
+        println("Unable to start server: " + e)
       }
     }
   }
+  
+  private var _status: RunningStatus = RunningStatus.Stopped
 }

@@ -38,14 +38,24 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
   def majorVersion: Int = version.split(".").drop(0).headOption.map(_.toInt).getOrElse(0)
   def minorVersion: Int = version.split(".").drop(1).headOption.map(_.toInt).getOrElse(0)
   
-  def startupHooks:         List[() => Future[_]] = Nil
-  def shutdownHooks:        List[() => Future[_]] = Nil
-  def notFoundHandler:      Option[HttpNotFoundHandler[_, _, Base]] = None
-  def pathMethodHandlers:   List[HttpPathMethodHandler[_, _, Base]] = Nil
+  def startHooks:         List[() => Future[_]] = Nil
+  def stopHooks:          List[() => Future[_]] = Nil
+  def notFoundHandler:    Option[HttpNotFoundHandler[_, _, Base]] = None
+  def pathMethodHandlers: List[HttpPathMethodHandler[_, _, Base]] = Nil
   
-  def start: Future[Unit] = runAllHooks(startupHooks)
+  def status: RunningStatus = _status
   
-  def shutdown: Future[Unit] = runAllHooks(shutdownHooks)
+  def start: Future[Unit] = {
+    _status = RunningStatus.Starting
+    
+    runAllHooks(startHooks, _status = RunningStatus.Started, _status = RunningStatus.Errored)
+  }
+  
+  def stop: Future[Unit] = {
+    _status = RunningStatus.Stopping
+    
+    runAllHooks(stopHooks, _status = RunningStatus.Stopped, _status = RunningStatus.Errored)
+  }
   
   def install(container: HttpServicesContainer[Base]): Unit
   
@@ -61,11 +71,13 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
   
   override def toString = name + "-" + version
   
+  private var _status: RunningStatus = RunningStatus.Stopped
+  
   private lazy val masterHandler: PartialFunction[HttpRequest[Base], Future[HttpResponse[Base]]] = {
     allHandlers.foldLeft[Handler](HttpNoHandler()) { (composite, cur) => composite.orElse(cur: Handler) }
   }
   
-  private def runAllHooks(hooks: List[() => Future[_]]): Future[Unit] = {
+  private def runAllHooks(hooks: List[() => Future[_]], onDone: => Unit, onError: => Unit): Future[Unit] = {
     var result = new Future[Unit]
     
     var hookCount: Int = hooks.length
@@ -74,7 +86,13 @@ trait HttpService2[Base] extends PartialFunction[HttpRequest[Base], Future[HttpR
       f => f().deliverTo { _ =>
         hookCount = hookCount - 1
         
-        if (hookCount == 0) result.deliver(Unit)
+        if (hookCount == 0) {
+          result.deliver(Unit)
+          
+          onDone
+        }
+      }.ifCanceled { e =>
+        onError
       }
     }
     
