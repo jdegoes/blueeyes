@@ -1,13 +1,13 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import blueeyes.json.JsonAST.{JString, JField, JObject}
 import blueeyes.json.JPathImplicits._
 import MongoFilterOperators._
-import blueeyes.json.JPath
 import com.mongodb.MongoException
 import MockMongoImplementation._
 import MongoImplicits._
+import blueeyes.json.{JsonParser, JPath}
+import blueeyes.json.JsonAST.{JValue, JString, JField, JObject}
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -15,6 +15,31 @@ class MockDatabaseCollectionSpec extends Specification{
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
+
+  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [
+      {
+        "shape" : "square",
+        "color" : "purple",
+        "thick" : false
+      },
+      {
+        "shape" : "circle",
+        "color" : "red",
+        "thick" : true
+      }
+] } """).asInstanceOf[JObject] :: JsonParser.parse("""
+{ "foo" : [
+      {
+        "shape" : "square",
+        "color" : "red",
+        "thick" : true
+      },
+      {
+        "shape" : "circle",
+        "color" : "purple",
+        "thick" : false
+      }
+] }""").asInstanceOf[JObject] :: Nil
 
   private val sort     = MongoSort("address.street", MongoSortOrderDescending)
 
@@ -132,6 +157,29 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None) mustEqual(jObject :: Nil)
+  }
+  "select jobjects with array when array element field filter is specified" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo.shape", $eq,"square") && MongoFieldFilter("foo.color", $eq,"purple")), None, None, None) mustEqual(jobjectsWithArray)
+  }
+  "select jobjects with array when array element filter is specified" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    val filterObject = JsonParser.parse(""" {"shape" : "square", "color" : "purple","thick" : false} """).asInstanceOf[JObject]
+    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo", $eq, filterObject)), None, None, None) mustEqual(List(jobjectsWithArray.head).toStream)
+  }
+  "does not select jobjects with array when wrong array element filter is specified" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    val filterObject = JsonParser.parse(""" {"shape" : "square", "color" : "purple"} """).asInstanceOf[JObject]
+    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo", $eq, filterObject)), None, None, None) mustEqual(Nil.toStream)
   }
   "select ordered objects" in{
     import MongoFilterImplicits._

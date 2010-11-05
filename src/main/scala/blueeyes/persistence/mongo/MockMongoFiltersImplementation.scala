@@ -4,7 +4,30 @@ import blueeyes.persistence.mongo.MongoFilterOperators.MongoFilterOperator
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
 
-private[mongo] object MockMongoFiltersEvalutors{
+private[mongo] object MockMongoFiltersImplementation{
+
+  object JObjectsFilter{
+    def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
+      case x: MongoFieldFilter => searchByField(jobjects, x)
+      case MongoOrFilter(x)    => x.foldLeft(List[JObject]()){ (result, currentFilter) => result.union(JObjectsFilter(jobjects, currentFilter)) }
+      case MongoAndFilter(x :: xs) => xs.foldLeft(JObjectsFilter(jobjects, x)){ (result, currentFilter) =>  result.intersect(JObjectsFilter(jobjects, currentFilter)) }
+      case MongoAndFilter(Nil)     => jobjects
+    }
+
+    private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {
+      val evaluator = FieldFilterEvalutorFactory(filter.operator)
+      jobjects.filter(jobject => {
+        val value = jobject.get(filter.lhs)
+        !value.filter(v => {
+          v match{
+            case JArray(x) => x.foldLeft(false){(result, element) => result || evaluator(element, filter.rhs.toJValue) }
+            case _         => evaluator(v, filter.rhs.toJValue)
+          }
+        }).isEmpty
+      })
+    }
+  }
+
   object FieldFilterEvalutorFactory{
     def apply(operator: MongoFilterOperator): FieldFilterEvalutor = operator match{
       case $gt      => GtFieldFilterEvalutor

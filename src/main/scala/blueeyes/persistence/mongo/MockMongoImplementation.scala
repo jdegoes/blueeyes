@@ -5,7 +5,7 @@ import collection.immutable.List
 import com.google.inject.{Provider, Inject}
 import blueeyes.json.JsonAST._
 import JPathExtension._
-import MockMongoFiltersEvalutors._
+import MockMongoFiltersImplementation._
 import MockMongoUpdateEvalutors._
 import com.mongodb.MongoException
 
@@ -140,22 +140,6 @@ private[mongo] object MockMongoImplementation{
     private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _)).getOrElse(all)
 
     private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
-  }
-
-  object JObjectsFilter{
-    def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
-      case x: MongoFieldFilter => searchByField(jobjects, x)
-      case x: MongoOrFilter    => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.union(JObjectsFilter(jobjects, filter0)) }
-      case x: MongoAndFilter   => x.queries.foldLeft(List[JObject]()){ (objects, filter0) => objects.intersect(JObjectsFilter(jobjects, filter0)) }
-    }
-
-    private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {
-      val evaluator = FieldFilterEvalutorFactory(filter.operator)
-      jobjects.filter(jobject => {
-        val value = jobject.get(filter.lhs)
-        !value.filter(v => evaluator(v, filter.rhs.toJValue)).isEmpty
-      })
-    }
   }
 
   class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends Ordering[JObject]{
