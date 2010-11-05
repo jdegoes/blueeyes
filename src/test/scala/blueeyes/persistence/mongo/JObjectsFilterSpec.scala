@@ -4,7 +4,7 @@ import org.specs.Specification
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
 import blueeyes.json.JPathImplicits._
-import MockMongoImplementation._
+import MockMongoFiltersImplementation._
 
 class JObjectsFilterSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)

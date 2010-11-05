@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs.Specification
 import blueeyes.json.JsonAST._
-import MockMongoFiltersEvalutors._
+import MockMongoFiltersImplementation._
 
 class AllFieldFilterEvalutorSpec  extends Specification {
   "returns true when not all elemenets matched" in {
