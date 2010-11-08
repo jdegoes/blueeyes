@@ -85,13 +85,11 @@ sealed trait RestPathPattern2 extends PartialFunction[String, Map[Symbol, String
   private def slashParser = RestPathPatternParsers.SlashPathPattern.parser
 }
 object RestPathPattern2 extends RegexParsers {
+  def Root = RestPathPatternParsers.RootPathPattern
+  
   def apply(string: String): RestPathPattern2 = RestPathPatternParsers.parse(string)
 }
 object RestPathPatternParsers extends RegexParsers {
-  lazy val Root: RestPathPattern2 = new RestPathPattern2 {
-    def parser: Parser[Map[Symbol, String]] = "" ^^^ Map()
-  }
-
   override def skipWhitespace = false
   
   def validUrlFrag:     Parser[String] = """[a-zA-z0-9$\-_.+!*'()]+""".r
@@ -109,7 +107,7 @@ object RestPathPatternParsers extends RegexParsers {
   
   def parse(s: String): RestPathPattern2 = {
     val elements = restPathPatternParser(new CharSequenceReader(s)) match {
-      case Success(result, _) => /*println(result);*/ result
+      case Success(result, _) => result
       
       case _ => error("The path specification " + s + " has a syntax error")
     }
@@ -123,6 +121,7 @@ object RestPathPatternParsers extends RegexParsers {
     override def toString = text
   }  
   object SlashPathPattern extends LiteralPathPattern("/")
+  object RootPathPattern extends LiteralPathPattern("")
   case class SymbolPathPattern(symbol: Symbol) extends RestPathPattern2 {
     val parser: Parser[Map[Symbol, String]] = validUrlFrag ^^ (s => Map(symbol -> s))
     
@@ -151,7 +150,7 @@ object RestPathPatternParsers extends RegexParsers {
         (composite ~ e.parser) ^^ (pair => pair._1 ++ pair._2)
       }
       
-      case Nil => Root.parser
+      case Nil => RestPathPattern2.Root.parser
     }
     
     override def toString = elements.mkString("")
