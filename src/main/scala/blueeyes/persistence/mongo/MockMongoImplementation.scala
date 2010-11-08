@@ -146,7 +146,7 @@ private[mongo] object MockMongoImplementation{
       elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
     }
 
-    private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _)).getOrElse(all)
+    private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
 
     private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
   }

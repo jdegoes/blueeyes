@@ -97,6 +97,9 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }  
   case object PullFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, filter: MongoFilter) = value
+    def apply(value: JValue, filter: MongoFilter) = value match {
+      case e: JArray => value
+      case _ => throw new MongoException("Cannot apply pull modifier to non-array")
+    }
   }
 }
