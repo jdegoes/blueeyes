@@ -18,6 +18,7 @@ trait DatabaseCollection{
   def insert(objects: List[JObject])
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
   def remove(filter: Option[MongoFilter]): Int
+  def count(filter: Option[MongoFilter]): Long
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
 }
@@ -44,6 +45,11 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
 
 trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
   def apply(collection: DatabaseCollection): JInt = JInt(collection.remove(filter))
+
+  def filter: Option[MongoFilter]
+}
+trait CountQueryBehaviour extends QueryBehaviour[JInt]{
+  def apply(collection: DatabaseCollection): JInt = JInt(collection.count(filter))
 
   def filter: Option[MongoFilter]
 }

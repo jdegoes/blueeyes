@@ -7,7 +7,7 @@ import com.mongodb.MongoException
 
 private[mongo] object MockMongoUpdateEvalutors{
   object UpdateFiledEvalutorFactory{
-    def apply(operator: MongoUpdateOperator) = operator match{
+    def apply(operator: MongoUpdateOperator): UpdateFieldEvalutor = operator match{
       case $inc      => IncFieldEvalutor
       case $set      => SetFieldEvalutor
       case $unset    => UnsetFieldEvalutor
@@ -20,13 +20,18 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }
 
-  sealed trait UpdateFieldEvalutor extends Function2[JValue, JValue, JValue]
+  sealed trait UpdateFieldEvalutor extends Function2[JValue, MongoFilter, JValue]{
+    def << (filter: MongoFilter) = filter match{
+      case e: MongoFieldFilter => e.rhs.toJValue
+      case _ => error("filter is not MongoFieldFilter")
+    }
+  }
 
   case object SetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = setValue
+    def apply(value: JValue, filter: MongoFilter) = <<(filter)
   }  
   case object IncFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = (value, setValue) match {
+    def apply(value: JValue, filter: MongoFilter) = (value, <<(filter)) match {
       case (JInt(x1),     JInt(x2))    => JInt(x1 + x2)
       case (JDouble(x1),  JDouble(x2)) => JDouble(x1 + x2)
       case (JDouble(x1),  JInt(x2))    => JDouble(x1 + x2.doubleValue)
@@ -35,36 +40,36 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }
   case object UnsetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = JNothing
+    def apply(value: JValue, filter: MongoFilter) = JNothing
   }
   case object PushFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = value match {
-      case JNothing  => JArray(setValue :: Nil)
-      case JArray(v) => JArray(v :+ setValue)
+    def apply(value: JValue, filter: MongoFilter) = value match {
+      case JNothing  => JArray(<<(filter) :: Nil)
+      case JArray(v) => JArray(v :+ <<(filter))
       case _ => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
     }
   }
   case object PushAllFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = setValue match {
+    def apply(value: JValue, filter: MongoFilter) = <<(filter) match {
       case JArray(x) => value match {
         case JNothing  => JArray(x)
         case JArray(v) => JArray(v ++ x)
         case _ => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
       }
-      case _ => PushFieldEvalutor(value, setValue)
+      case _ => PushFieldEvalutor(value, filter)
     }
   }
   case object AddToSetFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = value match {
-      case JNothing  => setValue match {
-        case JObject(JField(x, y) :: Nil) => y
+    def apply(value: JValue, filter: MongoFilter) = value match {
+      case JNothing  => <<(filter) match {
+        case e: JArray => e
         case JNothing  => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
-        case _  => JArray(setValue :: Nil)
+        case _  => JArray(<<(filter) :: Nil)
       }
-      case e: JArray => setValue match {
-        case JObject(JField(x, y) :: Nil) => y.asInstanceOf[JArray].elements.foldLeft(e){(result, element) => addToSet(result, element)}
+      case e: JArray => <<(filter) match {
+        case y: JArray => y.elements.foldLeft(e){(result, element) => addToSet(result, element)}
         case JNothing  => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
-        case _  => addToSet(e, setValue)
+        case _  => addToSet(e, <<(filter))
       }
       case _ => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
     }
@@ -75,9 +80,9 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }
   case object PopFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = value match{
+    def apply(value: JValue, filter: MongoFilter) = value match{
       case JArray(Nil) => value
-      case JArray(x)   => setValue match{
+      case JArray(x)   => <<(filter) match{
         case JInt(y)   => if (y.intValue == 1) JArray(x.dropRight(1)) else if (y.intValue == -1) JArray(x.drop(1)) else throw new MongoException("Cannot apply $pop modifier to non-JInt(1|-1)")  
         case _ => throw new MongoException("Cannot apply $pop modifier to non-JInt(1|-1)")
       }
@@ -85,13 +90,13 @@ private[mongo] object MockMongoUpdateEvalutors{
     }
   }
   case object PullAllFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = (value, setValue) match {
+    def apply(value: JValue, filter: MongoFilter) = (value, <<(filter)) match {
       case (JArray(x), JArray(y)) => JArray(x filterNot (y contains))
       case (JNothing, _) => JNothing
       case _ => throw new MongoException("Cannot apply $pullAll modifier to non-array")
     }
   }  
   case object PullFieldEvalutor extends UpdateFieldEvalutor{
-    def apply(value: JValue, setValue: JValue) = value
+    def apply(value: JValue, filter: MongoFilter) = value
   }
 }

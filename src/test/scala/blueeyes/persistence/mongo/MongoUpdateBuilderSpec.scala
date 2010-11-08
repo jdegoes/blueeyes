@@ -6,6 +6,7 @@ import blueeyes.json.JPathImplicits._
 import MongoUpdateOperators._
 import MongoFilterOperators._
 import blueeyes.json.JsonAST._
+import blueeyes.json.JPath
 
 class MongoUpdateBuilderSpec extends Specification{
   "builds $inc operation" in {
@@ -35,15 +36,11 @@ class MongoUpdateBuilderSpec extends Specification{
   }
   "builds $pull operation with default operator" in {
     import MongoFilterImplicits._
-    ("n" pull (1) toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
+    (("n" === 1 pull).toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
   }
   "builds $pull operation with custom operator" in {
     import MongoFilterImplicits._
-    ("n" pull (1, $gt) toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JObject(JField("$gt", JInt(1)) :: Nil)) :: Nil)) :: Nil))
-  }
-  "builds $pull operation with custom jValue" in {
-    import MongoFilterImplicits._
-    ("n" pull (JObject(JField("field", JInt(2)) :: Nil)) toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JObject(JField("field", JInt(2)) :: Nil)) :: Nil)) :: Nil))
+    ((JPath("n") > 1 pull) toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JObject(JField("$gt", JInt(1)) :: Nil)) :: Nil)) :: Nil))
   }
   "builds $pullAll operation" in {
     import MongoFilterImplicits._

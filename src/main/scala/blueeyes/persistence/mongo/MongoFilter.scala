@@ -33,6 +33,7 @@ object MongoFilterOperators {
   case object $exists     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $exists operator does not have a negation"); }
   case object $type       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $type operator does not have a negation"); }
   case object $or         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $or operator does not have a negation"); }
+  case object $each       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $each operator does not have a negation"); }
 }
 
 import MongoFilterOperators._

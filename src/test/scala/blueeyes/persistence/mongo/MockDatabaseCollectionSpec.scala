@@ -136,6 +136,19 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.remove(None) mustEqual(4)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
+  "count all jobjects when filter is not specified" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.count(None) mustEqual(4)
+  }
+  "count jobjects which match filter" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.count(Some(MongoFieldFilter("address.city", $eq,"A"))) mustEqual(1)
+  }
   "removes jobjects which match filter" in{
     import MongoFilterImplicits._
     val collection = newCollection
