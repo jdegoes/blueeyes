@@ -76,5 +76,4 @@ class JObjectsFilterSpec extends Specification{
     import MongoFilterImplicits._
      JObjectsFilter(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements, MongoAndFilter(MongoFieldFilter("foo", $eq, 1) :: Nil).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
   }
-
 }
