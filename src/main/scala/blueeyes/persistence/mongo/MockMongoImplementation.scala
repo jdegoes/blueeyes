@@ -95,8 +95,15 @@ private[mongo] object MockMongoImplementation{
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
         def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))
-        val jfield = selectByPath(x.path, jobject, updateValue _)
-        jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
+
+        val ddd = jobject.get(x.path)
+        val mergeOperation = jobject.get(x.path) match {
+          case List(JNothing) => true
+          case _   => false
+        }
+        
+        val jfield = selectByPath(x.path, jobject, updateValue _, mergeOperation)
+        jfield.map(newValue => (if (mergeOperation) jobject.merge(newValue) else jobject.replace(x.path, v => {newValue})).asInstanceOf[JObject]).getOrElse(jobject)
       }
       case x: MongoUpdateFieldsValues => x.values.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
     }
@@ -120,7 +127,7 @@ private[mongo] object MockMongoImplementation{
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
-      selectFields(limited, selection).toStream
+      selectFields(limited, selection).map(_.asInstanceOf[JObject]).toStream
     }
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {
@@ -135,9 +142,9 @@ private[mongo] object MockMongoImplementation{
         }).filter(_ != None).map(_.get)
       } else jobjects
     }
-    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue]) = jobject.get(selectionPath) match{
+    private def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue], restoreStructure: Boolean = true) = jobject.get(selectionPath) match{
       case Nil             => None
-      case x :: Nil        => transformer(x).map(jvalueToJObject(selectionPath, _))
+      case x :: Nil        => transformer(x).map(v => if (restoreStructure) jvalueToJObject(selectionPath, v) else v )
       case _        => error("jpath which is select more then one value is not supported")
     }
 

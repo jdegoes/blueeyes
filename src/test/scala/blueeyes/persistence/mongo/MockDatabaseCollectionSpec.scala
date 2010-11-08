@@ -102,6 +102,56 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject2 :: Nil).toStream)
   }
+  "pull jobject by field query" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    collection.update(None, ("foo" pull ("shape" === "square")), false, true)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((JsonParser.parse("""{ "foo" : [
+      {
+        "shape" : "circle",
+        "color" : "red",
+        "thick" : true
+      }
+] } """).asInstanceOf[JObject] :: JsonParser.parse("""
+{ "foo" : [
+      {
+        "shape" : "circle",
+        "color" : "purple",
+        "thick" : false
+      }
+] }""").asInstanceOf[JObject] :: Nil).toStream)
+  }
+
+  "pull jobject by element match" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    collection.update(None, ("foo" pull (("shape" === "square") && ("color" === "purple")).elemMatch("")), false, true)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((JsonParser.parse("""{ "foo" : [
+      {
+        "shape" : "circle",
+        "color" : "red",
+        "thick" : true
+      }
+] } """).asInstanceOf[JObject] :: JsonParser.parse("""
+{ "foo" : [
+      {
+        "shape" : "square",
+        "color" : "red",
+        "thick" : true
+      },
+      {
+        "shape" : "circle",
+        "color" : "purple",
+        "thick" : false
+      }
+] }""").asInstanceOf[JObject] :: Nil).toStream)
+  }
   "update all objects" in{
     val collection = newCollection
 

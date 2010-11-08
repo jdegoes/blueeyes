@@ -247,7 +247,7 @@ object JsonAST {
         case Nil => replacer(j)
         
         case head :: tail => head match {
-          case JPathField(name1) => this match { 
+          case JPathField(name1) => j match {
             case JObject(fields) => JObject(fields.map {
               case JField(name2, value) if (name1 == name2) => JField(name1, replace0(JPath(tail: _*), value))
               
@@ -257,7 +257,7 @@ object JsonAST {
             case jvalue => jvalue
           }
           
-          case JPathIndex(index) => this match {
+          case JPathIndex(index) => j match {
             case JArray(elements) =>
               val split = elements.splitAt(index)
             
