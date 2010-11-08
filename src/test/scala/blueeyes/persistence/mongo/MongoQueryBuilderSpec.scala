@@ -19,6 +19,9 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates remove query" in{
     remove.from("collection") mustEqual ( MongoRemoveQuery(MongoCollection("collection")) )
   }
+  "creates count query" in{
+    count.from("collection") mustEqual ( MongoCountQuery(MongoCollection("collection")) )
+  }
   "creates insert query" in{
     insert(jObject).into("collection") mustEqual ( MongoInsertQuery(MongoCollection("collection"), jObject :: Nil) )
   }

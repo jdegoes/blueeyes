@@ -36,6 +36,8 @@ private[mongo] object RealMongoImplementation{
 
     def remove(filter: Option[MongoFilter]) = checkWriteResult(collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))).getN
 
+    def count(filter: Option[MongoFilter])  = collection.getCount(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))
+
     def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))), value.toJValue, upsert, multi)).getN
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)

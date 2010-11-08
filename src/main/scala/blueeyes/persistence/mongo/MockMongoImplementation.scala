@@ -75,6 +75,9 @@ private[mongo] object MockMongoImplementation{
       objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
       objects.size
     }
+
+    def count(filter: Option[MongoFilter]) = search(filter).size
+
     def remove0(objects: List[JObject]) = objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
 
     def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int = {

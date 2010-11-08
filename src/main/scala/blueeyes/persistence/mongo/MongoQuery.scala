@@ -55,6 +55,9 @@ case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoColle
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
 }
+case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with CountQueryBehaviour{
+  def where (newFilter: MongoFilter): MongoCountQuery = MongoCountQuery(collection, Some(newFilter))
+}
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
 case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue, filter: Option[MongoFilter] = None, upsert: Boolean = false,
@@ -74,6 +77,9 @@ object MongoQueryBuilder{
   case class MongoRemoveQueryEntryPoint() extends MongoQueryEntryPoint{
     def from(collection: MongoCollection) = MongoRemoveQuery(collection)
   }  
+  case class MongoCountQueryEntryPoint() extends MongoQueryEntryPoint{
+    def from(collection: MongoCollection) = MongoCountQuery(collection)
+  }
   case class MongoInsertQueryEntryPoint(value: List[JObject]) extends MongoQueryEntryPoint{
     def into(collection: MongoCollection) = MongoInsertQuery(collection, value)
   }
@@ -87,6 +93,7 @@ object MongoQueryBuilder{
   def select(selection: JPath*)                 = MongoSelectQueryEntryPoint(MongoSelection(List(selection: _*)))
   def selectOne(selection: JPath*)              = MongoSelectOneQueryEntryPoint(MongoSelection(List(selection: _*)))
   def remove                                    = MongoRemoveQueryEntryPoint()
+  def count                                     = MongoCountQueryEntryPoint()
   def insert( value: JObject*)                  = MongoInsertQueryEntryPoint(List(value: _*))
   def ensureIndex(name: String)                 = MongoMongoEnsureIndexQueryEntryPoint(name, false)
   def ensureUniqueIndex(name: String)           = MongoMongoEnsureIndexQueryEntryPoint(name, true)

@@ -34,7 +34,7 @@ object MongoDemo{
 
 //    demoSelectOne
 
-//    demoSelect
+    demoSelect
     
 //    demoUpdate
 
@@ -50,7 +50,8 @@ object MongoDemo{
 //    printObjects(database(select().from(collection).sortBy("address.city" >>).skip(1).limit(1)))
 //    printObjects(database(select().from(collection).where("address.city" === "B").sortBy("address.city" >>)))
 //    printObjects(database(select().from(collection).where("address.city" === "Z").sortBy("address.city" >>)))
-    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
+//    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
+    println(database(count.from(collection)))
 //    printObjects(database(select("address.city").from(collection).sortBy("address.city" <<)))
 
     database(remove.from(collection))
