@@ -91,11 +91,17 @@ private[mongo] object MockMongoImplementation{
     private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match {
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
-        def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.value))
-        val jfield = selectByPath(x.lhs, jobject, updateValue _)
+        def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))
+        val jfield = selectByPath(toPath(x.filter), jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
       case x: MongoUpdateFieldsValues => x.values.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
+    }
+
+    private def toPath(filter: MongoFilter) = filter match {
+      case x: MongoFieldFilter => x.lhs
+      case x: MongoElementsMatchFilter => x.lhs
+      case _ => error("filte must be either MongoFieldFilter or MongoElementsMatchFilter")
     }
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {

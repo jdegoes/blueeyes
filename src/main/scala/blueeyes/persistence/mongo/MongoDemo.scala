@@ -5,9 +5,9 @@ import MongoImplicits._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JsonAST._
 import MongoFilterImplicits._
-import blueeyes.json.Printer
 import blueeyes.config.{ConfiggyModule, FilesystemConfiggyModule}
 import com.google.inject.Guice
+import blueeyes.json.{JPath, Printer}
 
 object MongoDemo{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
@@ -26,13 +26,15 @@ object MongoDemo{
   
   def main(args: Array[String]){
 
-    database(remove.from(collection))
+    println(JString("foo").get(JPath("")))
 
-    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
+//    database(remove.from(collection))
+
+//    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 
 //    demoSelectOne
 
-    demoSelect
+//    demoSelect
     
 //    demoUpdate
 
