@@ -8,11 +8,42 @@ private[mongo] object MockMongoFiltersImplementation{
 
   object JObjectsFilter{
     def apply(jobjects: List[JObject], filter: MongoFilter):  List[JObject] = filter match{
-      case x: MongoFieldFilter => searchByField(jobjects, x)
-      case MongoOrFilter(x)    => x.foldLeft(List[JObject]()){ (result, currentFilter) => result.union(JObjectsFilter(jobjects, currentFilter)) }
-      case MongoAndFilter(x :: xs) => xs.foldLeft(JObjectsFilter(jobjects, x)){ (result, currentFilter) =>  result.intersect(JObjectsFilter(jobjects, currentFilter)) }
-      case MongoAndFilter(Nil)     => jobjects
+      case x : MongoFieldFilter         => MongoFieldFilterEvaluator(jobjects, x)
+      case x : MongoOrFilter            => MongoOrFilterEvaluator   (jobjects, x)
+      case x : MongoAndFilter           => MongoAndFilterEvaluator  (jobjects, x)
+      case x : MongoElementsMatchFilter => MongoElementsMatchFilterEvaluator(jobjects, x)
     }
+  }
+
+  object MongoElementsMatchFilterEvaluator{
+    def apply(jobjects: List[JObject], filter: MongoElementsMatchFilter) = {
+      jobjects.filter(jobject => !searchElements(jobject.get(filter.lhs), filter).isEmpty)
+    }
+    private def searchElements(elements: List[JValue], filter: MongoElementsMatchFilter) = {
+      elements.filter(v => v match {
+        case JArray(x)    => 
+            val matched = x.filter(element => element match{
+            case y: JObject => !MongoAndFilterEvaluator(y :: Nil, filter.elementsQuery).isEmpty
+            case _ => false
+          })
+          !matched.isEmpty
+        case _         => false
+      })
+    }
+  }
+  object MongoOrFilterEvaluator{
+    def apply(jobjects: List[JObject], filter: MongoOrFilter) = filter.queries.foldLeft(List[JObject]()){ (result, currentFilter) => result.union(JObjectsFilter(jobjects, currentFilter)) }
+  }
+
+  object MongoAndFilterEvaluator{
+    def apply(jobjects: List[JObject], filter: MongoAndFilter) = filter.queries match{
+      case x :: xs => xs.foldLeft(JObjectsFilter(jobjects, x)){ (result, currentFilter) =>  result.intersect(JObjectsFilter(jobjects, currentFilter)) }
+      case Nil     => jobjects
+    }
+  }
+
+  object MongoFieldFilterEvaluator{
+    def apply(jobjects: List[JObject], filter: MongoFieldFilter) = searchByField(jobjects, filter)
 
     private def searchByField(jobjects: List[JObject], filter: MongoFieldFilter) = {
       val evaluator = FieldFilterEvalutorFactory(filter.operator)
