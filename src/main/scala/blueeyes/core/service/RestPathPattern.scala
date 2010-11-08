@@ -77,7 +77,10 @@ object RestPathPattern2 extends RegexParsers {
   
   def pathMiddle: Parser[List[PathElement]] = ((pathSep ~ pathElement)*) ^^ flattenLP
   
-  def pathPattern = (((((pathSepOpt ~ pathElementL) ^^ flattenPL) ~ pathMiddle) ^^ flattenPL) ~ pathSepOpt) ^^ flattenPL
+  //def pathPattern = (((((pathSepOpt ~ pathElementL) ^^ flattenPL) ~ pathMiddle) ^^ flattenPL) ~ pathSepOpt) ^^ flattenPL
+  def pathPattern = (pathSepOpt ~ pathElementL ~ pathMiddle ~ pathSepOpt ^^ {
+    case leadingSlash ~ first ~ middle ~ trailingSlash => leadingSlash ++ first ++ middle ++ trailingSlash
+  }) | pathSepL
   
   def fullPathPattern: Parser[List[PathElement]] = startOfString ~> pathPattern <~ endOfString
   

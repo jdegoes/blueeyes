@@ -22,11 +22,18 @@ class RestPathPatternSpec extends Specification{
       List("/bar/bar/bar")
     )
   }
+  "match root path" in {
+    testPath("/",
+      List(("/", Map())),
+      List("")
+    )
+  }
   "combine symbols and literals using slash operator" in {
     import RestPathPattern2Implicits._
     
     ("/foo" / 'bar / 'biz / "blah").apply("/foo/a/b/blah") mustEqual(Map('bar -> "a", 'biz -> "b"))
   }
+  
   
   
   "matches correct path started with slash" in {
@@ -51,11 +58,6 @@ class RestPathPatternSpec extends Specification{
     val pattern: RestPathPattern = "/foo/bar/'param"
     
     pattern.apply("foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
-  }
-  "create parameters automatically for root path specified as string" in {
-    val pattern: RestPathPattern = "/"
-    
-    pattern.isDefinedAt("") mustEqual(true)
   }
   
   private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
