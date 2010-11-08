@@ -87,7 +87,13 @@ sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter
 sealed case class MongoElementsMatchFilter(lhs: JPath, elementsQuery: MongoAndFilter) extends MongoFilter{
   def unary_! = error("The $elemMatch operator does not have a negation")
 
-  def filter = JObject(JField(JPathExtension.toMongoField(lhs), JObject(JField("$elemMatch", elementsQuery.filter) :: Nil)) :: Nil)
+  def filter = {
+    val value = JObject(JField("$elemMatch", elementsQuery.filter) :: Nil)
+    lhs.nodes match{
+      case Nil => value
+      case _   => JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)
+    }
+  }
 }
 
 sealed trait MongoPrimitive[T] {
