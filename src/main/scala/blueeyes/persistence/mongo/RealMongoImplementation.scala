@@ -34,18 +34,18 @@ private[mongo] object RealMongoImplementation{
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
     def insert(objects: List[JObject])      = checkWriteResult(collection.insert(objects.map(jObject2MongoObject(_))))
 
-    def remove(filter: Option[MongoFilter]) = checkWriteResult(collection.remove(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))).getN
+    def remove(filter: Option[MongoFilter]) = checkWriteResult(collection.remove(toMongoFilter(filter))).getN
 
-    def count(filter: Option[MongoFilter])  = collection.getCount(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))))
+    def count(filter: Option[MongoFilter])  = collection.getCount(toMongoFilter(filter))
 
-    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil))), value.toJValue, upsert, multi)).getN
+    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)).getN
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)
 
     def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
 
       val keysObject   = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
-      val filterObject = filter.map(_.filter).getOrElse(JObject(Nil))
+      val filterObject = toMongoFilter(filter)
       val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
 
       val cursor        = collection.find(filterObject, keysObject)
@@ -58,6 +58,8 @@ private[mongo] object RealMongoImplementation{
 
     def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
       if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
+
+    private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil)))
 
     private def checkWriteResult(result: WriteResult) = {
       val error  = result.getLastError
