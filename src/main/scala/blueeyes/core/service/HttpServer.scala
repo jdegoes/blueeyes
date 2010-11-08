@@ -13,8 +13,16 @@ import net.lag.logging.Logger
  * and started, and has a main function so it can be mixed into objects.
  */
 trait HttpServer[T] extends HttpServicesContainer[T] { self =>
+  /** The configuration for the server. This can be set manually and is set 
+   * automatically by the main function if --configFile is specified on the
+   * command-line.
+   */
   var rootConfig: Config = null
   
+  /** A list of services that are managed by this server. These services are 
+   * determined using reflection on the class or object that this trait is
+   * mixed into.
+   */
   lazy val services: List[HttpService2[T]] = {
     val c = self.getClass
     

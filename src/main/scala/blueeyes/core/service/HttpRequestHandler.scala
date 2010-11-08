@@ -10,7 +10,7 @@ import blueeyes.util.Future
 /** A handler for a particular http method (get/post/put/delete/etc.). A 
  * handler is a partial function from request to response.
  */
-sealed trait HttpRequestHandler[T] extends PartialFunction[HttpRequest[T], Future[HttpResponse[T]]]
+//sealed trait HttpRequestHandler[T] extends PartialFunction[HttpRequest[T], Future[HttpResponse[T]]]
 
 /** A handler that transcodes data to a subhandler that expects/produces data 
  * in a different format.

@@ -8,23 +8,22 @@ import net.lag.logging.Logger
 
 /**
  * An HttpServiceBuilder can be used to build any number of services. 
- * <p>
- * <pre>
- * trait EmailService extends HttpServiceBuilder[String] {
- *   val emailService = new service("email", "1.01") {
- *     path("/outgoing") {
- *       get { request =>
- *       }
- *     }
- *   }
- * }
- * </pre>
  */
 trait HttpServiceBuilder[Base] { self =>
   import scala.collection.mutable.{ListBuffer, Stack}
   
   protected type RequestHandler[In, Out] = HttpRequest[In] => Future[HttpResponse[Out]]
   
+  /**
+   * <pre>
+   * val emailService = new service("email", "1.01") {
+   *   path("/outgoing") {
+   *     get { request =>
+   *     }
+   *   }
+   * }
+   * </pre>
+   */
   abstract class service(val name: String, override val version: String) extends HttpService2[Base] {
     override def startHooks       = _startHooks.toList
     override def stopHooks      = _stopHooks.toList
