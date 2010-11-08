@@ -25,7 +25,7 @@ class JObjectsFilterSpec extends Specification{
         "color" : "red",
         "thick" : true
       }
-] } """).asInstanceOf[JObject] :: JsonParser.parse("""
+] } """) :: JsonParser.parse("""
 { "foo" : [
       {
         "shape" : "square",
@@ -37,7 +37,7 @@ class JObjectsFilterSpec extends Specification{
         "color" : "green",
         "thick" : false
       }
-] }""").asInstanceOf[JObject] :: Nil
+] }""") :: Nil
 
 
   "selects objects by field query" in{
@@ -59,8 +59,22 @@ class JObjectsFilterSpec extends Specification{
     import MongoFilterImplicits._
      JObjectsFilter(jobjectsWithArray, MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"purple")))) mustEqual(jobjectsWithArray.head :: Nil)
   }
-  "soes not select object using elemeMatch and wrong query" in {
+  "does not select object using elemeMatch and wrong query" in {
     import MongoFilterImplicits._
      JObjectsFilter(jobjectsWithArray, MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
   }
+  "select element from array" in {
+    import MongoFilterImplicits._
+     JObjectsFilter(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements, MongoFieldFilter("", $eq, 1)) mustEqual(JInt(1) :: Nil)
+  }
+
+  "select element by complex filter " in {
+    import MongoFilterImplicits._
+     JObjectsFilter(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements, MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+  }
+  "select element from array by element match " in {
+    import MongoFilterImplicits._
+     JObjectsFilter(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements, MongoAndFilter(MongoFieldFilter("foo", $eq, 1) :: Nil).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+  }
+
 }
