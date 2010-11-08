@@ -95,7 +95,7 @@ private[mongo] object MockMongoImplementation{
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
         def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))
-        val jfield = selectByPath(toPath(x.filter), jobject, updateValue _)
+        val jfield = selectByPath(x.path, jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
       case x: MongoUpdateFieldsValues => x.values.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
@@ -146,7 +146,7 @@ private[mongo] object MockMongoImplementation{
       elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
     }
 
-    private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _)).getOrElse(all)
+    private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
 
     private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
   }

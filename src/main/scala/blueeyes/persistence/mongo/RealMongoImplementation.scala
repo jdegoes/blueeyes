@@ -59,7 +59,7 @@ private[mongo] object RealMongoImplementation{
     def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
       if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
 
-    private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter).getOrElse(JObject(Nil)))
+    private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
 
     private def checkWriteResult(result: WriteResult) = {
       val error  = result.getLastError

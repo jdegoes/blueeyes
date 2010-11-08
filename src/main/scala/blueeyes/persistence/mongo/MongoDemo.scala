@@ -34,9 +34,9 @@ object MongoDemo{
 
 //    demoSelectOne
 
-    demoSelect
+//    demoSelect
     
-//    demoUpdate
+    demoUpdate
 
 //    demoRemove
   }
@@ -62,10 +62,10 @@ object MongoDemo{
     println("------------demoUpdate------------------")
     insertObjects
 
-    println(database(updateMany(collection).set("address" popFirst)))
-    printObjects(database(select().from(collection)))
-//    println(database(update(collection).set(("address.city" set ("Y")) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
+//    println(database(updateMany(collection).set("address" popFirst)))
 //    printObjects(database(select().from(collection)))
+    println(database(update(collection).set(("address.city" unset) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
+    printObjects(database(select().from(collection)))
 //    println(database(update(collection).set(jObject3).where("address.city" === "A")))
 //    printObjects(database(select().from(collection)))
 //    println(database(updateMany(collection).set("address.street" set ("New Street"))))
@@ -113,6 +113,6 @@ object MongoDemo{
   }
 
   private def insertObjects{
-    database[JNothing.type](insert(jObject, jObject1).into(collection))
+    database[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
   }
 }

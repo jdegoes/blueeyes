@@ -39,7 +39,7 @@ object MongoFilterOperators {
 import MongoFilterOperators._
 
 sealed trait MongoFilter { self =>
-  def filter: JObject
+  def filter: JValue
   
   def unary_! : MongoFilter
   
@@ -53,23 +53,31 @@ sealed trait MongoFilter { self =>
 }
 
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>
-  def filter: JObject = operator match {
-    case $eq => JObject(JField(JPathExtension.toMongoField(lhs), rhs.toJValue) :: Nil)
+  def filter: JValue = {
+    val value = operator match {
+      case $eq => rhs.toJValue
 
-    case _ => JObject(JField(JPathExtension.toMongoField(lhs), JObject(JField(operator.symbol, rhs.toJValue) :: Nil)) :: Nil)
+      case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
+    }
+    lhs.nodes match{
+      case Nil => value
+      case _   => JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)
+    }
   }
 
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
 sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter {
-  def filter: JObject = JObject(JField($or.symbol, JArray(queries.map(_.filter))) :: Nil)
+  def filter: JValue = JObject(JField($or.symbol, JArray(queries.map(_.filter))) :: Nil)
   
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
 }
 
 sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter { self =>
-  def filter: JObject = queries.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.filter).asInstanceOf[JObject] }
+  def filter: JValue = {
+    queries.foldLeft(JObject(Nil).asInstanceOf[JValue]) { (obj, e) => obj.merge(e.filter) }
+  }
   
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))
 
@@ -79,7 +87,13 @@ sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter
 sealed case class MongoElementsMatchFilter(lhs: JPath, elementsQuery: MongoAndFilter) extends MongoFilter{
   def unary_! = error("The $elemMatch operator does not have a negation")
 
-  def filter = JObject(JField(JPathExtension.toMongoField(lhs), JObject(JField("$elemMatch", elementsQuery.filter) :: Nil)) :: Nil)
+  def filter = {
+    val value = JObject(JField("$elemMatch", elementsQuery.filter) :: Nil)
+    lhs.nodes match{
+      case Nil => value
+      case _   => JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)
+    }
+  }
 }
 
 sealed trait MongoPrimitive[T] {

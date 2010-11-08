@@ -11,7 +11,7 @@ class MongoAndFilterSpec extends Specification{
   private val andFilter  = filter1 && filter2
 
   "create valid json for or filter" in {
-    (andFilter).filter mustEqual (JObject(filter1.filter.fields ++ filter2.filter.fields))
+    (andFilter).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields))
   }
   "unary_! use 'or' use with negative operators of subfilters " in{
     (andFilter).unary_! mustEqual (filter1.unary_! || filter2.unary_!)
