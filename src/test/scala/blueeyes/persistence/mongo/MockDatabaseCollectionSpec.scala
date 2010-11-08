@@ -173,6 +173,14 @@ class MockDatabaseCollectionSpec extends Specification{
     val filterObject = JsonParser.parse(""" {"shape" : "square", "color" : "purple","thick" : false} """).asInstanceOf[JObject]
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo", $eq, filterObject)), None, None, None) mustEqual(List(jobjectsWithArray.head).toStream)
   }
+  "select jobjects with array when elemMatch filter is specified" in{
+    import MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jobjectsWithArray)
+    collection.select(MongoSelection(Nil), Some(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"red")))), None, None, None) mustEqual(List(jobjectsWithArray.tail.head).toStream)
+  }
+
   "does not select jobjects with array when wrong array element filter is specified" in{
     import MongoFilterImplicits._
     val collection = newCollection
