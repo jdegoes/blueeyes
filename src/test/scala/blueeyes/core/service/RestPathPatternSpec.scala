@@ -1,7 +1,6 @@
 package blueeyes.core.service
 
 import org.specs.Specification
-import RestPathPatternImplicits._
 
 class RestPathPatternSpec extends Specification{
   "match correct literal path containing a single path element" in {
@@ -31,7 +30,9 @@ class RestPathPatternSpec extends Specification{
   "combine symbols and literals using slash operator" in {
     import RestPathPattern2Implicits._
     
-    ("/foo" / 'bar / 'biz / "blah").apply("/foo/a/b/blah") mustEqual(Map('bar -> "a", 'biz -> "b"))
+    val pattern: RestPathPattern2 = "/foo" / 'bar / 'biz / "blah"
+    
+    pattern("/foo/a/b/blah") mustEqual(Map('bar -> "a", 'biz -> "b"))
   }
   
   
@@ -40,6 +41,8 @@ class RestPathPatternSpec extends Specification{
     (RestPathPattern.Root / StringElement("foo")).isDefinedAt("/foo") mustEqual(true)
   }
   "matches complex correct path" in {
+    import RestPathPatternImplicits._
+    
     (RestPathPattern.Root / StringElement("foo") / StringElement("bar") / 'param).isDefinedAt("foo/bar/value") mustEqual(true)
   }
   "does not match incorrect path" in {
@@ -52,9 +55,13 @@ class RestPathPatternSpec extends Specification{
     (RestPathPattern.Root / SymbolElement('param)).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   "create parameters for complex path" in {
+    import RestPathPatternImplicits._
+    
     (RestPathPattern.Root / StringElement("foo") / StringElement("bar") / 'param).apply("foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   "create parameters automatically for complex path specified as string" in {
+    import RestPathPatternImplicits._
+    
     val pattern: RestPathPattern = "/foo/bar/'param"
     
     pattern.apply("foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))

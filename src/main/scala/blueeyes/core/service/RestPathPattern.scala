@@ -55,129 +55,112 @@ sealed trait RestPathPattern2 extends PartialFunction[String, Map[Symbol, String
   }
   
   def / (symbol: Symbol): RestPathPattern2 = new RestPathPattern2 {
-    def parser = self.parser ~ slash ~ RestPathPatternParsers.SymbolElement(symbol) ^^ sequence
+    def parser = self.parser ~ slashParser ~ RestPathPatternParsers.SymbolPathPattern(symbol).parser ^^ sequence
   }
   
   def / (regex: Regex, groupNames: List[String]): RestPathPattern2 = new RestPathPattern2 {
-    def parser = self.parser ~ slash ~ RestPathPatternParsers.RegexElement(regex, groupNames) ^^ sequence
+    def parser = self.parser ~ slashParser ~ RestPathPatternParsers.RegexPathPattern(regex, groupNames).parser ^^ sequence
   }
   
   def / (string: String): RestPathPattern2 = new RestPathPattern2 {
-    def parser = self.parser ~ slash ~ RestPathPatternParsers.parse(string).parser ^^ sequence
+    def parser = self.parser ~ slashParser ~ RestPathPatternParsers.parse(string).parser ^^ sequence
   }
   
   def / (that: RestPathPattern2): RestPathPattern2 = new RestPathPattern2 {
-    def parser = self.parser ~ slash ~ that.parser ^^ sequence
+    def parser = self.parser ~ slashParser ~ that.parser ^^ sequence
+  }
+  
+  def | (that: RestPathPattern2): RestPathPattern2 = new RestPathPattern2 {
+    def parser = self.parser | that.parser
+  }
+  
+  def || (that: => RestPathPattern2): RestPathPattern2 = new RestPathPattern2 {
+    def parser = self.parser | that.parser
   }
   
   private def sequence(a: ~[~[Map[Symbol, String], Map[Symbol, String]], Map[Symbol, String]]) = a match {
     case m1 ~ m2 ~ m3 => m1 ++ m2 ++ m3
   }
   
-  private val slash: RestPathPatternParsers.PathElement = RestPathPatternParsers.LiteralElement("/")
+  private def slashParser = RestPathPatternParsers.SlashPathPattern.parser
 }
 object RestPathPattern2 extends RegexParsers {
   def apply(string: String): RestPathPattern2 = RestPathPatternParsers.parse(string)
 }
 object RestPathPatternParsers extends RegexParsers {
-  lazy val Root: RestPathPattern2 = RestPathPattern2.apply("/")
-  
-  def flattenLP(list: List[~[PathElement, PathElement]]): List[PathElement] = list.flatMap(pair => pair._1 :: pair._2 :: Nil)
-  def flattenPL(pair: ~[List[PathElement], List[PathElement]]): List[PathElement] = pair._1 ++ pair._2
-  
+  lazy val Root: RestPathPattern2 = new RestPathPattern2 {
+    def parser: Parser[Map[Symbol, String]] = "" ^^^ Map()
+  }
+
   override def skipWhitespace = false
   
-  def specialUrlChar:   Parser[String] = """[;/?:@=&]""".r
   def validUrlFrag:     Parser[String] = """[a-zA-z0-9$\-_.+!*'()]+""".r
-  def validSymbolChar:  Parser[String] = """\w""".r
-  def symbolStartChar:  Parser[String] = """'""".r
-  def pathSeparator:    Parser[String] = """/""".r
+  def validSymbolName:  Parser[String] = """[a-zA-Z_][a-zA-z_0-9]*""".r
+  def pathSeparator:    Parser[String] = "/"
   def startOfString:    Parser[String] = """^""".r
   def endOfString:      Parser[String] = """$""".r
   
-  def symbol:  Parser[Symbol] = (symbolStartChar ~> validUrlFrag) ^^ (s => Symbol(s))
+  def symbol:  Parser[Symbol] = ("'" ~> validSymbolName) ^^ (s => Symbol(s))
   def literal: Parser[String] = validUrlFrag
   
-  def pathElement: Parser[PathElement] = (symbol ^^ (s => SymbolElement(s))) | (literal ^^ (s => LiteralElement(s)))
+  def pathElement: Parser[RestPathPattern2] = (symbol ^^ (s => SymbolPathPattern(s))) | (literal ^^ (s => LiteralPathPattern(s))) | (pathSeparator ^^ (s => LiteralPathPattern(s)))
   
-  def pathElementL: Parser[List[PathElement]] = pathElement ^^ (p => p :: Nil)
-  
-  def pathSep: Parser[PathElement] = "/" ^^ (s => LiteralElement(s))
-  
-  def pathSepL: Parser[List[PathElement]] = pathSep ^^ (p => p :: Nil)
-  
-  def pathSepOpt: Parser[List[PathElement]] = (pathSep?) ^^ (o => o.toList)
-  
-  def pathMiddle: Parser[List[PathElement]] = ((pathSep ~ pathElement)*) ^^ flattenLP
-  
-  //def pathPattern = (((((pathSepOpt ~ pathElementL) ^^ flattenPL) ~ pathMiddle) ^^ flattenPL) ~ pathSepOpt) ^^ flattenPL
-  def pathPattern = (pathSepOpt ~ pathElementL ~ pathMiddle ~ pathSepOpt ^^ {
-    case leadingSlash ~ first ~ middle ~ trailingSlash => leadingSlash ++ first ++ middle ++ trailingSlash
-  }) | pathSepL
-  
-  def fullPathPattern: Parser[List[PathElement]] = startOfString ~> pathPattern <~ endOfString
+  def restPathPatternParser: Parser[List[RestPathPattern2]] = startOfString ~> (pathElement*) <~ endOfString
   
   def parse(s: String): RestPathPattern2 = {
-    val elements = fullPathPattern(new CharSequenceReader(s)) match {
-      case Success(result, _) => println(result); result
+    val elements = restPathPatternParser(new CharSequenceReader(s)) match {
+      case Success(result, _) => /*println(result);*/ result
       
       case _ => error("The path specification " + s + " has a syntax error")
     }
     
-    CompositeRestPathPattern(elements)
-  }  
-
-  case class CompositeRestPathPattern(elements: List[PathElement]) extends RestPathPattern2 { self =>
-    val parser: Parser[Map[Symbol, String]] = CompositeElement(elements)
-
-    
-    
+    CompositePathPattern(elements)
   }
   
-  sealed trait PathElement extends Parser[Map[Symbol, String]]
-  
-  case class LiteralElement(literal: String) extends PathElement {
-    val parser: Parser[Map[Symbol, String]] = literal ^^^ Map()
-
-    def apply(in: Input) = parser.apply(in)
+  case class LiteralPathPattern(text: String) extends RestPathPattern2 {
+    val parser: Parser[Map[Symbol, String]] = literal(text) ^^^ Map()
     
-    override def toString = literal
+    override def toString = text
   }  
-  case class SymbolElement(symbol: Symbol) extends PathElement {
+  object SlashPathPattern extends LiteralPathPattern("/")
+  case class SymbolPathPattern(symbol: Symbol) extends RestPathPattern2 {
     val parser: Parser[Map[Symbol, String]] = validUrlFrag ^^ (s => Map(symbol -> s))
-
-    override def apply(in: Input) = parser.apply(in)
     
     override def toString = symbol.toString
   }  
-  case class RegexElement(regex: Regex, groupNames: List[String]) extends PathElement {
-    override def apply(in: Input) = {
-      val source = in.source
-      val offset = in.offset
-      val start = handleWhiteSpace(source, offset)
-      (regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
-        case Some(matched) => 
-          Success(Map(groupNames.map(name => Symbol(name) -> matched.group(name)): _*), in.drop(start + matched.end - offset))
-        case None =>
-          Failure("string matching regex `"+regex+"' expected but `"+in.first+"' found", in.drop(start - offset))
+  case class RegexPathPattern(regex: Regex, groupNames: List[String]) extends RestPathPattern2 {
+    val parser = new Parser[Map[Symbol, String]] {
+      def apply(in: Input) = {
+        val source = in.source
+        val offset = in.offset
+        val start = handleWhiteSpace(source, offset)
+        (regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
+          case Some(matched) => 
+            Success(Map(groupNames.map(name => Symbol(name) -> matched.group(name)): _*), in.drop(start + matched.end - offset))
+          case None =>
+            Failure("string matching regex `"+regex+"' expected but `"+in.first+"' found", in.drop(start - offset))
+        }
       }
     }
     
     override def toString = regex.pattern.toString
   }
-  case class CompositeElement(elements: List[PathElement]) extends PathElement {
-    val parser: Parser[Map[Symbol, String]] = elements.tail.foldLeft[Parser[Map[Symbol, String]]](elements.head) { (composite, e) =>
-      (composite ~ e) ^^ (pair => pair._1 ++ pair._2)
+  case class CompositePathPattern(elements: List[RestPathPattern2]) extends RestPathPattern2 {
+    val parser: Parser[Map[Symbol, String]] = elements match {
+      case head :: tail => tail.foldLeft[Parser[Map[Symbol, String]]](elements.head.parser) { (composite, e) =>
+        (composite ~ e.parser) ^^ (pair => pair._1 ++ pair._2)
+      }
+      
+      case Nil => Root.parser
     }
-    override def apply(in: Input) = parser.apply(in)
     
     override def toString = elements.mkString("")
   }
 }
 trait RestPathPattern2Implicits {
-  implicit def stringToRestPathPattern(s: String): RestPathPattern2 = RestPathPattern2.apply(s)
+  implicit def stringToRestPathPathPattern(s: String): RestPathPattern2 = RestPathPatternParsers.parse(s)
   
-  implicit def symbolToRestPathPattern(s: Symbol): RestPathPattern2 = RestPathPatternParsers.CompositeRestPathPattern(RestPathPatternParsers.SymbolElement(s) :: Nil)
+  implicit def symbolToRestPathPathPattern(s: Symbol): RestPathPattern2 = RestPathPatternParsers.SymbolPathPattern(s)
 }
 object RestPathPattern2Implicits extends RestPathPattern2Implicits
 
