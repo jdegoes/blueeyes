@@ -16,7 +16,7 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
 
   "calls test function" in {
     var executed = false
-    path("/bar/'id/bar.html"){
+    path("/bar/id/bar.html"){
       get{
         executed = true
       }
@@ -24,7 +24,7 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
     executed mustEqual (true)
   }
   "gets responce" in {
-    path("/bar/'id/bar.html"){
+    path("/bar/id/bar.html"){
       get{
         response[String] mustEqual (serviceResponse)
       }

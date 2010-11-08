@@ -14,7 +14,7 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
   private val netsedService = new TestNestedService
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
 
-  "add service to the specified path" in {
+  /*"add service to the specified path" in {
     val serviceByPath = service.hierarchy.head
 
     serviceByPath._1.elementPatterns mustEqual("ads" / 'adId / "adCode.html" elementPatterns)
@@ -32,7 +32,7 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
     val list2 = "blue/eyes/api/v1/ads/'adId/adCode.html".elementPatterns
 
     list1 mustEqual(list2)
-  }
+  }*/
 
   "associate handler with specified nested path" in {
     val serviceByPath = netsedService.hierarchy.head._3.asInstanceOf[HttpRequest[String] => Future[HttpResponse[String]]]

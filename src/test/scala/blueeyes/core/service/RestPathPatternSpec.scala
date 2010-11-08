@@ -3,7 +3,7 @@ package blueeyes.core.service
 import org.specs.Specification
 
 class RestPathPatternSpec extends Specification{
-  import RestPathPattern2Implicits._
+  import RestPathPatternImplicits._
   
   "match correct literal path containing a single path element" in {
     testPath("/foo",
@@ -29,34 +29,49 @@ class RestPathPatternSpec extends Specification{
       List("")
     )
   }
+  "create parameters that have characters which are not valid for symbols themselves" in {
+    testPath("/'foo",
+      List(("/foo$bar-baz", Map('foo -> "foo$bar-baz"))),
+      List("")
+    )
+  }
+  "not match more than specified when end method is invoked" in {
+    RestPathPattern("/get/'foo").$.isDefinedAt("/foo/bar") mustEqual(false)
+  }
+  "create parameters for regression case" in {
+    testPath("/get/'foo",
+      List(("/get/foo-value", Map('foo -> "foo-value"))),
+      List("/foo/bar")
+    )
+  }
   "combine symbols and literals using slash operator" in {
-    val pattern: RestPathPattern2 = "/foo" / 'bar / 'biz / "blah"
+    val pattern: RestPathPattern = "/foo" / 'bar / 'biz / "blah"
     
     pattern("/foo/a/b/blah") mustEqual(Map('bar -> "a", 'biz -> "b"))
   }
   "match manually formed path including root literal" in {
-    (RestPathPattern2.Root / "foo").isDefinedAt("/foo") mustEqual(true)
+    (RestPathPattern.Root / "foo").isDefinedAt("/foo") mustEqual(true)
   }
   "match complex path with symbols" in {
-    (RestPathPattern2.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
+    (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
   }
   "create single parameter" in {
-    (RestPathPattern2.Root / 'param).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
+    (RestPathPattern.Root / 'param).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   "create multiple parameters" in {
-    (RestPathPattern2.Root / 'param1 / 'param2).apply("/value1/value2") mustEqual(Map[Symbol, String]('param1 -> "value1", 'param2 -> "value2"))
+    (RestPathPattern.Root / 'param1 / 'param2).apply("/value1/value2") mustEqual(Map[Symbol, String]('param1 -> "value1", 'param2 -> "value2"))
   }
   "create single parameter in lengthy literal path" in {
-    (RestPathPattern2.Root / "foo" / "bar" / 'param).apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
+    (RestPathPattern.Root / "foo" / "bar" / 'param).apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   "create parameters automatically for complex path specified as string" in {
-    val pattern: RestPathPattern2 = "/foo/bar/'param"
+    val pattern: RestPathPattern = "/foo/bar/'param"
     
     pattern.apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
   
   private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
-    val pattern = RestPathPattern2(path)
+    val pattern = RestPathPattern(path)
     
     isDefinedAt.foreach { pair =>
       val path = pair._1
