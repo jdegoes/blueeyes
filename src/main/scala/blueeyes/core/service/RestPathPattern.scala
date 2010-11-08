@@ -51,7 +51,6 @@ object RestPathPattern2 extends RegexParsers {
   
   def flattenLP(list: List[~[PathElement, PathElement]]): List[PathElement] = list.flatMap(pair => pair._1 :: pair._2 :: Nil)
   def flattenPL(pair: ~[List[PathElement], List[PathElement]]): List[PathElement] = pair._1 ++ pair._2
-  def flattenO(option: Option[PathElement]): List[PathElement] = option.toList
   
   override def skipWhitespace = false
   
@@ -74,7 +73,7 @@ object RestPathPattern2 extends RegexParsers {
   
   def pathSepL: Parser[List[PathElement]] = pathSep ^^ (p => p :: Nil)
   
-  def pathSepOpt: Parser[List[PathElement]] = (pathSep?) ^^ flattenO
+  def pathSepOpt: Parser[List[PathElement]] = (pathSep?) ^^ (o => o.toList)
   
   def pathMiddle: Parser[List[PathElement]] = ((pathSep ~ pathElement)*) ^^ flattenLP
   

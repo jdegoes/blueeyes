@@ -477,7 +477,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.add("""
         protected def extractField[T](jvalue: JValue, name: String, default: JValue, e: Extractor[T]): T = {
           try {
-            e.extract((jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default))
+            e.extract((jvalue \ name) match { case JNothing => default; case jvalue => jvalue })
           }
           catch {
             case _ => e.extract(default)
