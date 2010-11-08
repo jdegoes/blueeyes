@@ -26,8 +26,6 @@ trait MongoImplicits {
 
   implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
 
-  implicit def filterToMongoPullUpdateBuilder(filter: MongoFilter): MongoPullUpdateBuilder = MongoPullUpdateBuilder(filter)
-
   implicit def jvalueToMongoUpdateObject(value: JObject): MongoUpdateObject = MongoUpdateObject(value)
 
 }
@@ -130,8 +128,8 @@ sealed case class MongoUpdateObject(value: JObject) extends MongoUpdateValue{
   def toJValue = value
 }
 
-sealed case class MongoUpdateFieldValue(operator: MongoUpdateOperator, filter: MongoFilter) extends MongoUpdateValue{  self =>
-  def toJValue: JObject = JObject(JField(operator.symbol, filter.filter) :: Nil)
+sealed case class MongoUpdateFieldValue(operator: MongoUpdateOperator, path: JPath, filter: MongoFilter) extends MongoUpdateValue{  self =>
+  def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(path), filter.filter) :: Nil)) :: Nil)
 
   def & (that: MongoUpdateFieldValue): MongoUpdateValue = MongoUpdateFieldsValues(self :: that :: Nil)
 }
@@ -140,28 +138,25 @@ sealed case class MongoUpdateFieldsValues(values: List[MongoUpdateValue]) extend
   def toJValue: JObject = values.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 
-case class MongoPullUpdateBuilder(filter: MongoFilter){
-  def pull = MongoUpdateFieldValue($pull, filter)
-}
-
 case class MongoUpdateBuilder(jpath: JPath) {
   import MongoFilterImplicits._
   import MongoFilterOperators._
-  def inc [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($inc,   jpath === value)
-  def set [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($set,   jpath === value)
-  def unset                             : MongoUpdateFieldValue = MongoUpdateFieldValue($unset, jpath === MongoPrimitiveInt(1))
-  def popLast                           : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath === MongoPrimitiveInt(1))
-  def popFirst                          : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath === MongoPrimitiveInt(-1))
-  def push [T](value: MongoPrimitive[T]): MongoUpdateFieldValue = MongoUpdateFieldValue($push,  jpath === value)
-  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pushAll, jpath === MongoPrimitiveArray(List(items: _*)))
-  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pullAll, jpath === MongoPrimitiveArray(List(items: _*)))
+  def inc [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($inc,   jpath, "" === value)
+  def set [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($set,   jpath, "" === value)
+  def unset                             : MongoUpdateFieldValue = MongoUpdateFieldValue($unset, jpath, "" === MongoPrimitiveInt(1))
+  def popLast                           : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath, "" === MongoPrimitiveInt(1))
+  def popFirst                          : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath, "" === MongoPrimitiveInt(-1))
+  def push [T](value: MongoPrimitive[T]): MongoUpdateFieldValue = MongoUpdateFieldValue($push,  jpath, "" === value)
+  def pull(filter: MongoFilter)         : MongoUpdateFieldValue = MongoUpdateFieldValue($pull,  jpath, filter)  
+  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pushAll, jpath, "" === MongoPrimitiveArray(List(items: _*)))
+  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pullAll, jpath, "" === MongoPrimitiveArray(List(items: _*)))
 
   def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateFieldValue = {
     val itemsList = List(items: _*)
     if (itemsList.size == 1) {
       val item: MongoPrimitive[_] = itemsList.head 
-      MongoUpdateFieldValue($addToSet, jpath === item)
+      MongoUpdateFieldValue($addToSet, jpath, "" === item)
     }
-    else MongoUpdateFieldValue($addToSet, MongoFieldFilter(jpath, $each, MongoPrimitiveArray(itemsList)))
+    else MongoUpdateFieldValue($addToSet, jpath, MongoFieldFilter(JPath(""), $each, MongoPrimitiveArray(itemsList)))
   }  
 }

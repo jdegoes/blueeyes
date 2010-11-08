@@ -36,11 +36,11 @@ class MongoUpdateBuilderSpec extends Specification{
   }
   "builds $pull operation with default operator" in {
     import MongoFilterImplicits._
-    (("n" === 1 pull).toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
+    (("n" pull(JPath("") === 1)).toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
   }
   "builds $pull operation with custom operator" in {
     import MongoFilterImplicits._
-    ((JPath("n") > 1 pull) toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JObject(JField("$gt", JInt(1)) :: Nil)) :: Nil)) :: Nil))
+    (("n" pull(JPath("") > 1)).toJValue) mustEqual (JObject(JField("$pull", JObject(JField("n", JObject(JField("$gt", JInt(1)) :: Nil)) :: Nil)) :: Nil))
   }
   "builds $pullAll operation" in {
     import MongoFilterImplicits._

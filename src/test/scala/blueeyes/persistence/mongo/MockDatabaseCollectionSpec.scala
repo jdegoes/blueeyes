@@ -73,7 +73,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject :: jObject1 :: Nil)
     collection.insert(jObject2 :: jObject3 :: Nil)
 
-    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
+    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse.toStream)
   }
   "update jobject field" in{
     import MongoFilterImplicits._
@@ -82,7 +82,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject1 :: Nil)
     collection.update(None, "address.street" set ("3"), false, false)
 
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject2 :: Nil).toStream)
   }
   "update not existing jobject field" in{
     import MongoFilterImplicits._
@@ -91,7 +91,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject1 :: Nil)
     collection.update(None, "name" set ("foo"), false, false)
 
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1.merge(JObject(JField("name", JString("foo")) :: Nil)) :: Nil)
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject1.merge(JObject(JField("name", JString("foo")) :: Nil)) :: Nil).toStream)
   }
   "update jobject fields" in{
     import MongoFilterImplicits._
@@ -100,7 +100,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject :: Nil)
     collection.update(None, ("address.city" set ("B")) & ("address.street" set ("3")), false, false)
 
-    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject2 :: Nil).toStream)
   }
   "update all objects" in{
     val collection = newCollection

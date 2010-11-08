@@ -75,6 +75,7 @@ private[mongo] object MockMongoFiltersImplementation{
       case $exists  => ExistsFieldFilterEvalutor
       case $type    => TypeFieldFilterEvalutor
       case $or      => error("'or' is not supported")
+      case $each    => error("'or' is not supported")
     }
   }
 

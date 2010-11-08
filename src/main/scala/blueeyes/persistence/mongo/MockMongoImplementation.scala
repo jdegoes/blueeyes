@@ -95,7 +95,7 @@ private[mongo] object MockMongoImplementation{
       case x: MongoUpdateObject       => x.value
       case x: MongoUpdateFieldValue   => {
         def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))
-        val jfield = selectByPath(toPath(x.filter), jobject, updateValue _)
+        val jfield = selectByPath(x.path, jobject, updateValue _)
         jfield.map(jobject.merge(_).asInstanceOf[JObject]).getOrElse(jobject)
       }
       case x: MongoUpdateFieldsValues => x.values.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
