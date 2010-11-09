@@ -4,12 +4,12 @@ import org.spex.Specification
 import MongoQueryBuilder._
 import MongoFilterBuilder._
 import MongoFilterOperators._
+import MongoImplicits._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
 
-
 class MongoDistinctQuerySpec extends Specification{
-  private val query = distinct("foo").from(MongoCollection("collection"))
+  private val query = distinct("foo").from("collection")
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._

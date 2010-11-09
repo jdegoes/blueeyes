@@ -41,6 +41,9 @@ sealed trait MongoQuery[T] extends QueryBehaviour[T]{
 case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
   def where (newFilter: MongoFilter): MongoDistinctQuery = MongoDistinctQuery(selection, collection, Some(newFilter))
 }
+case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JObject] with GroupQueryBehaviour{
+  def where (newFilter: MongoFilter): MongoGroupQuery = MongoGroupQuery(selection, collection, initial, reduce, Some(newFilter))
+}
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
                             sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[Stream[JObject]] with SelectQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectQuery = MongoSelectQuery(selection, collection, Some(newFilter), sort, skip, limit)
@@ -69,7 +72,6 @@ case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue
 }
 
 object MongoQueryBuilder{
-
   class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
     def from (collection: MongoCollection): T = f(collection)
   }
@@ -100,7 +102,10 @@ object MongoQueryBuilder{
   def updateMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, false, true)})
   def upsert( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, false)})
   def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, true)})
+  def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(List(selection: _*)), collection, initial, reduce)})
 }
+
+//group takes a MongoSelection, MongoFilter, reducer function, and initial JObject, and returns a single JObject.
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {

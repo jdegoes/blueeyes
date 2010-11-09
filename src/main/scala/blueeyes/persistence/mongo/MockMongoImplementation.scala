@@ -138,6 +138,7 @@ private[mongo] object MockMongoImplementation{
       selectFields(limited, selection).map(_.asInstanceOf[JObject]).toStream
     }
 
+    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = JObject(Nil)
 
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val objects = search(filter)

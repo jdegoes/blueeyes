@@ -48,7 +48,7 @@ private[mongo] object RealMongoImplementation{
 
     def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
 
-      val keysObject   = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+      val keysObject   = toMongoKeys(selection)
       val filterObject = toMongoFilter(filter)
       val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
 
@@ -60,6 +60,8 @@ private[mongo] object RealMongoImplementation{
       stream(limitedCursor.iterator)
     }
 
+    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JObject = 
+        collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
 
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val key    = JPathExtension.toMongoField(selection)
@@ -71,6 +73,7 @@ private[mongo] object RealMongoImplementation{
     def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
       if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
 
+    private def toMongoKeys(selection : MongoSelection)    = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
     private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
 
     private def checkWriteResult(result: WriteResult) = {

@@ -17,6 +17,7 @@ trait MongoDatabase{
 trait DatabaseCollection{
   def insert(objects: List[JObject])
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
+  def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JObject
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter]): Int
   def count(filter: Option[MongoFilter]): Long
@@ -79,6 +80,14 @@ trait SelectQueryBehaviour extends QueryBehaviour[Stream[JObject]]{
   def sort      : Option[MongoSort]
   def skip      : Option[Int]
   def limit     : Option[Int]
+}
+trait GroupQueryBehaviour extends QueryBehaviour[JObject]{
+  def apply(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
+
+  def selection : MongoSelection
+  def reduce    : String
+  def initial   : JObject
+  def filter    : Option[MongoFilter]
 }
 trait DistinctQueryBehaviour extends QueryBehaviour[List[JValue]]{
   def apply(collection: DatabaseCollection) = collection.distinct(selection, filter)

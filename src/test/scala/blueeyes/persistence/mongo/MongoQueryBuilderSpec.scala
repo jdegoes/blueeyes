@@ -13,6 +13,9 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates select query" in{
     select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection")) )
   }
+  "creates ggroup query" in{
+    group(JObject(Nil), "dummy", "foo", "bar").from("collection") mustEqual ( MongoGroupQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), JObject(Nil), "dummy") )
+  }
   "creates distinct query" in{
     distinct("foo").from("collection") mustEqual ( MongoDistinctQuery(JPath("foo"), MongoCollection("collection")) )
   }
