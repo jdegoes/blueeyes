@@ -82,13 +82,21 @@ private[mongo] object MockMongoImplementation{
     def remove0(objects: List[JObject]) = objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
 
     def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int = {
-      val objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
-      val updated = objects.map(update(_, value))
+      var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
+      var updated = objects.map(update(_, value))
+
+      if (objects.isEmpty && upsert){
+        objects = value match{
+          case MongoUpdateObject(value) => value :: Nil
+          case _ => Nil
+        }
+        updated = objects
+      }
 
       checkIndex(updated)
       remove0(objects)
       insert0(updated)
-
+      
       objects.size
     }
 
@@ -138,7 +146,10 @@ private[mongo] object MockMongoImplementation{
       selectFields(limited, selection).map(_.asInstanceOf[JObject]).toStream
     }
 
-    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = JObject(Nil)
+    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = {
+      val objects = search(filter)
+      JObject(Nil)
+    }
 
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val objects = search(filter)

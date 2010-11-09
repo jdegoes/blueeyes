@@ -204,6 +204,20 @@ class MockDatabaseCollectionSpec extends Specification{
     result.contains(jObject2) must be (true)
     (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be (true)
   }
+  "insert by update when upsert is true" in{
+    val collection = newCollection
+
+    collection.update(None, MongoUpdateObject(jObject2), true, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+  }
+  "does not insert by update when upsert is false" in{
+    val collection = newCollection
+
+    collection.update(None, MongoUpdateObject(jObject2), false, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
+  }
   "removes all jobjects when filter is not specified" in{
     val collection = newCollection
 
