@@ -38,6 +38,9 @@ sealed trait MongoQuery[T] extends QueryBehaviour[T]{
   def collection: MongoCollection;
 }
 
+case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
+  def where (newFilter: MongoFilter): MongoDistinctQuery = MongoDistinctQuery(selection, collection, Some(newFilter))
+}
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
                             sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[Stream[JObject]] with SelectQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectQuery = MongoSelectQuery(selection, collection, Some(newFilter), sort, skip, limit)
@@ -84,6 +87,7 @@ object MongoQueryBuilder{
   }
 
   def select(selection: JPath*)                 = new FromQueryEntryPoint[MongoSelectQuery]   ((collection: MongoCollection) => {MongoSelectQuery(MongoSelection(List(selection: _*)), collection)})
+  def distinct(selection: JPath)                = new FromQueryEntryPoint[MongoDistinctQuery] ((collection: MongoCollection) => {MongoDistinctQuery(selection, collection)})
   def selectOne(selection: JPath*)              = new FromQueryEntryPoint[MongoSelectOneQuery]((collection: MongoCollection) => {MongoSelectOneQuery(MongoSelection(List(selection: _*)), collection)})
   def remove                                    = new FromQueryEntryPoint[MongoRemoveQuery]   ((collection: MongoCollection) => {MongoRemoveQuery(collection)})
   def count                                     = new FromQueryEntryPoint[MongoCountQuery]    ((collection: MongoCollection) => {MongoCountQuery(collection)})

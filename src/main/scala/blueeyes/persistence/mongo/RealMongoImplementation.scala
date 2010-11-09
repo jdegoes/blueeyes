@@ -27,7 +27,7 @@ private[mongo] object RealMongoImplementation{
   }
 
   class RealMongoDatabase(database: DB) extends MongoDatabase{
-    def apply[T](query: MongoQuery[T]): T     = query(collection(query.collection.name))
+    def apply[T](query: MongoQuery[T]): T  = query(collection(query.collection.name))
     def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
   }
 
@@ -58,6 +58,14 @@ private[mongo] object RealMongoImplementation{
       val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
 
       stream(limitedCursor.iterator)
+    }
+
+
+    def distinct(selection: JPath, filter: Option[MongoFilter]) = {
+      val key    = JPathExtension.toMongoField(selection)
+      val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
+      
+      mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value)
     }
 
     def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =

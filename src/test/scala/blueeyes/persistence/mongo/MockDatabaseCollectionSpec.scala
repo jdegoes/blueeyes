@@ -49,6 +49,13 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
   }
+  "distinct simple fields" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.distinct("address.city", None) mustEqual(JString("A") :: JString("B") :: JString("C") :: Nil)
+  }
+
   "does not store jobject when unique index exists and objects are the same" in{
     val collection = newCollection
 

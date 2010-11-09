@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import collection.immutable.List
 import blueeyes.json.JPath
 import java.lang.String
-import blueeyes.json.JsonAST.{JInt, JObject, JNothing}
+import blueeyes.json.JsonAST.{JValue, JInt, JObject, JNothing}
 
 trait Mongo{
   def database(databaseName: String): MongoDatabase
@@ -17,6 +17,7 @@ trait MongoDatabase{
 trait DatabaseCollection{
   def insert(objects: List[JObject])
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
+  def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter]): Int
   def count(filter: Option[MongoFilter]): Long
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
@@ -78,6 +79,12 @@ trait SelectQueryBehaviour extends QueryBehaviour[Stream[JObject]]{
   def sort      : Option[MongoSort]
   def skip      : Option[Int]
   def limit     : Option[Int]
+}
+trait DistinctQueryBehaviour extends QueryBehaviour[List[JValue]]{
+  def apply(collection: DatabaseCollection) = collection.distinct(selection, filter)
+
+  def selection : JPath
+  def filter    : Option[MongoFilter]
 }
 
 trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>

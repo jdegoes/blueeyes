@@ -13,6 +13,9 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates select query" in{
     select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection")) )
   }
+  "creates distinct query" in{
+    distinct("foo").from("collection") mustEqual ( MongoDistinctQuery(JPath("foo"), MongoCollection("collection")) )
+  }
   "creates selectOne query" in{
     selectOne("foo", "bar").from("collection") mustEqual ( MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection")) )
   }

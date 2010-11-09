@@ -137,6 +137,13 @@ private[mongo] object MockMongoImplementation{
 
       selectFields(limited, selection).map(_.asInstanceOf[JObject]).toStream
     }
+
+
+    def distinct(selection: JPath, filter: Option[MongoFilter]) = {
+      val objects = search(filter)
+      objects.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, false)).filter(_.isDefined).map(_.get).distinct
+    }
+
     private def selectFields(jobjects: List[JObject], selection : MongoSelection) = {
       if (!selection.selection.isEmpty) {
         def updateValue(value: JValue) = value match{
