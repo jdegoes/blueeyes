@@ -148,7 +148,7 @@ private[mongo] object MockMongoImplementation{
 
     def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = {
       val objects = search(filter)
-      JObject(Nil)
+      JArray(Nil)
     }
 
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {

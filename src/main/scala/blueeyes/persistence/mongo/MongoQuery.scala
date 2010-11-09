@@ -41,7 +41,7 @@ sealed trait MongoQuery[T] extends QueryBehaviour[T]{
 case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
   def where (newFilter: MongoFilter): MongoDistinctQuery = MongoDistinctQuery(selection, collection, Some(newFilter))
 }
-case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JObject] with GroupQueryBehaviour{
+case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JArray] with GroupQueryBehaviour{
   def where (newFilter: MongoFilter): MongoGroupQuery = MongoGroupQuery(selection, collection, initial, reduce, Some(newFilter))
 }
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,

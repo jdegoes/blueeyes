@@ -60,8 +60,11 @@ private[mongo] object RealMongoImplementation{
       stream(limitedCursor.iterator)
     }
 
-    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JObject = 
-        collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
+    def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
+      val result = collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
+
+      JArray(mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value))
+    }
 
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val key    = JPathExtension.toMongoField(selection)
