@@ -20,6 +20,8 @@ trait DatabaseCollection{
   def remove(filter: Option[MongoFilter]): Int
   def count(filter: Option[MongoFilter]): Long
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
+  def dropIndexes
+  def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
 }
 
@@ -33,6 +35,20 @@ trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def keys: List[JPath]
   def name: String
   def unique: Boolean
+}
+
+trait DropIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection): JNothing.type = {
+    collection.dropIndex(name)
+    JNothing
+  }
+  def name: String
+}
+trait DropIndexesQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection): JNothing.type = {
+    collection.dropIndexes
+    JNothing
+  }
 }
 
 trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{

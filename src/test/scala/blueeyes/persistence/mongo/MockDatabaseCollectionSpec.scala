@@ -57,6 +57,24 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
+  "store jobject when index is dropped and objects are the same" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+    collection.dropIndex("index")
+    collection.insert(jObject :: jObject :: Nil)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject :: jObject :: Nil)
+  }
+  "store jobject when indexes are dropped and objects are the same" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+    collection.dropIndexes
+    collection.insert(jObject :: jObject :: Nil)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject :: jObject :: Nil)
+  }
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 

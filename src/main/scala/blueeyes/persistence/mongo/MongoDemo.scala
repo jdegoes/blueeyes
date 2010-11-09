@@ -7,7 +7,7 @@ import blueeyes.json.JsonAST._
 import MongoFilterImplicits._
 import blueeyes.config.{ConfiggyModule, FilesystemConfiggyModule}
 import com.google.inject.Guice
-import blueeyes.json.{JPath, Printer}
+import blueeyes.json.{JsonParser, JPath, Printer}
 
 object MongoDemo{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
@@ -15,6 +15,20 @@ object MongoDemo{
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("E")) :: JField("street", JString("4")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
   private val jObject6 = JObject(JField("address", JString("ll")) :: Nil)
+
+  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [
+      {
+        "shape" : "square",
+        "color" : "purple",
+        "thick" : false
+      },
+      {
+        "shape" : "circle",
+        "color" : "red",
+        "thick" : true
+      }
+] } """).asInstanceOf[JObject] :: Nil
+
 
   private val collection = "my-collection"
 
@@ -30,13 +44,20 @@ object MongoDemo{
 
 //    database(remove.from(collection))
 
-//    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
+    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
+    database[JNothing.type](dropIndex("index").on(collection))
+
+    insertObjects
+
+    printObjects(database(select().from(collection)))
+
+    database(remove.from(collection))
 
 //    demoSelectOne
 
 //    demoSelect
     
-    demoUpdate
+//    demoUpdate0
 
 //    demoRemove
   }
@@ -56,6 +77,17 @@ object MongoDemo{
 
     database(remove.from(collection))
     println("------------demoSelect------------------")
+  }
+  private def demoUpdate0{
+    database[JNothing.type](insert(jobjectsWithArray: _*).into(collection))
+
+    printObjects(database(select().from(collection)))
+
+    database(updateMany(collection).set("foo" pull (("shape" === "square") && ("color" === "purple")).elemMatch("")))
+
+    printObjects(database(select().from(collection)))
+
+    database(remove.from(collection))
   }
   private def demoUpdate{
     import MongoUpdateBuilder._
@@ -113,6 +145,6 @@ object MongoDemo{
   }
 
   private def insertObjects{
-    database[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
+    database[JNothing.type](insert(jObject, jObject).into(collection))
   }
 }

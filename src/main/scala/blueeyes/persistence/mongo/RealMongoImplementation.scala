@@ -2,12 +2,12 @@ package blueeyes.persistence.mongo
 
 import blueeyes.persistence.mongo.json.MongoJson._
 import scala.collection.JavaConversions._
-import blueeyes.json.JPath
 import java.lang.String
-import blueeyes.json.JsonAST.{JInt, JField, JObject}
+import blueeyes.json.JsonAST._
 import com.mongodb._
 import com.google.inject.{Provider, Inject}
 import net.lag.configgy.Config
+import blueeyes.json.{Printer, JPath}
 
 private[mongo] object RealMongoImplementation{
 
@@ -41,6 +41,10 @@ private[mongo] object RealMongoImplementation{
     def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)).getN
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)
+
+    def dropIndex(name: String) = collection.dropIndex(name)
+
+    def dropIndexes = collection.dropIndexes()
 
     def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
 

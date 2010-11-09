@@ -28,6 +28,12 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates ensureIndex query" in{
     ensureIndex("index").on("collection", "address.city") mustEqual ( MongoEnsureIndexQuery(MongoCollection("collection"), "index", JPath("address.city") :: Nil, false) )
   }
+  "creates dropIndex query" in{
+    dropIndex("index").on("collection") mustEqual ( MongoDropIndexQuery(MongoCollection("collection"), "index") )
+  }
+  "creates dropIndexes query" in{
+    dropIndexes.on("collection") mustEqual ( MongoDropIndexesQuery(MongoCollection("collection")) )
+  }
   "creates ensureUniqueIndex query" in{
     ensureUniqueIndex("index").on("collection", "address.city") mustEqual ( MongoEnsureIndexQuery(MongoCollection("collection"), "index", JPath("address.city") :: Nil, true) )
   }

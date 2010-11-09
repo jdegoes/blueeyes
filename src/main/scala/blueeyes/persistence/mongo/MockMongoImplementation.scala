@@ -8,6 +8,7 @@ import JPathExtension._
 import MockMongoFiltersImplementation._
 import MockMongoUpdateEvalutors._
 import com.mongodb.MongoException
+import java.lang.String
 
 private[mongo] object MockMongoImplementation{
   @com.google.inject.Singleton
@@ -120,6 +121,13 @@ private[mongo] object MockMongoImplementation{
         case Some(x) => indexes
       } else indexes
     }
+
+
+    def dropIndex(name: String) = {
+      indexes = indexes - name
+    }
+
+    def dropIndexes = indexes = Map[String, List[JPath]]()
 
     def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
       val objects = search(filter)
