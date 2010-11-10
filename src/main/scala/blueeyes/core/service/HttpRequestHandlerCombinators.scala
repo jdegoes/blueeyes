@@ -9,7 +9,13 @@ trait HttpRequestHandlerCombinators {
   def path[T](path: RestPathPattern)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.path)
     
-    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = h(path.shift(r))
+    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
+      val pathParameters = path(r.path)
+      
+      val shiftedRequest = path.shift(r)
+      
+      h(shiftedRequest.copy(parameters = shiftedRequest.parameters ++ pathParameters))
+    }
   }
   def transcode[In, Out, Base](h: HttpRequestHandler2[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): HttpRequestHandler[Base] = new HttpRequestHandler[Base] {
     def isDefinedAt(r: HttpRequest[Base]): Boolean = true
