@@ -538,7 +538,7 @@ object HttpHeaders {
   object `X-Forwarded-For` {
     def apply (ips: HttpIp*) = new `X-Forwarded-For`(ips: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-for") 
-      HttpIps.parseHttpIps(keyValue._2) else None
+      Some(HttpIps.parseHttpIps(keyValue._2)) else None
   }
 
   class `X-Forwarded-Proto`(val proto: String) extends HttpHeader {
