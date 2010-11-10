@@ -52,25 +52,30 @@ val emailService = {
 }
 */
 trait HttpServiceBuilder {
-  case class StartupDescriptor[T, S](startup: () => Future[S]) {
+  protected case class StartupDescriptor[T, S](startup: () => Future[S]) {
     def -> (request: RequestDescriptor[T, S]) = new {
       def -> (shutdown: ShutdownDescriptor[T, S]) = HttpServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
     }
   }
-  case class RequestDescriptor[T, S](request: S => HttpRequestHandler[T])
-  case class ShutdownDescriptor[T, S](shutdown: S => Future[Unit])
+  protected case class RequestDescriptor[T, S](request: S => HttpRequestHandler[T])
+  protected case class ShutdownDescriptor[T, S](shutdown: S => Future[Unit])
   
-  def startup[T, S](startup: => Future[S]): StartupDescriptor[T, S] = {
+  
+  protected def startup[T, S](startup: => Future[S]): StartupDescriptor[T, S] = {
     val thunk = () => startup
     
     StartupDescriptor[T, S](thunk)
   }
   
-  def request[T, S](request: S => HttpRequestHandler[T]): RequestDescriptor[T, S] = RequestDescriptor[T, S](request)
+  protected def request[T, S](request: S => HttpRequestHandler[T]): RequestDescriptor[T, S] = RequestDescriptor[T, S](request)
   
-  def shutdown[T, S](shutdown: S => Future[Unit]): ShutdownDescriptor[T, S] = ShutdownDescriptor[T, S](shutdown)
+  protected def request[T](request: => HttpRequestHandler[T]): RequestDescriptor[T, Unit] = RequestDescriptor[T, Unit]((u) => request)
   
-  implicit def statelessRequestDescriptorToServiceDescriptor[T](rd: RequestDescriptor[T, Unit]): HttpServiceDescriptor[T, Unit] = 
+  protected def shutdown[T, S](shutdown: S => Future[Unit]): ShutdownDescriptor[T, S] = ShutdownDescriptor[T, S](shutdown)
+  
+  protected def shutdown[T](shutdown: => Future[Unit]): ShutdownDescriptor[T, Unit] = ShutdownDescriptor[T, Unit]((u) => shutdown)
+  
+  protected implicit def statelessRequestDescriptorToServiceDescriptor[T](rd: RequestDescriptor[T, Unit]): HttpServiceDescriptor[T, Unit] = 
     HttpServiceDescriptor[T, Unit](() => Future(()), rd.request, _ => Future(()))
 
   def service[T](name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService2[T] = new HttpService2[T]{
