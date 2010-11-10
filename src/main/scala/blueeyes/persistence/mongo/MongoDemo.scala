@@ -45,7 +45,7 @@ object MongoDemo{
 //    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 //    demoSelectOne
 
-//    demoSelect
+    demoSelect
     
 //    demoUpdate0
 
@@ -53,20 +53,20 @@ object MongoDemo{
 
 //    demoDistinct
 
-    demoGroup
+//    demoGroup
   }
 
   private def demoSelect{
     println("------------demoSelect------------------")
-    insertObjects
+    database[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
 
-//    printObjects(database(select().from(collection).sortBy("address.street" <<)))
+    printObjects(database(select().from(collection).where(("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ))))
 //    printObjects(database(select().from(collection).sortBy("address.street" >>)))
 //    printObjects(database(select().from(collection).sortBy("address.city" >>).skip(1).limit(1)))
 //    printObjects(database(select().from(collection).where("address.city" === "B").sortBy("address.city" >>)))
 //    printObjects(database(select().from(collection).where("address.city" === "Z").sortBy("address.city" >>)))
 //    printObjects(database(select("address.city").from(collection).sortBy("address.city" >>)))
-    println(database(count.from(collection)))
+//    println(database(count.from(collection)))
 //    printObjects(database(select("address.city").from(collection).sortBy("address.city" <<)))
 
     database(remove.from(collection))
