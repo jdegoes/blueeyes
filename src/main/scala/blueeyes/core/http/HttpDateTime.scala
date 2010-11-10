@@ -40,7 +40,7 @@ object HttpDateTimes extends Rfc1123Standard{
 
 }
 
-trait HttpDateImplicits extends Rfc1123Standard{
+trait HttpDateImplicits {
 
   implicit def jodaDateTime2HttpDateTime(jodaDateTime: DateTime): HttpDateTime =  {
     return HttpDateTimes.StandardDateTime(jodaDateTime)
