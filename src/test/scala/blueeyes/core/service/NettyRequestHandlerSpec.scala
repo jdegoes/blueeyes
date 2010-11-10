@@ -62,7 +62,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   }
 
   class TestService extends RestHierarchyBuilder[String]{
-    path("bar" / 'adId / "adCode.html"){get(handler)}
+    path("/bar/'adId/adCode.html"){get(handler)}
   }
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {
