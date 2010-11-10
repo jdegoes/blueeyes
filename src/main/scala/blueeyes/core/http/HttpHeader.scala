@@ -504,7 +504,7 @@ object HttpHeaders {
       FrameOptions.parseFrameOptions(keyValue._2) else None
   }
 
-  /* Seems to be primarily used by IE8 */
+  /* X-XSS-Protection Seems to be primarily used by IE8 */
   class `X-XSS-Protection`(val xss: String) extends HttpHeader {
     def value = xss;
   }
@@ -550,7 +550,6 @@ object HttpHeaders {
       Some(keyValue._2) else None
   }
 
-  /* List of products */
   class `X-Powered-By`(val products: ProductType*) extends HttpHeader {
     def value = products.map(_.toString).mkString(",")
   }
@@ -559,6 +558,34 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by") 
       ProductTypes.parseProductTypes(keyValue._2) else None
   }  
+
+  /* Very new headers */
+  class `Access-Control-Allow-Origin`(val origin: String) extends HttpHeader {
+    def value = origin
+  }
+  object `Access-Control-Allow-Origin` {
+    def apply(origin: String) = new `Access-Control-Allow-Origin`(origin)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-allow-origin") 
+      Some(keyValue._2) else None
+  }
+
+  class `Access-Control-Request-Method`(val methods: HttpMethod*) extends HttpHeader {
+    def value = methods.map(_.toString).mkString(",") 
+  }
+  object `Access-Control-Request-Method` {
+    def apply(methods: HttpMethod*) = new `Access-Control-Request-Method`(methods:_ *)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-request-method") 
+      Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
+  }
+
+  class `Access-Control-Request-Headers`(val fields: HttpHeaderField*) extends HttpHeader {
+    def value = fields.map(_.toString).mkString(",")
+  }
+  object `Access-Control-Request-Headers` {
+    def apply(fields: HttpHeaderField*) = new `Access-Control-Request-Headers`(fields:_ *)
+    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-request-headers") 
+      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl") else None
+  }
   
   class CustomHeader(override val name: String, val value: String) extends HttpHeader {
   }
@@ -630,6 +657,9 @@ trait HttpHeaderImplicits {
     case `X-Forwarded-For`(value) => new `X-Forwarded-For`(value: _*)
     case `X-Forwarded-Proto`(value) => new `X-Forwarded-Proto`(value)
     case `X-Powered-By`(value) => new `X-Powered-By`(value: _*)
+    case `Access-Control-Allow-Origin`(value) => new `Access-Control-Allow-Origin`(value)
+    case `Access-Control-Request-Method`(value) => new `Access-Control-Request-Method`(value: _*)
+    case `Access-Control-Request-Headers`(value) => new `Access-Control-Request-Headers`(value: _*)
     case (name, value) => new CustomHeader(name, value)
   }
 }
