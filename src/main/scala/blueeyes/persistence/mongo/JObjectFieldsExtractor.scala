@@ -4,7 +4,7 @@ import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import JPathExtension._
 
-private[mongo] object JObjectFieldsExtractor{
+private[mongo] trait JObjectFieldsExtractor{
   def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = jobject.get(selectionPath) match{
     case Nil             => None
     case x :: Nil        => transformer(x).map(jobjectRestorer(selectionPath, _))

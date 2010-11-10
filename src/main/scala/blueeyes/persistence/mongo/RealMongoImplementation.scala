@@ -20,14 +20,23 @@ private[mongo] object RealMongoImplementation{
   @com.google.inject.Singleton
   class RealMongo(config: Config) extends Mongo{
     import MongoConfiguration._
+    val ServerAndPortPattern = "(.+):(.+)".r
 
-    private lazy val mongo = new com.mongodb.Mongo(config.getString(MongoHost).getOrElse("MongoHost is not configured. Configure the value '%s'".format(MongoHost)) , config.getInt(MongoPort, ServerAddress.defaultPort()))
+    private lazy val mongo = {
+      val servers = config.getList(MongoServers).map(server =>{
+        server match{
+          case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
+          case _ => new ServerAddress(server, ServerAddress.defaultPort())
+        }
+      })
+      if (servers.isEmpty) error("""MongoServers are not configured. Configure the value '%s'. Format is '["host1:port1", "host2:port2", ...]'""".format(MongoServers))
+      new com.mongodb.Mongo(servers)
+    }
 
     def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))
   }
 
   class RealMongoDatabase(database: DB) extends MongoDatabase{
-    def apply[T](query: MongoQuery[T]): T  = query(collection(query.collection.name))
     def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
   }
 
@@ -66,6 +75,10 @@ private[mongo] object RealMongoImplementation{
       JArray(mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value))
     }
 
+    def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
+      new RealMapReduceOutput(collection.mapReduce(map, reduce, outputCollection.getOrElse(null), toMongoFilter(filter)))
+    }
+
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val key    = JPathExtension.toMongoField(selection)
       val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
@@ -88,4 +101,10 @@ private[mongo] object RealMongoImplementation{
     }
   }
 
+  import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
+  class RealMapReduceOutput(output: MongoMapReduceOutput) extends MapReduceOutput{
+    def drop = {output.drop}
+
+    def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection))
+  }
 }

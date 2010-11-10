@@ -10,13 +10,11 @@ import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.Printer._
 import blueeyes.json.{JPath}
 import com.mongodb.{MongoException}
-import JObjectFieldsExtractor._
 import JPathExtension._
 
 private[mongo] class MockMongoDatabase() extends MongoDatabase{
   private val collections   = scala.collection.mutable.Map[String, MockDatabaseCollection]()
 
-  def apply[T](query: MongoQuery[T]): T     = query(collection(query.collection.name))
   def collection(collectionName: String) = {
     collections.get(collectionName) match{
       case Some(x) => x
@@ -29,7 +27,7 @@ private[mongo] class MockMongoDatabase() extends MongoDatabase{
   }
 }
 
-private[mongo] class MockDatabaseCollection() extends DatabaseCollection{
+private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFieldsExtractor{
   private var container = JArray(Nil)
   private var indexes   = Map[String, List[JPath]]()
 
@@ -166,6 +164,11 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection{
     objects.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).filter(_.isDefined).map(_.get).distinct
   }
 
+
+  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
+    new MockMapReduceOutput(this)  
+  }
+
   private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
 
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
@@ -191,4 +194,10 @@ private[mongo] class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends
       }
     case _ => error("lists cannot be ordered")
   }
+}
+
+class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
+  def drop = {}
+
+  def outpotCollection = MongoCollectionHolder(output)
 }

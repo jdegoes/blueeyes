@@ -3,8 +3,7 @@ package blueeyes.persistence.mongo
 import com.google.inject.{AbstractModule}
 
 object MongoConfiguration {
-  val MongoHost = "mongo.host"
-  val MongoPort = "mongo.port"
+  val MongoServers = "mongo.servers"
 }
 
 class RealMongoModule extends AbstractModule {

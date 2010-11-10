@@ -9,17 +9,16 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 
-
 class MongoSelectOneQuerySpec extends Specification{
   private val query = selectOne("foo", "bar").from("collection")
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
 
   "'sortBy' method sets new sort" in {
     import MongoFilterImplicits._
-    query.sortBy("name" << ) mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
+    query.sortBy("name" << ) mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
   }
 }

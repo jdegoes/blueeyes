@@ -13,6 +13,6 @@ class MongoDistinctQuerySpec extends Specification{
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual (MongoDistinctQuery(JPath("foo"), MongoCollection("collection"), Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoDistinctQuery(JPath("foo"), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
 }

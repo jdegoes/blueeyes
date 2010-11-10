@@ -14,6 +14,6 @@ class MongoGroupQuerySpec extends Specification{
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual (MongoGroupQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), MongoCollection("collection"), JObject(Nil), "dummy", Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoGroupQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", JObject(Nil), "dummy", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
 }

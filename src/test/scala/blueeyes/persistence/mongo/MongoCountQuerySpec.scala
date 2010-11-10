@@ -11,6 +11,6 @@ class MongoCountQuerySpec extends Specification{
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual ( MongoCountQuery(MongoCollection("collection"), Some(MongoFieldFilter("name", $eq, "Joe"))) )
+    query.where("name" === "Joe") mustEqual ( MongoCountQuery("collection", Some(MongoFieldFilter("name", $eq, "Joe"))) )
   }
 }

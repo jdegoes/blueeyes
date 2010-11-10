@@ -10,7 +10,14 @@ trait Mongo{
 }
 
 trait MongoDatabase{
-  def apply[T](query: MongoQuery[T]): T
+  def apply[T](query: MongoQuery[T]): T  = {
+    val databaseCollection = query.collection match{
+      case MongoCollectionReference(name)         => collection(name)
+      case MongoCollectionHolder(realCollection)  => realCollection
+    }
+    query(databaseCollection)
+  }
+
   def collection(collectionName: String): DatabaseCollection
 }
 
@@ -25,6 +32,7 @@ trait DatabaseCollection{
   def dropIndexes
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
+  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
 }
 
 trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
@@ -59,6 +67,16 @@ trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
     JNothing
   }
   def objects: List[JObject]
+}
+trait MapReduceQueryBehaviour extends QueryBehaviour[MapReduceOutput]{
+  def apply(collection: DatabaseCollection): MapReduceOutput = {
+    collection.mapReduce(map, reduce, outputCollection, filter)
+  }
+  def map: String
+  def reduce: String
+  def collection: MongoCollection
+  def filter: Option[MongoFilter]
+  def outputCollection: Option[String]
 }
 
 trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{

@@ -4,7 +4,9 @@ import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST._
 
-case class MongoCollection(name: String)
+sealed trait MongoCollection
+case class MongoCollectionReference(name: String) extends MongoCollection
+case class MongoCollectionHolder(collection: DatabaseCollection) extends MongoCollection  
 
 sealed abstract class MongoSortOrder(val order: Int)
 case object MongoSortOrderAscending extends MongoSortOrder(1)
@@ -16,7 +18,7 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
 }
 
 trait MongoImplicits {
-  implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollection(string)
+  implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
 
   implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
 
@@ -70,6 +72,17 @@ case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue
                             multi: Boolean = false) extends MongoQuery[JInt] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
 }
+case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCollection, outputCollection: Option[String] = None, filter: Option[MongoFilter] = None)
+                            extends MongoQuery[MapReduceOutput] with MapReduceQueryBehaviour{
+  def where (newFilter: MongoFilter)    = MongoMapReduceQuery(map, reduce, collection, outputCollection, Some(newFilter))
+  def into(newOutputCollection: String) = MongoMapReduceQuery(map, reduce, collection, Some(newOutputCollection), filter)
+}
+
+
+trait MapReduceOutput{
+  def outpotCollection: MongoCollection
+  def drop: Unit
+}
 
 object MongoQueryBuilder{
   class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
@@ -102,10 +115,9 @@ object MongoQueryBuilder{
   def updateMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, false, true)})
   def upsert( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, false)})
   def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, true)})
+  def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint[MongoMapReduceQuery](((collection: MongoCollection) => {MongoMapReduceQuery(map, reduce, collection, None, None)}))
   def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(List(selection: _*)), collection, initial, reduce)})
 }
-
-//group takes a MongoSelection, MongoFilter, reducer function, and initial JObject, and returns a single JObject.
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {

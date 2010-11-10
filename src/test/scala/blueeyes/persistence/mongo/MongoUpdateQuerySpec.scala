@@ -14,6 +14,6 @@ class MongoUpdateQuerySpec extends Specification{
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual ( MongoUpdateQuery(MongoCollection("collection"), jObject, Some(MongoFieldFilter("name", $eq, "Joe"))) )
+    query.where("name" === "Joe") mustEqual ( MongoUpdateQuery("collection", jObject, Some(MongoFieldFilter("name", $eq, "Joe"))) )
   }
 }
