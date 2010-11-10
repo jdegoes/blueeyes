@@ -43,13 +43,18 @@ sealed trait MongoFilter { self =>
   
   def unary_! : MongoFilter
   
-  def & (that: MongoFilter)  = MongoAndFilter(self :: that :: Nil)
+  def & (that: MongoFilter)  = &&(that)
   
   def && (that: MongoFilter) = MongoAndFilter(self :: that :: Nil)
 
-  def | (that: MongoFilter)  = MongoOrFilter(self :: that :: Nil)
+  def | (that: MongoFilter)  = ||(that)
   
-  def || (that: MongoFilter) = MongoOrFilter(self :: that :: Nil)
+  def || (that: MongoFilter) = (self, that) match{
+    case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
+    case (x: MongoFieldFilter, y: MongoOrFilter) => MongoOrFilter(x :: y.queries)
+    case (x: MongoOrFilter, y: MongoFieldFilter) => MongoOrFilter(x.queries :+ y)
+    case _  => MongoOrFilter(self :: that :: Nil)
+  }
 }
 
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>

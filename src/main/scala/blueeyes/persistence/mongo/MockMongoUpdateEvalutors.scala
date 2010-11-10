@@ -4,6 +4,7 @@ import blueeyes.persistence.mongo.MongoUpdateOperators.MongoUpdateOperator
 import MongoUpdateOperators._
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
+import MockMongoFiltersImplementation._
 
 private[mongo] object MockMongoUpdateEvalutors{
   object UpdateFiledEvalutorFactory{
@@ -98,7 +99,7 @@ private[mongo] object MockMongoUpdateEvalutors{
   }  
   case object PullFieldEvalutor extends UpdateFieldEvalutor{
     def apply(value: JValue, filter: MongoFilter) = value match {
-      case e: JArray => value
+      case JArray(x) => JArray(x filterNot (JObjectsFilter(x, filter) contains) )
       case _ => throw new MongoException("Cannot apply pull modifier to non-array")
     }
   }

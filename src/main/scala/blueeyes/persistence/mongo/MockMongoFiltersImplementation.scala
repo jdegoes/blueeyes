@@ -23,11 +23,12 @@ private[mongo] object MockMongoFiltersImplementation{
       elements.filter(v => v match {
         case JArray(x)    => 
             val matched = x.filter(element => element match{
-            case y: JObject => !MongoAndFilterEvaluator(y :: Nil, filter.elementsQuery).isEmpty
+            case e: JObject => !MongoAndFilterEvaluator(e :: Nil, filter.elementsQuery).isEmpty
             case _ => false
           })
           !matched.isEmpty
-        case _         => false
+        case e: JObject => !MongoAndFilterEvaluator(e :: Nil, filter.elementsQuery).isEmpty
+        case _          => false
       })
     }
   }

@@ -14,7 +14,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpNumberImplicits._
 import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
-class HttpClientSpec extends Specification {
+class HttpClientNettySpec extends Specification {
   val duration = 250
   val retries = 10
   val skip = true
@@ -173,6 +173,14 @@ class HttpClientSpec extends Specification {
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
     f.value.get.content.get must beEqual(jvalue)
+  }
+
+  "Support POST requests with empty body" in {
+    skipper()()
+    val f = new HttpClientNettyJValue().post("http://localhost/test/echo.php")
+    f.deliverTo((res: HttpResponse[JValue]) => {})
+    f.value must eventually(retries, new Duration(duration))(beSomething)
+    f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 }
 

@@ -11,6 +11,6 @@ class MongoRemoveQuerySpec extends Specification{
 
   "'where' method sets new filter" in {
     import MongoFilterImplicits._
-    query.where("name" === "Joe") mustEqual ( MongoRemoveQuery(MongoCollection("collection"), Some(MongoFieldFilter("name", $eq, "Joe"))) )
+    query.where("name" === "Joe") mustEqual ( MongoRemoveQuery("collection", Some(MongoFieldFilter("name", $eq, "Joe"))) )
   }
 }

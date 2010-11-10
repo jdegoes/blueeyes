@@ -15,6 +15,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val jodatime    = "joda-time"                   % "joda-time"         % "1.6.2"       % "compile"
   val configgy    = "net.lag"                     % "configgy"          % "2.0.0"       % "compile"
   val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
+  val rhino       = "rhino"                       % "js"                % "1.7R2"         % "compile"
 
   override def managedStyle = ManagedStyle.Maven
 
