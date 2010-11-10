@@ -82,8 +82,9 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
 
     val contentLength: (String, String) = `Content-Length`(
         (for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
-            transcode(request.content.getOrElse(transcode.unapply(""))).length))
-         
+          request.content.map(c => transcode(c).length).getOrElse[Int](0)))
+    println(contentLength)
+
     val newHeaders = request.headers ++ Map(
         contentType,
         contentLength
