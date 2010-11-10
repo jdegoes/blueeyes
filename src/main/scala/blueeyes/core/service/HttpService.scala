@@ -19,8 +19,8 @@ trait HttpService[S] extends RestHierarchy[S] {
 
 /**
  * An http service, which responds to http requests with http responses. 
- * Services are typed in whatever type is required by the server implementation.
- * For example, some server implementations might only deal with strings.
+ * Services are typed in whatever type is required by the server engine.
+ * For example, some server engines might only deal with strings.
  */
 trait HttpService2[T] {
   def name: String
