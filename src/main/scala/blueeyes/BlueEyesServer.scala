@@ -15,7 +15,7 @@ import blueeyes.util.{Future, FutureImplicits}
  *     }
  *   }
  * }
- * object EmailServer extends BlueEyesServer with EmailService
+ * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
 trait BlueEyesServer extends HttpServer[Array[Byte]] with HttpReflectiveServiceList[Array[Byte]] with NettyEngineArrayByte {

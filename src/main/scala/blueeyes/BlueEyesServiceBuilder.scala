@@ -13,7 +13,7 @@ import blueeyes.util.{Future, FutureImplicits}
  *     }
  *   }
  * }
- * object EmailServer extends BlueEyesServer with EmailService
+ * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
 trait BlueEyesServiceBuilder[T] extends HttpServiceBuilder[T] with 

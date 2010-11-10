@@ -3,14 +3,16 @@ package blueeyes.util
 class Future[T] {
   import scala.collection.mutable.ArrayBuffer
   
+  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
+  
   // TODO: Make this thread-safe
-  var _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
-  var _result: Option[T] = None
-  var _isSet: Boolean = false
-  var _isCanceled: Boolean = false
-  var _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
-  var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
-  var _error: Option[Throwable] = None
+  private var _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
+  private var _result: Option[T] = None
+  private var _isSet: Boolean = false
+  private var _isCanceled: Boolean = false
+  private var _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
+  private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
+  private var _error: Option[Throwable] = None
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
