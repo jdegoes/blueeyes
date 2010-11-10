@@ -10,6 +10,9 @@ import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 
+/** A trait that grabs services reflectively from the fields of the class it is
+ * mixed into.
+ */
 trait HttpServicesListReflection[T] { self =>
   lazy val services: List[HttpService2[T]] = {
     val c = self.getClass
@@ -31,11 +34,10 @@ trait HttpServicesListReflection[T] { self =>
  * and started, and has a main function so it can be mixed into objects.
  */
 trait HttpServer[T] extends HttpRequestHandler[T] { self =>
-  /** The configuration for the server. This can be set manually and is set 
-   * automatically by the main function if --configFile is specified on the
-   * command-line.
+  /** The root configuration. This is simply Configgy's root configuration 
+   * object, so this should not be used until Configgy has been configured.
    */
-  var rootConfig: Config = null
+  def rootConfig: Config = Configgy.config
   
   /** The list of services that this server is supposed to run.
    */
@@ -156,8 +158,6 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     }
     else {    
       Configgy.configure(arguments.parameters.get("configFile").getOrElse(error("Expected --configFile option")))
-      
-      rootConfig = Configgy.config
       
       start.deliverTo { _ =>
         Runtime.getRuntime.addShutdownHook { new Thread {
