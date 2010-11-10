@@ -14,6 +14,7 @@ private[service] object PathUtils {
   }
 }
 
+// TODO: Must change to URI => Map[Symbol, String]
 sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]] { self =>
   import RestPathPatternParsers._
   
@@ -35,36 +36,63 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   
   def / (symbol: Symbol): RestPathPattern = new RestPathPattern {
     val parser = self.parser ~ slashParser ~ RestPathPatternParsers.SymbolPathPattern(symbol).parser ^^ sequence
+    
+    override def toString = self.toString + "/" + symbol.toString
   }
   
   def / (regex: Regex, groupNames: List[String]): RestPathPattern = new RestPathPattern {
-    val parser = self.parser ~ slashParser ~ RestPathPatternParsers.RegexPathPattern(regex, groupNames).parser ^^ sequence
+    private val regexPattern = RestPathPatternParsers.RegexPathPattern(regex, groupNames).parser
+    
+    val parser = self.parser ~ slashParser ~ regexPattern ^^ sequence
+    
+    override def toString = self.toString + "/" + regexPattern
   }
   
   def / (string: String): RestPathPattern = new RestPathPattern {
     val parser = self.parser ~ slashParser ~ RestPathPatternParsers.parse(string).parser ^^ sequence
+    
+    override def toString = self.toString + "/" + string
   }
   
   def / (that: RestPathPattern): RestPathPattern = new RestPathPattern {
     val parser = self.parser ~ slashParser ~ that.parser ^^ sequence
+    
+    override def toString = self.toString + "/" + that.toString
   }
   
   def | (that: RestPathPattern): RestPathPattern = new RestPathPattern {
     val parser = self.parser | that.parser
+    
+    override def toString = self.toString + " | " + that.toString
   }
   
   def || (that: => RestPathPattern): RestPathPattern = new RestPathPattern {
     val parser = self.parser | that.parser
+    
+    override def toString = self.toString + " || " + that.toString
   }
   
   def + (that: RestPathPattern): RestPathPattern = new RestPathPattern {
     val parser = self.parser ~ that.parser ^^ {
       case m1 ~ m2 => m1 ++ m2
     }
+    
+    override def toString = self.toString + that.toString
   }
   
   def $: RestPathPattern = new RestPathPattern {
     val parser = self.parser <~ endOfString
+  }
+  
+  def shift[T](r: HttpRequest[T]): HttpRequest[T] = {
+    parser(new CharSequenceReader(r.path)) match {
+      case Success(result, next) => 
+        val remainingPath = next.source.subSequence(next.offset, next.source.length).toString
+        
+        r.withPath(remainingPath)
+      
+      case _ => error("The pattern " + this.toString + " does not match " + r.uri)
+    }
   }
   
   private def sequence(a: ~[~[Map[Symbol, String], Map[Symbol, String]], Map[Symbol, String]]) = a match {
@@ -113,6 +141,11 @@ object RestPathPatternParsers extends RegexParsers {
   }  
   object SlashPathPattern extends LiteralPathPattern("/")
   object RootPathPattern extends LiteralPathPattern("")
+  object EndPathPattern extends RestPathPattern {
+    val parser: Parser[Map[Symbol, String]] = """$""".r ^^^ Map()
+    
+    override def toString = "$"
+  }
   case class SymbolPathPattern(symbol: Symbol) extends RestPathPattern {
     val parser: Parser[Map[Symbol, String]] = validUrlFrag ^^ (s => Map(symbol -> s))
     

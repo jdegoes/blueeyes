@@ -4,25 +4,13 @@ import java.lang.reflect.{Method, Field}
 import java.util.concurrent.CountDownLatch
 import scala.collection.mutable.{ListBuffer}
 
+import blueeyes.core.http._
 import blueeyes.util.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 
-/** An http server acts as a container for services. A server can be stopped
- * and started, and has a main function so it can be mixed into objects.
- */
-trait HttpServer[T] extends HttpServicesContainer[T] { self =>
-  /** The configuration for the server. This can be set manually and is set 
-   * automatically by the main function if --configFile is specified on the
-   * command-line.
-   */
-  var rootConfig: Config = null
-  
-  /** A list of services that are managed by this server. These services are 
-   * determined using reflection on the class or object that this trait is
-   * mixed into.
-   */
+trait HttpServicesListReflection[T] { self =>
   lazy val services: List[HttpService2[T]] = {
     val c = self.getClass
     
@@ -37,14 +25,104 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
       field.get(self).asInstanceOf[HttpService2[T]]
     }
   }
+}
+
+/** An http server acts as a container for services. A server can be stopped
+ * and started, and has a main function so it can be mixed into objects.
+ */
+trait HttpServer[T] extends HttpRequestHandler[T] { self =>
+  /** The configuration for the server. This can be set manually and is set 
+   * automatically by the main function if --configFile is specified on the
+   * command-line.
+   */
+  var rootConfig: Config = null
+  
+  /** The list of services that this server is supposed to run.
+   */
+  def services: List[HttpService2[T]]
+  
+  def isDefinedAt(r: HttpRequest[T]): Boolean = _handler.isDefinedAt(r)
+  
+  def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = _handler.apply(r)
   
   /** Starts the server.
    */
-  def start: Future[Unit] = Future(services.map(_.start): _*).map(_ => Unit)
+  def start: Future[Unit] = {
+    log.info("Starting server")
+    
+    _status = RunningStatus.Starting
+    
+    // Start all the services:
+    descriptors.foreach { descriptor =>
+      log.info("Starting service " + descriptor.service.toString)
+      
+      descriptor.startup().deliverTo { _ =>
+        log.info("Successfully started service " + descriptor.service.toString)
+      }.ifCanceled { why =>
+        log.error("Failed to start service " + descriptor.service.toString + ": " + why)
+      }
+    }
+    
+    // As each handler becomes available, incorporate it into the master handler:
+    val handlerFutures = descriptors.map(_.request)
+    
+    handlerFutures.foreach { future =>
+      future.deliverTo { handler =>
+        handlerLock.writeLock.lock()
+        
+        try {
+          _handler = _handler.orElse(handler)
+        }
+        finally {
+          handlerLock.writeLock.unlock()
+        }
+      }
+    }
+    
+    // Combine all futures into a master one that will be delivered when and if
+    // all futures are delivered:
+    val unitFutures: List[Future[Unit]] = handlerFutures.map { future =>
+      future.map(_ => ())
+    }
+    
+    Future(unitFutures: _*).map(_ => ()).deliverTo { _ =>
+      println("Server started")
+      
+      _status = RunningStatus.Started
+    }.ifCanceled { why =>
+      _status = RunningStatus.Errored
+      
+      log.error("Unable to start server: " + why)
+    }
+  }
   
   /** Stops the server.
    */
-  def stop: Future[Unit] = Future(services.map(_.stop): _*).map(_ => Unit)
+  def stop: Future[Unit] = {
+    log.info("Stopping server")
+    
+    _status = RunningStatus.Stopping
+    
+    val shutdownFutures = descriptors.map { descriptor =>
+      log.info("Shutting down service " + descriptor.service.toString)
+      
+      descriptor.shutdown().deliverTo { _ =>
+        log.info("Successfully shut down service " + descriptor.service.toString)
+      }.ifCanceled { why =>
+        log.info("Failed to shut down service " + descriptor.service.toString + ": " + why)
+      }
+    }
+    
+    Future(shutdownFutures: _*).map(_ => ()).deliverTo { _ => 
+      println("Server stopped")
+      
+      _status = RunningStatus.Stopped
+    }.ifCanceled { e =>
+      _status = RunningStatus.Errored
+      
+      println("Unable to stop server: " + e)
+    }
+  }
   
   /** Retrieves the server configuration, which is always located in the 
    * "server" block of the root configuration object.
@@ -81,43 +159,52 @@ trait HttpServer[T] extends HttpServicesContainer[T] { self =>
       
       rootConfig = Configgy.config
       
-      _status = RunningStatus.Starting
-      
       start.deliverTo { _ =>
-        println("Server started")
-        
-        _status = RunningStatus.Started
-        
         Runtime.getRuntime.addShutdownHook { new Thread {
-          _status = RunningStatus.Stopping
-          
           override def start() {
             val doneSignal = new CountDownLatch(1)
             
             self.stop.deliverTo { _ => 
               doneSignal.countDown()
-              
-              println("Server stopped")
-              
-              _status = RunningStatus.Stopped
             }.ifCanceled { e =>
               doneSignal.countDown()
-              
-              _status = RunningStatus.Errored
-              
-              println("Unable to stop server: " + e)
             }
             
             doneSignal.await()
           }
         }}
-      }.ifCanceled { e =>
-        _status = RunningStatus.Errored
-        
-        println("Unable to start server: " + e)
       }
     }
   }
   
   private var _status: RunningStatus = RunningStatus.Stopped
+  
+  private val handlerLock = new java.util.concurrent.locks.ReentrantReadWriteLock
+  
+  private var _handler: HttpRequestHandler[T] = new PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = false
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = error("Function not defined here")
+  }
+  
+  private lazy val descriptors: List[BoundStateDescriptor[T, _]] = services.map { service =>
+    val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
+    val logger = Logger.configure(config.configMap("log"), false, false)
+    
+    val context = HttpServiceContext(config, logger)
+    
+    BoundStateDescriptor(context, service)
+  }
+  
+  private case class BoundStateDescriptor[T, S](context: HttpServiceContext, service: HttpService2[T]) {
+    val descriptor: HttpServiceDescriptor[T, S] = service.descriptorFactory(context).asInstanceOf[HttpServiceDescriptor[T, S]]
+    
+    val state: Future[S] = new Future[S]
+    
+    def startup(): Future[S] = descriptor.startup().deliverTo(state.deliver _)
+    
+    lazy val request: Future[HttpRequestHandler[T]] = state.map(state => descriptor.request(state))
+    
+    def shutdown(): Future[Unit] = state.flatMap(state => descriptor.shutdown(state))
+  }
 }

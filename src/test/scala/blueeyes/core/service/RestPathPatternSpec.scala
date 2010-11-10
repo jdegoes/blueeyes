@@ -2,6 +2,8 @@ package blueeyes.core.service
 
 import org.specs.Specification
 
+import blueeyes.core.http.{HttpRequest, HttpMethods}
+
 class RestPathPatternSpec extends Specification{
   import RestPathPatternImplicits._
   
@@ -68,6 +70,11 @@ class RestPathPatternSpec extends Specification{
     val pattern: RestPathPattern = "/foo/bar/'param"
     
     pattern.apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
+  }
+  "shift request uri leftward by matched pattern" in {
+    val pattern: RestPathPattern = "/foo/'param"
+    
+    pattern.shift(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz")) mustEqual(HttpRequest(method = HttpMethods.GET, uri = "/baz"))
   }
   
   private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
