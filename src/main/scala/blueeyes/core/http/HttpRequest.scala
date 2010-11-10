@@ -9,6 +9,8 @@ sealed case class HttpRequest[T](method: HttpMethod, uri: String, parameters: Ma
   
   def path = new URI(uri).getPath
   
+  def host = new URI(uri).getHost
+  
   def port = new URI(uri).getPort
   
   def query = new URI(uri).getQuery
@@ -26,4 +28,12 @@ sealed case class HttpRequest[T](method: HttpMethod, uri: String, parameters: Ma
   def isUriAbsolute = new URI(uri).isAbsolute
   
   def isUriOpaque = new URI(uri).isOpaque
+  
+  def withPath(p: String) = withUriChanges(path = p)
+  
+  def withUriChanges(scheme: String = this.scheme, userInfo: String = this.userInfo, host: String = this.host, port: Int = this.port, path: String = this.path, query: String = this.query, fragment: String = this.fragment) = {
+    val newUri = new URI(scheme, userInfo, host, port, path, query, fragment)
+    
+    copy(uri = newUri.toString)
+  }
 }

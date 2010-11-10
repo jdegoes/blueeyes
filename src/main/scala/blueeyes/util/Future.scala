@@ -3,6 +3,7 @@ package blueeyes.util
 class Future[T] {
   import scala.collection.mutable.ArrayBuffer
   
+  // TODO: Make this thread-safe
   var _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
   var _result: Option[T] = None
   var _isSet: Boolean = false
@@ -277,6 +278,23 @@ object Future {
           
           result.deliver(list)
         }
+      }
+    }
+    
+    result
+  }
+  
+  def async[T](f: => T): Future[T] = {
+    val result = new Future[T]
+    
+    import scala.actors.Actor._
+    
+    actor {
+      try {
+        result.deliver(f)
+      }
+      catch {
+        case t: Throwable => result.cancel(t)
       }
     }
     
