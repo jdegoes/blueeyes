@@ -13,7 +13,7 @@ import net.lag.logging.Logger
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
  */
-trait HttpServicesListReflection[T] { self =>
+trait HttpReflectiveServiceList[T] { self =>
   lazy val services: List[HttpService2[T]] = {
     val c = self.getClass
     
