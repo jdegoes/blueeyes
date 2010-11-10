@@ -6,7 +6,7 @@ import blueeyes.util.{Future, FutureImplicits}
 
 /** Convenience trait for building services with many common mixins. 
  */
-trait BlueEyesServiceBuilder extends HttpServiceBuilder with 
+trait BlueEyesServiceBuilder[T] extends HttpServiceBuilder[T] with 
   FutureImplicits with 
   HttpHeaderImplicits with 
   HttpStatusImplicits with
