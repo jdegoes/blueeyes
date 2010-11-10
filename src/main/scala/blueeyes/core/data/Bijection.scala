@@ -13,6 +13,14 @@ trait Bijection[T, S] extends Function1[T, S] { self =>
   }
 }
 
+object Bijection {
+  def identity[T]: Bijection[T, T] = new Bijection[T, T] {
+    def apply(t: T): T = t
+    
+    def unapply(t: T): T = t
+  }
+}
+
 trait DataTranscoder[T, S] {
   def transcode: Bijection[T, S]
   def mimeType: MimeType;
@@ -20,10 +28,17 @@ trait DataTranscoder[T, S] {
 
 class DataTranscoderImpl[T, S](val transcode: Bijection[T, S], val mimeType: MimeType) extends DataTranscoder[T, S]
 
+class ProxyBijection[T, S](val underlying: Bijection[T, S]) extends Bijection[T, S] {
+  def apply(t: T): S = underlying.apply(t)
+  
+  def unapply(s: S): T = underlying.unapply(s)
+}
+
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 import blueeyes.json.JsonAST.JValue
+
 object JsonToTextBijection extends Bijection[JValue, String]{
   def unapply(t: String) = JsonParser.parse(t)
   def apply(s: JValue)   = compact(render(s))
