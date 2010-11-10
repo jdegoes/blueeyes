@@ -88,7 +88,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     }
     
     Future(unitFutures: _*).map(_ => ()).deliverTo { _ =>
-      println("Server started")
+      log.info("Server started")
       
       _status = RunningStatus.Started
     }.ifCanceled { why =>
@@ -116,13 +116,13 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     }
     
     Future(shutdownFutures: _*).map(_ => ()).deliverTo { _ => 
-      println("Server stopped")
+      log.info("Server stopped")
       
       _status = RunningStatus.Stopped
     }.ifCanceled { e =>
       _status = RunningStatus.Errored
       
-      println("Unable to stop server: " + e)
+      log.info("Unable to stop server: " + e)
     }
   }
   
