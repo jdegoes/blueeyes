@@ -1,16 +1,22 @@
 package blueeyes.js
 
-import org.mozilla.javascript.{ScriptableObject, Scriptable, Context}
 import scala.collection.JavaConversions._
 import blueeyes.json.JsonAST._
 import RhinoJson._
+import org.mozilla.javascript.{ScriptableObject, Scriptable, Context}
 
 case class RhinoScript(script: String){
-  def apply(): JObject = {
+  def apply(scopedObjects: Map[String, _] = Map()): Option[JObject] = {
     val context = Context.enter();
     try{
       val scope = context.initStandardObjects();
-      context.evaluateString(scope, script, "javascript.log", 1, null).asInstanceOf[Scriptable]
+
+      scopedObjects.foreach(scopedObject => ScriptableObject.putProperty(scope, scopedObject._1, scopedObject._2))
+
+      context.evaluateString(scope, script, "javascript.log", 1, null) match {
+        case e: Scriptable => Some(e)
+        case _             => None
+      }
     }
     finally{
       Context.exit();

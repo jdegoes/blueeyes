@@ -10,7 +10,9 @@ import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.Printer._
 import blueeyes.json.{JPath}
 import com.mongodb.{MongoException}
+import blueeyes.js.RhinoJson._
 import JPathExtension._
+import org.mozilla.javascript.Scriptable
 
 private[mongo] class MockMongoDatabase() extends MongoDatabase{
   private val collections   = scala.collection.mutable.Map[String, MockDatabaseCollection]()
@@ -135,17 +137,18 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     val groupedObject  = groupObject(selection, search(filter))
     var result         = List[JValue]()
 
-    def renderJObject(value: JValue) = compact(render(value))
     groupedObject.foreach(group => {
-      val groupValue = group._2.foldLeft(initial){ (groupResult, current) => RhinoScript(reduceFunction.format(renderJObject(current), renderJObject(groupResult)))()}
+      val groupValue = group._2.foldLeft(initial){ (groupResult, current) => RhinoScript(reduceFunction.format(renderJObject(current), renderJObject(groupResult)))().get}
       result = group._1.merge(groupValue) :: result
     })
 
     JArray(result)
   }
 
+  def renderJObject(value: JValue) = compact(render(value))
+
   private def groupObject(selection: MongoSelection, objects: List[JObject]) = {
-    var groupedObjects = Map[JValue, List[JObject]]()
+    val groupedObjects = ValuesGroup[JValue, JObject]()
 
     def updateValue(value: JValue) = value match{
       case JNothing => Some(JNull)
@@ -153,10 +156,9 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     }
     objects.foreach(jobject => {
       val fields      = selectFields(jobject :: Nil, selection.selection, updateValue _, (p, v) => {JObject(JField(toMongoField(p), v) :: Nil)}).head
-      val grouped     = jobject :: groupedObjects.get(fields).getOrElse(Nil)
-      groupedObjects  = groupedObjects + Tuple2(fields, grouped)
+      groupedObjects.emitCorrect(fields, jobject)
     })
-    groupedObjects
+    groupedObjects.group
   }
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) = {
@@ -164,9 +166,47 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     objects.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).filter(_.isDefined).map(_.get).distinct
   }
 
-
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
-    new MockMapReduceOutput(this)  
+    val mapped  = mapObjects(map, filter)
+    val reduced = reduceObjects(reduce, mapped)
+
+    val collection = new MockDatabaseCollection()
+    collection.insert(reduced)
+
+    new MockMapReduceOutput(collection)
+  }
+
+  private def reduceObjects(reduce: String, mapped: Map[Any, List[JObject]]): List[JObject] = {
+    val reduceScriptPattern = """var reduce = %s; reduce(%s, %s)"""
+    val reduced = mapped.map(entry => {
+      val entryKey = entry._1 match {
+        case e: JValue => render(e)
+        case e: String => "\"" + e + "\""
+        case _ => entry._1
+      }
+      val entryValue = renderJObject(JArray(entry._2))
+      val reducedObject = RhinoScript(reduceScriptPattern.format(reduce, entryKey, entryValue))().get
+      Tuple2(entry._1, reducedObject)
+    })
+    reduced.values.toList
+  }
+
+  private def mapObjects(map: String, filter: Option[MongoFilter]) = {
+    def keyTransformer(value: Any): Any = value match{
+      case e: Scriptable => scriptableObject2JObject(e)
+      case _ => value
+    }
+    def valueTransformer(value: Any): JObject = value match{
+      case e: Scriptable => scriptableObject2JObject(e)
+      case _ => error("value is not Json")
+    }
+    val mapScriptPattern = """var record  = %s; record.map  = %s; var emit = function(k, v){emitter.emit(k, v)}; record.map()"""
+    val objects            = search(filter)
+    val mapped             = ValuesGroup[Any, JObject](keyTransformer _, valueTransformer _)
+
+    objects.foreach(jobject => RhinoScript(mapScriptPattern.format(renderJObject(jobject), map))(Map("emitter" -> mapped)))
+
+    mapped.group
   }
 
   private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
@@ -200,4 +240,20 @@ class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutpu
   def drop = {}
 
   def outpotCollection = MongoCollectionHolder(output)
+}
+
+
+case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {error("any value is not supported")}){
+  private var groupedValues = Map[K, List[V]]()
+
+  def emit(key: Any, value: Any) = {
+    emitCorrect(keyTransformer(key), valueTransformer(value))
+  }
+
+  def emitCorrect(key: K, value: V){
+    val grouped   = value :: groupedValues.get(key).getOrElse(Nil)
+    groupedValues = groupedValues + Tuple2(key, grouped)
+  }
+
+  def group: Map[K, List[V]] = groupedValues
 }
