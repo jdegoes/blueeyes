@@ -129,8 +129,6 @@ object RestPathPatternParsers extends RegexParsers {
       case _ => error("The path specification " + s + " has a syntax error")
     }
     
-    println(elements.mkString(""))
-    
     CompositePathPattern(elements)
   }
   
