@@ -1,13 +1,12 @@
 package blueeyes.js
 
 import org.specs.Specification
+import blueeyes.json.{JsonParser}
 
-class RhinoScriptSpec extends Specification with RhinoScriptImplicits{
-  "execute script" in{
-    val parameters = Map("prev" -> 1, "obj" -> 3)
-    
-    val result = RhinoScript("{ prev += obj; }")(parameters)
-    
-    result mustEqual(4)
+class RhinoScriptSpec extends Specification{
+  "execute pure script" in{
+    val result = RhinoScript("""var f = function(x){x.foo.bar += 1; return x}; f({foo: {bar: 1}, name: "hello"})""")()
+
+    result mustEqual(JsonParser.parse("""{"name": "hello", "foo": {"bar": 2.0}}"""))
   }
 }

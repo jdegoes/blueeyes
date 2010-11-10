@@ -40,19 +40,9 @@ object MongoDemo{
   
   def main(args: Array[String]){
 
-    println(JString("foo").get(JPath("")))
-
 //    database(remove.from(collection))
 
-    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
-    database[JNothing.type](dropIndex("index").on(collection))
-
-    insertObjects
-
-    printObjects(database(select().from(collection)))
-
-    database(remove.from(collection))
-
+//    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
 //    demoSelectOne
 
 //    demoSelect
@@ -60,6 +50,10 @@ object MongoDemo{
 //    demoUpdate0
 
 //    demoRemove
+
+//    demoDistinct
+
+    demoGroup
   }
 
   private def demoSelect{
@@ -78,6 +72,28 @@ object MongoDemo{
     database(remove.from(collection))
     println("------------demoSelect------------------")
   }
+  private def demoDistinct{
+    println("------------demoDistinct------------------")
+    database[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
+    printObjects(database(select().from(collection)))
+//    val result = database(distinct("address.city").from(collection))
+
+    database(remove.from(collection))
+    println("------------demoDistinct------------------")
+  }
+  private def demoGroup{
+    println("------------demoGroup------------------")
+    val objects = JsonParser.parse("""{"address":{ "city":"A", "code":2, "street":"1"  } }""").asInstanceOf[JObject] :: JsonParser.parse("""{"address":{ "city":"A", "code":5, "street":"3"  } }""").asInstanceOf[JObject] :: JsonParser.parse("""{"address":{ "city":"C", "street":"1"  } }""").asInstanceOf[JObject] :: JsonParser.parse("""{"address":{ "code":3, "street":"1"  } }""").asInstanceOf[JObject] :: Nil
+    database[JNothing.type](insert(objects :_*).into(collection))
+
+    val initial = JsonParser.parse("""{ "csum": 10.0 }""").asInstanceOf[JObject]
+    val result  = database(group(initial, "function(obj,prev) { prev.csum += obj.address.code; }", "address.city").from(collection))
+    
+    printObject(Some(result))
+
+    database(remove.from(collection))
+    println("------------demoGroup------------------")
+  }
   private def demoUpdate0{
     database[JNothing.type](insert(jobjectsWithArray: _*).into(collection))
 
@@ -94,14 +110,14 @@ object MongoDemo{
     println("------------demoUpdate------------------")
     insertObjects
 
-//    println(database(updateMany(collection).set("address" popFirst)))
-//    printObjects(database(select().from(collection)))
+    println(database(updateMany(collection).set("address" popFirst)))
+    printObjects(database(select().from(collection)))
     println(database(update(collection).set(("address.city" unset) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
     printObjects(database(select().from(collection)))
-//    println(database(update(collection).set(jObject3).where("address.city" === "A")))
-//    printObjects(database(select().from(collection)))
-//    println(database(updateMany(collection).set("address.street" set ("New Street"))))
-//    printObjects(database(select().from(collection)))
+    println(database(update(collection).set(jObject3).where("address.city" === "A")))
+    printObjects(database(select().from(collection)))
+    println(database(updateMany(collection).set("address.street" set ("New Street"))))
+    printObjects(database(select().from(collection)))
 
     database(remove.from(collection))
     println("------------demoUpdate------------------")
@@ -126,7 +142,7 @@ object MongoDemo{
     println("------------------------------------------------")
   }
 
-  private def printObject(objects: Option[JObject]){
+  private def printObject(objects: Option[JValue]){
     println("------------------------------------------------")
     println(objects.map(v => Printer.pretty(render(v))).mkString("\n"))
     println("------------------------------------------------")
@@ -148,3 +164,13 @@ object MongoDemo{
     database[JNothing.type](insert(jObject, jObject).into(collection))
   }
 }
+
+//db.foo.insert({"address":{ "city":"A", "code":2, "street":"1"  } })
+//db.foo.insert({"address":{ "city":"C", "street":"1"  } })
+//db.foo.insert({"address":{ "code":33, "street":"5"  } })
+//
+//db.foo.group({key: { "address.city":1 }, cond: {}, reduce: function(a,b) { b.csum += a.address.code; return b;}, initial: { csum: 0 } })
+
+
+//{ group: { key: { address.city: 1.0 }, cond: {}, initial: { csum: 12.0 }, $reduce: function (obj, prev) {prev.csum += obj.address.code;} } }
+//{ group: { key: { address.city: 1.0 }, cond: {}, initial: { csum: 10 }, $reduce: "function(obj,prev) { prev.csum += obj.address.code;}" } }

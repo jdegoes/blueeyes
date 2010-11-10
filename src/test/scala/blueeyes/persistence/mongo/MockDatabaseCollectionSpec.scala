@@ -4,10 +4,9 @@ import org.specs.Specification
 import blueeyes.json.JPathImplicits._
 import MongoFilterOperators._
 import com.mongodb.MongoException
-import MockMongoImplementation._
 import MongoImplicits._
-import blueeyes.json.{JsonParser, JPath}
-import blueeyes.json.JsonAST.{JValue, JString, JField, JObject}
+import blueeyes.json.JsonAST._
+import blueeyes.json.{Printer, JsonParser, JPath}
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -16,33 +15,29 @@ class MockDatabaseCollectionSpec extends Specification{
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
 
-  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [
-      {
-        "shape" : "square",
-        "color" : "purple",
-        "thick" : false
-      },
-      {
-        "shape" : "circle",
-        "color" : "red",
-        "thick" : true
-      }
-] } """).asInstanceOf[JObject] :: JsonParser.parse("""
-{ "foo" : [
-      {
-        "shape" : "square",
-        "color" : "red",
-        "thick" : true
-      },
-      {
-        "shape" : "circle",
-        "color" : "purple",
-        "thick" : false
-      }
-] }""").asInstanceOf[JObject] :: Nil
+  private val jobjectsWithArray = parse("""{ "foo" : [{"shape" : "square", "color" : "purple", "thick" : false}, {"shape" : "circle", "color" : "red", "thick" : true}] } """) :: parse("""{ "foo" : [{"shape" : "square", "color" : "red", "thick" : true}, {"shape" : "circle", "color" : "purple", "thick" : false}] }""") :: Nil
 
   private val sort     = MongoSort("address.street", MongoSortOrderDescending)
 
+  private def parse(value: String) = JsonParser.parse(value).asInstanceOf[JObject]
+
+  "group objects" in{
+    val objects = parse("""{"address":{ "city":"A", "code":2, "street":"1"  } }""") :: parse("""{"address":{ "city":"A", "code":5, "street":"3"  } }""") :: parse("""{"address":{ "city":"C", "street":"1"  } }""") :: parse("""{"address":{ "code":3, "street":"1"  } }""") :: Nil
+    val initial = parse("""{ "csum": 10.0 }""")
+
+    val collection = newCollection
+    collection.insert(objects)
+
+    val result = collection.group(MongoSelection(JPath("address.city") :: Nil), None, initial, "function(obj,prev) { prev.csum += obj.address.code }")
+
+    result.elements.size must be (3)
+    result.elements.contains(parse("""{"address.city":null,"csum":13.0} """)) must be (true)
+    result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be (true)
+
+    val withNaN = result.elements.filter(v => v.asInstanceOf[JObject].fields.head == JField("address.city", JString("C"))).head.asInstanceOf[JObject]
+    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be (true)
+  }
+  
   "store jobjects" in{
     val collection = newCollection
 

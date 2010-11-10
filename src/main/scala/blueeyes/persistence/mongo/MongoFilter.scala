@@ -68,6 +68,7 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
+
 sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter {
   def filter: JValue = JObject(JField($or.symbol, JArray(queries.map(_.filter))) :: Nil)
   

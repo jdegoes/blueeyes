@@ -7,7 +7,7 @@ import blueeyes.json.JsonAST._
 import com.mongodb._
 import com.google.inject.{Provider, Inject}
 import net.lag.configgy.Config
-import blueeyes.json.{Printer, JPath}
+import blueeyes.json.{JPath}
 
 private[mongo] object RealMongoImplementation{
 
