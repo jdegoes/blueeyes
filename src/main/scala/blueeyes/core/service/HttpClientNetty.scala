@@ -13,9 +13,13 @@ import blueeyes.util.Future
 import com.ning.http.client.{
   AsyncHttpClient,
   AsyncCompletionHandler,
+  AsyncHttpProviderConfig,
   Response,
   RequestBuilderBase
 }
+import com.ning.http.client.AsyncHttpClientConfig.Builder
+import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig
+
 import java.util.concurrent.{ Future => JavaFuture }
 
 trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
@@ -51,6 +55,12 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
         yield requestBuilder.setBody(transcode(content))).getOrElse(requestBuilder)
     }
 
+    def getAsyncHttpClientInstance(): AsyncHttpClient = {
+      val pc: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig()
+      pc.addProperty("asyncConnect", true)
+      new AsyncHttpClient(new Builder().setAsyncHttpClientProviderConfig(pc).build())
+    }
+
     import blueeyes.util.QueryParser
     import java.net.URI
     import scala.collection.mutable.LinkedHashMap
@@ -64,13 +74,13 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
                       origURI.getFragment).toString
 
     var requestBuilder = request.method match {
-      case HttpMethods.CONNECT => Some(new AsyncHttpClient().prepareConnect(uri))
-      case HttpMethods.DELETE => Some(new AsyncHttpClient().prepareDelete(uri))
-      case HttpMethods.GET => Some(new AsyncHttpClient().prepareGet(uri))
-      case HttpMethods.HEAD => Some(new AsyncHttpClient().prepareHead(uri))
-      case HttpMethods.OPTIONS => Some(new AsyncHttpClient().prepareOptions(uri))
-      case HttpMethods.POST => Some(setBody(new AsyncHttpClient().preparePost(uri)))
-      case HttpMethods.PUT => Some(setBody(new AsyncHttpClient().preparePut(uri)))
+      case HttpMethods.CONNECT => Some(getAsyncHttpClientInstance().prepareConnect(uri))
+      case HttpMethods.DELETE => Some(getAsyncHttpClientInstance().prepareDelete(uri))
+      case HttpMethods.GET => Some(getAsyncHttpClientInstance().prepareGet(uri))
+      case HttpMethods.HEAD => Some(getAsyncHttpClientInstance().prepareHead(uri))
+      case HttpMethods.OPTIONS => Some(getAsyncHttpClientInstance().prepareOptions(uri))
+      case HttpMethods.POST => Some(setBody(getAsyncHttpClientInstance().preparePost(uri)))
+      case HttpMethods.PUT => Some(setBody(getAsyncHttpClientInstance().preparePut(uri)))
       // TODO - CUSTOM
       // TODO - PATCH
       // TODO - TRACE
@@ -83,7 +93,6 @@ trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
     val contentLength: (String, String) = `Content-Length`(
         (for (`Content-Length`(contentLength) <- request.headers) yield contentLength).headOption.getOrElse(
           request.content.map(c => transcode(c).length).getOrElse[Int](0)))
-    println(contentLength)
 
     val newHeaders = request.headers ++ Map(
         contentType,
