@@ -5,7 +5,7 @@ package blueeyes.core.service
  * Services are typed in whatever type is required by the server engine.
  * For example, some server engines might only deal with strings.
  */
-trait HttpService2[T] {
+trait HttpService[T] {
   def name: String
   
   def version: String

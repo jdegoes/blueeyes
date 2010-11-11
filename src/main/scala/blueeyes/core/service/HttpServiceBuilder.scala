@@ -46,9 +46,9 @@ trait HttpServiceBuilder[T] {
   protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[Unit]): HttpServiceDescriptor[T, Unit] = 
     HttpServiceDescriptor[T, Unit](() => Future(()), rd.request, _ => Future(()))
 
-  def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService2[T] = new HttpService2Impl[T](name, version, descriptorFactory)
+  def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService[T] = new HttpServiceImpl[T](name, version, descriptorFactory)
 
-  class HttpService2Impl[T](val name: String, val version: String, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService2[T]{
+  class HttpServiceImpl[T](val name: String, val version: String, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
     def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
   }
 }

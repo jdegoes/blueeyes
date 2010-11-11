@@ -19,20 +19,30 @@ import org.jboss.netty.util.internal.ExecutorUtil
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
-  private var server: Option[ServerBootstrap] = None
+  private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
+
+  private var server: Option[ServerBootstrap]  = None
   private var serverExecutor: Option[Executor] = None
 
   override def start: Future[Unit] = {
     super.start.map(_ => {
-      val executor  = Executors.newCachedThreadPool()
-      val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-      bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self)))
+      startStopLock.writeLock.lock()
 
-      bootstrap.bind(new InetSocketAddress(self.port))
+      try {
+        val executor = Executors.newCachedThreadPool()
+        val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-      server          = Some(bootstrap)
-      serverExecutor  = Some(executor)
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self)))
+
+        bootstrap.bind(new InetSocketAddress(self.port))
+
+        server = Some(bootstrap)
+        serverExecutor = Some(executor)
+      }
+      finally{
+        startStopLock.writeLock.unlock()
+      }
 
       log.info("Netty engine is started using port: " + self.port)
       ()
@@ -41,8 +51,16 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
   override def stop: Future[Unit] = {
     super.stop.map(_ => {
-      serverExecutor.foreach(ExecutorUtil.terminate(_))
-      server.foreach(_.releaseExternalResources)
+
+      startStopLock.writeLock.lock()
+      
+      try {
+        serverExecutor.foreach(ExecutorUtil.terminate(_))
+        server.foreach(_.releaseExternalResources)
+      }
+      finally{
+        startStopLock.writeLock.unlock()
+      }
 
       log.info("Netty engine is stopped.")
       ()

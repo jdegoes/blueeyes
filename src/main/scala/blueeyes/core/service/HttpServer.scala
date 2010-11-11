@@ -14,17 +14,17 @@ import net.lag.logging.Logger
  * mixed into.
  */
 trait HttpReflectiveServiceList[T] { self =>
-  lazy val services: List[HttpService2[T]] = {
+  lazy val services: List[HttpService[T]] = {
     val c = self.getClass
     
     val allMethods: List[Method] = c.getDeclaredMethods.toList
     
     val serviceMethods: List[Method] = allMethods.reverse.filter { method =>
-      classOf[HttpService2[T]].isAssignableFrom(method.getReturnType) && method.getParameterTypes.length == 0
+      classOf[HttpService[T]].isAssignableFrom(method.getReturnType) && method.getParameterTypes.length == 0
     }
     
     serviceMethods.map { method =>
-      method.invoke(self).asInstanceOf[HttpService2[T]]
+      method.invoke(self).asInstanceOf[HttpService[T]]
     }
   }
 }
@@ -40,7 +40,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   
   /** The list of services that this server is supposed to run.
    */
-  def services: List[HttpService2[T]]
+  def services: List[HttpService[T]]
   
   def isDefinedAt(r: HttpRequest[T]): Boolean = _handler.isDefinedAt(r)
   
@@ -195,7 +195,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     BoundStateDescriptor(context, service)
   }
   
-  private case class BoundStateDescriptor[T, S](context: HttpServiceContext, service: HttpService2[T]) {
+  private case class BoundStateDescriptor[T, S](context: HttpServiceContext, service: HttpService[T]) {
     val descriptor: HttpServiceDescriptor[T, S] = service.descriptorFactory(context).asInstanceOf[HttpServiceDescriptor[T, S]]
     
     val state: Future[S] = new Future[S]

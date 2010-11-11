@@ -75,7 +75,7 @@ object SampleServer extends HttpReflectiveServiceList[String] with SampleService
 trait SampleService extends BlueEyesServiceBuilder[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
 
-  val sampleService: HttpService2[String] = service("sample", "1.32") { context =>
+  val sampleService: HttpService[String] = service("sample", "1.32") { context =>
     startup {
     } ->
     request { state: Unit =>

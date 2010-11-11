@@ -84,7 +84,7 @@ trait BlueEyesServiceSpecification[T]{
   def content  = response.content
   def version  = response.version
   
-  def service: HttpService2[T]
+  def service: HttpService[T]
   def config: String
 
   class SpecHttpServer extends HttpServer[T](){
