@@ -18,10 +18,9 @@ class HttpServerNettySpec extends Specification{
 
   shareVariables()
 
-
   private var port = 8585
-  @volatile
   private var server: Option[NettyEngineString] = None
+  
   "HttpServer" should{
     doFirst{
       var success = false
