@@ -6,10 +6,47 @@ import blueeyes.util.{Future, FutureImplicits}
 
 /** Convenience trait for building services with many common mixins. 
  * <pre>
- * trait EmailServices extends BlueEyesServiceBuilder {
- *   val emailService = service("email", "1.32") {
- *     request {
+ * services {
+ *   email {
+ *     v1 {
  *       ...
+ *       
+ *       log {
+ *       
+ *       }
+ *     }
+ *   }
+ * }
+ * </pre>
+ * <pre>
+ * trait EmailServices extends BlueEyesServiceBuilder {
+ *   case class EmailState(contacts: List[String])
+ *
+ *   val emailService = service("email", "1.32") { context =>
+ *     startup {
+ *       val file = context.config.getString("contactsFileName")
+ *
+ *       context.log.info("Attempting to load contacts list...")
+ *
+ *       EmailState(load(file))
+ *     } ->
+ *     request { state =>
+ *       path("/foo") {
+ *          get { request =>
+ *
+ *          } ~
+ *
+ *          post { request =>
+ *
+ *          }
+ *       } ~ 
+ *       
+ *       path("/bar") {
+ *
+ *       }
+ *     } ->
+ *     shutdown { state =>
+ *
  *     }
  *   }
  * }

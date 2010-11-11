@@ -6,29 +6,38 @@ class Future[T] {
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   
   // TODO: Make this thread-safe
-  private var _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
+  private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
+  private def listeners: List[T => Unit] = readLock { _listeners.toList }
+  
   private var _result: Option[T] = None
   private var _isSet: Boolean = false
   private var _isCanceled: Boolean = false
-  private var _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
+  
+  private val _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
+  private def cancelers: List[Unit => Boolean] = readLock { _cancelers.toList }
+  
   private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
+  private def canceled: List[Option[Throwable] => Unit] = _canceled.toList
+  
   private var _error: Option[Throwable] = None
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
    */
   def deliver(t: T): Future[T] = {
-    if (_isCanceled) this
-    else if (_isSet) error("Future already delivered")
-    else {
-      _result = Some(t)
-      _isSet  = true
+    writeLock {
+      if (_isCanceled) this
+      else if (_isSet) error("Future already delivered")
+      else {
+        _result = Some(t)
+        _isSet  = true
 
-      _listeners.foreach(l => l(t))
+        listeners.foreach(l => l(t))
+        
+        _listeners.clear()
 
-      _listeners = new ArrayBuffer
-
-      this
+        this
+      }
     }
   }
 
@@ -40,7 +49,9 @@ class Future[T] {
    * for the implementation of future primitives.
    */
   def allowCancelOnlyIf(f: Unit => Boolean): Future[T] = {
-    if (!isDone) _cancelers.append(f)
+    writeLock {
+      if (!isDone) _cancelers.append(f)
+    }
 
     this
   }
@@ -55,8 +66,10 @@ class Future[T] {
    * explicitly known the result of a future will not be used.
    */
   def ifCanceled(f: Option[Throwable] => Unit): Future[T] = {
-    if (isCanceled) f(_error)
-    else if (!isDone) _canceled.append(f)
+    writeLock {
+      if (isCanceled) f(_error)
+      else if (!isDone) _canceled.append(f)
+    }
 
     this
   }
@@ -90,11 +103,13 @@ class Future[T] {
    * is delivered.
    */
   def deliverTo(f: T => Unit): Future[T] = {
-    if (!isCanceled) {
-      if (isDelivered) f(_result.get)
-      else _listeners.append(f)
+    writeLock {
+      if (!isCanceled) {
+        if (isDelivered) f(_result.get)
+        else _listeners.append(f)
+      }
+      this
     }
-    this
   }
 
   /** Uses the specified function to transform the result of this future into
@@ -203,29 +218,55 @@ class Future[T] {
   def toList: List[T] = value.toList
 
   private def forceCancel(error: Option[Throwable]): Future[T] = {
-    if (!_isCanceled) {
-      _isCanceled = true
+    writeLock {
+      if (!_isCanceled) {
+        _isCanceled = true
 
-      _canceled.foreach(f => f(error))
+        canceled.foreach(f => f(error))
+        
+        _canceled.clear()
+      }
     }
 
     return this
   }
   
   private def internalCancel(error: Option[Throwable]): Boolean = {
-    if (isDone) false           // [-- Already done, can't be canceled
-    else if (isCanceled) true   // <-- Already canceled, nothing to do
-    else {                      // <-- Ask to see if everyone's OK with canceling
-      _error = error
+    writeLock {
+      if (isDone) false           // [-- Already done, can't be canceled
+      else if (isCanceled) true   // <-- Already canceled, nothing to do
+      else {                      // <-- Ask to see if everyone's OK with canceling
+        _error = error
       
-      var r = _cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
+        var r = _cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
 
-      if (r) {
-        // Everyone's OK with canceling, mark state & notify:
-        forceCancel(error)
+        if (r) {
+          // Everyone's OK with canceling, mark state & notify:
+          forceCancel(error)
+        }
+
+        r
       }
-
-      r
+    }
+  }
+  
+  private def readLock[S](f: => S): S = {
+    lock.readLock.lock()
+    try {
+      f
+    }
+    finally {
+      lock.readLock.unlock()
+    }
+  }
+  
+  private def writeLock[S](f: => S): S = {
+    lock.writeLock.lock()
+    try {
+      f
+    }
+    finally {
+      lock.writeLock.unlock()
     }
   }
 }
