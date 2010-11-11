@@ -70,7 +70,7 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-object SampleServer extends HttpReflectiveServiceList[String] with SampleService with NettyEngineString { }
+object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
 
 trait SampleService extends BlueEyesServiceBuilder[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
