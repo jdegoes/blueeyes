@@ -662,5 +662,7 @@ trait HttpHeaderImplicits {
     case `Access-Control-Request-Headers`(value) => new `Access-Control-Request-Headers`(value: _*)
     case (name, value) => new CustomHeader(name, value)
   }
+  
+  implicit def headersList2HeadersMap(headers: Seq[HttpHeader]): Map[String, String] = Map(headers.map(header => {header: (String, String)}): _*)
 }
 object HttpHeaderImplicits extends HttpHeaderImplicits
