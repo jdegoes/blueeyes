@@ -152,9 +152,43 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      f(t).deliverTo(s => {
+      f(t).deliverTo { s =>
         fut.deliver(s)
-      }).ifCanceled(fut.forceCancel)
+      }.ifCanceled {
+        fut.forceCancel
+      }
+    }
+
+    ifCanceled(fut.forceCancel)
+
+    return fut
+  }
+  
+  def flatMapOption[S](f: T => Option[S]): Future[S] = {
+    var fut: Future[S] = new Future
+
+    deliverTo { t =>
+      f(t) match {
+        case None => fut.cancel()
+        
+        case Some(s) => fut.deliver(s)
+      }
+    }
+
+    ifCanceled(fut.forceCancel)
+
+    return fut
+  }
+  
+  def flatMapEither[F <: Throwable, S](f: T => Either[F, S]): Future[S] = {
+    var fut: Future[S] = new Future
+
+    deliverTo { t =>
+      f(t) match {
+        case Left(f) => fut.cancel(f)
+        
+        case Right(s) => fut.deliver(s)
+      }
     }
 
     ifCanceled(fut.forceCancel)
@@ -238,14 +272,16 @@ class Future[T] {
       else {                      // <-- Ask to see if everyone's OK with canceling
         _error = error
       
-        var r = _cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
+        var shouldCancel = cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
 
-        if (r) {
+        if (shouldCancel) {
           // Everyone's OK with canceling, mark state & notify:
           forceCancel(error)
         }
+        
+        _cancelers.clear()
 
-        r
+        shouldCancel
       }
     }
   }
