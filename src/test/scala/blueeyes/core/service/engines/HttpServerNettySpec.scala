@@ -72,8 +72,6 @@ class HttpServerNettySpec extends Specification{
 object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
 
 trait SampleService extends BlueEyesServiceBuilder[String]{
-  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
-
   val sampleService: HttpService[String] = service("sample", "1.32") { context =>
     startup {
     } ->

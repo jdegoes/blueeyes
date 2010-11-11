@@ -7,7 +7,7 @@ import blueeyes.util.Future
 import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes}
 import blueeyes.BlueEyesServiceBuilder
 
 class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
@@ -41,7 +41,6 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
 }
 
 class SampleService extends BlueEyesServiceBuilder[String]{
-  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
 
   val sampleService = service("sample", "1.32") { context =>
     startup {

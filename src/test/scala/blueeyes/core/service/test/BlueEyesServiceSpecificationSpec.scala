@@ -11,7 +11,6 @@ import blueeyes.core.http._
 
 class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[String]{
   val serviceResponse = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some("context"), HttpVersions.`HTTP/1.1`)
-  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
 
   val service = new SampeService().sampleService
   def config = ""  
@@ -33,14 +32,14 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
   "gets responce" in {
     path("/bar/id/bar.html"){
       get{
-          response mustEqual (serviceResponse)
+        response mustEqual (serviceResponse)
       }
     }
   }
   "gets responce when future is set asynchronously" in {
     path("/asynch/future"){
       get{
-            response mustEqual (serviceResponse)
+        response mustEqual (serviceResponse)
       }
     }
   }

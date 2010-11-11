@@ -15,7 +15,6 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.http.{HttpVersions, HttpResponse, HttpStatus, HttpStatusCodes}
 import java.net.InetSocketAddress
-import blueeyes.core.service.HttpStringDataTranscoder
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConvertersions{
   private val handler       = mock[HttpRequestHandler[String]]
@@ -23,7 +22,6 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
-  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
   private implicit val bijection  = NettyBijections.ChannelBufferToString
 
   private val response      = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
