@@ -26,9 +26,11 @@ import blueeyes.util.{Future, FutureImplicits}
  *     startup {
  *       val file = context.config.getString("contactsFileName")
  *
- *       context.log.info("Attempting to load contacts list...")
+ *       Future.async {
+ *         context.log.info("Attempting to load contacts list...")
  *
- *       EmailState(load(file))
+ *         EmailState(load(file))
+ *       }
  *     } ->
  *     request { state =>
  *       path("/foo") {
@@ -46,7 +48,7 @@ import blueeyes.util.{Future, FutureImplicits}
  *       }
  *     } ->
  *     shutdown { state =>
- *
+ *        
  *     }
  *   }
  * }
