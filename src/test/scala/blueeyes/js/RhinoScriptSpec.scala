@@ -7,6 +7,13 @@ class RhinoScriptSpec extends Specification{
   "execute pure script" in{
     val result = RhinoScript("""var f = function(x){x.foo.bar += 1; return x}; f({foo: {bar: 1}, name: "hello"})""")()
 
-    result mustEqual(JsonParser.parse("""{"name": "hello", "foo": {"bar": 2.0}}"""))
+    result mustEqual(Some(JsonParser.parse("""{"name": "hello", "foo": {"bar": 2.0}}""")))
   }
 }
+
+//"""
+//    var record  = %s;
+//    record.map  = %s
+//    record.emit = function(k, v){emitter.emmit(k, v)}
+//
+//    record.map()"""

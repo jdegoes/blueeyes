@@ -2,12 +2,15 @@ package blueeyes.core.service
 
 import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import scala.collection.JavaConversions._
+import blueeyes.core.http.HttpIp
+import blueeyes.core.http.HttpIps
+
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
 
-import HttpHeaders._
-import HttpVersions._
+import blueeyes.core.http.HttpHeaders._
+import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import java.net.{SocketAddress, InetSocketAddress}
 
@@ -56,15 +59,19 @@ object Converters {
   }
 
   implicit def fromNettyRequest[T, S](request: NettyHttpRequest, pathParameters: Map[Symbol, String], remoteAddres: SocketAddress, transcoder: HttpDataTranscoder[T, S]): HttpRequest[T] = {
-    val queryStringDecoder = new QueryStringDecoder(request.getUri())
-    val params             = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
-    val headers            = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
-    val nettyContent       = request.getContent()
-    val content            = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
-    val remoteHost         = remoteAddres match {
-                              case x: InetSocketAddress => Some(x.getAddress())
-                              case _ => None
-                            }
+    val queryStringDecoder  = new QueryStringDecoder(request.getUri())
+    val params              = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
+    val headers             = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
+    val nettyContent        = request.getContent()
+    val content             = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
+    val remoteHost          = if (headers.contains("x-forwarded-for")) {
+                                HttpIps.parseSingleIp(headers("x-forwarded-for")).map(_.ip)
+                              } else {
+                                remoteAddres match {
+                                  case x: InetSocketAddress => Some(x.getAddress())
+                                  case _ => None
+                                }
+                              }
 
     HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }
