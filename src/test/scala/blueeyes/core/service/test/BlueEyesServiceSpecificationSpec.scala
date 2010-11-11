@@ -48,29 +48,20 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
 
   class SampeService extends BlueEyesServiceBuilder[String]{
     val sampleService = service("sample", "1.32") { context =>
-      startup {
-      } ->
-      request { state: Unit =>
+      request { 
         path("/bar/'foo/bar.html") {
-          get [String]{ request: HttpRequest[String] =>
-            new Future[HttpResponse[String]]().deliver(serviceResponse)
-  }
+          get [String] { request: HttpRequest[String] =>
+            serviceResponse
+          }
         } ~
         path("/asynch/future") {
           get [String]{ request: HttpRequest[String] =>
-      import scala.actors.Actor._
-
-      val future = new Future[HttpResponse[String]]()
-      val actor2 = actor {
-        Thread.sleep(1000)
-        future.deliver(serviceResponse)
+            Future.async {
+              serviceResponse
+            }
+          }
+        }  
       }
-      future
-    }
-  }  
-      } ->
-      shutdown {
-}
     }
   }
 }

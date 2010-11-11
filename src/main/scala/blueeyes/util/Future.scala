@@ -335,7 +335,7 @@ object Future {
     f
   }
   
-  def apply[T, S >: T](t: T): Future[S] = new Future().deliver(t: S)
+  def apply[T](t: T): Future[T] = new Future().deliver(t: T)
   
   def apply[T](futures: Future[T]*): Future[List[T]] = {
     import java.util.concurrent.ConcurrentHashMap
