@@ -236,14 +236,14 @@ private[mongo] class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends
   }
 }
 
-class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
+private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
   def drop = {}
 
   def outpotCollection = MongoCollectionHolder(output)
 }
 
 
-case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {error("any value is not supported")}){
+private[mongo] case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {error("any value is not supported")}){
   private var groupedValues = Map[K, List[V]]()
 
   def emit(key: Any, value: Any) = {

@@ -41,28 +41,28 @@ sealed trait MongoQuery[T] extends QueryBehaviour[T]{
 }
 
 case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoDistinctQuery = MongoDistinctQuery(selection, collection, Some(newFilter))
+  def where (newFilter: MongoFilter): MongoDistinctQuery = copy(filter = Some(newFilter))
 }
 case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JArray] with GroupQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoGroupQuery = MongoGroupQuery(selection, collection, initial, reduce, Some(newFilter))
+  def where (newFilter: MongoFilter): MongoGroupQuery = copy(filter = Some(newFilter))
 }
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
                             sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[Stream[JObject]] with SelectQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoSelectQuery = MongoSelectQuery(selection, collection, Some(newFilter), sort, skip, limit)
-  def sortBy(newSort: MongoSort)    : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, Some(newSort), skip, limit)
-  def skip  (newSkip: Int)          : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, Some(newSkip), limit)
-  def limit (newLimit: Int)         : MongoSelectQuery = MongoSelectQuery(selection, collection, filter, sort, skip, Some(newLimit))
+  def where (newFilter: MongoFilter): MongoSelectQuery = copy(filter = Some(newFilter))
+  def sortBy(newSort: MongoSort)    : MongoSelectQuery = copy(sort = Some(newSort))
+  def skip  (newSkip: Int)          : MongoSelectQuery = copy(skip = Some(newSkip))
+  def limit (newLimit: Int)         : MongoSelectQuery = copy(limit = Some(newLimit))
 }
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
                               sort: Option[MongoSort] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, Some(newFilter), sort)
-  def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = MongoSelectOneQuery(selection, collection, filter, Some(newSort))
+  def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
+  def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = copy(sort = Some(newSort))
 }
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoRemoveQuery = MongoRemoveQuery(collection, Some(newFilter))
+  def where (newFilter: MongoFilter): MongoRemoveQuery = copy(filter = Some(newFilter))
 }
 case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with CountQueryBehaviour{
-  def where (newFilter: MongoFilter): MongoCountQuery = MongoCountQuery(collection, Some(newFilter))
+  def where (newFilter: MongoFilter): MongoCountQuery = copy(filter = Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
 case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
@@ -70,12 +70,12 @@ case class MongoDropIndexQuery(collection: MongoCollection, name: String) extend
 case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery[JNothing.type] with DropIndexesQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue, filter: Option[MongoFilter] = None, upsert: Boolean = false,
                             multi: Boolean = false) extends MongoQuery[JInt] with UpdateQueryBehaviour{
-  def where  (newFilter: MongoFilter) : MongoUpdateQuery = MongoUpdateQuery(collection, value, Some(newFilter), upsert, multi)
+  def where  (newFilter: MongoFilter) : MongoUpdateQuery = copy(filter = Some(newFilter))
 }
 case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCollection, outputCollection: Option[String] = None, filter: Option[MongoFilter] = None)
                             extends MongoQuery[MapReduceOutput] with MapReduceQueryBehaviour{
-  def where (newFilter: MongoFilter)    = MongoMapReduceQuery(map, reduce, collection, outputCollection, Some(newFilter))
-  def into(newOutputCollection: String) = MongoMapReduceQuery(map, reduce, collection, Some(newOutputCollection), filter)
+  def where (newFilter: MongoFilter)    = copy(filter = Some(newFilter))
+  def into(newOutputCollection: String) = copy(outputCollection = Some(newOutputCollection))
 }
 
 
