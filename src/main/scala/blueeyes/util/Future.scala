@@ -27,7 +27,7 @@ class Future[T] {
   def deliver(t: T): Future[T] = {
     writeLock {
       if (_isCanceled) this
-      else if (_isSet) error("Future already delivered")
+      else if (_isSet) Predef.error("Future already delivered")
       else {
         _result = Some(t)
         _isSet  = true
@@ -81,9 +81,14 @@ class Future[T] {
    *
    * @return true if the future is canceled, false otherwise.
    */
-  def cancel(): Boolean = internalCancel(None)
+  def cancel(): Boolean = cancel(None)
 
-  def cancel(e: Throwable): Boolean = internalCancel(Some(e))
+  /** Attempts to cancel the future. This may succeed only if the future is
+   * not already delivered, and if all cancel conditions are satisfied.
+   */
+  def cancel(e: Throwable): Boolean = cancel(Some(e))
+  
+  def cancel(o: Option[Throwable]): Boolean = internalCancel(o)
 
   /** Determines if the future is "done" -- that is, delivered or canceled.
    */
@@ -205,7 +210,9 @@ class Future[T] {
   def filter(f: T => Boolean): Future[T] = {
     var fut: Future[T] = new Future
 
-    deliverTo(t => { if (f(t)) fut.deliver(t) else fut.forceCancel(None) })
+    deliverTo { t => 
+      if (f(t)) fut.deliver(t) else fut.forceCancel(None)
+    }
 
     ifCanceled(fut.forceCancel)
 
@@ -243,9 +250,15 @@ class Future[T] {
     zipped
   }
 
-  /** Retrieves the value of the future, as an option.
+  /** Retrieves the value of the future, as an option. If the future has not
+   * been delivered, or produced an error, this method will return None.
    */
   def value: Option[T] = _result
+  
+  /** Retrieves the error of the future, as an option. If the future has been
+   * delivered, or has not produced an error, this method will return None.
+   */
+  def error: Option[Throwable] = _error
 
   def toOption: Option[T] = value
 
@@ -343,7 +356,9 @@ object Future {
     }
     
     futures.foreach { future =>
-      future.ifCanceled(_ => result.cancel())
+      future.ifCanceled { e =>
+        result.cancel(e)
+      }
       
       future.deliverTo { _ => 
         val newCount = remaining.decrementAndGet
