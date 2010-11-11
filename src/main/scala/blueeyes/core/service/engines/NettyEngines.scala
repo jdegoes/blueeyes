@@ -70,7 +70,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
   implicit def contentBijection: Bijection[ChannelBuffer, T]
 }
 
-class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T])(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConvertersions{
+class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T])(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     val nettyRequest   = event.getMessage().asInstanceOf[NettyHttpRequest]
     val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)

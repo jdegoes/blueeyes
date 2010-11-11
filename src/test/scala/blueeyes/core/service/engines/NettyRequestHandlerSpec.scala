@@ -16,7 +16,7 @@ import blueeyes.core.service._
 import blueeyes.core.http.{HttpVersions, HttpResponse, HttpStatus, HttpStatusCodes}
 import java.net.InetSocketAddress
 
-class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConvertersions{
+class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters{
   private val handler       = mock[HttpRequestHandler[String]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
