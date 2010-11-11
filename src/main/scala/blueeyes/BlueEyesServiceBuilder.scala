@@ -63,6 +63,7 @@ trait BlueEyesServiceBuilder[T] extends HttpServiceBuilder[T] with
   HttpDateImplicits with
   HttpNumberImplicits with
   HttpRequestHandlerCombinators with 
+  HttpRequestHandlerImplicits with
   RestPathPatternImplicits {
   
 }
