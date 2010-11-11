@@ -1,6 +1,12 @@
 package blueeyes.core.data
 
-import blueeyes.core.http.MimeType
+import blueeyes.json.JsonAST._
+import blueeyes.json.Printer._
+import blueeyes.json.JsonParser
+import blueeyes.json.JsonAST.JValue
+
+import scala.xml.NodeSeq
+import scala.xml.XML
 
 trait Bijection[T, S] extends Function1[T, S] { self =>
   def apply(t: T): S
@@ -11,6 +17,20 @@ trait Bijection[T, S] extends Function1[T, S] { self =>
     def apply(s: S): T   = self.unapply(s)
     def unapply(t: T): S = self.apply(t)
   }
+  
+  def compose[R](that: Bijection[R, T]): Bijection[R, S] = new Bijection[R, S] {
+    def apply(r: R): S = self.apply(that.apply(r))
+    
+    def unapply(s: S): R = that.unapply(self.unapply(s))
+  }
+  
+  def andThen[R](that: Bijection[S, R]): Bijection[T, R] = that.compose(self)
+}
+
+class ProxyBijection[T, S](val underlying: Bijection[T, S]) extends Bijection[T, S] {
+  def apply(t: T): S = underlying.apply(t)
+  
+  def unapply(s: S): T = underlying.unapply(s)
 }
 
 object Bijection {
@@ -21,52 +41,28 @@ object Bijection {
   }
 }
 
-trait DataTranscoder[T, S] {
-  def transcode: Bijection[T, S]
-  def mimeType: MimeType;
-}
-
-class DataTranscoderImpl[T, S](val transcode: Bijection[T, S], val mimeType: MimeType) extends DataTranscoder[T, S]
-
-class ProxyBijection[T, S](val underlying: Bijection[T, S]) extends Bijection[T, S] {
-  def apply(t: T): S = underlying.apply(t)
+object Bijections {
+  val ByteArrayToString = new Bijection[Array[Byte], String] {
+    def apply(t: Array[Byte]): String = t.map(_.toChar).mkString("")
+    
+    def unapply(s: String): Array[Byte] = s.toArray.map(_.toByte)
+  }
+  val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
   
-  def unapply(s: S): T = underlying.unapply(s)
-}
-
-import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
-import blueeyes.json.JsonParser
-import blueeyes.json.JsonAST.JValue
-
-object JsonToTextBijection extends Bijection[JValue, String]{
-  def unapply(t: String) = JsonParser.parse(t)
-  def apply(s: JValue)   = compact(render(s))
-}
-
-object JsonToJsonBijection extends Bijection[JValue, JValue] {
-  def unapply(t: JValue) = t
-  def apply(s: JValue)   = s
-}
-
-object ByteArrayToByteArrayBijection extends Bijection[Array[Byte], Array[Byte]] {
-  def unapply(t: Array[Byte]) = t
-  def apply(s: Array[Byte])   = s
-}
-
-object JsonToByteArrayBijection extends Bijection[JValue, Array[Byte]] {
-  def unapply(t: Array[Byte]) = JsonParser.parse(t.map(_.toChar).mkString(""))
-  def apply(s: JValue)         = compact(render(s)).toArray.map(_.toByte)
-}
-
-import xml.NodeSeq
-import xml.XML
-object XMLToTextBijection extends Bijection[NodeSeq, String]{
-  def apply(s: NodeSeq)  = s.toString
-  def unapply(t: String) = XML.loadString(t)
-}
-
-object TextToTextBijection extends Bijection[String, String]{
-  def unapply(s: String) = s
-  def apply(t: String)   = t
+  val StringToString    = Bijection.identity[String]
+  val StringToByteArray = ByteArrayToString.inverse
+    
+  val JValueToString = new Bijection[JValue, String] {
+    def apply(s: JValue)   = compact(render(s))
+    def unapply(t: String) = JsonParser.parse(t)
+  }
+  val JValueToJValue    = Bijection.identity[JValue]
+  val JValueToByteArray = JValueToString.andThen(StringToByteArray)
+  
+  val XMLToString = new Bijection[NodeSeq, String] {
+    def apply(s: NodeSeq)  = s.toString
+    def unapply(t: String) = XML.loadString(t)
+  }  
+  val XMLToXML        = Bijection.identity[NodeSeq]  
+  val XMLToByteArray  = XMLToString.andThen(StringToByteArray)
 }

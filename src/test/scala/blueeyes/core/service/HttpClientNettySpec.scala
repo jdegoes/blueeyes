@@ -188,7 +188,7 @@ class HttpClientNettyString extends HttpClientNetty[String] with String2StringTr
 
 class HttpClientNettyJValue extends HttpClientNetty[JValue] with Json2StringTranscoder
 
-trait Json2StringTranscoder extends DataTranscoder[JValue, String] {
+trait Json2StringTranscoder {
   def transcode: Bijection[JValue, String] = new Bijection[JValue, String] {
     def apply(s: JValue)   = compact(render(s))
     def unapply(t: String) = JsonParser.parse(t)
@@ -196,7 +196,7 @@ trait Json2StringTranscoder extends DataTranscoder[JValue, String] {
   def mimeType:MimeType = application/json
 }
 
-trait String2StringTranscoder extends DataTranscoder[String, String] {
+trait String2StringTranscoder {
   def transcode: Bijection[String, String] = new Bijection[String, String] {
     def apply(s: String) = s
     def unapply(t: String) = t

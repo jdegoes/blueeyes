@@ -3,7 +3,7 @@ package blueeyes.core.service
 import org.specs.Specification
 import RestPathPatternImplicits._
 import org.scalatest.mock.MockitoSugar
-import blueeyes.core.data.TextToTextBijection
+import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 import blueeyes.util.Future
@@ -12,7 +12,7 @@ class RestHierarchyBuilderSpec extends Specification with MockitoSugar {
   private val handler       = mock[HttpRequest[String] => Future[HttpResponse[String]]]
   private val service       = new TestService
   private val netsedService = new TestNestedService
-  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
 
   /*"add service to the specified path" in {
     val serviceByPath = service.hierarchy.head

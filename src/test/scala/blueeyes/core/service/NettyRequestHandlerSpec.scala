@@ -10,7 +10,7 @@ import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
 import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.core.data.TextToTextBijection
+import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 import java.net.InetSocketAddress
@@ -21,7 +21,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar {
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
-  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
   
   private val response     = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
   private val hierarchy: RestHierarchy[_]  = new TestService()

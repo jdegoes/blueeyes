@@ -22,26 +22,31 @@ import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig
 
 import java.util.concurrent.{ Future => JavaFuture }
 
-trait HttpClientNetty[T] extends HttpClient[T] with DataTranscoder[T, String] {
+trait HttpClientNetty[T] extends HttpClient[T] {
+  def transcode: Bijection[T, String]
+  def mimeType: MimeType
+  
   def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    new Future[HttpResponse[T]]() {
-      prepareRequest(request).foreach(r => r.execute(
-        new AsyncCompletionHandler[Response] {
-          def onCompleted(response: Response): Response = {
-            val data = transcode.unapply(response.getResponseBody)
-            deliver(HttpResponse[T](status = HttpStatus(response.getStatusCode), content = Some(data)));
-            response;
-          }
+    val f = new Future[HttpResponse[T]]
+    
+    prepareRequest(request).foreach(r => r.execute(
+      new AsyncCompletionHandler[Response] {
+        def onCompleted(response: Response): Response = {
+          val data = transcode.unapply(response.getResponseBody)
+          f.deliver(HttpResponse[T](status = HttpStatus(response.getStatusCode), content = Some(data)));
+          response;
+        }
 
-          override def onThrowable(t: Throwable) {
-            val httpStatus = HttpStatus(t match {
-              case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
-              case _ => HttpStatusCodes.InternalServerError
-            })
-            cancel(new Error(t))
-          }
-        }))
-    }
+        override def onThrowable(t: Throwable) {
+          val httpStatus = HttpStatus(t match {
+            case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
+            case _ => HttpStatusCodes.InternalServerError
+          })
+          f.cancel(new Error(t))
+        }
+      }))
+    
+    f
   }
 
   /**

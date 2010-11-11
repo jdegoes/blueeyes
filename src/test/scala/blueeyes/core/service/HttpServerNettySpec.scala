@@ -5,7 +5,7 @@ import com.ning.http.client._
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.util.{Future}
-import blueeyes.core.data.{TextToTextBijection}
+import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
@@ -59,7 +59,7 @@ class HttpServerNettySpec extends Specification{
 }
 
 class TestService extends RestHierarchyBuilder[String] with HttpService[String]{
-  private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
+  private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
   path("/bar/'adId/adCode.html"){get(new Handler())}
 
   def version = 1
