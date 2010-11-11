@@ -1,38 +1,50 @@
-package blueeyes.core.service
+package blueeyes.core.service.engines
 
 import java.net.URI
 import com.ning.http.client._
+import blueeyes.core.service._
 import org.specs.Specification
-import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.util.{Future}
 import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
+import blueeyes.core.http.{HttpVersions, HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes}
+import blueeyes.BlueEyesServiceBuilder
+import net.lag.configgy.Configgy
+import java.util.concurrent.CountDownLatch
 
 class HttpServerNettySpec extends Specification{
-  @volatile
+
+  private val configPattern = """server{port = %d}"""
+
+  shareVariables()
+
+
   private var port = 8585
   @volatile
-  private var server: Option[HttpServerNetty] = None
+  private var server: Option[NettyEngineString] = None
   "HttpServer" should{
     doFirst{
-      val testServer = new HttpServerNetty(classOf[TestService] :: Nil)
-
       var success = false
       do{
+        SampleServer.sampleService
         success = try {
-          testServer.start(port)
+          val doneSignal = new CountDownLatch(1)
+
+          Configgy.configureFromString(configPattern.format(port))
+
+          SampleServer.start.deliverTo { _ => doneSignal.countDown()}
           true
         }
         catch {
           case e: Throwable => {
+            e.printStackTrace()
             port = port + 1
             false
           }
         }
       }while(!success)
 
-      server = Some(testServer)
+      server = Some(SampleServer)
     }
 
     "return html by correct URI" in{
@@ -53,19 +65,31 @@ class HttpServerNettySpec extends Specification{
     }
 
     doLast{
-      server.foreach(_.stop)  
+      server.foreach(_.stop)
     }
   }
 }
 
-class TestService extends RestHierarchyBuilder[String] with HttpService[String]{
+object SampleServer extends HttpReflectiveServiceList[String] with SampleService with NettyEngineString { }
+
+trait SampleService extends BlueEyesServiceBuilder[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(Bijections.StringToString, text / html)
-  path("/bar/'adId/adCode.html"){get(new Handler())}
 
-  def version = 1
-
-  def name = "test-service"
+  val sampleService: HttpService2[String] = service("sample", "1.32") { context =>
+    startup {
+    } ->
+    request { state: Unit =>
+      path("/bar/'adId/adCode.html") {
+        get [String]{ request: HttpRequest[String] =>
+          new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
+        }
+      }
+    } ->
+    shutdown {
+    }
+  }
 }
+
 class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
   def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
 }

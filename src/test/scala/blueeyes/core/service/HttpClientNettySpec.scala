@@ -2,7 +2,7 @@ package blueeyes.core.service;
 
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.core.data.{ Bijection, DataTranscoder }
+import blueeyes.core.data.{ Bijection}
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser

@@ -19,13 +19,12 @@ trait HttpReflectiveServiceList[T] { self =>
     
     val allMethods: List[Method] = c.getDeclaredMethods.toList
     
-    val serviceFields: List[Field] = c.getDeclaredFields.toList.reverse.filter { field => 
-      classOf[HttpService2[T]].isAssignableFrom(field.getType) &&
-      allMethods.exists(m => field.getName == m.getName && m.getReturnType == field.getType)
+    val serviceMethods: List[Method] = allMethods.reverse.filter { method =>
+      classOf[HttpService2[T]].isAssignableFrom(method.getReturnType) && method.getParameterTypes.length == 0
     }
     
-    serviceFields.map { field =>
-      field.get(self).asInstanceOf[HttpService2[T]]
+    serviceMethods.map { method =>
+      method.invoke(self).asInstanceOf[HttpService2[T]]
     }
   }
 }
@@ -202,7 +201,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     val state: Future[S] = new Future[S]
     
     def startup(): Future[S] = descriptor.startup().deliverTo(state.deliver _)
-    
+
     lazy val request: Future[HttpRequestHandler[T]] = state.map(state => descriptor.request(state))
     
     def shutdown(): Future[Unit] = state.flatMap(state => descriptor.shutdown(state))

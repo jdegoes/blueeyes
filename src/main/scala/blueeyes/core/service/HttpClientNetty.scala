@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 
 
-import blueeyes.core.data.{ Bijection, DataTranscoder }
+import blueeyes.core.data.{ Bijection}
 import blueeyes.util.Future
 import com.ning.http.client.{
   AsyncHttpClient,

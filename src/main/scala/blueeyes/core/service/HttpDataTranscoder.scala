@@ -10,7 +10,7 @@ sealed trait HttpResponseType[T]
 case object HttpResponseStringType extends HttpResponseType[String]
 case object HttpResponseBytesType  extends HttpResponseType[Array[Byte]]
 
-trait HttpDataTranscoder[T, S] extends DataTranscoder[T, S] { self =>
+trait HttpDataTranscoder[T, S]{ self =>
   def responseType: HttpResponseType[S]
   
   def transcode: Bijection[T, S]
@@ -18,10 +18,10 @@ trait HttpDataTranscoder[T, S] extends DataTranscoder[T, S] { self =>
   def mimeType: MimeType
 }
 
-class HttpStringDataTranscoder[T](transcode: Bijection[T, String], mimeType: MimeType) extends DataTranscoder[T, String](transcode, mimeType) with HttpDataTranscoder[T, String]{
+class HttpStringDataTranscoder[T](val transcode: Bijection[T, String], val mimeType: MimeType) extends HttpDataTranscoder[T, String]{
   val responseType: HttpResponseType[String] = HttpResponseStringType
 }
-class HttpBytesDataTranscoder[T](transcode: Bijection[T, Array[Byte]], mimeType: MimeType) extends DataTranscoder[T, Array[Byte]](transcode, mimeType) with HttpDataTranscoder[T, Array[Byte]]{
+class HttpBytesDataTranscoder[T](val transcode: Bijection[T, Array[Byte]], val mimeType: MimeType) extends HttpDataTranscoder[T, Array[Byte]]{
   val responseType: HttpResponseType[Array[Byte]] = HttpResponseBytesType
 }
 
