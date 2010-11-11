@@ -41,26 +41,21 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
 }
 
 class SampleService extends BlueEyesServiceBuilder[String]{
-
   val sampleService = service("sample", "1.32") { context =>
-    startup {
-    } ->
-    request { state: Unit =>
+    request {
       path("/get/'foo") {
         get [String]{ request: HttpRequest[String] =>
-      val fooValue = request.parameters.get('foo).getOrElse("")
-      val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), Some(fooValue))
-      new Future[HttpResponse[String]]().deliver(response)
-    }
+          val fooValue = request.parameters.get('foo).getOrElse("")
+          val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), Some(fooValue))
+          new Future[HttpResponse[String]]().deliver(response)
+        }
       } ~
       path("/post/foo") {
         post [String]{ request: HttpRequest[String] =>
-      val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), request.content)
-      new Future[HttpResponse[String]]().deliver(response)
+          val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), request.content)
+          new Future[HttpResponse[String]]().deliver(response)
+        }
+      }
     }
-  }
-    } ->
-    shutdown {
-}
   }
 }
