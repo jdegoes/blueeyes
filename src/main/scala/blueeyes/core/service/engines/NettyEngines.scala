@@ -13,10 +13,10 @@ import org.jboss.netty.bootstrap.ServerBootstrap
 import java.net.InetSocketAddress
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.{Executors, Executor}
-import org.jboss.netty.handler.codec.http.{HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
 import net.lag.logging.Logger
+import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
