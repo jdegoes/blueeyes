@@ -1,8 +1,61 @@
 import sbt._
 import de.element34.sbteclipsify._
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repositories with Eclipsify with IdeaProject {
+trait OneJar { this: DefaultProject =>
+  lazy val oneJar = oneJarAction
+  
+  def oneJarAction = oneJarTask.dependsOn(`package`) describedAs("Creates a single JAR containing all dependencies that runs the project's mainClass")
+  
+  def oneJarTask: Task = task { 
+    import FileUtilities._
+    import java.io.{ByteArrayInputStream, File}
+    import java.util.jar.Manifest
+    
+    val manifest = new Manifest(new ByteArrayInputStream((
+      "Manifest-Version: 1.0\n" +
+      "Main-Class: " + mainClass.get + "\n").getBytes))
 
+    val versionString = version match {
+      case BasicVersion(major, _, _, _) => "-v" + major.toString
+
+      case _ => version.toString
+    }
+
+    val allDependencies = jarPath +++ runClasspath +++ mainDependencies.scalaJars 
+    
+    log.info("All dependencies of " + name + ": " + allDependencies)
+
+    val destJar = (normalizedName + versionString + ".jar"): Path
+
+    FileUtilities.withTemporaryDirectory(log) { tmpDir =>
+      val tmpPath = Path.fromFile(tmpDir)
+
+      allDependencies.get.foreach { dependency => 
+        log.info("Unzipping " + dependency + " to " + tmpPath)
+
+        if (dependency.ext.toLowerCase == "jar") {
+          unzip(dependency, tmpPath, log) 
+        }
+        else if (dependency.asFile.isDirectory) {
+          copy(List(dependency), tmpPath, true, true, log)
+        }
+        else {
+          copyFile(dependency.asFile, tmpDir, log)
+        }
+      } 
+      
+      new File(tmpDir, "META-INF/MANIFEST.MF").delete
+
+      log.info("Creating single jar out of all dependencies: " + destJar)
+
+      jar(tmpDir.listFiles.map(Path.fromFile), destJar, manifest, true, log)
+
+      None
+    }
+  }
+}
+
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with OneJar {
   val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"    % "test"
   val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "test"
   val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "test"
@@ -16,6 +69,8 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info)  with Repo
   val configgy    = "net.lag"                     % "configgy"          % "2.0.0"       % "compile"
   val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
   val rhino       = "rhino"                       % "js"                % "1.7R2"       % "compile"
+
+  override def mainClass = Some("blueeyes.BlueEyesDemo")
 
   override def managedStyle = ManagedStyle.Maven
 

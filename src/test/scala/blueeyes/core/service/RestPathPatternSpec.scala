@@ -57,6 +57,18 @@ class RestPathPatternSpec extends Specification{
   "match complex path with symbols" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
   }
+  "match end of path when final element is symbol" in {
+    ("/foo/bar/'param" $).apply("/foo/bar/value") mustEqual(Map('param -> "value"))
+  }
+  "not match beyond end of path when final element is symbol" in {
+    ("/foo/bar/'param" $).isDefinedAt("/foo/bar/value/") mustBe(false)
+  }
+  "match end of path when final element is string" in {
+    ("/foo/bar/adCode.html" $).apply("/foo/bar/adCode.html") mustEqual(Map())
+  }
+  "not match beyond end of path when final element is string" in {
+    ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") mustBe(false)
+  }
   "create single parameter" in {
     (RestPathPattern.Root / 'param).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }

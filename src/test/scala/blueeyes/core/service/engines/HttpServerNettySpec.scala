@@ -83,20 +83,17 @@ object SampleServer extends SampleService with HttpReflectiveServiceList[String]
 trait SampleService extends BlueEyesServiceBuilder[String]{
   private val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`)
   val sampleService: HttpService[String] = service("sample", "1.32") { context =>
-    startup {
-    } ->
-    request { state: Unit =>
+    request {
       path("/bar/'adId/adCode.html") {
         get [String]{ request: HttpRequest[String] =>
           new Future[HttpResponse[String]]().deliver(response)
         }
-      } ~ path("/foo") {
+      } ~ 
+      path("/foo") {
         get [String]{ request: HttpRequest[String] =>
           new Future[HttpResponse[String]]().deliver(response)
         }  
       }
-    } ->
-    shutdown {
     }
   }
 }

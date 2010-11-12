@@ -31,7 +31,9 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   def apply(s: String): Map[Symbol, String] = applyParser.apply(new CharSequenceReader(s)) match {
     case Success(result, _) => result
     
-    case _ => error("Cannot parse " + s)
+    case Failure(msg, _) => parseFailure(msg, s)
+    
+    case Error(msg, _) => parseError(msg, s)
   }
   
   def / (symbol: Symbol): RestPathPattern = new RestPathPattern {
@@ -91,7 +93,9 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
         
         r.withPath(remainingPath)
       
-      case _ => error("The pattern " + this.toString + " does not match " + r.uri)
+      case Failure(msg, _) => parseFailure(msg, r.path)
+      
+      case Error(msg, _) => parseError(msg, r.path)
     }
   }
   
@@ -100,6 +104,13 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   }
   
   private def slashParser = RestPathPatternParsers.SlashPathPattern.parser
+  
+  private def parseFailure(msg: String, s: String) = {
+    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+  }
+  private def parseError(msg: String, s: String) = {
+    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+  }
 }
 object RestPathPattern extends RegexParsers {
   def Root = RestPathPatternParsers.RootPathPattern
@@ -126,7 +137,9 @@ object RestPathPatternParsers extends RegexParsers {
     val elements = restPathPatternParser(new CharSequenceReader(s)) match {
       case Success(result, _) => result
       
-      case _ => error("The path specification " + s + " has a syntax error")
+      case Failure(msg, _) => error("The path specification " + s + " has a syntax error: " + msg)
+      
+      case Error(msg, _) => error("There was an error parsing \"" + s + "\": " + msg)
     }
     
     CompositePathPattern(elements)
@@ -139,10 +152,10 @@ object RestPathPatternParsers extends RegexParsers {
   }  
   object SlashPathPattern extends LiteralPathPattern("/")
   object RootPathPattern extends LiteralPathPattern("")
-  object EndPathPattern extends RestPathPattern {
-    val parser: Parser[Map[Symbol, String]] = """$""".r ^^^ Map()
+  object EmptyPathPattern extends RestPathPattern {
+    val parser: Parser[Map[Symbol, String]] = """^$""".r ^^^ Map()
     
-    override def toString = "$"
+    override def toString = "^$"
   }
   case class SymbolPathPattern(symbol: Symbol) extends RestPathPattern {
     val parser: Parser[Map[Symbol, String]] = validUrlFrag ^^ (s => Map(symbol -> s))

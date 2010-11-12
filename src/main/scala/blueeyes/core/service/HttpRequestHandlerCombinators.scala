@@ -7,7 +7,7 @@ import blueeyes.core.http.HttpHeaderImplicits._
 
 trait HttpRequestHandlerCombinators {
   def path[T](path: RestPathPattern)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.path)
+    def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.path) && h.isDefinedAt(path.shift(r))
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
       val pathParameters = path(r.path)
@@ -31,7 +31,7 @@ trait HttpRequestHandlerCombinators {
       case _ => error("The handler " + h + " can only respond to HTTP method " + method)
     }
   }
-  def $[T](h: HttpRequestHandler[T]): HttpRequestHandler[T] = path(RestPathPatternParsers.EndPathPattern) { h }
+  def $[T](h: HttpRequestHandler[T]): HttpRequestHandler[T] = path(RestPathPatternParsers.EmptyPathPattern) { h }
   
   def get     [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.GET)      { toPartial(h) } }
   def put     [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.PUT)      { toPartial(h) } }
@@ -95,4 +95,3 @@ trait HttpRequestHandlerCombinators {
     def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = full.apply(request)
   }
 }
-object HttpRequestHandlerCombinators extends HttpRequestHandlerCombinators
