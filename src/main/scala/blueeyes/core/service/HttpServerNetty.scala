@@ -1,6 +1,5 @@
 package blueeyes.core.service
 
-import org.jboss.netty.handler.codec.http.{HttpResponseEncoder, HttpRequestDecoder}
 import org.jboss.netty.channel.{Channels, ChannelPipeline, ChannelPipelineFactory}
 import java.net.InetSocketAddress
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
@@ -8,6 +7,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.util.concurrent.{Executor, Executors}
 import net.lag.logging.Logger
+import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
 
 class HttpServerNetty(val servicesClasses: List[Class[_ <: HttpService[_]]]) {
   if (servicesClasses.isEmpty) error("No services are specified.")
@@ -53,6 +53,8 @@ class HttpServerPipelineFactory(val services: List[HttpService[_]]) extends Chan
 
     pipeline.addLast("decoder", new HttpRequestDecoder())
     pipeline.addLast("encoder", new HttpResponseEncoder())
+
+    pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
 
     pipeline.addLast("handler", new NettyRequestHandler(services))
 
