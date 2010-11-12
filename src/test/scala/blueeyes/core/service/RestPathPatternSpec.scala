@@ -10,7 +10,7 @@ class RestPathPatternSpec extends Specification{
   "match correct literal path containing a single path element" in {
     testPath("/foo",
       List(("/foo", Map())),
-      List("/bar", "/foo/bar")
+      List("/bar")
     )
   }
   "match correct literal path containing many path elements" in {

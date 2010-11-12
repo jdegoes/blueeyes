@@ -85,7 +85,7 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
       else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
     }
     catch {
-      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, e.getMessage)))
+      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, e.getMessage.replace("\n", " "))))
     }
   }
 
