@@ -61,7 +61,7 @@ object Converters {
   implicit def fromNettyRequest[T, S](request: NettyHttpRequest, pathParameters: Map[Symbol, String], remoteAddres: SocketAddress, transcoder: HttpDataTranscoder[T, S]): HttpRequest[T] = {
     val queryStringDecoder  = new QueryStringDecoder(request.getUri())
     val params              = pathParameters ++ queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
-    val headers             = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
+    val headers             = buildHeaders(request.getHeaders())
     val nettyContent        = request.getContent()
     val content             = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
     val remoteHost          = if (headers.contains("x-forwarded-for")) {
@@ -74,5 +74,18 @@ object Converters {
                               }
 
     HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+  }
+
+  private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
+    var headers = Map[String, String]()
+
+    nettyHeaders.foreach(header => {
+      val key   = header.getKey()
+      val value = header.getValue()
+
+      val values = headers.get(key).map(_ + "," + value).getOrElse(value)
+      headers = headers + Tuple2(key, values)
+    })
+    headers
   }
 }

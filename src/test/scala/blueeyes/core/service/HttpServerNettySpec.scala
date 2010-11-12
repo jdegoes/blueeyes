@@ -44,6 +44,15 @@ class HttpServerNettySpec extends Specification{
       response.getResponseBody mustEqual (Context.context)
     }
 
+    "return html by correct URI with parameters" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/foo?bar=zar".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
+      response.getResponseBody mustEqual (Context.context)
+    }
+
     "return not found error by wrong URI" in{
       val client = new AsyncHttpClient()
       val future = client.prepareGet("http://localhost:%d/foo/foo/adCode.html".format(port)).execute();
@@ -61,6 +70,7 @@ class HttpServerNettySpec extends Specification{
 class TestService extends RestHierarchyBuilder[String] with HttpService[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
   path("/bar/'adId/adCode.html"){get(new Handler())}
+  path("/foo"){get(new Handler())}
 
   def version = 1
 
