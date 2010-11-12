@@ -109,6 +109,8 @@ class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler) exten
     pipeline.addLast("decoder", new HttpRequestDecoder())
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
+    pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
+
     pipeline.addLast("handler", requestChannelHandler)
 
     pipeline
