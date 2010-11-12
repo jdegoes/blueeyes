@@ -70,4 +70,14 @@ class NettyConvertersSpec extends Specification with NettyConverters{
     request.remoteHost  mustEqual(Some(forwardedAddress.getAddress()))
   }
 
+  "convert netty NettyHttpRequest with multiple headers values to service HttpRequest" in {
+    val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
+    nettyRequest.addHeader("retry-after", "1")
+    nettyRequest.addHeader("retry-after", "2")
+
+    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))(NettyBijections.ChannelBufferToString)
+
+    request.headers     mustEqual(Map("retry-after" -> "1,2"))
+  }
+
 }

@@ -63,6 +63,15 @@ class HttpServerNettySpec extends Specification{
       response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
     }
 
+    "return html by correct URI with parameters" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/foo?bar=zar".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
+      response.getResponseBody mustEqual (Context.context)
+    }
+
     doLast{
       server.foreach(_.stop)
     }
@@ -72,14 +81,19 @@ class HttpServerNettySpec extends Specification{
 object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
 
 trait SampleService extends BlueEyesServiceBuilder[String]{
+  private val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`)
   val sampleService: HttpService[String] = service("sample", "1.32") { context =>
     startup {
     } ->
     request { state: Unit =>
       path("/bar/'adId/adCode.html") {
         get [String]{ request: HttpRequest[String] =>
-          new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
+          new Future[HttpResponse[String]]().deliver(response)
         }
+      } ~ path("/foo") {
+        get [String]{ request: HttpRequest[String] =>
+          new Future[HttpResponse[String]]().deliver(response)
+        }  
       }
     } ->
     shutdown {

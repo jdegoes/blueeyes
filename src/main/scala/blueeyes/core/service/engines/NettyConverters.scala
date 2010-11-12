@@ -46,13 +46,26 @@ trait NettyConverters {
   implicit def fromNettyRequest[T, S](request: NettyHttpRequest, remoteAddres: SocketAddress)(implicit contentBijection: Bijection[ChannelBuffer, T]): HttpRequest[T] = {
     val queryStringDecoder  = new QueryStringDecoder(request.getUri())
     val parameters          = queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
-    val headers             = Map(request.getHeaders().map(header => (header.getKey(), header.getValue())): _*)
+    val headers             = buildHeaders(request.getHeaders())
     val nettyContent        = request.getContent()
     val content             = if (nettyContent.readable()) Some(contentBijection(nettyContent)) else None
   
     val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
     val remoteHost          =  xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
-    HttpRequest(request.getMethod, request.getUri, parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+    HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+  }
+
+  private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
+    var headers = Map[String, String]()
+
+    nettyHeaders.foreach(header => {
+      val key   = header.getKey()
+      val value = header.getValue()
+
+      val values = headers.get(key).map(_ + "," + value).getOrElse(value)
+      headers = headers + Tuple2(key, values)
+    })
+    headers
   }
 }

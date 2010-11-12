@@ -16,6 +16,7 @@ import java.util.concurrent.{Executors, Executor}
 import org.jboss.netty.handler.codec.http.{HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
+import net.lag.logging.Logger
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -33,7 +34,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
         val executor = Executors.newCachedThreadPool()
         val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
 
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self)))
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log)))
 
         bootstrap.bind(new InetSocketAddress(self.port))
 
@@ -70,7 +71,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
   implicit def contentBijection: Bijection[ChannelBuffer, T]
 }
 
-class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T])(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
+class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     val nettyRequest   = event.getMessage().asInstanceOf[NettyHttpRequest]
     val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)
@@ -84,7 +85,7 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T])(implicit co
       else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
     }
     catch {
-      case e: Throwable => new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, e.getMessage)))
+      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, e.getMessage)))
     }
   }
 

@@ -15,6 +15,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.http.{HttpVersions, HttpResponse, HttpStatus, HttpStatusCodes}
 import java.net.InetSocketAddress
+import net.lag.logging.Logger
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters{
   private val handler       = mock[HttpRequestHandler[String]]
@@ -25,7 +26,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
   private implicit val bijection  = NettyBijections.ChannelBufferToString
 
   private val response      = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
-  private val nettyHandler  = new NettyRequestHandler(handler)
+  private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
 
   "write OK responce service when path is match" in {
