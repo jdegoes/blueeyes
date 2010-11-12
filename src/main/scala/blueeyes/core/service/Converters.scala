@@ -64,13 +64,10 @@ object Converters {
     val headers             = buildHeaders(request.getHeaders())
     val nettyContent        = request.getContent()
     val content             = if (nettyContent.readable()) Some(fromChannelBuffer(nettyContent, transcoder)) else None
-    val remoteHost          = headers.find(v => v._1.toLowerCase() == "x-forwarded-for").map(_._2) match {
-                                case Some(x) => HttpIps.parseSingleIp(x).map(_.ip)
-                                case None => remoteAddres match {
-                                  case x: InetSocketAddress => Some(x.getAddress())
-                                  case _ => None
-                                }
-                              }
+
+    val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
+
+    val remoteHost = xforwarded.flatMap(_.ips.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(fromNettyMethod(request.getMethod), request.getUri, params, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }

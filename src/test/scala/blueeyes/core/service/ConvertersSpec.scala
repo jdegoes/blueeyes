@@ -58,7 +58,7 @@ class ConvertersSpec extends Specification {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
-    nettyRequest.setHeader("x-forwarded-for", "111.11.11.1, 121.21.2.2")
+    nettyRequest.setHeader("X-Forwarded-For", "111.11.11.1, 121.21.2.2")
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
     val forwardedAddress = new InetSocketAddress("111.11.11.1", 8080)
@@ -67,7 +67,7 @@ class ConvertersSpec extends Specification {
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
     request.parameters  mustEqual(Map('param1 -> "value1", 'pathParam1 -> "value"))
-    request.headers     mustEqual(Map("retry-after" -> "1", "x-forwarded-for" -> "111.11.11.1, 121.21.2.2"))
+    request.headers     mustEqual(Map("retry-after" -> "1", "X-Forwarded-For" -> "111.11.11.1, 121.21.2.2"))
     request.content     mustEqual(Some("12"))
     request.version     mustEqual(`HTTP/1.0`)
     request.remoteHost  mustEqual(Some(forwardedAddress.getAddress()))
