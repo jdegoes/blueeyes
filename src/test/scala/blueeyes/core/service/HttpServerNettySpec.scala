@@ -51,7 +51,7 @@ class HttpServerNettySpec extends Specification{
       val response = future.get
       response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
       response.getResponseBody mustEqual (Context.context)
-    }    
+    }
 
     "return not found error by wrong URI" in{
       val client = new AsyncHttpClient()

@@ -15,8 +15,7 @@ class NettyRequestHandler(hierarchies: List[RestHierarchy[_]]) extends SimpleCha
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request        = e.getMessage().asInstanceOf[NettyHttpRequest]
     val method         = fromNettyMethod(request.getMethod())
-
-    val requestUri = new QueryStringDecoder(request.getUri).getPath
+    val requestUri     = new QueryStringDecoder(request.getUri).getPath
 
     val builders       = hierarchies.map(new RequestBuilder(e, _))
     val builder        = builders.find(_.isDefinedAt((requestUri, method))).getOrElse(new NotFoundBuilder())
