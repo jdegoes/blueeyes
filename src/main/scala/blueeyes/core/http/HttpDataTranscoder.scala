@@ -1,7 +1,6 @@
-package blueeyes.core.service
+package blueeyes.core.http
 
 import blueeyes.core.data._
-import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
 import blueeyes.json.JsonAST.JValue
 
