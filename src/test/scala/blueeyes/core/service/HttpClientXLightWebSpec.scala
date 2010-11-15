@@ -14,7 +14,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpNumberImplicits._
 import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
 
-class HttpClientNettySpec extends Specification {
+class HttpClientXLightWebSpec extends Specification {
   val duration = 250
   val retries = 10
   val skip = true
@@ -26,7 +26,7 @@ class HttpClientNettySpec extends Specification {
   
   "Support GET requests with status OK" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/test/echo.php")
+    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
@@ -34,7 +34,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support GET requests with status Not Found" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/bogus")
+    val f = new HttpClientXLightWebString().get("http://localhost/bogus")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.NotFound)
@@ -42,7 +42,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support GET requests with query params" in {
     skipper()()
-    val f = new HttpClientNettyString()get("http://localhost/test/echo.php?param1=a&param2=b")
+    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php?param1=a&param2=b")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -51,7 +51,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support POST requests with query params" in {
     skipper()()
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php?param1=a&param2=b")
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php?param1=a&param2=b")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -60,7 +60,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support POST requests with request params" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/test/echo.php", 
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
                                             parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -71,7 +71,7 @@ class HttpClientNettySpec extends Specification {
   "Support POST requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", content=Some(content))
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", content=Some(content))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))
@@ -81,7 +81,7 @@ class HttpClientNettySpec extends Specification {
   "Support POST requests with body and request params" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
                                              content=Some(content), 
                                              parameters=Map('param1 -> "a", 'param2 -> "b"))
     f.deliverTo((res: HttpResponse[String]) => {})
@@ -93,7 +93,7 @@ class HttpClientNettySpec extends Specification {
   "Support PUT requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientNettyString().put("http://localhost/test/echo.php", 
+    val f = new HttpClientXLightWebString().put("http://localhost/test/echo.php", 
                                             content=Some(content), 
                                             headers=Map(`Content-Length`(100)))
     f.deliverTo((res: HttpResponse[String]) => {})
@@ -103,7 +103,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support GET requests with header" in {
     skipper()()
-    val f = new HttpClientNettyString().get("http://localhost/test/echo.php?headers=true", 
+    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php?headers=true", 
                                             headers=Map("Fooblahblah" -> "washere", "param2" -> "1"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -114,7 +114,7 @@ class HttpClientNettySpec extends Specification {
   "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
     skipper()()
     val content = "<html></html>"
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
                                              content=Some(content), 
                                              headers=Map(`Content-Type`(text/html), `Content-Length`(100)))
     f.deliverTo((res: HttpResponse[String]) => {})
@@ -126,7 +126,7 @@ class HttpClientNettySpec extends Specification {
   "Support POST requests with large payload" in {
     skipper()()
     val content = Array.fill(1024*1000)(0).toList.mkString("")
-    val f = new HttpClientNettyString().post("http://localhost/test/echo.php", 
+    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
                                              content=Some(content))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -136,7 +136,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support HEAD requests" in {
     skipper()()
-    val f = new HttpClientNettyString().head("http://localhost/test/echo.php")
+    val f = new HttpClientXLightWebString().head("http://localhost/test/echo.php")
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -144,7 +144,7 @@ class HttpClientNettySpec extends Specification {
 
   "Support CONNECT requests" in {
     skip("CONNECT method TBD")
-    val f = new HttpClientNettyString().connect("http://localhost/test/echo.php?headers=true", 
+    val f = new HttpClientXLightWebString().connect("http://localhost/test/echo.php?headers=true", 
                                                 headers=Map("Fooblahblah" -> "washere"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -168,7 +168,7 @@ class HttpClientNettySpec extends Specification {
     }
     """
     val jvalue = JsonParser.parse(person)
-    val f = new HttpClientNettyJValue().post("http://localhost/test/echo.php", content=Some(jvalue))
+    val f = new HttpClientXLightWebJValue().post("http://localhost/test/echo.php", content=Some(jvalue))
     f.deliverTo((res: HttpResponse[JValue]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -177,16 +177,16 @@ class HttpClientNettySpec extends Specification {
 
   "Support POST requests with empty body" in {
     skipper()()
-    val f = new HttpClientNettyJValue().post("http://localhost/test/echo.php")
+    val f = new HttpClientXLightWebJValue().post("http://localhost/test/echo.php")
     f.deliverTo((res: HttpResponse[JValue]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 }
 
-class HttpClientNettyString extends HttpClientNetty[String] with String2StringTranscoder
+class HttpClientXLightWebString extends HttpClientXLightWeb[String] with String2StringTranscoder
 
-class HttpClientNettyJValue extends HttpClientNetty[JValue] with Json2StringTranscoder
+class HttpClientXLightWebJValue extends HttpClientXLightWeb[JValue] with Json2StringTranscoder
 
 trait Json2StringTranscoder extends DataTranscoder[JValue, String] {
   def transcode: Bijection[JValue, String] = new Bijection[JValue, String] {
