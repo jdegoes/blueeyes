@@ -38,16 +38,20 @@ private[mongo] object RealMongoImplementation{
 
   class RealMongoDatabase(database: DB) extends MongoDatabase{
     def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
+
+    def requestDone = {database.requestDone}
+
+    def requestStart = {database.requestStart}
   }
 
   class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
-    def insert(objects: List[JObject])      = checkWriteResult(collection.insert(objects.map(jObject2MongoObject(_))))
+    def insert(objects: List[JObject])      = collection.insert(objects.map(jObject2MongoObject(_)))
 
-    def remove(filter: Option[MongoFilter]) = checkWriteResult(collection.remove(toMongoFilter(filter))).getN
+    def remove(filter: Option[MongoFilter]) = collection.remove(toMongoFilter(filter))
 
     def count(filter: Option[MongoFilter])  = collection.getCount(toMongoFilter(filter))
 
-    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = checkWriteResult(collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)).getN
+    def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
     def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)
 
@@ -82,7 +86,7 @@ private[mongo] object RealMongoImplementation{
     def distinct(selection: JPath, filter: Option[MongoFilter]) = {
       val key    = JPathExtension.toMongoField(selection)
       val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
-      
+
       mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value)
     }
 
@@ -92,13 +96,13 @@ private[mongo] object RealMongoImplementation{
     private def toMongoKeys(selection : MongoSelection)    = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
     private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
 
-    private def checkWriteResult(result: WriteResult) = {
-      val error  = result.getLastError
-      if (error != null && error.get("err") != null){
-       throw new MongoException(error)
-      }
-      result
-    }
+//    private def checkWriteResult(result: WriteResult) = {
+//      val error  = result.getLastError
+//      if (error != null && error.get("err") != null){
+//       throw new MongoException(error)
+//      }
+//      result
+//    }
   }
 
   import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}

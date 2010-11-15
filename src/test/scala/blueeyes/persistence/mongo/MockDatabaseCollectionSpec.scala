@@ -232,7 +232,7 @@ class MockDatabaseCollectionSpec extends Specification{
     val collection = newCollection
 
     collection.insert(jobjects)
-    collection.remove(None) mustEqual(4)
+    collection.remove(None)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
   "count all jobjects when filter is not specified" in{
@@ -253,7 +253,7 @@ class MockDatabaseCollectionSpec extends Specification{
     val collection = newCollection
 
     collection.insert(jobjects)
-    collection.remove(Some(MongoFieldFilter("address.city", $eq,"A"))) mustEqual(1)
+    collection.remove(Some(MongoFieldFilter("address.city", $eq,"A")))
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
   }
   "select all jobjects when filter is not specified" in{

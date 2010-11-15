@@ -27,6 +27,10 @@ private[mongo] class MockMongoDatabase() extends MongoDatabase{
       }
     }
   }
+
+  def requestDone = {}
+
+  def requestStart = {}
 }
 
 private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFieldsExtractor{
@@ -52,17 +56,16 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     })
   }
 
-  def remove(filter: Option[MongoFilter]) = {
+  def remove(filter: Option[MongoFilter]) {
     val objects = search(filter)
     objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
-    objects.size
   }
 
   def count(filter: Option[MongoFilter]) = search(filter).size
 
   def remove0(objects: List[JObject]) = objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
 
-  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int = {
+  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean){
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
     var updated = objects.map(update(_, value))
 
@@ -77,8 +80,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     checkIndex(updated)
     remove0(objects)
     insert0(updated)
-
-    objects.size
   }
 
   private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match {

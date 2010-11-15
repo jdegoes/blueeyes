@@ -16,18 +16,7 @@ object MongoDemo{
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("E")) :: JField("street", JString("4")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
   private val jObject6 = JObject(JField("address", JString("ll")) :: Nil)
 
-  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [
-      {
-        "shape" : "square",
-        "color" : "purple",
-        "thick" : false
-      },
-      {
-        "shape" : "circle",
-        "color" : "red",
-        "thick" : true
-      }
-] } """).asInstanceOf[JObject] :: Nil
+  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [{"shape" : "square", "color" : "purple", "thick" : false}, {"shape" : "circle","color" : "red","thick" : true}] } """).asInstanceOf[JObject] :: Nil
 
 
   private val collection = "my-collection"
@@ -42,10 +31,13 @@ object MongoDemo{
 
 //    database(remove.from(collection))
 
+    database[JNothing.type](dropIndexes.on(collection))
 //    database[JNothing.type](ensureUniqueIndex("index").on(collection, "address.city", "address.street"))
+
+//    benchamrk()
 //    demoSelectOne
 
-    demoSelect
+//    demoSelect
     
 //    demoUpdate0
 
@@ -55,6 +47,17 @@ object MongoDemo{
 
 //    demoGroup
   }
+
+//  private def benchamrk(){
+//    val start = System.currentTimeMillis
+//
+//    for (x <- 1 to 50000) database[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
+//
+//    val end = System.currentTimeMillis
+//    println("Time=" + (end - start))
+//
+//    database(remove.from(collection))
+//  }
 
   private def demoSelect{
     println("------------demoSelect------------------")
@@ -69,7 +72,7 @@ object MongoDemo{
 //    println(database(count.from(collection)))
 //    printObjects(database(select("address.city").from(collection).sortBy("address.city" <<)))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
     println("------------demoSelect------------------")
   }
   private def demoDistinct{
@@ -78,7 +81,7 @@ object MongoDemo{
     printObjects(database(select().from(collection)))
 //    val result = database(distinct("address.city").from(collection))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
     println("------------demoDistinct------------------")
   }
   private def demoGroup{
@@ -91,7 +94,7 @@ object MongoDemo{
     
     printObject(Some(result))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
     println("------------demoGroup------------------")
   }
   private def demoUpdate0{
@@ -99,27 +102,27 @@ object MongoDemo{
 
     printObjects(database(select().from(collection)))
 
-    database(updateMany(collection).set("foo" pull (("shape" === "square") && ("color" === "purple")).elemMatch("")))
+    database[JNothing.type](updateMany(collection).set("foo" pull (("shape" === "square") && ("color" === "purple")).elemMatch("")))
 
     printObjects(database(select().from(collection)))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
   }
   private def demoUpdate{
     import MongoUpdateBuilder._
     println("------------demoUpdate------------------")
     insertObjects
 
-    println(database(updateMany(collection).set("address" popFirst)))
+    database[JNothing.type](updateMany(collection).set("address" popFirst))
     printObjects(database(select().from(collection)))
-    println(database(update(collection).set(("address.city" unset) & ("address.street" set ("Another Street"))).where("address.city" === "C")))
+    database[JNothing.type](update(collection).set(("address.city" unset) & ("address.street" set ("Another Street"))).where("address.city" === "C"))
     printObjects(database(select().from(collection)))
-    println(database(update(collection).set(jObject3).where("address.city" === "A")))
+    database[JNothing.type](update(collection).set(jObject3).where("address.city" === "A"))
     printObjects(database(select().from(collection)))
-    println(database(updateMany(collection).set("address.street" set ("New Street"))))
+    database[JNothing.type](updateMany(collection).set("address.street" set ("New Street")))
     printObjects(database(select().from(collection)))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
     println("------------demoUpdate------------------")
   }
   private def demoSelectOne{
@@ -132,7 +135,7 @@ object MongoDemo{
     printObject(database(selectOne("address.city").from(collection).sortBy("address.city" >>)))
     printObject(database(selectOne("address.city").from(collection).sortBy("address.city" <<)))
 
-    database(remove.from(collection))
+    database[JNothing.type](remove.from(collection))
     println("------------demoSelectOne------------------")
   }
 
@@ -153,9 +156,9 @@ object MongoDemo{
 
     insertObjects
 
-    println("REMOVED=" + database(remove.from(collection).where("address.city" === "A")))
+    database[JNothing.type](remove.from(collection).where("address.city" === "A"))
 
-    println("REMOVED=" + database(remove.from(collection)))
+    database[JNothing.type](remove.from(collection))
 
     println("------------demoRemove------------------")
   }
