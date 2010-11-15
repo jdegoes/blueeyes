@@ -27,12 +27,6 @@ trait Bijection[T, S] extends Function1[T, S] { self =>
   def andThen[R](that: Bijection[S, R]): Bijection[T, R] = that.compose(self)
 }
 
-class ProxyBijection[T, S](val underlying: Bijection[T, S]) extends Bijection[T, S] {
-  def apply(t: T): S = underlying.apply(t)
-  
-  def unapply(s: S): T = underlying.unapply(s)
-}
-
 object Bijection {
   def identity[T]: Bijection[T, T] = new Bijection[T, T] {
     def apply(t: T): T = t
@@ -66,7 +60,9 @@ trait Bijections {
   implicit val XMLToXML        = Bijection.identity[NodeSeq]  
   implicit val XMLToByteArray  = XMLToString.andThen(StringToByteArray)
   
-  implicit val StringToJValue = JValueToString.inverse
-  implicit val StringToXML    = XMLToString.inverse
+  implicit val StringToJValue     = JValueToString.inverse
+  implicit val StringToXML        = XMLToString.inverse  
+  implicit val ByteArrayToJValue  = JValueToByteArray.inverse
+  implicit val ByteArrayToXML     = XMLToByteArray.inverse
 }
 object Bijections extends Bijections
