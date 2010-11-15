@@ -5,13 +5,13 @@ import blueeyes.util.Future
 import blueeyes.core.data._
 
 trait HttpRequestHandlerImplicits {
-  implicit def fullHttpRequestHandler2PartialHttpRequestHandler[T](full: HttpRequest[T] => Future[HttpResponse[T]]) = new HttpRequestHandler[T] {
+  /*implicit def fullHttpRequestHandler2PartialHttpRequestHandler[T](full: HttpRequest[T] => Future[HttpResponse[T]]) = new HttpRequestHandler[T] {
     def isDefinedAt(request: HttpRequest[T]) = true
   
     def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = full.apply(request)
   }
   
-  /*
+  
   // Not useful due to strange behavior of Scala implicits on (anonymous) functions
   implicit def doublyTypedRequestHandlerToSinglyTypedRequestHandler[S, R, T]
     (h: HttpRequest[S] => Future[HttpResponse[R]])(implicit in: DataTranscoder[T, S], out: DataTranscoder[R, T]): HttpRequest[T] => Future[HttpResponse[T]] = {
