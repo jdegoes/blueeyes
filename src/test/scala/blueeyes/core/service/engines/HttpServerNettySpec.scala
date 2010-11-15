@@ -4,13 +4,13 @@ import java.net.URI
 import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
-import blueeyes.util.{Future}
+import blueeyes.util.Future
 import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpVersions, HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes}
 import blueeyes.BlueEyesServiceBuilder
 import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
+import blueeyes.core.http._
 
 class HttpServerNettySpec extends Specification{
 
@@ -62,6 +62,20 @@ class HttpServerNettySpec extends Specification{
       val response = future.get
       response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
     }
+    "return Internall error when handling request crushes" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/error".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.InternalServerError.value)
+    }
+    "return Http error when handling request throws HttpException" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/http/error".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.BadRequest.value)
+    }
 
     "return html by correct URI with parameters" in{
       val client = new AsyncHttpClient()
@@ -93,13 +107,19 @@ trait SampleService extends BlueEyesServiceBuilder[String]{
         get [String]{ request: HttpRequest[String] =>
           new Future[HttpResponse[String]]().deliver(response)
         }  
+      } ~
+      path("/error") {
+        get [String]{ request: HttpRequest[String] =>
+          throw new RuntimeException("Unexecpcted Error.")
+        }
+      } ~
+      path("/http/error") {
+        get [String]{ request: HttpRequest[String] =>
+          throw HttpException(HttpStatusCodes.BadRequest)
+        }
       }
     }
   }
-}
-
-class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
-  def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
 }
 
 object Context{
