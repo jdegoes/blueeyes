@@ -69,6 +69,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val configgy    = "net.lag"                     % "configgy"          % "2.0.0"       % "compile"
   val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
   val rhino       = "rhino"                       % "js"                % "1.7R2"       % "compile"
+  val xlightweb   = "org.xlightweb"               % "xlightweb"         % "2.13"        % "compile"
 
   override def mainClass = Some("blueeyes.BlueEyesDemo")
 
