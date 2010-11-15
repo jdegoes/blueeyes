@@ -7,7 +7,7 @@ import blueeyes.core.http.HttpNumberImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import blueeyes.core.service.HttpClient
-import blueeyes.core.data.{ Bijection, DataTranscoder }
+import blueeyes.core.data.Bijection
 import blueeyes.util.Future
 import java.io.IOException
 import java.util.concurrent.{ Future => JavaFuture }
