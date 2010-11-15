@@ -6,7 +6,9 @@ import blueeyes.core.http.MimeTypes._
 
 import scala.xml.NodeSeq
 
-case class DataTranscoder[T, S](transcode: Bijection[T, S], mimeType: MimeType)
+case class DataTranscoder[T, S](transcode: Bijection[T, S], mimeType: MimeType) {
+  def inverse = DataTranscoder[S, T](transcode.inverse, mimeType)
+}
 
 object DataTranscoders {
   val JValueToString    = DataTranscoder[JValue, String]      (Bijections.JValueToString,     application/json)
@@ -19,4 +21,6 @@ object DataTranscoders {
   
   val StringToString    = DataTranscoder[String, String]      (Bijections.StringToString,     text/plain)
   val StringToByteArray = DataTranscoder[String, Array[Byte]] (Bijections.StringToByteArray,  text/plain)  
+  val StringToJValue    = JValueToString.inverse
+  val StringToXML       = XMLToString.inverse
 }

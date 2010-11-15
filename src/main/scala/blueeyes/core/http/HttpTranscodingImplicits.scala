@@ -33,5 +33,33 @@ trait HttpTranscodingImplicits {
       response.copy(content = response.content.map(transcoder.transcode.unapply), headers = response.headers + `Content-Type`(transcoder.mimeType))
     }
   }
+  
+  implicit def requestToForwardTypelesslyTranscodedRequest[T, S](request: HttpRequest[T])(implicit transcoder: Bijection[T, S]): HttpRequest[S] = {
+    request.copy(content = request.content.map(transcoder.apply))
+  }
+  
+  implicit def requestToBackwardTypelesslyTranscodedRequest[T, S](request: HttpRequest[S])(implicit transcoder: Bijection[T, S]): HttpRequest[T] = {
+    request.copy(content = request.content.map(transcoder.unapply))
+  }
+  
+  implicit def responseToForwardTypelesslyTranscodedResponse[T, S](response: HttpResponse[T])(implicit transcoder: Bijection[T, S]): HttpResponse[S] = {
+    response.copy(content = response.content.map(transcoder.apply))
+  }
+  
+  implicit def responseToBackwardTypelesslyTranscodedResponse[T, S](response: HttpResponse[S])(implicit transcoder: Bijection[T, S]): HttpResponse[T] = {
+    response.copy(content = response.content.map(transcoder.unapply))
+  }
+  
+  implicit def futureResponseToForwardTypelesslyTranscodedFutureResponse[T, S](response: Future[HttpResponse[T]])(implicit transcoder: Bijection[T, S]): Future[HttpResponse[S]] = {
+    response.map { response =>
+      response.copy(content = response.content.map(transcoder.apply))
+    }
+  }
+  
+  implicit def futureResponseToBackwardTypelesslyTranscodedFutureResponse[T, S](response: Future[HttpResponse[S]])(implicit transcoder: Bijection[T, S]): Future[HttpResponse[T]] = {
+    response.map { response =>
+      response.copy(content = response.content.map(transcoder.unapply))
+    }
+  }
 }
 object HttpTranscodingImplicits extends HttpTranscodingImplicits

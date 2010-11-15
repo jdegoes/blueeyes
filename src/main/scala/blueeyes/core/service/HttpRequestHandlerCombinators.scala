@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import blueeyes.util.Future
+import blueeyes.core.data.Bijection
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
@@ -17,9 +18,48 @@ trait HttpRequestHandlerCombinators {
       h(shiftedRequest.copy(parameters = shiftedRequest.parameters ++ pathParameters))
     }
   }
-  def transcode[In, Out, Base](h: HttpRequestHandlerFull2[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): HttpRequestHandler[Base] = new HttpRequestHandlerFull[Base] {
+  def transcode[In, Out, Base](h: HttpRequestHandlerFull2[In, Out])(implicit in: HttpDataTranscoder[Base, In], out: HttpDataTranscoder[Out, Base]): HttpRequestHandlerFull[Base] = new HttpRequestHandlerFull[Base] {
     def apply(r: HttpRequest[Base]) = h(r.copy(content = r.content.map(in.transcode))).map { response =>
       response.copy(content = response.content.map(out.transcode), headers = response.headers + `Content-Type`(out.mimeType))
+    }
+  }
+  def contentType[T, S](mimeType: MimeType)(h: HttpRequestHandlerFull[T])(implicit b1: Bijection[T, S]): HttpRequestHandlerFull[S] = {
+    implicit val b2 = b1.inverse
+    
+    accept(mimeType) {
+      produce(mimeType) {
+        toPartial(h)
+      }
+    }
+  }
+  
+  def contentType[T, S](mimeType: MimeType)(h: HttpRequestHandler[T])(implicit b1: Bijection[T, S]): HttpRequestHandler[S] = {
+    implicit val b2 = b1.inverse
+    
+    accept(mimeType) {
+      produce(mimeType) {
+        h
+      }
+    }
+  }
+  def accept[T, S, U](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[U, T]): HttpRequestHandler2[U, S] = new HttpRequestHandler2[U, S] {
+    def isDefinedAt(r: HttpRequest[U]): Boolean = {
+      val requestMimeType = (for (`Content-Type`(mimeTypes) <- r.headers) yield `Content-Type`(mimeTypes: _*)).headOption
+      
+      requestMimeType match {
+        case Some(`mimeType`) => h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
+        
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[U]) = h(r.copy(content = r.content.map(b.apply)))
+  }
+  def produce[T, S, V](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[S, V]): HttpRequestHandler2[T, V] = new HttpRequestHandler2[T, V] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = h.isDefinedAt(r)
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[V]] = h(r).map { response =>
+      response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType))
     }
   }
   def method[T](method: HttpMethod)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
@@ -89,7 +129,7 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  private def toPartial[T](full: HttpRequestHandlerFull[T]) = new HttpRequestHandler[T] {
+  private def toPartial[T](full: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
     def isDefinedAt(request: HttpRequest[T]) = true
   
     def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = full.apply(request)
