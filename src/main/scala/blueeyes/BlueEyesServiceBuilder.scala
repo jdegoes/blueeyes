@@ -1,6 +1,7 @@
 package blueeyes
 
 import blueeyes.core.http._
+import blueeyes.core.data.Bijections
 import blueeyes.core.service._
 import blueeyes.util.{Future, FutureImplicits}
 
@@ -64,6 +65,7 @@ trait BlueEyesServiceBuilder[T] extends HttpServiceBuilder[T] with
   HttpNumberImplicits with
   HttpRequestHandlerCombinators with 
   HttpRequestHandlerImplicits with
-  RestPathPatternImplicits {
+  RestPathPatternImplicits with
+  Bijections {
   
 }
