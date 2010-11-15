@@ -41,28 +41,32 @@ object Bijection {
   }
 }
 
-object Bijections {
-  val ByteArrayToString = new Bijection[Array[Byte], String] {
+trait Bijections {
+  implicit val ByteArrayToString = new Bijection[Array[Byte], String] {
     def apply(t: Array[Byte]): String = t.map(_.toChar).mkString("")
     
     def unapply(s: String): Array[Byte] = s.toArray.map(_.toByte)
   }
-  val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
+  implicit val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
   
-  val StringToString    = Bijection.identity[String]
-  val StringToByteArray = ByteArrayToString.inverse
+  implicit val StringToString    = Bijection.identity[String]
+  implicit val StringToByteArray = ByteArrayToString.inverse
     
-  val JValueToString = new Bijection[JValue, String] {
+  implicit val JValueToString = new Bijection[JValue, String] {
     def apply(s: JValue)   = compact(render(s))
     def unapply(t: String) = JsonParser.parse(t)
   }
-  val JValueToJValue    = Bijection.identity[JValue]
-  val JValueToByteArray = JValueToString.andThen(StringToByteArray)
+  implicit val JValueToJValue    = Bijection.identity[JValue]
+  implicit val JValueToByteArray = JValueToString.andThen(StringToByteArray)
   
-  val XMLToString = new Bijection[NodeSeq, String] {
+  implicit val XMLToString = new Bijection[NodeSeq, String] {
     def apply(s: NodeSeq)  = s.toString
     def unapply(t: String) = XML.loadString(t)
   }  
-  val XMLToXML        = Bijection.identity[NodeSeq]  
-  val XMLToByteArray  = XMLToString.andThen(StringToByteArray)
+  implicit val XMLToXML        = Bijection.identity[NodeSeq]  
+  implicit val XMLToByteArray  = XMLToString.andThen(StringToByteArray)
+  
+  implicit val StringToJValue = JValueToString.inverse
+  implicit val StringToXML    = XMLToString.inverse
 }
+object Bijections extends Bijections

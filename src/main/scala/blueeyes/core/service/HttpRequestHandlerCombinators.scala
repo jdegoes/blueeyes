@@ -106,7 +106,7 @@ trait HttpRequestHandlerCombinators {
   /** The json combinator creates a handler that accepts and produces JSON. 
    * Requires an implicit bijection used for transcoding.
    */
-  def json[T](h: HttpRequestHandler[JValue])(implicit b: Bijection[T, JValue]): HttpRequestHandler[T] = contentType(MimeTypes.application/MimeTypes.json) { h }
+  def jvalue[T](h: HttpRequestHandler[JValue])(implicit b: Bijection[T, JValue]): HttpRequestHandler[T] = contentType(MimeTypes.application/MimeTypes.json) { h }
   
   /** The xml combinator creates a handler that accepts and produces XML. 
    * Requires an implicit bijection used for transcoding.
