@@ -15,25 +15,22 @@ class RemoveQueryBehaviourSpec extends Specification {
     import MongoFilterImplicits._
 
     val filter = Some("name" === "Joe")
-    when(collection.remove(filter)).thenReturn(2)
 
     val query  = remove.from("collection").where("name" === "Joe")
     val result = query(collection)
 
     Mockito.verify(collection, times(1)).remove(filter)
 
-    result mustEqual(JInt(2))
+    result must be (JNothing)
   }
   "Call collection method with dummy JObject when filter is not specified" in{
     import MongoFilterImplicits._
-
-    when(collection.remove(None)).thenReturn(2)
 
     val query = remove.from("collection")
     val result = query(collection)
 
     Mockito.verify(collection, times(1)).remove(None)
     
-    result mustEqual(JInt(2))
+    result must be (JNothing)
   }
 }

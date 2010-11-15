@@ -58,7 +58,7 @@ case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoColle
   def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = copy(sort = Some(newSort))
 }
-case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with RemoveQueryBehaviour{
+case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = copy(filter = Some(newFilter))
 }
 case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with CountQueryBehaviour{
@@ -69,7 +69,7 @@ case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys
 case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery[JNothing.type] with DropIndexQueryBehaviour
 case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery[JNothing.type] with DropIndexesQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue, filter: Option[MongoFilter] = None, upsert: Boolean = false,
-                            multi: Boolean = false) extends MongoQuery[JInt] with UpdateQueryBehaviour{
+                            multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = copy(filter = Some(newFilter))
 }
 case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCollection, outputCollection: Option[String] = None, filter: Option[MongoFilter] = None)

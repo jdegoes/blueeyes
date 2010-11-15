@@ -26,12 +26,12 @@ trait DatabaseCollection{
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
-  def remove(filter: Option[MongoFilter]): Int
+  def remove(filter: Option[MongoFilter])
   def count(filter: Option[MongoFilter]): Long
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
   def dropIndexes
   def dropIndex(name: String)
-  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean): Int
+  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean)
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
 }
 
@@ -79,8 +79,11 @@ trait MapReduceQueryBehaviour extends QueryBehaviour[MapReduceOutput]{
   def outputCollection: Option[String]
 }
 
-trait RemoveQueryBehaviour extends QueryBehaviour[JInt]{
-  def apply(collection: DatabaseCollection): JInt = JInt(collection.remove(filter))
+trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection) = {
+    collection.remove(filter)
+    JNothing
+  }
 
   def filter: Option[MongoFilter]
 }
@@ -130,8 +133,11 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
 }
 
 
-trait UpdateQueryBehaviour extends QueryBehaviour[JInt]{
-  def apply(collection: DatabaseCollection): JInt = JInt(collection.update(filter, value, upsert, multi))
+trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
+  def apply(collection: DatabaseCollection) = {
+    collection.update(filter, value, upsert, multi)
+    JNothing
+  }
   
   def value : MongoUpdateValue
   def filter: Option[MongoFilter]
