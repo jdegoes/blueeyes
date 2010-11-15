@@ -70,7 +70,7 @@ trait HttpRequestHandlerCombinators {
       requestMimeType match {
         case Some(`mimeType`) => h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
         
-        case _ => false
+        case _ => r.content.map(b.isDefinedAt _).getOrElse(false)
       }
     }
     
