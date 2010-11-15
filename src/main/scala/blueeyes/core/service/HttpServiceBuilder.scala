@@ -48,7 +48,7 @@ trait HttpServiceBuilder[T] {
 
   def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService[T] = new HttpServiceImpl[T](name, version, descriptorFactory)
 
-  class HttpServiceImpl[T](val name: String, val version: String, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
+  private class HttpServiceImpl[T](val name: String, val version: String, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
     def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
   }
 }
