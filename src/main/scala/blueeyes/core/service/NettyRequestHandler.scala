@@ -3,11 +3,11 @@ package blueeyes.core.service
 import scala.collection.JavaConversions._
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import blueeyes.util.FutureImplicits
+import blueeyes.util.FutureImplicits._
 import Converters._
 import org.jboss.netty.handler.codec.http.{CookieEncoder, CookieDecoder, HttpRequest => NettyHttpRequest, HttpResponse => NettyHttpResponse, DefaultHttpResponse, HttpVersion => NettyHttpVersion}
 
-import blueeyes.core.http.{HttpMethod, HttpStatusCodes, HttpRequest, HttpResponse, HttpStatus}
+import blueeyes.core.http.{HttpMethod, HttpStatusCodes, HttpRequest, HttpResponse, HttpStatus, HttpException}
 import org.jboss.netty.handler.codec.http._
 import blueeyes.util.Future
 import net.lag.logging.Logger
@@ -60,26 +60,26 @@ class RequestBuilder[S](event: MessageEvent, hierarchy: RestHierarchy[S]) extend
   def isDefinedAt(uriAndMethod: (String, HttpMethod)) = findPattern(uriAndMethod._1, uriAndMethod._2).map(v => true).getOrElse(false)
   def apply(uriAndMethod: (String, HttpMethod)) = createResponse(uriAndMethod._1, event, findPattern(uriAndMethod._1, uriAndMethod._2).get)
 
-  private def createResponse[T, S](requestUri: String, event: MessageEvent, handler: (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S])) = {
-    try {
+  private def createResponse[T, S](requestUri: String, event: MessageEvent, handler: (RestPathPattern, HttpMethod, HttpRequest[T] => Future[HttpResponse[T]], HttpDataTranscoder[T, S])): Future[NettyHttpResponse] = {
+    val transcoder: HttpDataTranscoder[T, S] = handler._4
+
+    try{
       val request = event.getMessage().asInstanceOf[NettyHttpRequest]
       val parameters = handler._1(requestUri)
 
-      handler._3(fromNettyRequest(request, parameters, event.getRemoteAddress, handler._4)).map(response => {
-        try {
-          toNettyResponse(response, handler._4)
-        }
-        catch {
-          case e: Throwable => log.error(e, "Error while NettyResponse creation. Request:" + event);  errorResponse(e.getMessage);
-        }
+      handler._3(fromNettyRequest(request, parameters, event.getRemoteAddress, transcoder)).map(response => {
+        try {toNettyResponse(response, transcoder)} catch {case e: Throwable => handle(e, transcoder)}
       })
     }
-    catch {
-      case e: Throwable => log.error(e, "Error while request handling. Request:" + event); new Future[NettyHttpResponse]().deliver(errorResponse(e.getMessage));
-    }
+    catch{case e: Throwable => handle(e, transcoder)}
   }
 
-  private def errorResponse(reason: String): NettyHttpResponse = new DefaultHttpResponse(NettyHttpVersion.HTTP_1_1, toNettyStatus(HttpStatus(HttpStatusCodes.InternalServerError, reason.replace("\n", ""))))
+  private def handle[T, S](th: Throwable, transcoder: HttpDataTranscoder[T, S]): NettyHttpResponse = th match{
+    case e: HttpException => toNettyResponse(HttpResponse(HttpStatus(e.failure, e.reason)), transcoder)
+    case _ => log.error(th, "Error while request handling. Request:" + event); toNettyResponse(errorResponse(th.getMessage), transcoder);
+  }
+
+  private def errorResponse[T](reason: String) = HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, reason.replace("\n", "")))
 
   private def findPattern(uri: String, method: HttpMethod) = hierarchy.hierarchy.find(handler => handler._1.isDefinedAt(uri) && method == handler._2)
 }

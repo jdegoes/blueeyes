@@ -4,10 +4,11 @@ import java.net.URI
 import com.ning.http.client._
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.util.{Future}
+import blueeyes.util.Future
+import blueeyes.util.Future._
 import blueeyes.core.data.{TextToTextBijection}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
+import blueeyes.core.http._
 
 class HttpServerNettySpec extends Specification{
   @volatile
@@ -53,6 +54,21 @@ class HttpServerNettySpec extends Specification{
       response.getResponseBody mustEqual (Context.context)
     }
 
+    "return Internall error when handling request crushes" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/error".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.InternalServerError.value)
+    }
+    "return Http error when handling request throws HttpException" in{
+      val client = new AsyncHttpClient()
+      val future = client.prepareGet("http://localhost:%d/http/error".format(port)).execute();
+
+      val response = future.get
+      response.getStatusCode mustEqual (HttpStatusCodes.BadRequest.value)
+    }
+
     "return not found error by wrong URI" in{
       val client = new AsyncHttpClient()
       val future = client.prepareGet("http://localhost:%d/foo/foo/adCode.html".format(port)).execute();
@@ -69,17 +85,35 @@ class HttpServerNettySpec extends Specification{
 
 class TestService extends RestHierarchyBuilder[String] with HttpService[String]{
   private implicit val transcoder = new HttpStringDataTranscoder(TextToTextBijection, text / html)
-  path("/bar/'adId/adCode.html"){get(new Handler())}
-  path("/foo"){get(new Handler())}
+  path("/bar/'adId/adCode.html"){
+    get{request: HttpRequest[String] =>
+      future(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
+    }
+  }
+  path("/foo"){
+    get{request: HttpRequest[String] =>
+      future(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
+    }
+  }
+  path("/error") {
+    get { request: HttpRequest[String] =>
+      throw new RuntimeException("Unexecpcted Error.")
+    }
+  }
+  path("/http/error") {
+    get { request: HttpRequest[String] =>
+      throw HttpException(HttpStatusCodes.BadRequest)
+    }
+  }
+
+  private def future(response: HttpResponse[String]) = {
+    new Future().deliver(response)
+  }
 
   def version = 1
 
   def name = "test-service"
 }
-class Handler extends Function1[HttpRequest[String], Future[HttpResponse[String]]]{
-  def apply(request: HttpRequest[String]) = new Future[HttpResponse[String]]().deliver(HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`))
-}
-
 object Context{
   val context = """<html>
 <head>
