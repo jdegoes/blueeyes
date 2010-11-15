@@ -8,7 +8,7 @@ import blueeyes.core.data.Bijection
 import java.lang.String
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import blueeyes.util.Future
-import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpResponse, HttpRequest}
+import blueeyes.util.Future._
 import org.jboss.netty.bootstrap.ServerBootstrap
 import java.net.InetSocketAddress
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
@@ -17,6 +17,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
 import net.lag.logging.Logger
 import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
+import blueeyes.core.http._
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -79,14 +80,19 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
     handleRequest(request).deliverTo(writeResponse(event) _)
   }
 
-  private def handleRequest(request: HttpRequest[T]) = {
+  private def handleRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
     try {
       if (requestHandler.isDefinedAt(request)) requestHandler(request)
       else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
     }
     catch {
-      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, e.getMessage.replace("\n", " "))))
+      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(toResponse(e))
     }
+  }
+
+  private def toResponse(th: Throwable) = th match{
+    case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
+    case _ => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, th.getMessage.replace("\n", " ")))
   }
 
   private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){
