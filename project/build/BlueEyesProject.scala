@@ -80,8 +80,15 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   override def packageDocsJar = defaultJarPath("-javadoc.jar")
   override def packageSrcJar= defaultJarPath("-sources.jar")
 
-  val sourceArtifact = Artifact.sources(artifactID)
-  val docsArtifact = Artifact.javadoc(artifactID)
+  override def moduleID: String = normalizedName
+
+  override def publishAction = task{
+    incrementVersionAction.run
+    super.publishAction.run
+  }
+
+  val sourceArtifact  = Artifact.sources(artifactID)
+  val docsArtifact    = Artifact.javadoc(artifactID)
 
   // Can't publish to snapshots
 //  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
@@ -98,7 +105,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
       <artifactId>oss-parent</artifactId>
       <version>5</version>
     </parent> ++
-    <name>BlueEyes</name> ++
+    <name>{name}</name> ++
     <description>A lightweight Web 3.0 framework for Scala</description> ++
     <url>http://github.com/jdegoes/blueeyes</url> ++
     <licenses>
