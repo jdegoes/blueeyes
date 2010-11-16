@@ -10,8 +10,8 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 
 trait HttpRequestHandlerCombinators {
-  /** The path combinator is defined only for matches to the specified path 
-   * pattern.
+  /** The path combinator creates a handler that is defined only for suffixes 
+   * of the specified path pattern.
    * <p>
    * <pre>
    * path("/foo") {
@@ -31,7 +31,7 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  /** The method combinator created a handler that is defined only for the 
+  /** The method combinator creates a handler that is defined only for the 
    * specified HTTP method.
    */
   def method[T](method: HttpMethod)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
@@ -65,13 +65,13 @@ trait HttpRequestHandlerCombinators {
    */
   def accept[T, S, U](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[U, T]): HttpRequestHandler2[U, S] = new HttpRequestHandler2[U, S] {
     def isDefinedAt(r: HttpRequest[U]): Boolean = {
-      val requestMimeType = (for (`Content-Type`(mimeTypes) <- r.headers) yield `Content-Type`(mimeTypes: _*)).headOption
+      val requestMimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- r.headers) yield mimeTypes.toList).toList.flatten
       
-      requestMimeType match {
-        case Some(`mimeType`) => h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
-        
-        case _ => r.content.map(b.isDefinedAt _).getOrElse(false)
-      }
+      requestMimeType.find(_ == mimeType).map { mimeType =>
+        h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
+      }.orElse {
+        r.content.map(b.isDefinedAt _)
+      }.getOrElse(false)
     }
     
     def apply(r: HttpRequest[U]) = h(r.copy(content = r.content.map(b.apply)))

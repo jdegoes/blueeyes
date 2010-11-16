@@ -9,7 +9,7 @@ import blueeyes.util.FutureImplicits
 class HttpRequestHandlerCombinatorsSpec extends Specification{
   "composition of paths" should {
     "have the right type" in {
-      /*val handler: HttpRequestHandler[Int] = {
+      val handler: HttpRequestHandler[Int] = {
         path("/foo/bar") { 
           path("/baz") {
             get { (request: HttpRequest[Int]) => 
@@ -17,7 +17,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification{
             }
           }
         }
-      }*/
+      }
     }
   }
 }

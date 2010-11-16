@@ -8,7 +8,7 @@ import blueeyes.json.JsonAST.JValue
 import scala.xml.NodeSeq
 import scala.xml.XML
 
-trait Bijection[T, S] extends PartialFunction[T, S] { self =>
+trait Bijection[T, S] { self =>
   def isDefinedAt(t: T): Boolean = {
     try {
       apply(t)
