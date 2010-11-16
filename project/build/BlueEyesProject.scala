@@ -1,5 +1,7 @@
 import sbt._
+import scala.xml._
 import de.element34.sbteclipsify._
+import com.rossabaker.sbt.gpg._
 
 trait OneJar { this: DefaultProject =>
   lazy val oneJar = oneJarAction
@@ -55,7 +57,7 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with OneJar {
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with GpgPlugin with ChecksumPlugin {
   val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"    % "test"
   val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "test"
   val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "test"
@@ -78,16 +80,24 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   override def packageDocsJar = defaultJarPath("-javadoc.jar")
   override def packageSrcJar= defaultJarPath("-sources.jar")
 
-  val sourceArtifact = Artifact.sources(artifactID)
-  val docsArtifact = Artifact.javadoc(artifactID)
+  override def moduleID: String = normalizedName
+
+  override def publishAction = task{
+    incrementVersionAction.run
+    super.publishAction.run
+  }
+
+  val sourceArtifact  = Artifact.sources(artifactID)
+  val docsArtifact    = Artifact.javadoc(artifactID)
 
   // Can't publish to snapshots
 //  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
   // Staging seems to publish though
-  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
+  val publishTo = if (version.toString.endsWith("-SNAPSHOT")) "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+                  else "Sonatype Nexus Release Staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 
-  Credentials(Path.userHome / ".ivy2" / ".credentials", log)
+    Credentials(Path.userHome / ".ivy2" / "credentials" / "oss.sonatype.org", log)
+  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
 
   override def pomExtra =
     <parent>
@@ -95,7 +105,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
       <artifactId>oss-parent</artifactId>
       <version>5</version>
     </parent> ++
-    <name>BlueEyes</name> ++
+    <name>{name}</name> ++
     <description>A lightweight Web 3.0 framework for Scala</description> ++
     <url>http://github.com/jdegoes/blueeyes</url> ++
     <licenses>
@@ -111,6 +121,32 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
       <url>git@github.com:jdegoes/blueeyes.git</url>
     </scm> ++
     <developers></developers>
+
+  override def pomPostProcess(pom: Node) =
+    super.pomPostProcess(pom) match {
+      case Elem(prefix, label, attr, scope, c @ _*) =>
+        val children = c flatMap {
+          case Elem(_, "repositories", _, _, repos @ _*) =>
+            <profiles>
+              <!-- poms deployed to maven central CANNOT have a repositories
+                   section defined.  This download profile lets you
+                   download dependencies other repos during development time. -->
+              <profile>
+                <id>download</id>
+                <repositories>
+                  {repos}
+                </repositories>
+              </profile>
+            </profiles>
+          case Elem(_, "dependencies", _, _, _ @ _*) =>
+            // In SBT, parent projects depend on their children.  They should
+            // not in Maven.
+            None
+          case x => x
+        }
+        Elem(prefix, label, attr, scope, children : _*)
+    }
+    override def deliverProjectDependencies = Nil
 }
 
 trait Repositories {
