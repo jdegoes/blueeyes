@@ -21,6 +21,8 @@ sealed trait MimeType {
   def extensions: List[String] = subtype :: Nil
   
   def defaultExtension = extensions.head
+
+  override def toString = value
 }
 
 object MimeTypes {
