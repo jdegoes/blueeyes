@@ -21,6 +21,14 @@ sealed trait MimeType {
   def extensions: List[String] = subtype :: Nil
   
   def defaultExtension = extensions.head
+  
+  override def hashCode = value.hashCode
+  
+  override def equals(o: Any) = o match {
+    case that: MimeType => this.value.toLowerCase == that.value.toLowerCase
+    
+    case _ => false
+  }
 
   override def toString = value
 }
