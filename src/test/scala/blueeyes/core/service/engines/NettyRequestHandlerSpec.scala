@@ -10,7 +10,6 @@ import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
 import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
-import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.http.{HttpVersions, HttpResponse, HttpStatus, HttpStatusCodes}

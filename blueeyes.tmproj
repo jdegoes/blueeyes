@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
+	<string>src/main/scala/blueeyes/json/JPath.scala</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -40,14 +40,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>42</integer>
+				<integer>33</integer>
 				<key>line</key>
-				<integer>36</integer>
+				<integer>17</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>7</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/BlueEyesDemo.scala</key>
 		<dict>
@@ -57,6 +57,48 @@
 				<integer>1</integer>
 				<key>line</key>
 				<integer>6</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/BlueEyesServer.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>21</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/BlueEyesServiceBuilder.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>67</integer>
+				<key>line</key>
+				<integer>58</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>18</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/core/data/Bijection.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>31</integer>
+				<key>line</key>
+				<integer>10</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -77,19 +119,33 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
+		<key>src/main/scala/blueeyes/core/http/MimeType.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>75</integer>
+				<key>line</key>
+				<integer>27</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>28</integer>
+		</dict>
 		<key>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>19</integer>
 				<key>line</key>
-				<integer>74</integer>
+				<integer>16</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>17</integer>
+			<integer>22</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/RestPathPattern.scala</key>
 		<dict>
@@ -118,6 +174,34 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>68</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/json/JPath.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>24</integer>
+				<key>line</key>
+				<integer>109</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>22</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
 		</dict>
 		<key>src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala</key>
 		<dict>
@@ -151,18 +235,19 @@
 	<key>openDocuments</key>
 	<array>
 		<string>project/build/BlueEyesProject.scala</string>
+		<string>src/main/scala/blueeyes/json/JPath.scala</string>
 		<string>project/build.properties</string>
 		<string>src/main/scala/blueeyes/BlueEyesDemo.scala</string>
 		<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
-		<string>src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala</string>
-		<string>src/main/scala/blueeyes/core/service/RestPathPattern.scala</string>
-		<string>src/test/scala/blueeyes/core/service/engines/HttpServerNettySpec.scala</string>
-		<string>src/main/scala/blueeyes/core/service/engines/NettyEngines.scala</string>
-		<string>src/main/scala/blueeyes/core/http/HttpStatus.scala</string>
+		<string>src/main/scala/blueeyes/core/http/MimeType.scala</string>
+		<string>src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala</string>
+		<string>src/main/scala/blueeyes/core/data/Bijection.scala</string>
+		<string>src/main/scala/blueeyes/BlueEyesServer.scala</string>
+		<string>src/main/scala/blueeyes/BlueEyesServiceBuilder.scala</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{416, 376}, {1392, 979}}</string>
+	<string>{{498, 112}, {1392, 979}}</string>
 </dict>
 </plist>

@@ -5,7 +5,6 @@ import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
 import blueeyes.util.Future
-import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import net.lag.configgy.Configgy
@@ -19,7 +18,7 @@ class HttpServerNettySpec extends Specification{
   shareVariables()
 
   private var port = 8585
-  private var server: Option[NettyEngineString] = None
+  private var server: Option[NettyEngineArrayByte] = None
   
   "HttpServer" should{
     doFirst{
@@ -92,30 +91,34 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
+object SampleServer extends SampleService with HttpReflectiveServiceList[Array[Byte]] with NettyEngineArrayByte { }
 
-trait SampleService extends BlueEyesServiceBuilder[String]{
+trait SampleService extends BlueEyesServiceBuilder {
+  import blueeyes.core.http.MimeTypes._
+  
   private val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`)
-  val sampleService: HttpService[String] = service("sample", "1.32") { context =>
+  val sampleService: HttpService[Array[Byte]] = service("sample", "1.32") { context =>
     request {
-      path("/bar/'adId/adCode.html") {
-        get [String]{ request: HttpRequest[String] =>
-          new Future[HttpResponse[String]]().deliver(response)
-        }
-      } ~ 
-      path("/foo") {
-        get [String]{ request: HttpRequest[String] =>
-          new Future[HttpResponse[String]]().deliver(response)
-        }  
-      } ~
-      path("/error") {
-        get [String]{ request: HttpRequest[String] =>
-          throw new RuntimeException("Unexecpcted Error.")
-        }
-      } ~
-      path("/http/error") {
-        get [String]{ request: HttpRequest[String] =>
-          throw HttpException(HttpStatusCodes.BadRequest)
+      contentType(text/plain) {
+        path("/bar/'adId/adCode.html") {
+          get [String]{ request: HttpRequest[String] =>
+            new Future[HttpResponse[String]]().deliver(response)
+          }
+        } ~ 
+        path("/foo") {
+          get [String]{ request: HttpRequest[String] =>
+            new Future[HttpResponse[String]]().deliver(response)
+          }  
+        } ~
+        path("/error") {
+          get [String]{ request: HttpRequest[String] =>
+            throw new RuntimeException("Unexecpcted Error.")
+          }
+        } ~
+        path("/http/error") {
+          get [String]{ request: HttpRequest[String] =>
+            throw HttpException(HttpStatusCodes.BadRequest)
+          }
         }
       }
     }

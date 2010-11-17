@@ -2,7 +2,7 @@ package blueeyes.core.service.engines;
 
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.core.data.{ Bijection}
+import blueeyes.core.data.Bijection
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
@@ -183,8 +183,6 @@ class HttpClientXLightWebSpec extends Specification {
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 }
-
-import blueeyes.core.service.engines.HttpClientXLightWeb
 
 class HttpClientXLightWebString extends HttpClientXLightWeb[String] with String2StringTranscoder
 

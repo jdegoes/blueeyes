@@ -4,13 +4,12 @@ import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.util.Future
-import blueeyes.core.data.Bijections
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes}
 import blueeyes.BlueEyesServiceBuilder
 
-class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
+class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[Array[Byte]]{
   val service = new SampleService().sampleService
   def config = """"""
 
@@ -24,7 +23,7 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
       path("/get/foo-value"){
         get{
           status  mustEqual(HttpStatus(OK))
-          content mustEqual(Some("foo-value"))
+          content mustEqual(Some("foo-value".getBytes))
         }
       }
     }
@@ -33,27 +32,31 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
         post({
           status  mustEqual(HttpStatus(OK))
           content mustEqual(Some("post-content"))
-        }, Map(), Map(), Some("post-content"))
+        }, Map(), Map(), Some("post-content".getBytes))
       }
     }
     doLast{stop(60000)}
   }
 }
 
-class SampleService extends BlueEyesServiceBuilder[String]{
+class SampleService extends BlueEyesServiceBuilder {
+  import blueeyes.core.http.MimeTypes._
+  
   val sampleService = service("sample", "1.32") { context =>
     request {
-      path("/get/'foo") {
-        get [String]{ request: HttpRequest[String] =>
-          val fooValue = request.parameters.get('foo).getOrElse("")
-          val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), Some(fooValue))
-          new Future[HttpResponse[String]]().deliver(response)
-        }
-      } ~
-      path("/post/foo") {
-        post [String]{ request: HttpRequest[String] =>
-          val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/plain"), request.content)
-          new Future[HttpResponse[String]]().deliver(response)
+      contentType(text/plain) {
+        path("/get/'foo") {
+          get [String]{ request: HttpRequest[String] =>
+            val fooValue = request.parameters.get('foo).getOrElse("")
+            val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(fooValue))
+            new Future[HttpResponse[String]]().deliver(response)
+          }
+        } ~
+        path("/post/foo") {
+          post [String]{ request: HttpRequest[String] =>
+            val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = request.content)
+            new Future[HttpResponse[String]]().deliver(response)
+          }
         }
       }
     }

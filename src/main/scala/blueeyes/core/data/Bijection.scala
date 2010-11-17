@@ -46,34 +46,38 @@ object Bijection {
   }
 }
 
-trait Bijections {
+trait BijectionsString {
   implicit val ByteArrayToString = new Bijection[Array[Byte], String] {
     def apply(t: Array[Byte]): String = t.map(_.toChar).mkString("")
     
     def unapply(s: String): Array[Byte] = s.toArray.map(_.toByte)
   }
-  implicit val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
-  
-  implicit val StringToString    = Bijection.identity[String]
-  implicit val StringToByteArray = ByteArrayToString.inverse
-    
   implicit val JValueToString = new Bijection[JValue, String] {
     def apply(s: JValue)   = compact(render(s))
     def unapply(t: String) = JsonParser.parse(t)
   }
-  implicit val JValueToJValue    = Bijection.identity[JValue]
-  implicit val JValueToByteArray = JValueToString.andThen(StringToByteArray)
-  
   implicit val XMLToString = new Bijection[NodeSeq, String] {
     def apply(s: NodeSeq)  = s.toString
     def unapply(t: String) = XML.loadString(t)
-  }  
-  implicit val XMLToXML        = Bijection.identity[NodeSeq]  
-  implicit val XMLToByteArray  = XMLToString.andThen(StringToByteArray)
+  }
   
-  implicit val StringToJValue     = JValueToString.inverse
-  implicit val StringToXML        = XMLToString.inverse  
-  implicit val ByteArrayToJValue  = JValueToByteArray.inverse
-  implicit val ByteArrayToXML     = XMLToByteArray.inverse
+  implicit val StringToByteArray = ByteArrayToString.inverse
+  implicit val StringToJValue    = JValueToString.inverse
+  implicit val StringToXML       = XMLToString.inverse
+  
+  implicit val StringToString    = Bijection.identity[String]
 }
-object Bijections extends Bijections
+object BijectionsString extends BijectionsString
+
+trait BijectionsByteArray {
+  implicit val StringToByteArray    = ByteArrayToString.inverse
+  implicit val JValueToByteArray    = BijectionsString.JValueToString.andThen(BijectionsString.StringToByteArray)
+  implicit val XMLToByteArray       = BijectionsString.XMLToString.andThen(BijectionsString.StringToByteArray)
+  
+  implicit val ByteArrayToString    = BijectionsString.ByteArrayToString
+  implicit val ByteArrayToJValue    = JValueToByteArray.inverse
+  implicit val ByteArrayToXML       = XMLToByteArray.inverse
+  
+  implicit val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
+}
+object BijectionsByteArray extends BijectionsByteArray

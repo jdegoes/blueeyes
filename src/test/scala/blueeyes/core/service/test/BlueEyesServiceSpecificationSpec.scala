@@ -6,10 +6,10 @@ import blueeyes.core.service._
 import blueeyes.util.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.core.data.Bijections
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 
-class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[String]{
+class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServiceSpecification[Array[Byte]] {
   val serviceResponse = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some("context"), HttpVersions.`HTTP/1.1`)
 
   val service = new SampeService().sampleService
@@ -46,21 +46,23 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
     doLast{stop(60000)}
   }
 
-  class SampeService extends BlueEyesServiceBuilder[String]{
+  class SampeService extends BlueEyesServiceBuilder {
     val sampleService = service("sample", "1.32") { context =>
       request { 
-        path("/bar/'foo/bar.html") {
-          get [String] { request: HttpRequest[String] =>
-            serviceResponse
-          }
-        } ~
-        path("/asynch/future") {
-          get [String]{ request: HttpRequest[String] =>
-            Future.async {
+        contentType(text/plain) {
+          path("/bar/'foo/bar.html") {
+            get [String] { request: HttpRequest[String] =>
               serviceResponse
             }
-          }
-        }  
+          } ~
+          path("/asynch/future") {
+            get [String]{ request: HttpRequest[String] =>
+              Future.async {
+                serviceResponse
+              }
+            }
+          }  
+        }
       }
     }
   }
