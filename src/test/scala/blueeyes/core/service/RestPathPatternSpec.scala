@@ -57,6 +57,21 @@ class RestPathPatternSpec extends Specification{
   "match complex path with symbols" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
   }
+  /* ---- Regex Tests ---- */ 
+  "match for a simple regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """steamboats""".r ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
+  }
+  "not match for a simple regex"  in {
+    (RestPathPattern.Root/ "foo" / "bar" / """steamboats""".r ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
+  }
+  "match a more complex regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
+  }
+  "not match for a more complex regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
+  }
+
+
   "match end of path when final element is symbol" in {
     ("/foo/bar/'param" $).apply("/foo/bar/value") mustEqual(Map('param -> "value"))
   }
