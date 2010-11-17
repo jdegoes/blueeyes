@@ -70,7 +70,7 @@ trait BijectionsString {
 object BijectionsString extends BijectionsString
 
 trait BijectionsByteArray {
-  implicit val StringToByteArray    = ByteArrayToString.inverse
+  implicit val StringToByteArray    = BijectionsString.StringToByteArray
   implicit val JValueToByteArray    = BijectionsString.JValueToString.andThen(BijectionsString.StringToByteArray)
   implicit val XMLToByteArray       = BijectionsString.XMLToString.andThen(BijectionsString.StringToByteArray)
   

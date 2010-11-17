@@ -6,19 +6,19 @@ import blueeyes.core.service._
 import org.specs.Specification
 import blueeyes.util.Future
 import blueeyes.core.http.MimeTypes._
-import blueeyes.BlueEyesServiceBuilder
+import blueeyes.BlueEyesServiceBuilderString
 import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
 
-class HttpServerNettySpec extends Specification{
+class HttpServerNettySpec extends Specification {
 
   private val configPattern = """server{port = %d}"""
 
   shareVariables()
 
   private var port = 8585
-  private var server: Option[NettyEngineArrayByte] = None
+  private var server: Option[NettyEngineString] = None
   
   "HttpServer" should{
     doFirst{
@@ -91,15 +91,16 @@ class HttpServerNettySpec extends Specification{
   }
 }
 
-object SampleServer extends SampleService with HttpReflectiveServiceList[Array[Byte]] with NettyEngineArrayByte { }
+object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
 
-trait SampleService extends BlueEyesServiceBuilder {
+trait SampleService extends BlueEyesServiceBuilderString {
   import blueeyes.core.http.MimeTypes._
   
-  private val response = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("Content-Type" -> "text/html"), Some(Context.context), HttpVersions.`HTTP/1.1`)
-  val sampleService: HttpService[Array[Byte]] = service("sample", "1.32") { context =>
+  private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
+  
+  val sampleService: HttpService[String] = service("sample", "1.32") { context =>
     request {
-      contentType(text/plain) {
+      produce(text/html) {
         path("/bar/'adId/adCode.html") {
           get [String]{ request: HttpRequest[String] =>
             new Future[HttpResponse[String]]().deliver(response)

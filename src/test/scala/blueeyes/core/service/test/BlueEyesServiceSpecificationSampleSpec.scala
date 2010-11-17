@@ -7,9 +7,9 @@ import blueeyes.util.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes}
-import blueeyes.BlueEyesServiceBuilder
+import blueeyes.BlueEyesServiceBuilderString
 
-class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[Array[Byte]]{
+class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyesServiceSpecification[String]{
   val service = new SampleService().sampleService
   def config = """"""
 
@@ -23,7 +23,7 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
       path("/get/foo-value"){
         get{
           status  mustEqual(HttpStatus(OK))
-          content mustEqual(Some("foo-value".getBytes))
+          content mustEqual(Some("foo-value"))
         }
       }
     }
@@ -32,14 +32,14 @@ class BlueEyesServiceSpecificationSampleSpec extends Specification with BlueEyes
         post({
           status  mustEqual(HttpStatus(OK))
           content mustEqual(Some("post-content"))
-        }, Map(), Map(), Some("post-content".getBytes))
+        }, Map(), Map(), Some("post-content"))
       }
     }
     doLast{stop(60000)}
   }
 }
 
-class SampleService extends BlueEyesServiceBuilder {
+class SampleService extends BlueEyesServiceBuilderString {
   import blueeyes.core.http.MimeTypes._
   
   val sampleService = service("sample", "1.32") { context =>

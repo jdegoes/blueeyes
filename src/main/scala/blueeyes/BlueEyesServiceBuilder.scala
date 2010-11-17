@@ -1,7 +1,7 @@
 package blueeyes
 
 import blueeyes.core.http._
-import blueeyes.core.data.BijectionsByteArray
+import blueeyes.core.data._
 import blueeyes.core.service._
 import blueeyes.util.{Future, FutureImplicits}
 
@@ -56,7 +56,7 @@ import blueeyes.util.{Future, FutureImplicits}
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServiceBuilder extends HttpServiceBuilder[Array[Byte]] with 
+trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with 
   FutureImplicits with 
   HttpHeaderImplicits with 
   HttpStatusImplicits with
@@ -65,7 +65,9 @@ trait BlueEyesServiceBuilder extends HttpServiceBuilder[Array[Byte]] with
   HttpNumberImplicits with
   HttpRequestHandlerCombinators with 
   HttpRequestHandlerImplicits with
-  RestPathPatternImplicits with
-  BijectionsByteArray {
-  
+  RestPathPatternImplicits {
+
 }
+trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[Array[Byte]] with BijectionsByteArray
+
+trait BlueEyesServiceBuilderString extends BlueEyesServiceBuilderBase[String] with BijectionsString
