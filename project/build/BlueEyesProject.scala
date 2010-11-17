@@ -57,7 +57,7 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with GpgPlugin with ChecksumPlugin {
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with GpgPlugin with ChecksumPlugin  {
   val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"    % "test"
   val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "test"
   val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "test"
@@ -75,11 +75,9 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
 
   override def mainClass = Some("blueeyes.BlueEyesDemo")
 
-  override def managedStyle = ManagedStyle.Maven
-
+  override def managedStyle   = ManagedStyle.Maven
   override def packageDocsJar = defaultJarPath("-javadoc.jar")
-  override def packageSrcJar= defaultJarPath("-sources.jar")
-
+  override def packageSrcJar  = defaultJarPath("-sources.jar")
   override def moduleID: String = normalizedName
 
   override def publishAction = task{
@@ -87,14 +85,36 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
     super.publishAction.run
   }
 
+  lazy val publishSnapshot = publishSnapshotAction
+  def publishSnapshotAction = task{
+    val oldVersion = projectVersion.get match
+    {
+      case Some(v: BasicVersion) =>
+      {
+        val newVersion = v.withExtra(Some("SNAPSHOT"))
+        projectVersion() = newVersion
+        log.info("Changing version to " + newVersion)
+        Some(v)
+      }
+      case _ => None
+    }
+
+    publishTo  = sonatypeSnapshots
+    val result = publishAction.run
+    
+    publishTo  = sonatypeStaging
+    oldVersion.foreach(projectVersion() = _)
+
+    result
+  }
+
   val sourceArtifact  = Artifact.sources(artifactID)
   val docsArtifact    = Artifact.javadoc(artifactID)
 
-  // Can't publish to snapshots
-//  val publishTo = "OSS Nexus" at "https://oss.sonatype.org/content/repositories/snapshots/"
-  // Staging seems to publish though
-  val publishTo = if (version.toString.endsWith("-SNAPSHOT")) "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-                  else "Sonatype Nexus Release Staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+  val sonatypeStaging   = "Sonatype Nexus Release Staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+  val sonatypeSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
+  var publishTo = sonatypeStaging
 
     Credentials(Path.userHome / ".ivy2" / "credentials" / "oss.sonatype.org", log)
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)

@@ -27,7 +27,7 @@ trait ChecksumPlugin extends BasicManagedProject with GpgPlugin {
   lazy val checksum = checksumAction
 
   def checksumAction = checksumTask(artifacts)
-    .dependsOn(makePom)
+    .dependsOn(sign)
     .describedAs("Calculates MD5 and SHA1 checksums")
 
   def checksumTask(artifacts: Iterable[Artifact]): Task = task {
