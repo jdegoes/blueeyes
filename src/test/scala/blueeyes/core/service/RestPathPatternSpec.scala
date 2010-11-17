@@ -56,20 +56,8 @@ class RestPathPatternSpec extends Specification{
   }
   "match complex path with symbols" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
-  }
-  /* ---- Regex Tests ---- */ 
-  "match for a simple regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """steamboats""".r ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
-  }
-  "not match for a simple regex"  in {
-    (RestPathPattern.Root/ "foo" / "bar" / """steamboats""".r ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
-  }
-  "match a more complex regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
-  }
-  "not match for a more complex regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
-  }
+    }
+
 
 
   "match end of path when final element is symbol" in {
@@ -84,6 +72,22 @@ class RestPathPatternSpec extends Specification{
   "not match beyond end of path when final element is string" in {
     ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") mustBe(false)
   }
+
+  /* ---- Regex Tests ---- */ 
+  "match for a simple regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List(Symbol("1"))).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
+  }
+  "not match for a simple regex"  in {
+    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
+  }
+  "match a more complex regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
+  }
+  "not match for a more complex regex" in {
+    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
+  }
+
+
   "create single parameter" in {
     (RestPathPattern.Root / 'param).apply("/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
@@ -93,6 +97,19 @@ class RestPathPatternSpec extends Specification{
   "create single parameter in lengthy literal path" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
+
+  /* ---- Suffix Tests ---- */
+  "match on a symbol with a suffix (ex: 'name.gif)" in {
+    ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
+  }
+  "recover the parameter when using a path with a suffix" in {
+    val pattern: RestPathPattern = "/foo/bar/'name.gif"
+    pattern.apply("/foo/bar/foocubus.gif").mustEqual(Map[Symbol, String]('name -> "foocubus"))
+  }
+  "not match on a symbol with different suffix (ex: 'name.html)" in {
+    ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/example.html") mustBe (false)
+  }
+
   "create parameters automatically for complex path specified as string" in {
     val pattern: RestPathPattern = "/foo/bar/'param"
     
