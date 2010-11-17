@@ -33,37 +33,27 @@ private[mongo] class MockMongoDatabase() extends MongoDatabase{
   def requestStart = {}
 }
 
-private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFieldsExtractor{
+private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFieldsExtractor with MockIndex{
   private var container = JArray(Nil)
-  private var indexes   = Map[String, List[JPath]]()
 
-  def insert(objects: List[JObject]) = {
+  def insert(objects: List[JObject]): Unit = {
     checkIndex(objects)
     insert0(objects)
   }
 
-  def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
-
-  private def checkIndex(objects: List[JObject]) = {
-    indexes.foreach(index => {
-      val selection = MongoSelection(index._2)
-      val newFields = selectExistingFields(objects, selection.selection)
-      if (newFields.distinct.size != newFields.size) throw new MongoException("Index contraint.")
-      objects.foreach(jobject => {
-        val existing  = selectExistingFields(all, selection.selection)
-        if ((existing filterNot (newFields contains)).size != existing.size) throw new MongoException("Index contraint.")
-      })
-    })
-  }
-
-  def remove(filter: Option[MongoFilter]) {
-    val objects = search(filter)
-    objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
-  }
+  def remove(filter: Option[MongoFilter]) : Unit = remove(search(filter))
 
   def count(filter: Option[MongoFilter]) = search(filter).size
 
-  def remove0(objects: List[JObject]) = objects.foreach(jobject => container = JArray(container.elements.filterNot(_ == jobject)))
+  def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
+
+  def indexed = all
+
+  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
+
+  private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
+
+  private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
 
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean){
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
@@ -78,7 +68,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     }
 
     checkIndex(updated)
-    remove0(objects)
+    remove(objects)
     insert0(updated)
   }
 
@@ -103,19 +93,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     case _ => error("filter must be either MongoFieldFilter or MongoElementsMatchFilter")
   }
 
-  def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
-    indexes = if (unique) indexes.get(name) match{
-      case None    => indexes + Tuple2(name, keys)
-      case Some(x) => indexes
-    } else indexes
-  }
-
-
-  def dropIndex(name: String) = {
-    indexes = indexes - name
-  }
-
-  def dropIndexes = indexes = Map[String, List[JPath]]()
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
     val objects = search(filter)
@@ -209,10 +186,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
     mapped.group
   }
-
-  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
-
-  private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 }
 
 private[mongo] class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends Ordering[JObject]{
