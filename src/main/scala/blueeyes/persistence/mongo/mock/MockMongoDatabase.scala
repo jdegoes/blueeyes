@@ -180,46 +180,8 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   }
 }
 
-private[mongo] class JObjectXPathBasedOrdering(path: JPath, weight: Int) extends Ordering[JObject]{
-  def compare(o1: JObject, o2: JObject) = (o1.get(path), o2.get(path)) match {
-    case (v1 :: Nil, v2 :: Nil) =>
-      (v1, v2) match {
-        case (JString(x1),  JString(x2)) => x1.compare(x2) * weight
-        case (JInt(x1),     JInt(x2))    => x1.compare(x2) * weight
-        case (JDouble(x1),  JDouble(x2)) => x1.compare(x2) * weight
-        case (JDouble(x1),  JInt(x2))    => x1.compare(x2.doubleValue) * weight
-        case (JInt(x1),     JDouble(x2)) => x1.doubleValue.compare(x2) * weight
-        case (JBool(x1),    JBool(x2))   => x1.compare(x2) * weight
-        case (JNull,        JNull)       => 0
-        case (v,            JNull)       => 1
-        case (JNull,        v)           => -1
-        case (JNothing,     JNothing)    => 0
-        case (v,            JNothing)       => 1
-        case (JNothing,     v)           => -1
-        case _ => error("differents elements cannot be ordered")
-      }
-    case _ => error("lists cannot be ordered")
-  }
-}
-
 private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
   def drop = {}
 
   def outpotCollection = MongoCollectionHolder(output)
-}
-
-
-private[mongo] case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {error("any value is not supported")}){
-  private var groupedValues = Map[K, List[V]]()
-
-  def emit(key: Any, value: Any) = {
-    emitCorrect(keyTransformer(key), valueTransformer(value))
-  }
-
-  def emitCorrect(key: K, value: V){
-    val grouped   = value :: groupedValues.get(key).getOrElse(Nil)
-    groupedValues = groupedValues + Tuple2(key, grouped)
-  }
-
-  def group: Map[K, List[V]] = groupedValues
 }
