@@ -1,12 +1,10 @@
 import sbt._
 import util.matching.Regex
-import org.apache.ivy.util.url.CredentialsStore
+import SinatypeCredentials._
 
 object SonatypeMvn {
   
   def apply(projectRoot: Path, input: Option[String], log: Logger, command: String, mvmArgs: String*): String = {
-
-    val credentials = CredentialsStore.INSTANCE.getCredentials("Sonatype Nexus Repository Manager", "oss.sonatype.org")
 
     val args = List("mvn", "-s", (projectRoot / "project" / "build" / "sonatype.mvn.xml").asFile.getAbsolutePath, command, "-Dnexus.url=https://oss.sonatype.org", "-Dnexus.username=" + credentials.getUserName(), "-Dnexus.password=" + credentials.getPasswd()) ++ mvmArgs
 
