@@ -55,7 +55,7 @@ trait PublishingProject extends DefaultProject{
 
   var publishTo = sonatypeStaging
 
-    Credentials(Path.userHome / ".ivy2" / "credentials" / "oss.sonatype.org", log)
+  Credentials(info.projectPath  / "project" / "build" / "oss.sonatype.org", log)
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
 
   override def pomExtra =
