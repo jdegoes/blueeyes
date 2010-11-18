@@ -58,8 +58,6 @@ class RestPathPatternSpec extends Specification{
     (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
     }
 
-
-
   "match end of path when final element is symbol" in {
     ("/foo/bar/'param" $).apply("/foo/bar/value") mustEqual(Map('param -> "value"))
   }
@@ -75,7 +73,7 @@ class RestPathPatternSpec extends Specification{
 
   /* ---- Regex Tests ---- */ 
   "match for a simple regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List(Symbol("1"))).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
+    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
   }
   "not match for a simple regex"  in {
     (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
@@ -109,6 +107,7 @@ class RestPathPatternSpec extends Specification{
   "not match on a symbol with different suffix (ex: 'name.html)" in {
     ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/example.html") mustBe (false)
   }
+
 
   "create parameters automatically for complex path specified as string" in {
     val pattern: RestPathPattern = "/foo/bar/'param"
