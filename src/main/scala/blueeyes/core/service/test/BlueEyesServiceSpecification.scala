@@ -9,27 +9,37 @@ import blueeyes.core.http.HttpVersions._
 import blueeyes.core.http.HttpMethods._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpVersion, HttpMethod}
 import java.net.InetAddress
-import net.lag.configgy.Configgy
+import org.spex.Specification
+import net.lag.configgy.{Config, Configgy}
 
-trait BlueEyesServiceSpecification[T]{
+trait BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] with HttpReflectiveServiceList[T] {  self: Specification =>
 
   private val _response = new DynamicVariable[Option[HttpResponse[T]]](None)
   private val pathStack: Stack[String] = new Stack[String];
-  private val server = new SpecHttpServer()
 
-  def start(timeout: Long = 60000) = {
-    Configgy.configureFromString(config)
-    waitForResponse[Unit](server.start, timeout)
-  }
-  def stop(timeout: Long = 60000) = {
-    waitForResponse[Unit](server.stop, timeout)
-  }
+  shareVariables()  
+  doBeforeSpec{startServer}
+  doAfterSpec {stopServer}
+
+  def startTimeOut  = 60000
+  def stopTimeOut   = 60000
+  def configuration = ""
+
+  private def startServer = waitForResponse[Unit](start, startTimeOut)
+  private def stopServer  = waitForResponse[Unit](stop, stopTimeOut)
 
   def path(path: String)(f: => Unit): Unit = {
     pathStack.push(path)
 
     try { f } finally { pathStack.pop() }
   }
+
+  override def rootConfig: Config = {
+    Configgy.configureFromString(configuration)
+    Configgy.config
+  }
+
+  override def main(args: Array[String]): Unit = super.main(args)
 
   def get(f: => Unit, queryParameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), remoteHost: Option[InetAddress] = None,
           version: HttpVersion = `HTTP/1.1`, timeout: Long = 60000) = custom(GET, queryParameters, headers, None, remoteHost, version, f, timeout)
@@ -58,7 +68,7 @@ trait BlueEyesServiceSpecification[T]{
   def custom(method: HttpMethod, queryParameters: Map[Symbol, String], headers: Map[String, String],
              content: Option[T], remoteHost: Option[InetAddress] = None, version: HttpVersion, f: => Unit, timeout: Long = 60000) = {
     val request = HttpRequest[T](method, currentPath, queryParameters, headers, content, remoteHost, version)
-    val future  = server(request)
+    val future  = apply(request)
 
     withResponse(waitForResponse[HttpResponse[T]](future, timeout), f)
   }
@@ -79,15 +89,10 @@ trait BlueEyesServiceSpecification[T]{
   private def currentPath: String = pathStack.foldRight[String]("") { (element, path) => path + element }
 
   def response: HttpResponse[T] = _response.value.getOrElse(throw new RuntimeException("Request is not loaded."))
-  def status   = response.status
-  def headers  = response.headers
-  def content  = response.content
-  def version  = response.version
+  def responseStatus   = response.status
+  def responseHeaders  = response.headers
+  def responseContent  = response.content
+  def responseVersion  = response.version
   
-  def service: HttpService[T]
-  def config: String
-
-  class SpecHttpServer extends HttpServer[T](){
-    def services = service :: Nil
-  }
+//  def config: String
 }
