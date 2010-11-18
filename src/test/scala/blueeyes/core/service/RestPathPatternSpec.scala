@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import org.specs.Specification
+import scala.util.matching.Regex
 
 import blueeyes.core.http.{HttpRequest, HttpMethods}
 
@@ -73,16 +74,16 @@ class RestPathPatternSpec extends Specification{
 
   /* ---- Regex Tests ---- */ 
   "match for a simple regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
   }
   "not match for a simple regex"  in {
-    (RestPathPattern.Root/ "foo" / "bar" / """(steamboats)""".r ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
   }
   "match a more complex regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""([a-z]+_[0-9])""", "id") ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
   }
   "not match for a more complex regex" in {
-    (RestPathPattern.Root/ "foo" / "bar" / """([a-z]+_[0-9])""".r ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""([a-z]+_[0-9])""", "id") ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
   }
 
 
