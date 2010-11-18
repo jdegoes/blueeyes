@@ -44,11 +44,6 @@ trait GpgPlugin extends BasicManagedProject {
   override def deliverLocalAction = super.deliverLocalAction dependsOn(sign)
   override def deliverAction = super.deliverAction dependsOn(sign)
 
-  /*
-   * http://github.com/rossabaker/sbt-gpg-plugin/issues#issue/1
-   *
-   * Set packaging to be main artifact's type.
-   */
   override def pomPostProcess(pom: Node): Node =
     pom match {
       case Elem(prefix, label, attr, scope, c @ _*) =>

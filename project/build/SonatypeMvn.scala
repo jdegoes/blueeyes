@@ -2,7 +2,7 @@ import sbt._
 import util.matching.Regex
 import org.apache.ivy.util.url.CredentialsStore
 
-object Mvn {
+object SonatypeMvn {
   
   def apply(projectRoot: Path, input: Option[String], log: Logger, command: String, mvmArgs: String*): String = {
 
@@ -19,7 +19,7 @@ object NexusStagingList {
 
     log.info("Getting Nexus staging repositories list.")
 
-    val output = Mvn(projectRoot, None, log, "nexus:staging-list")
+    val output = SonatypeMvn(projectRoot, None, log, "nexus:staging-list")
 
     val regexp = new Regex("(comgithubblueeyes-\\d+)")
 
@@ -32,7 +32,7 @@ object NexusStagingClose {
 
     log.info("Closing staging repository: %s.".format(repositoryId))
 
-    Mvn(projectRoot, None, log, "nexus:staging-close", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=Closing repository " + repositoryId)
+    SonatypeMvn(projectRoot, None, log, "nexus:staging-close", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=Closing repository " + repositoryId)
   }
 }
 
@@ -41,6 +41,6 @@ object NexusStagingRelease {
 
     log.info("Releasing staging repository: %s.".format(repositoryId))
 
-    Mvn(projectRoot, Some("releases"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
+    SonatypeMvn(projectRoot, Some("releases"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
   }
 }
