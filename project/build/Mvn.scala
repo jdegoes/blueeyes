@@ -46,6 +46,7 @@ object ExtermalProcess{
   private def writeTo(input: Option[String])(stream: java.io.OutputStream) {
     input.foreach(v => {
       stream.write(v.getBytes())
+//      stream.write("\n".getBytes())
       stream.flush()
     })
   }  
@@ -88,6 +89,6 @@ object NexusStagingRelease {
 
     log.info("Releasing staging repository: %s.".format(repositoryId))
 
-    Mvn(projectRoot, Some("releases\n"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
+    Mvn(projectRoot, Some("releases"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
   }
 }

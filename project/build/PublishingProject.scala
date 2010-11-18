@@ -8,13 +8,13 @@ trait PublishingProject extends DefaultProject{
   override def moduleID: String = normalizedName
 
   override def publishAction = task{
-//    incrementVersionAction.run
-//    super.publishAction.run
+    incrementVersionAction.run
+    super.publishAction.run
     
     val repositories = NexusStagingList(info.projectPath, log)
     val result = repositories match{
       case x :: Nil =>{
-//        NexusStagingClose(info.projectPath, x, log)
+        NexusStagingClose(info.projectPath, x, log)
         NexusStagingRelease(info.projectPath, x, log)
         None
       }

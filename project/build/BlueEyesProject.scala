@@ -1,6 +1,5 @@
 import sbt._
 import de.element34.sbteclipsify._
-import com.rossabaker.sbt.gpg._
 
 trait OneJar { this: DefaultProject =>
   lazy val oneJar = oneJarAction
