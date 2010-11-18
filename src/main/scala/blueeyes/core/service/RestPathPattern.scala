@@ -168,8 +168,8 @@ object RestPathPatternParsers extends RegexParsers {
         val source = in.source
         val offset = in.offset
         val start = handleWhiteSpace(source, offset)
-        //(regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
-        (regex findFirstMatchIn (source.subSequence(start, source.length))) match {
+        //(regex findFirstMatchIn (source.subSequence(start, source.length))) match {
+        (regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
           case Some(matched) => 
             Success(Map(groupNames.map(name => Symbol(name) -> matched.group(name)): _*), in.drop(start + matched.end - offset))
           case None =>
