@@ -168,6 +168,7 @@ object RestPathPatternParsers extends RegexParsers {
         val source = in.source
         val offset = in.offset
         val start = handleWhiteSpace(source, offset)
+        //(regex findFirstMatchIn (source.subSequence(start, source.length))) match {
         (regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
           case Some(matched) => 
             Success(Map(groupNames.map(name => Symbol(name) -> matched.group(name)): _*), in.drop(start + matched.end - offset))
@@ -196,7 +197,17 @@ trait RestPathPatternImplicits {
   
   implicit def symbolToRestPathPathPattern(s: Symbol): RestPathPattern = RestPathPatternParsers.SymbolPathPattern(s)
   
-  // """(\w+)""".r ~ List('adId)
+  /** Example: new Regex("""([a-z]+)""", "id") ~ List('id) 
+   *  In use example: ads / foo / new Regex("""([a-z]+)""", "id") ~ List('id)
+   *
+   *  A note about groups for scala Regex:  
+   *    Scala Regex is based off of Java Pattern, in which groups are not given
+   *    names, only numbers based on the order in which they appear.  Thus,
+   *    the labels one gives groups in the Scala Regex are assigned based on
+   *    ordering from the java Pattern.  As such, in the following example,
+   *      New Regex("""(a|z)(b+)""", "id1", "id2")
+   *    id1 referss to the capture group a|z, whereas id2 refers to b+. 
+   */
   implicit def regexToRestPathPatternBuilder(regex: Regex) = new {
     def ~ (names: List[Symbol]) = RestPathPatternParsers.RegexPathPattern(regex, names.map(_.name))
   }

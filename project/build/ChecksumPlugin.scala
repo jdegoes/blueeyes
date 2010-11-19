@@ -1,13 +1,11 @@
 import sbt._
 import Process._
 import scala.xml._
-import com.rossabaker.sbt.gpg._
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
 import java.security.DigestInputStream
 
-// TODO make independent of GpgPlugin
 trait ChecksumPlugin extends BasicManagedProject with GpgPlugin {
   lazy val skipChecksum = systemOptional[Boolean]("checksum.skip", false).value
   val checksumsConfig = config("checksums")

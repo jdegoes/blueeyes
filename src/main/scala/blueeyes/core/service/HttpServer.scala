@@ -147,7 +147,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   /** A default main function, which accepts the configuration file from the
    * command line, with flag "--configFile".
    */
-  def main(args: Array[String]) = {
+  def main(args: Array[String]) {
     val arguments = CommandLineArguments(args: _*)
     
     if (arguments.size == 0 || !arguments.parameters.get("help").isEmpty) {

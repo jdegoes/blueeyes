@@ -1,6 +1,8 @@
 package blueeyes.core.service
 
 import org.specs.Specification
+import scala.util.matching.Regex
+import RestPathPatternImplicits._
 
 import blueeyes.core.http.{HttpRequest, HttpMethods}
 
@@ -56,7 +58,8 @@ class RestPathPatternSpec extends Specification{
   }
   "match complex path with symbols" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).isDefinedAt("/foo/bar/value") mustEqual(true)
-  }
+    }
+
   "match end of path when final element is symbol" in {
     ("/foo/bar/'param" $).apply("/foo/bar/value") mustEqual(Map('param -> "value"))
   }
@@ -78,6 +81,49 @@ class RestPathPatternSpec extends Specification{
   "create single parameter in lengthy literal path" in {
     (RestPathPattern.Root / "foo" / "bar" / 'param).apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
   }
+
+
+  /* ---- Regex Tests ---- */ 
+  "Regex: match for a simple pattern" in {
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
+  }
+  "Regex: not match for a simple pattern"  in {
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/lame_boats") mustEqual(false)
+  }
+  "Regex: not match for when the match occurs but later in the string" in {
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/lame_steamboats") mustEqual(false)
+  }
+  "Regex: match a more complex pattern" in {
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""([a-z]+_[0-9])""", "id") ~ List('id)).isDefinedAt("/foo/bar/hercules_1") mustEqual(true)
+  }
+  "Regex: not match for a more complex pattern" in {
+    (RestPathPattern.Root/ "foo" / "bar" / new Regex("""([a-z]+_[0-9])""", "id") ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
+  }
+  "Regex: should match for the other syntax and positive look ahead" in {
+    ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path) $).isDefinedAt("/foo/bar/example.html") mustBe (true)
+  }
+  "Regex: should use the implicit for Regex (removed the $)" in {
+    ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path)).isDefinedAt("/foo/bar/example.html") mustBe (true)
+  }
+  "Regex: should recover the parameter with positive look ahead" in {
+    val pattern: RestPathPattern = "/darth" / new Regex("""([a-z]+)(\.gif)""", "path") ~ List('path) 
+    pattern.apply("/darth/joshuar.gif").mustEqual(Map[Symbol, String]('path -> "joshuar"))
+  }
+
+
+  /* ---- Suffix Tests ---- */
+  "match on a symbol with a suffix (ex: 'name.gif)" in {
+    ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
+  }
+  "recover the parameter when using a path with a suffix" in {
+    val pattern: RestPathPattern = "/foo/bar/'name.gif"
+    pattern.apply("/foo/bar/foocubus.gif").mustEqual(Map[Symbol, String]('name -> "foocubus"))
+  }
+  "not match on a symbol with different suffix (ex: 'name.html)" in {
+    ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/example.html") mustBe (false)
+  }
+
+
   "create parameters automatically for complex path specified as string" in {
     val pattern: RestPathPattern = "/foo/bar/'param"
     

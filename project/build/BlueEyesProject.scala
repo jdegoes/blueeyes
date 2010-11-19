@@ -1,7 +1,5 @@
 import sbt._
-import scala.xml._
 import de.element34.sbteclipsify._
-import com.rossabaker.sbt.gpg._
 
 trait OneJar { this: DefaultProject =>
   lazy val oneJar = oneJarAction
@@ -57,13 +55,13 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with GpgPlugin with ChecksumPlugin  {
-  val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"    % "test"
-  val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "test"
-  val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "test"
-  val mockito     = "org.mockito"                 % "mockito-all"       % "1.8.4"       % "test"
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin  {
+  val scalatest   = "org.scalatest"               % "scalatest"         % "1.2"         % "test"
+  val scalacheck  = "org.scala-tools.testing"     % "scalacheck_2.8.0"  % "1.7"         % "compile"
+  val mockito     = "org.mockito"                 % "mockito-all"       % "1.8.4"       % "compile"
   val paranamer   = "com.thoughtworks.paranamer"  % "paranamer"         % "2.0"
-  val junit       = "junit"                       % "junit"             % "4.7"         % "test"
+  val junit       = "junit"                       % "junit"             % "4.7"         % "compile"
+  val scalaspec   = "org.scala-tools.testing"     % "specs_2.8.0"       % "1.6.6-SNAPSHOT"       % "compile"  
   val netty       = "org.jboss.netty"             % "netty"             % "3.2.3.Final" % "compile"
   val async       = "com.ning"                    % "async-http-client" % "1.3.3"       % "compile"
   val mongo       = "org.mongodb"                 % "mongo-java-driver" % "2.1"         % "compile"
@@ -74,99 +72,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val xlightweb   = "org.xlightweb"               % "xlightweb"         % "2.13"        % "compile"
 
   override def mainClass = Some("blueeyes.BlueEyesDemo")
-
-  override def managedStyle   = ManagedStyle.Maven
-  override def packageDocsJar = defaultJarPath("-javadoc.jar")
-  override def packageSrcJar  = defaultJarPath("-sources.jar")
-  override def moduleID: String = normalizedName
-
-  override def publishAction = task{
-    incrementVersionAction.run
-    super.publishAction.run
-  }
-
-  lazy val publishSnapshot = publishSnapshotAction
-  def publishSnapshotAction = task{
-    val oldVersion = projectVersion.get match
-    {
-      case Some(v: BasicVersion) =>
-      {
-        val newVersion = v.withExtra(Some("SNAPSHOT"))
-        projectVersion() = newVersion
-        log.info("Changing version to " + newVersion)
-        Some(v)
-      }
-      case _ => None
-    }
-
-    publishTo  = sonatypeSnapshots
-    val result = publishAction.run
-    
-    publishTo  = sonatypeStaging
-    oldVersion.foreach(projectVersion() = _)
-
-    result
-  }
-
-  val sourceArtifact  = Artifact.sources(artifactID)
-  val docsArtifact    = Artifact.javadoc(artifactID)
-
-  val sonatypeStaging   = "Sonatype Nexus Release Staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-  val sonatypeSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-
-  var publishTo = sonatypeStaging
-
-    Credentials(Path.userHome / ".ivy2" / "credentials" / "oss.sonatype.org", log)
-  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageDocs, packageSrc)
-
-  override def pomExtra =
-    <parent>
-      <groupId>org.sonatype.oss</groupId>
-      <artifactId>oss-parent</artifactId>
-      <version>5</version>
-    </parent> ++
-    <name>{name}</name> ++
-    <description>A lightweight Web 3.0 framework for Scala</description> ++
-    <url>http://github.com/jdegoes/blueeyes</url> ++
-    <licenses>
-      <license>
-	<name>Apache 2</name>
-	<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-	 <distribution>repo</distribution>
-      </license>
-    </licenses> ++
-    <scm>
-      <connection>scm:git:git@github.com:jdegoes/blueeyes.git</connection>
-      <developerConnection>scm:git:git@github.com:jdegoes/blueeyes.git</developerConnection>
-      <url>git@github.com:jdegoes/blueeyes.git</url>
-    </scm> ++
-    <developers></developers>
-
-  override def pomPostProcess(pom: Node) =
-    super.pomPostProcess(pom) match {
-      case Elem(prefix, label, attr, scope, c @ _*) =>
-        val children = c flatMap {
-          case Elem(_, "repositories", _, _, repos @ _*) =>
-            <profiles>
-              <!-- poms deployed to maven central CANNOT have a repositories
-                   section defined.  This download profile lets you
-                   download dependencies other repos during development time. -->
-              <profile>
-                <id>download</id>
-                <repositories>
-                  {repos}
-                </repositories>
-              </profile>
-            </profiles>
-          case Elem(_, "dependencies", _, _, _ @ _*) =>
-            // In SBT, parent projects depend on their children.  They should
-            // not in Maven.
-            None
-          case x => x
-        }
-        Elem(prefix, label, attr, scope, children : _*)
-    }
-    override def deliverProjectDependencies = Nil
 }
 
 trait Repositories {
