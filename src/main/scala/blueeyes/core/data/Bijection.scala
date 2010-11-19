@@ -54,7 +54,7 @@ trait BijectionsString {
   }
   implicit val JValueToString = new Bijection[JValue, String] {
     def apply(s: JValue)   = compact(render(s))
-    def unapply(t: String) = JsonParser.parse(t)
+    def unapply(t: String) = JsonParser.parse(t.trim())
   }
   implicit val XMLToString = new Bijection[NodeSeq, String] {
     def apply(s: NodeSeq)  = s.toString
