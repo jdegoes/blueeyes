@@ -138,7 +138,7 @@ object MongoUpdateOperators {
 }
 
 import MongoUpdateOperators._
-sealed trait MongoUpdateValue{
+sealed trait MongoUpdateValue {
   def  toJValue: JObject;
 }
 
@@ -149,11 +149,12 @@ sealed case class MongoUpdateObject(value: JObject) extends MongoUpdateValue{
 sealed case class MongoUpdateFieldValue(operator: MongoUpdateOperator, path: JPath, filter: MongoFilter) extends MongoUpdateValue{  self =>
   def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(path), filter.filter) :: Nil)) :: Nil)
 
-  def & (that: MongoUpdateFieldValue): MongoUpdateValue = MongoUpdateFieldsValues(self :: that :: Nil)
+  def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(self :: that :: Nil) 
 }
 
 sealed case class MongoUpdateFieldsValues(values: List[MongoUpdateValue]) extends MongoUpdateValue{
   def toJValue: JObject = values.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
+  def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(values ::: that :: Nil)
 }
 
 case class MongoUpdateBuilder(jpath: JPath) {
