@@ -102,22 +102,22 @@ trait SampleService extends BlueEyesServiceBuilderString {
     request {
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
-          get [String]{ request: HttpRequest[String] =>
+          get { request: HttpRequest[String] =>
             new Future[HttpResponse[String]]().deliver(response)
           }
         } ~ 
         path("/foo") {
-          get [String]{ request: HttpRequest[String] =>
+          get { request: HttpRequest[String] =>
             new Future[HttpResponse[String]]().deliver(response)
           }  
         } ~
         path("/error") {
-          get [String]{ request: HttpRequest[String] =>
+          get { request: HttpRequest[String] =>
             throw new RuntimeException("Unexecpcted Error.")
           }
         } ~
         path("/http/error") {
-          get [String]{ request: HttpRequest[String] =>
+          get { request: HttpRequest[String] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }

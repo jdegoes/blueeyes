@@ -19,10 +19,10 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def path[T](path: RestPathPattern)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
+  def path[T, S](path: RestPathPattern)(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.path) && h.isDefinedAt(path.shift(r))
     
-    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       val pathParameters = path(r.path)
       
       val shiftedRequest = path.shift(r)
@@ -34,10 +34,10 @@ trait HttpRequestHandlerCombinators {
   /** The method combinator creates a handler that is defined only for the 
    * specified HTTP method.
    */
-  def method[T](method: HttpMethod)(h: HttpRequestHandler[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
+  def method[T, S](method: HttpMethod)(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = r.method == method
     
-    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = r.method match {
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
       case `method` => h(r)
       
       case _ => error("The handler " + h + " can only respond to HTTP method " + method)
@@ -47,17 +47,17 @@ trait HttpRequestHandlerCombinators {
   /** The path end combinator creates a handler that is defined only for paths 
    * that are fully matched.
    */
-  def $ [T](h: HttpRequestHandler[T]): HttpRequestHandler[T] = path(RestPathPatternParsers.EmptyPathPattern) { h }
+  def $ [T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
   
-  def get     [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.GET)      { toPartial(h) } }
-  def put     [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.PUT)      { toPartial(h) } }
-  def post    [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.POST)     { toPartial(h) } }
-  def delete  [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.DELETE)   { toPartial(h) } }
-  def head    [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.HEAD)     { toPartial(h) } }
-  def patch   [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.PATCH)    { toPartial(h) } }
-  def options [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.OPTIONS)  { toPartial(h) } }
-  def trace   [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.TRACE)    { toPartial(h) } }
-  def connect [T](h: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = $ { method(HttpMethods.CONNECT)  { toPartial(h) } }
+  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { toPartial(h) } }
+  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { toPartial(h) } }
+  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { toPartial(h) } }
+  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.DELETE)   { toPartial(h) } }
+  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.HEAD)     { toPartial(h) } }
+  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PATCH)    { toPartial(h) } }
+  def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { toPartial(h) } }
+  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { toPartial(h) } }
+  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { toPartial(h) } }
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
@@ -113,9 +113,9 @@ trait HttpRequestHandlerCombinators {
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }
   
-  private def toPartial[T](full: HttpRequestHandlerFull[T]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
+  private def toPartial[T, S](full: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(request: HttpRequest[T]) = true
   
-    def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = full.apply(request)
+    def apply(request: HttpRequest[T]): Future[HttpResponse[S]] = full.apply(request)
   }
 }

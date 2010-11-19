@@ -51,12 +51,12 @@ class BlueEyesServiceSpecificationSpec extends Specification with BlueEyesServic
       request { 
         contentType(text/html) {
           path("/bar/'foo/bar.html") {
-            get [String] { request: HttpRequest[String] =>
+            get { request: HttpRequest[String] =>
               serviceResponse
             }
           } ~
           path("/asynch/future") {
-            get [String]{ request: HttpRequest[String] =>
+            get { request: HttpRequest[String] =>
               Future.async {
                 serviceResponse
               }
