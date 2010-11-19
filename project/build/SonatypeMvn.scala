@@ -39,6 +39,6 @@ object NexusStagingRelease {
 
     log.info("Releasing staging repository: %s.".format(repositoryId))
 
-    SonatypeMvn(projectRoot, Some("releases"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
+    SonatypeMvn(projectRoot, Some("releases\n"), log, "nexus:staging-release", "-Dnexus.repositoryId=" + repositoryId, "-Dnexus.description=repository release: " + repositoryId)
   }
 }
