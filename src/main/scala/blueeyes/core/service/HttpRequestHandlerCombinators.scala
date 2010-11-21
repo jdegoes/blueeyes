@@ -44,6 +44,32 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
+  /**
+   * <pre>
+   * path("/foo") {
+   *   ...
+   * } ~ orFail { request => BadRequest -> "The path " + request.path + " is malformed" }
+   * </pre>
+   */
+  def orFail[T, S](h: HttpRequest[T] => (HttpFailure, String)): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = true
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val fail = h(r)
+      
+      Future.dead(HttpException(fail._1, fail._2))
+    }
+  }
+  
+  /**
+   * <pre>
+   * path("/foo") {
+   *   ...
+   * } ~ orFail("The path is malformed")
+   * </pre>
+   */
+  def orFail[T, S](msg: String): HttpRequestHandler2[T, S] = orFail { request => HttpStatusCodes.BadRequest -> msg }
+  
   /** The path end combinator creates a handler that is defined only for paths 
    * that are fully matched.
    */
@@ -58,6 +84,118 @@ trait HttpRequestHandlerCombinators {
   def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { toPartial(h) } }
   def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { toPartial(h) } }
   def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { toPartial(h) } }
+
+  /**
+   * Extracts data from the request. The extractor combinators can be used to 
+   * factor out extraction logic that's duplicated across a range of paths or
+   * methods.
+   * <pre>
+   * extract(_.parameters('username)) { username =>
+   *   ...
+   * }
+   * </pre>
+   */
+  def extract[T, S, E1](extractor: HttpRequest[T] => E1)(h: E1 => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val extracted = extractor(r)
+        
+        h(extracted).isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val extracted = extractor(r)
+      
+      h(extracted).apply(r)
+    }
+  }
+  
+  /**
+   * <pre>
+   * extract(r => (r.parameters('username), r.parameters('password))) { (username, password) =>
+   *   ...
+   * }
+   * </pre>
+   */
+  def extract[T, S, E1, E2](extractor: HttpRequest[T] => (E1, E2))(h: (E1, E2) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val extracted = extractor(r)
+        
+        h(extracted._1, extracted._2).isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val extracted = extractor(r)
+      
+      h(extracted._1, extracted._2).apply(r)
+    }
+  }
+  
+  def extract[T, S, E1, E2, E3](extractor: HttpRequest[T] => (E1, E2, E3))(h: (E1, E2, E3) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val extracted = extractor(r)
+        
+        h(extracted._1, extracted._2, extracted._3).isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val extracted = extractor(r)
+      
+      h(extracted._1, extracted._2, extracted._3).apply(r)
+    }
+  }
+  
+  def extract[T, S, E1, E2, E3, E4](extractor: HttpRequest[T] => (E1, E2, E3, E4))(h: (E1, E2, E3, E4) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val extracted = extractor(r)
+        
+        h(extracted._1, extracted._2, extracted._3, extracted._4).isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val extracted = extractor(r)
+      
+      h(extracted._1, extracted._2, extracted._3, extracted._4).apply(r)
+    }
+  }
+  
+  def extract[T, S, E1, E2, E3, E4, E5](extractor: HttpRequest[T] => (E1, E2, E3, E4, E5))(h: (E1, E2, E3, E4, E5) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val extracted = extractor(r)
+        
+        h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val extracted = extractor(r)
+      
+      h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).apply(r)
+    }
+  }
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
