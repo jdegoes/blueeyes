@@ -24,7 +24,7 @@ trait HttpResponseHandlerCombinators {
     apply((request: HttpRequest[T]) => request.copy(version = version))(h)
 
   def contentType[T, S](mimeType: MimeType)(h: HttpResponseHandler[T, S]): HttpResponseHandler[T, S] =
-    apply((request: HttpRequest[T]) => request.copy(headers = request.headers + Tuple2("content-type", mimeType.value)))(h)
+    apply((request: HttpRequest[T]) => request.copy(headers = request.headers + Tuple2("Content-Type", mimeType.value)))(h)
 
   private def apply[T, S](copy: (HttpRequest[T]) => HttpRequest[T])(h: HttpResponseHandler[T, S]) = {
     (request: HttpRequest[T]) => (
