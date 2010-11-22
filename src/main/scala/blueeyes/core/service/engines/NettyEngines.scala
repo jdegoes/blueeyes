@@ -18,6 +18,7 @@ import org.jboss.netty.util.internal.ExecutorUtil
 import net.lag.logging.Logger
 import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
 import blueeyes.core.http._
+import java.io.ByteArrayOutputStream
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -133,12 +134,19 @@ trait NettyEngineString extends NettyEngine[String]{ self: HttpServer[String] =>
 
 object NettyBijections{
   val ChannelBufferToByteArray = new Bijection[ChannelBuffer, Array[Byte]]{
-    def apply(content: ChannelBuffer) = content.array()
+    def apply(content: ChannelBuffer) = {
+      val stream = new ByteArrayOutputStream()
+      try {
+        content.readBytes(stream, content.readableBytes)
+        stream.toByteArray
+      }
+      finally stream.close
+    }
     def unapply(content: Array[Byte]) = ChannelBuffers.copiedBuffer(content)
   }
 
   val ChannelBufferToString = new Bijection[ChannelBuffer, String]{
-    def apply(content: ChannelBuffer) = content.toString(CharsetUtil.UTF_8)
+    def apply(content: ChannelBuffer) = new String(ChannelBufferToByteArray.apply(content), CharsetUtil.UTF_8) 
     def unapply(content: String)      = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8)
   }
 }

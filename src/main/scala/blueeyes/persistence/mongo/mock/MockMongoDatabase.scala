@@ -154,7 +154,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
         case e: String => "\"" + e + "\""
         case _ => entry._1
       }
-      val entryValue = renderJObject(JArray(entry._2))
+      val entryValue    = renderJObject(JArray(entry._2))
       val reducedObject = RhinoScript(reduceScriptPattern.format(reduce, entryKey, entryValue))().get
       Tuple2(entry._1, reducedObject)
     })
@@ -171,10 +171,9 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
       case _ => error("value is not Json")
     }
     val mapScriptPattern = """var record  = %s; record.map  = %s; var emit = function(k, v){emitter.emit(k, v)}; record.map()"""
-    val objects            = search(filter)
-    val mapped             = ValuesGroup[Any, JObject](keyTransformer _, valueTransformer _)
+    val mapped          = ValuesGroup[Any, JObject](keyTransformer _, valueTransformer _)
 
-    objects.foreach(jobject => RhinoScript(mapScriptPattern.format(renderJObject(jobject), map))(Map("emitter" -> mapped)))
+    search(filter).foreach(jobject => RhinoScript(mapScriptPattern.format(renderJObject(jobject), map))(Map("emitter" -> mapped)))
 
     mapped.group
   }
