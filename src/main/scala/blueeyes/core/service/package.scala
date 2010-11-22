@@ -12,4 +12,6 @@ package object service extends HttpRequestHandlerCombinators with
   
   type HttpRequestHandlerFull[T]     = HttpRequest[T] => Future[HttpResponse[T]]
   type HttpRequestHandlerFull2[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
+
+  type HttpResponseHandler[T, S] = HttpRequest[T] => (HttpRequest[T], (HttpResponse[T] => Future[S]))
 }
