@@ -15,5 +15,5 @@ trait HttpClient2 {
     }
   }
 
-  def doRequest[T, S](request: HttpRequest[T]): Future[HttpResponse[T]]
+  protected def doRequest[T, S](request: HttpRequest[T]): Future[HttpResponse[T]]
 }

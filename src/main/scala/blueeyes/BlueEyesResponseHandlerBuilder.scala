@@ -5,7 +5,7 @@ import core.http._
 import core.service.HttpResponseHandlerCombinators
 import util.FutureImplicits
 
-trait BlueEyesClientBuilderBase[T] extends HttpResponseHandlerCombinators with
+trait BlueEyesResponseHandlerBuilderBase[T] extends HttpResponseHandlerCombinators with
     FutureImplicits with
     HttpHeaderImplicits with
     HttpStatusImplicits with
@@ -14,6 +14,6 @@ trait BlueEyesClientBuilderBase[T] extends HttpResponseHandlerCombinators with
     HttpNumberImplicits{
 }
 
-trait BlueEyesClientBuilder extends BlueEyesClientBuilderBase[Array[Byte]] with BijectionsByteArray
+trait BlueEyesResponseHandlerBuilder extends BlueEyesResponseHandlerBuilderBase[Array[Byte]] with BijectionsByteArray
 
-trait BlueEyesClientBuilderString extends BlueEyesClientBuilderBase[String] with BijectionsString
+trait BlueEyesResponseHandlerBuilderString extends BlueEyesResponseHandlerBuilderBase[String] with BijectionsString
