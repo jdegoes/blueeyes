@@ -9,5 +9,5 @@ case class HttpException(failure: HttpFailure, reason: String) extends Exception
 object HttpException {
   def apply(failure: HttpFailure): HttpException = new HttpException(failure, failure.defaultMessage)
   
-  def apply(failure: HttpFailure, cause: Throwable): HttpException = new HttpException(failure, cause.fullStackTrace)
+  def apply(failure: HttpFailure, cause: Throwable): HttpException = new HttpException(failure, cause.getMessage)
 }

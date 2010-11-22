@@ -103,7 +103,7 @@ trait HttpRequestHandlerCombinators {
         h(extracted).isDefinedAt(r)
       }
       catch {
-        case _ => false
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
     
@@ -129,7 +129,7 @@ trait HttpRequestHandlerCombinators {
         h(extracted._1, extracted._2).isDefinedAt(r)
       }
       catch {
-        case _ => false
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
     
@@ -148,7 +148,7 @@ trait HttpRequestHandlerCombinators {
         h(extracted._1, extracted._2, extracted._3).isDefinedAt(r)
       }
       catch {
-        case _ => false
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
     
@@ -167,7 +167,7 @@ trait HttpRequestHandlerCombinators {
         h(extracted._1, extracted._2, extracted._3, extracted._4).isDefinedAt(r)
       }
       catch {
-        case _ => false
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
     
@@ -186,7 +186,7 @@ trait HttpRequestHandlerCombinators {
         h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).isDefinedAt(r)
       }
       catch {
-        case _ => false
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
     
@@ -196,6 +196,44 @@ trait HttpRequestHandlerCombinators {
       h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).apply(r)
     }
   }
+  
+  /** A special-case extractor for parameters.
+   * <pre>
+   * parameter('token) { token =>
+   *   get {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+  def parameter[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    request.parameters(s1)
+  } { h }
+
+  /** A special-case extractor for parameters.
+   * <pre>
+   * parameters('username, 'password) { (username, password) =>
+   *   get {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */  
+  def parameters[T, S](s1: Symbol, s2: Symbol)(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+    (request.parameters(s1), request.parameters(s2))
+  } { h }
+  
+  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+    (request.parameters(s1), request.parameters(s2), request.parameters(s3))
+  } { h }
+  
+  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+    (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4))
+  } { h }
+  
+  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+    (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
+  } { h }
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
