@@ -1,4 +1,4 @@
-import java.io.{FileInputStream, File}
+import java.io.{InputStreamReader, BufferedReader, FileInputStream, File}
 import java.util.Properties
 import sbt._
 

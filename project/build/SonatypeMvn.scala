@@ -34,6 +34,15 @@ object NexusStagingClose {
   }
 }
 
+object NexusStagingDrop {
+  def apply(projectRoot: Path, repositoryId: String, log: Logger) = {
+
+    log.info("Deleting staging repository: %s.".format(repositoryId))
+
+    SonatypeMvn(projectRoot, None, log, "nexus:staging-drop", "-Dnexus.repositoryId=" + repositoryId)
+  }
+}
+
 object NexusStagingRelease {
   def apply(projectRoot: Path, repositoryId: String, log: Logger) = {
 

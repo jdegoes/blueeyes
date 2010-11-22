@@ -8,6 +8,10 @@ trait PublishingProject extends DefaultProject{
   override def moduleID: String = normalizedName
 
   override def publishAction = task{
+
+    val staleRepositories = NexusStagingList(info.projectPath, log)
+    staleRepositories.foreach(NexusStagingDrop(info.projectPath, _, log))
+
     incrementVersionAction.run
     super.publishAction.run
     
@@ -23,6 +27,8 @@ trait PublishingProject extends DefaultProject{
     }
     result
   }
+
+
 
 //  lazy val publishSnapshot = publishSnapshotAction
 //  def publishSnapshotAction = task{
