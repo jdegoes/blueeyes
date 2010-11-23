@@ -21,6 +21,7 @@ class MongoOrFilterSpec extends Specification{
     ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(("address.city" === "B") :: ("address.street" === "2") :: ("address.code" === 1) :: Nil))
     ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(("address.city" === "B") :: ("address.street" === "2") :: ("address.code" === 1) :: Nil))
   }
+
   "2 unary_! results to the same filter" in{
     (orFilter).unary_!.unary_! mustEqual (orFilter)
   }
