@@ -51,7 +51,6 @@ sealed trait MongoFilter { self =>
   
   def || (that: MongoFilter) = (self, that) match{
     case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
-    case (x: MongoFieldFilter, y: MongoOrFilter) => MongoOrFilter(x :: y.queries)
     case (_, y: MongoOrFilter) => MongoOrFilter(self :: y.queries)
     case (x: MongoOrFilter, _) => MongoOrFilter(x.queries :+ that)
     case _  => MongoOrFilter(self :: that :: Nil)
