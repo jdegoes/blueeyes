@@ -13,7 +13,7 @@ import blueeyes.core.data.Bijection
 sealed trait HttpClientXLightWebEngines[T]{
   def contentBijection: Bijection[BodyDataSource, T]
 
-  def doRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
+  protected def doRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
     new Future[HttpResponse[T]]() {
       executeRequest(request, new IHttpResponseHandler() {
         def onResponse(response: IHttpResponse) {
@@ -80,16 +80,16 @@ sealed trait HttpClientXLightWebEngines[T]{
   private def postRequest(request: HttpRequest[T], url: String) = {
     request.content.map(v => {
       val contentType = requestContentType(request).value
-      if (v.isInstanceOf[String]) new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      if (v.isInstanceOf[Array[Byte]]) new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      if (v.isInstanceOf[String])       new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
       else error("unsupported body type")
     }).getOrElse[XLHttpRequest](new PostRequest(url))
   }
   private def putRequest(request: HttpRequest[T], url: String) = {
     request.content.map(v => {
       val contentType = requestContentType(request).value
-      if (v.isInstanceOf[String]) new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      if (v.isInstanceOf[Array[Byte]]) new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      if (v.isInstanceOf[String])       new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
       else error("unsupported content type")
     }).getOrElse[XLHttpRequest](new PutRequest(url))
   }
