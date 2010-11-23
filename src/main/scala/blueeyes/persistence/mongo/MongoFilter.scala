@@ -52,7 +52,9 @@ sealed trait MongoFilter { self =>
   def || (that: MongoFilter) = (self, that) match{
     case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
     case (x: MongoFieldFilter, y: MongoOrFilter) => MongoOrFilter(x :: y.queries)
-    case (x: MongoOrFilter, y: MongoFieldFilter) => MongoOrFilter(x.queries :+ y)
+    case (x: MongoOrFilter, y: MongoFieldFilter) => MongoOrFilter(x.queries ++ List(y))
+    case (x: MongoAndFilter, y: MongoOrFilter)   => MongoOrFilter(List(x) ++ y.queries)
+    case (x: MongoOrFilter, y: MongoAndFilter)   => MongoOrFilter(x.queries ++ List(y))
     case _  => MongoOrFilter(self :: that :: Nil)
   }
 }
