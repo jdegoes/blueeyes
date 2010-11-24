@@ -87,15 +87,15 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   }
   
   def shift[T](r: HttpRequest[T]): HttpRequest[T] = {
-    parser(new CharSequenceReader(r.path)) match {
+    parser(new CharSequenceReader(r.subpath)) match {
       case Success(result, next) => 
         val remainingPath = next.source.subSequence(next.offset, next.source.length).toString
         
-        r.withPath(remainingPath)
+        r.withSubpath(remainingPath)
       
-      case Failure(msg, _) => parseFailure(msg, r.path)
+      case Failure(msg, _) => parseFailure(msg, r.subpath)
       
-      case Error(msg, _) => parseError(msg, r.path)
+      case Error(msg, _) => parseError(msg, r.subpath)
     }
   }
   

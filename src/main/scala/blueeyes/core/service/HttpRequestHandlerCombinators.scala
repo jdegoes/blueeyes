@@ -20,10 +20,10 @@ trait HttpRequestHandlerCombinators {
    * </pre>
    */
   def path[T, S](path: RestPathPattern)(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.path) && h.isDefinedAt(path.shift(r))
+    def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.subpath) && h.isDefinedAt(path.shift(r))
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val pathParameters = path(r.path)
+      val pathParameters = path(r.subpath)
       
       val shiftedRequest = path.shift(r)
       
