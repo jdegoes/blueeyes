@@ -1,3 +1,8 @@
 package blueeyes.core.service
 
-class HttpClient2Spec
+import org.specs.Specification
+
+class HttpClient2Spec extends Specification  with HttpResponseHandlerCombinators{
+
+
+}

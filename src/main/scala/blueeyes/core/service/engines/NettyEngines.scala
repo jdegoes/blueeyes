@@ -10,7 +10,6 @@ import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import blueeyes.util.Future
 import blueeyes.util.Future._
 import org.jboss.netty.bootstrap.ServerBootstrap
-import java.net.InetSocketAddress
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.{Executors, Executor}
 import org.jboss.netty.channel._
@@ -19,6 +18,7 @@ import net.lag.logging.Logger
 import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder, HttpRequest => NettyHttpRequest}
 import blueeyes.core.http._
 import java.io.ByteArrayOutputStream
+import java.net.{InetAddress, InetSocketAddress}
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -35,10 +35,11 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       try {
         val executor = Executors.newCachedThreadPool()
         val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
+        val address   = new InetSocketAddress(self.port)
 
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log)))
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log), address))
 
-        bootstrap.bind(new InetSocketAddress(self.port))
+        bootstrap.bind(address)
 
         server = Some(bootstrap)
         serverExecutor = Some(executor)
@@ -109,11 +110,11 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
   }
 }
 
-class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler, address: InetSocketAddress) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
     val pipeline = Channels.pipeline()
 
-    pipeline.addLast("decoder", new HttpRequestDecoder())
+    pipeline.addLast("decoder", new FulURIHttpRequestDecoder("http", address))
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
     pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
@@ -121,6 +122,14 @@ class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler) exten
     pipeline.addLast("handler", requestChannelHandler)
 
     pipeline
+  }
+}
+
+class FulURIHttpRequestDecoder(protocol: String, address: InetSocketAddress) extends HttpRequestDecoder{
+  private val baseUri = """%s://%s:%d""".format(protocol, address.getHostName, address.getPort)
+  override def createMessage(initialLine: Array[String]) = {
+    initialLine(1) = baseUri + initialLine(1)
+    super.createMessage(initialLine)
   }
 }
 
