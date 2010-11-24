@@ -41,6 +41,10 @@ class JObjectsFilterSpec extends Specification{
 ] }""") :: Nil
 
 
+  "selects all objects by MongoFilterAll" in{
+    import MongoFilterImplicits._
+    JObjectsFilter(jobjects, MongoFilterAll) mustEqual(jobjects)
+  }
   "selects objects by field query" in{
     import MongoFilterImplicits._
     JObjectsFilter(jobjects, MongoFieldFilter("address.city", $eq,"B")) mustEqual(jObject1 :: jObject2 :: Nil)

@@ -135,7 +135,10 @@ trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
 
 trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
   def apply(collection: DatabaseCollection) = {
-    collection.update(filter, value, upsert, multi)
+    value match {
+      case MongoUpdateNothing =>
+      case _ => collection.update(filter, value, upsert, multi)
+    }
     JNothing
   }
   

@@ -53,6 +53,8 @@ sealed trait MongoFilter { self =>
     case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
     case (_, y: MongoOrFilter) => MongoOrFilter(self :: y.queries)
     case (x: MongoOrFilter, _) => MongoOrFilter(x.queries :+ that)
+    case (MongoFilterAll, _)   => that
+    case (_, MongoFilterAll)   => self
     case _  => MongoOrFilter(self :: that :: Nil)
   }
 }

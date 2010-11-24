@@ -9,8 +9,7 @@ private[mock] object MockMongoFiltersImplementation{
 
   object JObjectsFilter{
     def apply(jobjects: List[JValue], filter: MongoFilter):  List[JValue] = filter match{
-      case MongoFilterAll => jobjects
-      
+      case MongoFilterAll               => jobjects
       case x : MongoFieldFilter         => MongoFieldFilterEvaluator(jobjects, x)
       case x : MongoOrFilter            => MongoOrFilterEvaluator   (jobjects, x)
       case x : MongoAndFilter           => MongoAndFilterEvaluator  (jobjects, x)

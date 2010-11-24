@@ -205,6 +205,15 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jObject2 :: jObject1  :: Nil)
   }
+  "does not update object by MongoUpdateNothing" in{
+    import blueeyes.persistence.mongo.MongoFilterImplicits._
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.update(Some(MongoFieldFilter("address.city", $eq,"A")), MongoUpdateNothing, false, true)
+
+    collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jObject1  :: jObject :: Nil)
+  }
   "update only one object when multi is false" in{
     val collection = newCollection
 

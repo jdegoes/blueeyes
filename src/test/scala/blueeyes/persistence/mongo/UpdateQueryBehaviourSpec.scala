@@ -23,4 +23,16 @@ class UpdateQueryBehaviourSpec  extends Specification {
 
     result must be (JNothing)
   }
+  "Does not call collection method when update is MongoUpdateNothing" in{
+    import MongoFilterImplicits._
+
+    val filter   = Some("name" === "Joe")
+
+    val query  = update("collection").set(MongoUpdateNothing).where("name" === "Joe")
+    val result = query(collection)
+
+    Mockito.verify(collection, times(0)).update(filter, MongoUpdateNothing, false, false)
+
+    result must be (JNothing)
+  }
 }

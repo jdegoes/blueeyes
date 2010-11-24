@@ -11,7 +11,7 @@ class MongoUpdateFieldValueSpec  extends Specification{
     import MongoFilterImplicits._
     MongoUpdateFieldValue($inc, "n", "" === 1).toJValue mustEqual  (JObject(JField("$inc", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
   }
-  "build valid json for neset MongoQuery" in {
+  "build valid json for set MongoQuery" in {
     import MongoFilterImplicits._
     MongoUpdateFieldValue($pull, "foo", "bar" === 1).toJValue mustEqual  (JObject(JField("$pull", JObject(JField("foo", JObject(JField("bar", JInt(1)) :: Nil)) :: Nil)) :: Nil))
   }

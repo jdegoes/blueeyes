@@ -77,8 +77,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   }
 
   private def update(jobject: JObject, value : MongoUpdateValue): JObject = value match {
-    case MongoUpdateNothing => MongoUpdateNothing.toJValue
-    
+    case MongoUpdateNothing         => jobject
     case x: MongoUpdateObject       => x.value
     case x: MongoUpdateFieldValue   => {
       def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))

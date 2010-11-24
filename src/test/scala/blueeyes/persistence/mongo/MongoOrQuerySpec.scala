@@ -15,7 +15,7 @@ class MongoOrFilterSpec extends Specification{
   }
   "unary_! use 'and' use with negative operators of subfilters " in{
     (orFilter).unary_! mustEqual (filter1.unary_! && filter2.unary_!)
-  }  
+  }
   "several or does not create recursion" in{
     import MongoFilterImplicits._
     ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(("address.city" === "B") :: ("address.street" === "2") :: ("address.code" === 1) :: Nil))
@@ -24,5 +24,9 @@ class MongoOrFilterSpec extends Specification{
 
   "2 unary_! results to the same filter" in{
     (orFilter).unary_!.unary_! mustEqual (orFilter)
+  }
+  "or with MongoFilterAll return filter" in{
+    MongoFilterAll || filter1 mustEqual (filter1)
+    filter1 || MongoFilterAll mustEqual (filter1)
   }
 }

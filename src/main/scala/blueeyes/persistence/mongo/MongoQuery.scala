@@ -144,6 +144,8 @@ sealed trait MongoUpdateValue {
 
 case object MongoUpdateNothing extends MongoUpdateValue {
   def toJValue: JObject = JObject(Nil)
+
+  def & (that: MongoUpdateFieldValue): MongoUpdateFieldValue = that
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdateValue{

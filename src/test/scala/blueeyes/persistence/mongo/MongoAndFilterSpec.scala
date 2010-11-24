@@ -23,7 +23,7 @@ class MongoAndFilterSpec extends Specification{
 
   "combine ANDs with ORs" in {
     import MongoFilterImplicits._
-    val exam: MongoOrFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
+    val exam: MongoFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
     val cfilter: MongoFilter = ((filter1 && filter2 && filter3) || (filter2 && filter3) || (filter1 && filter3)) //|| (filter1 && filter2)
     cfilter.filter mustEqual
     JsonParser.parse("""
@@ -55,10 +55,6 @@ class MongoAndFilterSpec extends Specification{
       }]
     }
   """)
-
-
-    //println(Printer.pretty(render(cfilter.filter)))
-    //cfilter.filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields))
   }
 
   "unary_! use 'or' use with negative operators of subfilters " in{
@@ -68,4 +64,10 @@ class MongoAndFilterSpec extends Specification{
   "2 unary_! result to the same filter" in{
     (andFilter).unary_!.unary_! mustEqual (andFilter)
   }
+
+  "and with MongoFilterAll return filter" in{
+    (MongoFilterAll && filter2).filter mustEqual (filter2.filter)
+    (filter2 && MongoFilterAll).filter mustEqual (filter2.filter)
+  }
+  
 }
