@@ -19,6 +19,7 @@ import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEnco
 import blueeyes.core.http._
 import java.io.ByteArrayOutputStream
 import java.net.{InetAddress, InetSocketAddress}
+import net.lag.configgy.ConfigMap
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -33,13 +34,13 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       startStopLock.writeLock.lock()
 
       try {
-        val executor = Executors.newCachedThreadPool()
-        val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-        val address   = new InetSocketAddress(self.port)
+        val executor     = Executors.newCachedThreadPool()
+        val bootstrap    = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
+        val inteIterface = InetInrerfaceLookup(config, port)
 
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log), address))
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log), inteIterface._2, self.port))
 
-        bootstrap.bind(address)
+        bootstrap.bind(inteIterface._1)
 
         server = Some(bootstrap)
         serverExecutor = Some(executor)
@@ -110,11 +111,11 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
   }
 }
 
-class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler, address: InetSocketAddress) extends ChannelPipelineFactory {
+class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler, host: String, port: Int) extends ChannelPipelineFactory {
   def getPipeline(): ChannelPipeline = {
-    val pipeline = Channels.pipeline()
+    val pipeline     = Channels.pipeline()
 
-    pipeline.addLast("decoder", new FulURIHttpRequestDecoder("http", address))
+    pipeline.addLast("decoder", new FullURIHttpRequestDecoder("http", host, port))
     pipeline.addLast("encoder", new HttpResponseEncoder())
 
     pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
@@ -125,8 +126,14 @@ class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler, addre
   }
 }
 
-class FulURIHttpRequestDecoder(protocol: String, address: InetSocketAddress) extends HttpRequestDecoder{
-  private val baseUri = """%s://%s:%d""".format(protocol, address.getHostName, address.getPort)
+object InetInrerfaceLookup{
+  def apply(config: ConfigMap, port: Int) = {
+    config.getString("address").map(v => Tuple2(new InetSocketAddress(v, port), v)).getOrElse(Tuple2(new InetSocketAddress(port), InetAddress.getLocalHost().getHostName()))
+  }
+}
+
+class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int) extends HttpRequestDecoder{
+  private val baseUri = """%s://%s:%d""".format(protocol, host, port)
   override def createMessage(initialLine: Array[String]) = {
     initialLine(1) = baseUri + initialLine(1)
     super.createMessage(initialLine)

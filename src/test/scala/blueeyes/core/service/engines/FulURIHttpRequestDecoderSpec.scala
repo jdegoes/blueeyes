@@ -1,3 +1,0 @@
-package blueeyes.core.service.engines
-
-class FulURIHttpRequestDecoderSpec
