@@ -132,7 +132,7 @@ class RestPathPatternSpec extends Specification{
   "shift request uri leftward by matched pattern" in {
     val pattern: RestPathPattern = "/foo/'param"
     
-    pattern.shift(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz")) mustEqual(HttpRequest(method = HttpMethods.GET, uri = "/baz"))
+    pattern.shift(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz")) mustEqual(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz").withSubpath("/baz"))
   }
   
   private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
