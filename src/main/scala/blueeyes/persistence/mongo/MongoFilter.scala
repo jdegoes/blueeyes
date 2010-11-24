@@ -57,6 +57,12 @@ sealed trait MongoFilter { self =>
   }
 }
 
+case object MongoFilterAll extends MongoFilter {
+  def filter: JValue = JObject(Nil)
+  
+  def unary_! : MongoFilter = this
+}
+
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[_]) extends MongoFilter { self =>
   def filter: JValue = {
     val value = operator match {
