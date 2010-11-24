@@ -20,6 +20,7 @@ import blueeyes.core.http._
 import java.io.ByteArrayOutputStream
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
+import blueeyes.util.RichThrowableImplicits._
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -38,7 +39,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
         val bootstrap    = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
         val inteIterface = InetInrerfaceLookup(config, port)
 
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(new NettyRequestHandler[T](self, log), inteIterface._2, self.port))
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(inteIterface._2, self.port))
 
         bootstrap.bind(inteIterface._1)
 
@@ -73,6 +74,22 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
   }
 
   implicit def contentBijection: Bijection[ChannelBuffer, T]
+
+  class HttpServerPipelineFactory(host: String, port: Int) extends ChannelPipelineFactory {
+    def getPipeline(): ChannelPipeline = {
+      val pipeline     = Channels.pipeline()
+
+      pipeline.addLast("decoder", new FullURIHttpRequestDecoder("http", host, port))
+      pipeline.addLast("encoder", new HttpResponseEncoder())
+
+      pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
+
+      pipeline.addLast("handler", new NettyRequestHandler[T](self, log))
+
+      pipeline
+    }
+  }
+  
 }
 
 class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
@@ -81,6 +98,19 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
     val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)
 
     handleRequest(request).deliverTo(writeResponse(event) _)
+  }
+
+  override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+    super.channelDisconnected(ctx, e)    
+  }
+
+  override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
+    val error    = e.getCause
+    val response = toNettyResponse(toResponse(error))
+
+    log.error(error, "ExceptionCaught")
+    e.getChannel().write(response)
+    e.getChannel().close
   }
 
   private def handleRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
@@ -95,7 +125,7 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
 
   private def toResponse(th: Throwable) = th match{
     case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
-    case _ => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, th.getMessage.replace("\n", " ")))
+    case _ => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, th.fullStackTrace.replace("\n", " ").substring(0, 3500)))
   }
 
   private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){
@@ -108,21 +138,6 @@ class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger
     val future = e.getChannel().write(nettyResponse)
 
     if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
-  }
-}
-
-class HttpServerPipelineFactory(val requestChannelHandler: ChannelHandler, host: String, port: Int) extends ChannelPipelineFactory {
-  def getPipeline(): ChannelPipeline = {
-    val pipeline     = Channels.pipeline()
-
-    pipeline.addLast("decoder", new FullURIHttpRequestDecoder("http", host, port))
-    pipeline.addLast("encoder", new HttpResponseEncoder())
-
-    pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
-
-    pipeline.addLast("handler", requestChannelHandler)
-
-    pipeline
   }
 }
 
@@ -166,13 +181,3 @@ object NettyBijections{
     def unapply(content: String)      = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8)
   }
 }
-//  private def encodeCookie(request: NettyHttpRequest, response: NettyHttpResponse) = {
-//    val cookieString = request.getHeader(Names.COOKIE)
-//    if (cookieString != null) {
-//      val cookieDecoder = new CookieDecoder()
-//      val cookieEncoder = new CookieEncoder(true)
-//      val cookies       = cookieDecoder.decode(cookieString)
-//      cookies.foreach(cookieEncoder.addCookie(_))
-//      response.addHeader(Names.SET_COOKIE, cookieEncoder.encode())
-//    }
-//  }
