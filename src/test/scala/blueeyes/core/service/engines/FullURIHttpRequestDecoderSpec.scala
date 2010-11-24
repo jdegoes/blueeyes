@@ -12,4 +12,10 @@ class FullURIHttpRequestDecoderSpec extends Specification{
     message.getUri              mustEqual("http://google:8080/foo")
     message.getProtocolVersion  mustEqual(HttpVersion.HTTP_1_1)
   }
+  "creates full uri when first slash is missing" in{
+    val decoder = new FullURIHttpRequestDecoder("http", "google", 8080)
+    val message = decoder.createMessage(Array("GET", "foo", "HTTP/1.1")).asInstanceOf[DefaultHttpRequest]
+
+    message.getUri              mustEqual("http://google:8080/foo")
+  }
 }

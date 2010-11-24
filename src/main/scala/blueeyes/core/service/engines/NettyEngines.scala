@@ -95,7 +95,8 @@ private[engines] object InetInrerfaceLookup{
 private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int) extends HttpRequestDecoder{
   private val baseUri = """%s://%s:%d""".format(protocol, host, port)
   override def createMessage(initialLine: Array[String]) = {
-    initialLine(1) = baseUri + initialLine(1)
+    val path = initialLine(1)
+    initialLine(1) = baseUri + (if (path.startsWith("/")) path else "/" + path)
     super.createMessage(initialLine)
   }
 }
