@@ -12,9 +12,9 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpNumberImplicits._
-import blueeyes.core.http.{HttpMethod, HttpVersion, HttpMethods, HttpVersions, HttpRequest, HttpResponse, HttpStatusCode, HttpStatus, HttpStatusCodes, MimeType}
+import blueeyes.core.http._
 
-class HttpClientXLightWebSpec extends Specification {
+class HttpClientXLightWebSpec extends Specification with HttpClientXLightWebEnginesString{
   val duration = 250
   val retries = 10
   val skip = true
@@ -26,7 +26,9 @@ class HttpClientXLightWebSpec extends Specification {
   
   "Support GET requests with status OK" in {
     skipper()()
-    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php")
+
+    println("RUNNING")
+    val f = apply(HttpRequest[String](HttpMethods.GET, "http://localhost/test/echo.php"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
@@ -34,7 +36,7 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support GET requests with status Not Found" in {
     skipper()()
-    val f = new HttpClientXLightWebString().get("http://localhost/bogus")
+    val f = apply(HttpRequest[String](HttpMethods.GET, "http://localhost/bogus"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.NotFound)
@@ -42,7 +44,7 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support GET requests with query params" in {
     skipper()()
-    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php?param1=a&param2=b")
+    val f = apply(HttpRequest[String](HttpMethods.GET, "http://localhost/test/echo.php?param1=a&param2=b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -51,7 +53,7 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support POST requests with query params" in {
     skipper()()
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php?param1=a&param2=b")
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php?param1=a&param2=b"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -60,8 +62,8 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support POST requests with request params" in {
     skipper()()
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
-                                            parameters=Map('param1 -> "a", 'param2 -> "b"))
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php",
+                                            parameters=Map('param1 -> "a", 'param2 -> "b")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -71,7 +73,7 @@ class HttpClientXLightWebSpec extends Specification {
   "Support POST requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", content=Some(content))
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php", content=Some(content)))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))
@@ -81,9 +83,9 @@ class HttpClientXLightWebSpec extends Specification {
   "Support POST requests with body and request params" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php",
                                              content=Some(content), 
-                                             parameters=Map('param1 -> "a", 'param2 -> "b"))
+                                             parameters=Map('param1 -> "a", 'param2 -> "b")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must equalIgnoreSpace("param1=a&param2=b" + content)
@@ -93,9 +95,9 @@ class HttpClientXLightWebSpec extends Specification {
   "Support PUT requests with body" in {
     skipper()()
     val content = "Hello, world"
-    val f = new HttpClientXLightWebString().put("http://localhost/test/echo.php", 
+    val f = apply(HttpRequest[String](HttpMethods.PUT, "http://localhost/test/echo.php",
                                             content=Some(content), 
-                                            headers=Map(`Content-Length`(100)))
+                                            headers=Map(`Content-Length`(100))))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -103,8 +105,8 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support GET requests with header" in {
     skipper()()
-    val f = new HttpClientXLightWebString().get("http://localhost/test/echo.php?headers=true", 
-                                            headers=Map("Fooblahblah" -> "washere", "param2" -> "1"))
+    val f = apply(HttpRequest[String](HttpMethods.GET, "http://localhost/test/echo.php?headers=true",
+                                            headers=Map("Fooblahblah" -> "washere", "param2" -> "1")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must include("Fooblahblah: washere")
@@ -114,9 +116,9 @@ class HttpClientXLightWebSpec extends Specification {
   "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
     skipper()()
     val content = "<html></html>"
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php",
                                              content=Some(content), 
-                                             headers=Map(`Content-Type`(text/html), `Content-Length`(100)))
+                                             headers=Map(`Content-Type`(text/html), `Content-Length`(100))))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must beEqual(content)
@@ -126,8 +128,8 @@ class HttpClientXLightWebSpec extends Specification {
   "Support POST requests with large payload" in {
     skipper()()
     val content = Array.fill(1024*1000)(0).toList.mkString("")
-    val f = new HttpClientXLightWebString().post("http://localhost/test/echo.php", 
-                                             content=Some(content))
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php",
+                                             content=Some(content)))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.content.get.trim must beEqual(content)
@@ -136,7 +138,7 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support HEAD requests" in {
     skipper()()
-    val f = new HttpClientXLightWebString().head("http://localhost/test/echo.php")
+    val f = apply(HttpRequest[String](HttpMethods.HEAD, "http://localhost/test/echo.php"))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -144,63 +146,18 @@ class HttpClientXLightWebSpec extends Specification {
 
   "Support CONNECT requests" in {
     skip("CONNECT method TBD")
-    val f = new HttpClientXLightWebString().connect("http://localhost/test/echo.php?headers=true", 
-                                                headers=Map("Fooblahblah" -> "washere"))
+    val f = apply(HttpRequest[String](HttpMethods.CONNECT, "http://localhost/test/echo.php?headers=true",
+                                                headers=Map("Fooblahblah" -> "washere")))
     f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 
-  "Support POST requests with JValue" in {
-    skipper()()
-    val person = """
-    { 
-      "person": {
-        "name": "John Doe",
-        "age": 37,
-        "spouse": {
-          "person": {
-            "name": "Jane Doe",
-            "age": 35
-          }
-        }
-      }
-    }
-    """
-    val jvalue = JsonParser.parse(person)
-    val f = new HttpClientXLightWebJValue().post("http://localhost/test/echo.php", content=Some(jvalue))
-    f.deliverTo((res: HttpResponse[JValue]) => {})
-    f.value must eventually(retries, new Duration(duration))(beSomething)
-    f.value.get.status.code must be(HttpStatusCodes.OK)
-    f.value.get.content.get must beEqual(jvalue)
-  }
-
   "Support POST requests with empty body" in {
     skipper()()
-    val f = new HttpClientXLightWebJValue().post("http://localhost/test/echo.php")
-    f.deliverTo((res: HttpResponse[JValue]) => {})
+    val f = apply(HttpRequest[String](HttpMethods.POST, "http://localhost/test/echo.php"))
+    f.deliverTo((res: HttpResponse[String]) => {})
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
 }
-
-class HttpClientXLightWebString extends HttpClientXLightWeb[String] with String2StringTranscoder
-
-class HttpClientXLightWebJValue extends HttpClientXLightWeb[JValue] with Json2StringTranscoder
-
-trait Json2StringTranscoder {
-  def transcode: Bijection[JValue, String] = new Bijection[JValue, String] {
-    def apply(s: JValue)   = compact(render(s))
-    def unapply(t: String) = JsonParser.parse(t)
-  }
-  def mimeType:MimeType = application/json
-}
-
-trait String2StringTranscoder {
-  def transcode: Bijection[String, String] = new Bijection[String, String] {
-    def apply(s: String) = s
-    def unapply(t: String) = t
-  }
-  def mimeType:MimeType = text/plain
-}
-

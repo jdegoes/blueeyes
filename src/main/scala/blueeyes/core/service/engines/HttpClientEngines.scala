@@ -8,12 +8,13 @@ import blueeyes.core.http.HttpHeaders._
 import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
                       OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import blueeyes.core.data.Bijection
+import blueeyes.core.service.HttpClient
 
 
-sealed trait HttpClientXLightWebEngines[T]{
+sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   def contentBijection: Bijection[BodyDataSource, T]
 
-  protected def doRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
+  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
     new Future[HttpResponse[T]]() {
       executeRequest(request, new IHttpResponseHandler() {
         def onResponse(response: IHttpResponse) {

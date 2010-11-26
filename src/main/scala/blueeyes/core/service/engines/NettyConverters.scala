@@ -12,6 +12,7 @@ import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.{ChannelBuffer}
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.Bijection
+import blueeyes.util.QueryParser
 
 trait NettyConverters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -44,8 +45,7 @@ trait NettyConverters {
   }
 
   implicit def fromNettyRequest[T, S](request: NettyHttpRequest, remoteAddres: SocketAddress)(implicit contentBijection: Bijection[ChannelBuffer, T]): HttpRequest[T] = {
-    val queryStringDecoder  = new QueryStringDecoder(request.getUri())
-    val parameters          = queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
+    val parameters          = getParameters(request.getUri())
     val headers             = buildHeaders(request.getHeaders())
     val nettyContent        = request.getContent()
     val content             = if (nettyContent.readable()) Some(contentBijection(nettyContent)) else None
@@ -54,6 +54,11 @@ trait NettyConverters {
     val remoteHost          =  xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+  }
+
+  private def getParameters(uri: String) = {
+    val queryStringDecoder  = new QueryStringDecoder(uri)
+    queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
