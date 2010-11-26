@@ -73,11 +73,10 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
     def getPipeline(): ChannelPipeline = {
       val pipeline     = Channels.pipeline()
 
-      pipeline.addLast("decoder", new FullURIHttpRequestDecoder("http", host, port))
-      pipeline.addLast("encoder", new HttpResponseEncoder())
-
-      pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
-      pipeline.addLast("deflater", new HttpContentCompressor())
+      pipeline.addLast("decoder",     new FullURIHttpRequestDecoder("http", host, port))
+      pipeline.addLast("aggregator",  new HttpChunkAggregator(1048576));
+      pipeline.addLast("encoder",     new HttpResponseEncoder())
+      pipeline.addLast("deflater",    new HttpContentCompressor())
 
       pipeline.addLast("handler", new NettyRequestHandler[T](self, log))
 
