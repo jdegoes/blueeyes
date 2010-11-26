@@ -11,10 +11,10 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.{Executors, Executor}
 import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
-import org.jboss.netty.handler.codec.http.{HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
 import java.io.ByteArrayOutputStream
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
+import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -77,6 +77,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline.addLast("encoder", new HttpResponseEncoder())
 
       pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
+      pipeline.addLast("deflater", new HttpContentCompressor())
 
       pipeline.addLast("handler", new NettyRequestHandler[T](self, log))
 

@@ -12,23 +12,27 @@ import blueeyes.util.Future
 import blueeyes.util.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
-import collection.mutable.ArrayBuffer
 import org.jboss.netty.handler.timeout.TimeoutException
 
 private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   private val futures = new FuturesList[HttpResponse[T]]()
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
-    val nettyRequest   = event.getMessage().asInstanceOf[NettyHttpRequest]
-    val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)
-    val requestFuture  = handleRequest(request)
+    try {
+      val nettyRequest   = event.getMessage().asInstanceOf[NettyHttpRequest]
+      val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)
+      val requestFuture  = handleRequest(request)
 
-    futures + requestFuture
+      futures + requestFuture
 
-    requestFuture.deliverTo(response => {
-      futures - requestFuture
-      writeResponse(event) (response)
-    })
+      requestFuture.deliverTo(response => {
+        futures - requestFuture
+        writeResponse(event) (response)
+      })
+    }
+    catch {
+      case e: Throwable => log.error(e, "Error while request handling. Request=" + event); writeResponse(event) (toResponse(e))
+    }
   }
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
@@ -47,18 +51,16 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   }
 
   private def handleRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    try {
-      if (requestHandler.isDefinedAt(request)) requestHandler(request)
-      else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
-    }
-    catch {
-      case e: Throwable => log.error(e, "Error while request handling. Request=" + request); new Future[HttpResponse[T]]().deliver(toResponse(e))
-    }
+    if (requestHandler.isDefinedAt(request)) requestHandler(request)
+    else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
   }
 
   private def toResponse(th: Throwable) = th match{
     case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
-    case _ => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, th.fullStackTrace.replace("\n", " ").substring(0, 3500)))
+    case _ => {
+      val trace = th.fullStackTrace.replace("\n", " ")
+      HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (trace.length > 3500) trace.substring(0, 3500) else trace))
+    }
   }
 
   private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){

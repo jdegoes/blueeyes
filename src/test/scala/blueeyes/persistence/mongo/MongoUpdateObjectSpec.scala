@@ -1,0 +1,3 @@
+package blueeyes.persistence.mongo
+
+class MongoUpdateObjectSpec
