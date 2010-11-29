@@ -70,6 +70,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val guice       = "com.google.inject"           % "guice"             % "2.0"         % "compile"
   val rhino       = "rhino"                       % "js"                % "1.7R2"       % "compile"
   val xlightweb   = "org.xlightweb"               % "xlightweb"         % "2.13"        % "compile"
+  val codecs      = "commons-codec"               % "commons-codec"     % "1.4"         % "compile"
 
   override def mainClass = Some("blueeyes.BlueEyesDemo")
 }
