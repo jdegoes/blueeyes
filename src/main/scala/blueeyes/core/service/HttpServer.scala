@@ -138,8 +138,13 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
    */
-  lazy val port: Int = config.getInt("port", 8888)
-  
+  lazy val port: Int    = config.getInt("port", 8888)
+
+  /** Retrieves the ssl port the server should be running at, which defaults to
+   * 8889.
+   */
+  lazy val sslPort: Int = config.getInt("sslPort", 8889)
+
   /** The status of the server.
    */
   def status: RunningStatus = _status

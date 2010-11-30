@@ -15,13 +15,15 @@ import java.io.ByteArrayOutputStream
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
 import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
+import org.jboss.netty.handler.ssl.SslHandler
+import security.BlueEyesKeyStoreFactory
+import util.matching.Regex
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
-  private var server: Option[ServerBootstrap]  = None
-  private var serverExecutor: Option[Executor] = None
+  private var servers: List[Tuple2[Executor, ServerBootstrap]]  = Nil
 
   override def start: Future[Unit] = {
     super.start.map(_ => {
@@ -29,23 +31,41 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       startStopLock.writeLock.lock()
 
       try {
-        val executor     = Executors.newCachedThreadPool()
-        val bootstrap    = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-        val inteIterface = InetInrerfaceLookup(config, port)
+        val host = InetInrerfaceLookup.host(config)
 
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory(inteIterface._2, self.port))
+        try {
+          startServers(List(Tuple2(port, new HttpServerPipelineFactory("http", host, port)), Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort))))
 
-        bootstrap.bind(inteIterface._1)
-
-        server = Some(bootstrap)
-        serverExecutor = Some(executor)
+          log.info("Http Netty engine is started using port: " + self.port)
+          log.info("Https Netty engine is started using port: " + self.sslPort)          
+        }
+        catch {
+          case e: Throwable => {
+            log.error("Error while servers start.")
+            stop
+          }
+        }
       }
       finally{
         startStopLock.writeLock.unlock()
       }
 
-      log.info("Netty engine is started using port: " + self.port)
       ()
+    })
+  }
+
+  private def startServers(serversArgs: List[Tuple2[Int, ChannelPipelineFactory]]){
+    serversArgs.foreach(serverArg => {
+      try {
+        val executor = Executors.newCachedThreadPool()
+        val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
+
+        bootstrap.setPipelineFactory(serverArg._2)
+
+        bootstrap.bind(InetInrerfaceLookup.socketAddres(config, serverArg._1))
+
+        servers = Tuple2(executor, bootstrap) :: servers
+      }
     })
   }
 
@@ -55,8 +75,11 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       startStopLock.writeLock.lock()
       
       try {
-        serverExecutor.foreach(ExecutorUtil.terminate(_))
-        server.foreach(_.releaseExternalResources)
+        servers.foreach(server => {
+          ExecutorUtil.terminate(server._1)
+          server._2.releaseExternalResources
+        })
+        servers = Nil
       }
       finally{
         startStopLock.writeLock.unlock()
@@ -69,11 +92,25 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
   implicit def contentBijection: Bijection[ChannelBuffer, T]
 
-  class HttpServerPipelineFactory(host: String, port: Int) extends ChannelPipelineFactory {
+  class HttpsServerPipelineFactory(protocol: String, host: String, port: Int) extends HttpServerPipelineFactory(protocol: String, host, port) {
+    private val keyStore = BlueEyesKeyStoreFactory(config)
+
+    override def getPipeline(): ChannelPipeline = {
+      val pipeline = super.getPipeline
+
+      val engine = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password).createSSLEngine();
+      engine.setUseClientMode(false);
+      pipeline.addFirst("ssl", new SslHandler(engine))
+
+      pipeline
+    }
+  }
+
+  class HttpServerPipelineFactory(protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
     def getPipeline(): ChannelPipeline = {
       val pipeline     = Channels.pipeline()
 
-      pipeline.addLast("decoder",     new FullURIHttpRequestDecoder("http", host, port))
+      pipeline.addLast("decoder",     new FullURIHttpRequestDecoder(protocol, host, port))
       pipeline.addLast("aggregator",  new HttpChunkAggregator(1048576));
       pipeline.addLast("encoder",     new HttpResponseEncoder())
       pipeline.addLast("deflater",    new HttpContentCompressor())
@@ -83,20 +120,20 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline
     }
   }
-  
 }
 
 private[engines] object InetInrerfaceLookup{
-  def apply(config: ConfigMap, port: Int) = {
-    config.getString("address").map(v => Tuple2(new InetSocketAddress(v, port), v)).getOrElse(Tuple2(new InetSocketAddress(port), InetAddress.getLocalHost().getHostName()))
-  }
+  def socketAddres(config: ConfigMap, port: Int) = config.getString("address").map(v => new InetSocketAddress(v, port)).getOrElse(new InetSocketAddress(port))
+
+  def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
 }
 
 private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int) extends HttpRequestDecoder{
   private val baseUri = """%s://%s:%d""".format(protocol, host, port)
+  private val fullUriRegexp = new Regex("""(https|http)://.+/(:\d+/)?.+""")
   override def createMessage(initialLine: Array[String]) = {
     val path = initialLine(1)
-    initialLine(1) = baseUri + (if (path.startsWith("/")) path else "/" + path)
+    if (!fullUriRegexp.pattern.matcher(path).matches) initialLine(1) = baseUri + (if (path.startsWith("/")) path else "/" + path)
     super.createMessage(initialLine)
   }
 }

@@ -1,6 +1,6 @@
 package blueeyes.core.service.engines
 
-import java.net.URI
+import java.net.URL
 import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
@@ -10,10 +10,19 @@ import blueeyes.BlueEyesServiceBuilderString
 import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
+import security.BlueEyesKeyStoreFactory
+import java.security.cert.X509Certificate
+import org.xlightweb.{GetRequest}
+
+import org.xlightweb.client.{HttpClient => XLHttpClient}
+import javax.net.ssl.{SSLContext, X509TrustManager, TrustManagerFactory}
 
 class HttpServerNettySpec extends Specification {
 
-  private val configPattern = """server{port = %d}"""
+  private val configPattern = """server{
+  port = %d
+  sslPort = %d
+}"""
 
   shareVariables()
 
@@ -28,7 +37,7 @@ class HttpServerNettySpec extends Specification {
         success = try {
           val doneSignal = new CountDownLatch(1)
 
-          Configgy.configureFromString(configPattern.format(port))
+          Configgy.configureFromString(configPattern.format(port, port + 1))
 
           SampleServer.start.deliverTo { _ => doneSignal.countDown()}
           true
@@ -36,13 +45,25 @@ class HttpServerNettySpec extends Specification {
         catch {
           case e: Throwable => {
             e.printStackTrace()
-            port = port + 1
+            port = port + 2
             false
           }
         }
       }while(!success)
 
       server = Some(SampleServer)
+    }
+
+    "return html by correct URI by https" in{
+      val keyStore            = BlueEyesKeyStoreFactory(SampleServer.config)
+      val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+      trustManagerFactory.init(keyStore)
+
+      val sslContext  = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
+      val httpClient = new XLHttpClient(sslContext)
+      val response = httpClient.call(new GetRequest("https://localhost:%d/bar/foo/adCode.html".format(port + 1)))
+
+      XLightWebRequestBijections.BodyDataSourceToString(response.getBody()) mustEqual (Context.context)
     }
 
     "return html by correct URI" in{

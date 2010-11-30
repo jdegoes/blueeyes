@@ -72,5 +72,5 @@ class HttpResponseHandlerCombinatorsSpec extends Specification with HttpResponse
     mockClient.request.get mustEqual(initialRequest.copy(version = HttpVersions.`HTTP/1.0`))
   }
 
-  private def clientHandler = (request: HttpResponse[String]) => responseFuture
+  private def clientHandler = (response: HttpResponse[String]) => responseFuture
 }

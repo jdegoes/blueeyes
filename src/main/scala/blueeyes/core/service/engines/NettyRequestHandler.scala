@@ -4,7 +4,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
-import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
+import org.jboss.netty.buffer.{ChannelBuffer}
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.data.Bijection
 import blueeyes.core.service._
@@ -37,16 +37,13 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelDisconnected(ctx, e)
-
     futures.cancel
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
     val error    = e.getCause
-    val response = toNettyResponse(toResponse(error))
 
     log.error(error, "ExceptionCaught")
-    e.getChannel().write(response)
     e.getChannel().close
   }
 

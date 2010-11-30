@@ -18,4 +18,10 @@ class FullURIHttpRequestDecoderSpec extends Specification{
 
     message.getUri              mustEqual("http://google:8080/foo")
   }
+  "creates full uri when original uri is full" in{
+    val decoder = new FullURIHttpRequestDecoder("http", "google", 8080)
+    val message = decoder.createMessage(Array("GET", "http://google:8080/foo", "HTTP/1.1")).asInstanceOf[DefaultHttpRequest]
+
+    message.getUri              mustEqual("http://google:8080/foo")
+  }
 }
