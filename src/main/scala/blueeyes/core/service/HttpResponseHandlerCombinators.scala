@@ -9,9 +9,9 @@ trait HttpResponseHandlerCombinators{
   def protocol[T, S](protocol: String)(handler: HttpClientHandler[T, S]): HttpClientHandler[T, S] =
     path(protocol + "://")(handler)
 
-  def host[T, S](host: String)(h: HttpClientHandler[T, S]): HttpClientHandler[T, S]               = path(host)(h)
+  def host[T, S](host: String)(h: HttpClientHandler[T, S]): HttpClientHandler[T, S] = path(host)(h)
 
-  def port[T, S](port: Int)(h: HttpClientHandler[T, S]): HttpClientHandler[T, S]                  = path(":" + port.toString)(h)
+  def port[T, S](port: Int)(h: HttpClientHandler[T, S]): HttpClientHandler[T, S]    = path(":" + port.toString)(h)
 
   def path[T, S](path: String)(handler: HttpClientHandler[T, S]): HttpClientHandler[T, S] =
     apply((request: HttpRequest[T]) => request.copy(uri = path + request.uri))(handler)
@@ -73,14 +73,6 @@ trait HttpResponseHandlerCombinators{
       }
 
       handler(wrappedClient)
-    }
-  }
-
-  def ~[T, S, V](h1: HttpClientHandler[T, S], h2: HttpClientHandler[T, V]): HttpClientHandler[T, (S, V)] = {
-    (client: HttpClient[T]) => {
-      h1(client).flatMap(v1 => {
-        h2(client).map(v2 => (v1, v2))
-      })      
     }
   }
 }

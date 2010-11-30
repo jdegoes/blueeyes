@@ -1,6 +1,5 @@
 package blueeyes.core.service.engines
 
-import java.net.URL
 import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
@@ -11,11 +10,10 @@ import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
 import security.BlueEyesKeyStoreFactory
-import java.security.cert.X509Certificate
 import org.xlightweb.{GetRequest}
 
 import org.xlightweb.client.{HttpClient => XLHttpClient}
-import javax.net.ssl.{SSLContext, X509TrustManager, TrustManagerFactory}
+import javax.net.ssl.{TrustManagerFactory}
 
 class HttpServerNettySpec extends Specification {
 
@@ -64,6 +62,8 @@ class HttpServerNettySpec extends Specification {
       val response = httpClient.call(new GetRequest("https://localhost:%d/bar/foo/adCode.html".format(port + 1)))
 
       XLightWebRequestBijections.BodyDataSourceToString(response.getBody()) mustEqual (Context.context)
+
+      httpClient.close
     }
 
     "return html by correct URI" in{

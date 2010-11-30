@@ -2,6 +2,7 @@ package blueeyes.core.service.engines.security
 
 import net.lag.configgy.ConfigMap
 import java.security.KeyStore
+import blueeyes.core.service.engines.InetInrerfaceLookup
 
 object CertificateConfig{
   val SslKey              = "ssl"
@@ -48,7 +49,7 @@ object BlueEyesKeyStoreFactory{
 
   private def generate(config: ConfigMap) = {
     val certificateConfig   = config.configMap(SslKey).configMap(CertificateEntryKey)
-    val cn = "CN=" + certificateConfig.getString("CN", "BlueEyes,L=Boulder,ST=Colorado,C=US")
+    val cn = "CN=" + certificateConfig.getString("CN", InetInrerfaceLookup.host(config))
     CertificateGenerator("RSA", alias, cn, 36500, password)
   }
 
