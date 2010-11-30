@@ -160,4 +160,24 @@ class HttpClientXLightWebSpec extends Specification with HttpClientXLightWebEngi
     f.value must eventually(retries, new Duration(duration))(beSomething)
     f.value.get.status.code must be(HttpStatusCodes.OK)
   }
+
+  "Support GET requests of 1000 requests" in {
+    skipper()()
+    val total = 1000
+    val duration = 1000
+    val futures = (0 until total).map { i =>
+      apply(HttpRequest[String](HttpMethods.GET, "http://localhost/test/echo.php?test=true"))
+    }
+
+    val responses = futures.foldLeft(0) { 
+      (acc, f) => {
+        f.deliverTo((res: HttpResponse[String]) => {})
+        f.value must eventually(retries, new Duration(duration))(beSomething)
+        f.value.get.status.code must be(HttpStatusCodes.OK)
+        acc + 1
+      }
+    }
+
+    responses must beEqual(total)
+  }
 }
