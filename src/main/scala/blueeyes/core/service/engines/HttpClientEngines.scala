@@ -64,6 +64,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
 
     // Execute the HTTP request
     xlRequest.foreach(httpClient.send(_, responseHandler))
+    httpClient.close 
   }
 
   def createXLRequest(request: HttpRequest[T], url: String): Option[XLHttpRequest] = {
