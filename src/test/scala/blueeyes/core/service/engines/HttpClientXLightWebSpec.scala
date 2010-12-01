@@ -1,29 +1,45 @@
-package blueeyes.core.service.engines;
+package blueeyes.core.service.engines
 
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.core.data.Bijection
-import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
-import blueeyes.json.JsonParser
-import blueeyes.json.JsonAST.JValue
-import blueeyes.util.Future
-import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.http.HttpHeaderImplicits._
-import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http.HttpNumberImplicits._
 import blueeyes.core.http._
+import blueeyes.core.service._
+import blueeyes.core.service.HttpClientHandler
+import blueeyes.core.service.RestPathPatternImplicits
+import blueeyes.util.Future
+import blueeyes.util.FutureImplicits
 
-class HttpClientXLightWebSpec extends Specification with HttpClientXLightWebEnginesString{
+class HttpClientXLightWebSpec extends Specification with RestPathPatternImplicits with HttpResponseHandlerCombinators {
   val duration = 250
   val retries = 10
   val skip = true
   
+  private val httpClient = new HttpClientXLightWebEnginesString {
+  }
+
   def skipper(): () => Unit = skip match {
     case true => skip("Will use Skalatra")
     case _ => () => Unit
   }
-  
+
+  "Support GET requests with status OK" in {
+    val h = protocol("http") {
+      host("www.google.com") {
+        port(80) {
+          path[String, String]("/") {
+            get[String, String] { (res: HttpResponse[String]) =>
+	      Future[String](res.content.getOrElse[String](""))
+	    }
+          }
+        }
+      }
+    }
+
+    val f = h(httpClient) 
+    f.value must eventually(beSomething)
+  }
+
+/*  
   "Support GET requests with status OK" in {
     skipper()()
 
@@ -180,4 +196,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientXLightWebEngi
 
     responses must beEqual(total)
   }
+*/
+
+
 }
