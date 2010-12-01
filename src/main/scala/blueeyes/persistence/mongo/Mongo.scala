@@ -31,6 +31,7 @@ trait DatabaseCollection{
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
   def dropIndexes
   def dropIndex(name: String)
+  // seems like there should be upsert here
   def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean)
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
 }

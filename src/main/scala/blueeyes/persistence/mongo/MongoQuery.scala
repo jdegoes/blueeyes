@@ -160,11 +160,13 @@ sealed case class MongoUpdateFieldValue(operator: MongoUpdateOperator, path: JPa
 
   // TODO: def & (that: MongoUpdateValue)
   def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(self :: that :: Nil) 
+  def & (that: MongoUpdateFieldsValues): MongoUpdateFieldsValues = MongoUpdateFieldsValues(List(self) ++ that.values)
 }
 
 sealed case class MongoUpdateFieldsValues(values: List[MongoUpdateValue]) extends MongoUpdateValue{
   def toJValue: JObject = values.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
   def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(values ::: that :: Nil)
+  def & (that: MongoUpdateFieldsValues): MongoUpdateFieldsValues = MongoUpdateFieldsValues(values ++ that.values)
 }
 
 case class MongoUpdateBuilder(jpath: JPath) {

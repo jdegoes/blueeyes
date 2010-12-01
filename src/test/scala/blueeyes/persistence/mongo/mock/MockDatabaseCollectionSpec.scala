@@ -231,6 +231,16 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
   }
+
+  // Added by josh
+  /*
+  "upsert should work" in {
+    val collection = newCollection
+    upsert(collection) 
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+  } 
+  */
+
   "does not insert by update when upsert is false" in{
     val collection = newCollection
 
