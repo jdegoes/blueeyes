@@ -43,9 +43,9 @@ trait HttpResponseHandlerCombinators{
 
   def get[T, S](handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.GET, handler)
 
-  def put[T, S](content: T)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.PUT, handler)
+  def put[T, S](content: T)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.PUT, handler, Some(content))
 
-  def post[T, S](content: T)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.POST, handler)
+  def post[T, S](content: T)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.POST, handler, Some(content))
 
   def delete[T, S]()(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] = method[T, S](HttpMethods.DELETE, handler)
 
@@ -60,7 +60,7 @@ trait HttpResponseHandlerCombinators{
   def custom[T, S](custom: String)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] =
     method[T, S](HttpMethods.CUSTOM(custom), handler)
 
-  private def method[T, S](method: HttpMethod, handler: HttpResponse[T] => Future[S]) = {
+  private def method[T, S](method: HttpMethod, handler: HttpResponse[T] => Future[S], content: Option[T] = None) = {
     (client: HttpClient[T]) => {
       client.apply(HttpRequest[T](method = method, uri = "")).flatMap(handler)
     }
