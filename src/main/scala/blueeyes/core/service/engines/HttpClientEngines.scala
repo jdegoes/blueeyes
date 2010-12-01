@@ -1,5 +1,6 @@
 package blueeyes.core.service.engines
 
+import javax.net.ssl.SSLContext
 import java.io.IOException
 import blueeyes.util.Future
 import org.xlightweb.client.{HttpClient => XLHttpClient}
@@ -24,7 +25,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
             // Need to log here...
             case _ => None
           }
-          deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data));
+          deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
         }
 
         def onException(e: IOException) {
@@ -38,8 +39,10 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     }
   }
 
+  protected def createSSLContext: SSLContext = SSLContext.getDefault() 
+  
   private def executeRequest(request: HttpRequest[T], responseHandler: IHttpResponseHandler) {
-    val httpClient = new XLHttpClient()
+    val httpClient = if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
 
     import blueeyes.util.QueryParser
     import java.net.URI

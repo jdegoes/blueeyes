@@ -9,11 +9,10 @@ import blueeyes.BlueEyesServiceBuilderString
 import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
+import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
-import org.xlightweb.{GetRequest}
+import javax.net.ssl.TrustManagerFactory
 
-import org.xlightweb.client.{HttpClient => XLHttpClient}
-import javax.net.ssl.{TrustManagerFactory}
 
 class HttpServerNettySpec extends Specification {
 
@@ -26,6 +25,7 @@ class HttpServerNettySpec extends Specification {
 
   private var port = 8585
   private var server: Option[NettyEngineString] = None
+  private var clientFacade: SampleClientFacade = _
   
   "HttpServer" should{
     doFirst{
@@ -49,61 +49,42 @@ class HttpServerNettySpec extends Specification {
         }
       }while(!success)
 
-      server = Some(SampleServer)
+      clientFacade = new SampleClientFacade(port, port + 1)
+      server       = Some(SampleServer)
     }
 
     "return html by correct URI by https" in{
-      val keyStore            = BlueEyesKeyStoreFactory(SampleServer.config)
-      val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-      trustManagerFactory.init(keyStore)
-
-      val sslContext  = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
-      val httpClient = new XLHttpClient(sslContext)
-      val response = httpClient.call(new GetRequest("https://localhost:%d/bar/foo/adCode.html".format(port + 1)))
-
-      XLightWebRequestBijections.BodyDataSourceToString(response.getBody()) mustEqual (Context.context)
-
-      httpClient.close
+      val response =  LocalHttpsClient.execSynch(clientFacade.httpsRequest)
+      response.content.get mustEqual (Context.context)
     }
 
     "return html by correct URI" in{
-      val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:%d/bar/foo/adCode.html".format(port)).execute();
+      val response =  LocalHttpsClient.execSynch(clientFacade.httpRequest)
 
-      val response = future.get
-      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
-      response.getResponseBody mustEqual (Context.context)
+      response.status       mustEqual (HttpStatus(OK))
+      response.content.get  mustEqual (Context.context)
     }
 
     "return not found error by wrong URI" in{
-      val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:%d/foo/foo/adCode.html".format(port)).execute();
+      val response = LocalHttpsClient.execSynch(clientFacade.wrongHttpRequest)
 
-      val response = future.get
-      response.getStatusCode mustEqual (HttpStatusCodes.NotFound.value)
+      response.status mustEqual (HttpStatus(NotFound))
     }
     "return Internall error when handling request crushes" in{
-      val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:%d/error".format(port)).execute();
+      val response = LocalHttpsClient.execSynch(clientFacade.errorHttpRequest)
 
-      val response = future.get
-      response.getStatusCode mustEqual (HttpStatusCodes.InternalServerError.value)
+      response.status mustEqual (HttpStatus(InternalServerError))
     }
     "return Http error when handling request throws HttpException" in{
-      val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:%d/http/error".format(port)).execute();
-
-      val response = future.get
-      response.getStatusCode mustEqual (HttpStatusCodes.BadRequest.value)
+    val response = LocalHttpsClient.execSynch(clientFacade.httpErrorHttpRequest)
+      response.status mustEqual (HttpStatus(BadRequest))
     }
 
     "return html by correct URI with parameters" in{
-      val client = new AsyncHttpClient()
-      val future = client.prepareGet("http://localhost:%d/foo?bar=zar".format(port)).execute();
+      val response = LocalHttpsClient.execSynch(clientFacade.httpRequestWithParams)
 
-      val response = future.get
-      response.getStatusCode mustEqual (HttpStatusCodes.OK.value)
-      response.getResponseBody mustEqual (Context.context)
+      response.status       mustEqual (HttpStatus(OK))
+      response.content.get  mustEqual (Context.context)
     }
 
     doLast{
@@ -113,6 +94,89 @@ class HttpServerNettySpec extends Specification {
 }
 
 object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
+
+object LocalHttpsClient extends HttpClientXLightWebEnginesString{
+  override protected def createSSLContext = {
+    val keyStore            = BlueEyesKeyStoreFactory(SampleServer.config)
+    val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+    trustManagerFactory.init(keyStore)
+
+    SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
+  }
+
+  def execSynch[R](f: HttpClient[String] => Future[R]): R = {
+    val future = f(this)
+
+    val counDown = new CountDownLatch(1)
+    future.deliverTo(response =>{
+      counDown.countDown
+    })
+    counDown.await
+    future.value.get
+  }
+}
+
+class SampleClientFacade(port: Int, sslPort: Int) extends HttpResponseHandlerCombinators{
+  def httpsRequest = protocol("https"){
+    host("localhost"){
+      port(sslPort){
+        path("/bar/foo/adCode.html"){
+          get[String, HttpResponse[String]]{ simpleHandler }
+        }
+      }
+    }
+  }
+  //val future = client.prepareGet("http://localhost:%d/foo?bar=zar".format(port)).execute();
+  def httpRequest = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/bar/foo/adCode.html"){
+          get[String, HttpResponse[String]]{ simpleHandler }
+        }
+      }
+    }
+  }
+  def httpRequestWithParams = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/foo"){
+          parameters('bar -> "zar"){
+            get[String, HttpResponse[String]]{ simpleHandler }
+          }
+        }
+      }
+    }
+  }
+  def wrongHttpRequest = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/foo/foo/adCode.html"){
+          get[String, HttpResponse[String]]{ simpleHandler }
+        }
+      }
+    }
+  }
+  def errorHttpRequest = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/error"){
+          get[String, HttpResponse[String]]{ simpleHandler }
+        }
+      }
+    }
+  }
+  def httpErrorHttpRequest = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/http/error"){
+          get[String, HttpResponse[String]]{ simpleHandler }
+        }
+      }
+    }
+  }
+
+  private def simpleHandler = (response: HttpResponse[String]) => new Future[HttpResponse[String]]().deliver(response)
+}
 
 trait SampleService extends BlueEyesServiceBuilderString {
   import blueeyes.core.http.MimeTypes._

@@ -62,7 +62,7 @@ trait HttpResponseHandlerCombinators{
 
   private def method[T, S](method: HttpMethod, handler: HttpResponse[T] => Future[S], content: Option[T] = None) = {
     (client: HttpClient[T]) => {
-      client.apply(HttpRequest[T](method = method, uri = "")).flatMap(handler)
+      client.apply(HttpRequest[T](method = method, content = content, uri = "")).flatMap(handler)
     }
   }
 
