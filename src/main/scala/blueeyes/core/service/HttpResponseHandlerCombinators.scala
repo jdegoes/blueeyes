@@ -60,6 +60,16 @@ trait HttpResponseHandlerCombinators{
   def custom[T, S](custom: String)(handler: HttpResponse[T] => Future[S]): HttpClientHandler[T, S] =
     method[T, S](HttpMethods.CUSTOM(custom), handler)
 
+  def secure[T, S](handler: HttpClientHandler[T, S]): HttpClientHandler[T, S] = {
+    (client: HttpClient[T]) => {
+      val wrappedClient: HttpClient[T] = new HttpClient[T] {
+        def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = client(request)
+        override def isDefinedAt(request: HttpRequest[T]) = request.scheme == "https"
+      }
+      handler(wrappedClient)
+    }
+  }
+  
   private def method[T, S](method: HttpMethod, handler: HttpResponse[T] => Future[S], content: Option[T] = None) = {
     (client: HttpClient[T]) => {
       client.apply(HttpRequest[T](method = method, content = content, uri = "")).flatMap(handler)
