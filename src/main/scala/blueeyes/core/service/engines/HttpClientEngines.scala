@@ -105,8 +105,8 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   private def requestContentLength(request: HttpRequest[T]) = {
     `Content-Length`(request.content.map(v => {
       if (v.isInstanceOf[String]) v.asInstanceOf[String].length
-      if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[String].size
-      else error("unsupported content type")
+      if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[Array[Byte]].size
+      else error("Unsupported content type. Content ype canbe either String or Array[Byte]")
     }).getOrElse[Int](0))
   }
 }
