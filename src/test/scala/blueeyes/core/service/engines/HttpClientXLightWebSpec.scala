@@ -4,12 +4,10 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.core.http._
 import blueeyes.core.service._
-import blueeyes.core.service.HttpClientHandler
-import blueeyes.core.service.RestPathPatternImplicits
 import blueeyes.util.Future
 import blueeyes.util.FutureImplicits
 
-class HttpClientXLightWebSpec extends Specification with RestPathPatternImplicits with HttpResponseHandlerCombinators {
+class HttpClientXLightWebSpec extends Specification with HttpResponseHandlerCombinators {
   val duration = 250
   val retries = 10
   val skip = true
