@@ -71,7 +71,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     xlRequest
   }
 
-  def createXLRequest(request: HttpRequest[T], url: String): XLHttpRequest = {
+  private def createXLRequest(request: HttpRequest[T], url: String): XLHttpRequest = {
     request.method match {
       case HttpMethods.DELETE     => new DeleteRequest(url)
       case HttpMethods.GET        => new GetRequest(url)
