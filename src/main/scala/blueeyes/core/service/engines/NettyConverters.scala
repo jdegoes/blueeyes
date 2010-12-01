@@ -1,8 +1,6 @@
 package blueeyes.core.service.engines
 
 import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
-import scala.collection.JavaConversions._
-import blueeyes.core.http.HttpIps
 
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
@@ -12,7 +10,6 @@ import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.{ChannelBuffer}
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.Bijection
-import blueeyes.util.QueryParser
 
 trait NettyConverters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {

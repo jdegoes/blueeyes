@@ -1,9 +1,10 @@
 package blueeyes.core.service.engines
 
+import scala.collection.JavaConversions._
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffer}
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.data.Bijection
@@ -13,6 +14,7 @@ import blueeyes.util.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
 import org.jboss.netty.handler.timeout.TimeoutException
+import org.jboss.netty.handler.codec.http.{CookieEncoder, CookieDecoder, HttpRequest => NettyHttpRequest, HttpResponse => NettyHttpResponse}
 
 private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   private val futures = new FuturesList[HttpResponse[T]]()
@@ -61,22 +63,36 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   }
 
   private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){
-
     val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
     val nettyResponse = toNettyResponse(response)
     val keepAlive     = isKeepAlive(request)
 
     if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
 
+    addCookies(request, response)
+
     val future = e.getChannel().write(nettyResponse)
 
     if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
   }
+
+  private def addCookies(request: NettyHttpRequest, response: NettyHttpResponse){
+    val cookieString = request.getHeader(COOKIE)
+    if (cookieString != null) {
+      val cookieDecoder = new CookieDecoder()
+      val cookies       = cookieDecoder.decode(cookieString)
+      if(!cookies.isEmpty()) {
+        val cookieEncoder = new CookieEncoder(true)
+        cookies.foreach(cookieEncoder.addCookie(_))
+
+        response.addHeader(SET_COOKIE, cookieEncoder.encode())
+      }
+    }
+  }
 }
 
 private[engines] class FuturesList[T]{
-
-  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock  
+  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
          
   private var _futures = List[Future[T]]()
   private var cancelError: Option[TimeoutException] = None

@@ -53,6 +53,15 @@ class HttpResponseHandlerCombinatorsSpec extends Specification with HttpResponse
 
     mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("content-length" -> "1")))
   }
+  "sets cookies request" in{
+    val h = cookies("content-length" -> "1"){
+      get[String, String]{ clientHandler }
+    }
+
+    h(mockClient)
+
+    mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("Cookie" -> "content-length=1")))
+  }
   "sets remote host header request" in{
     val h = remoteHost(InetAddress.getLocalHost){
       get[String, String]{ clientHandler }
