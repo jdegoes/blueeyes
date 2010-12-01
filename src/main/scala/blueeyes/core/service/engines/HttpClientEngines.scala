@@ -85,16 +85,16 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     request.content.map(v => {
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else error("unsupported body type")
+      else if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      else error("Unsupported body type. Content type canbe either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PostRequest(url))
   }
   private def putRequest(request: HttpRequest[T], url: String) = {
     request.content.map(v => {
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else error("unsupported content type")
+      else if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      else error("Unsupported content type. Content type canbe either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PutRequest(url))
   }
 
@@ -105,8 +105,8 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   private def requestContentLength(request: HttpRequest[T]) = {
     `Content-Length`(request.content.map(v => {
       if (v.isInstanceOf[String]) v.asInstanceOf[String].length
-      if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[Array[Byte]].size
-      else error("Unsupported content type. Content ype canbe either String or Array[Byte]")
+      else if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[Array[Byte]].size
+      else error("Unsupported content type. Content type canbe either String or Array[Byte].")
     }).getOrElse[Int](0))
   }
 }

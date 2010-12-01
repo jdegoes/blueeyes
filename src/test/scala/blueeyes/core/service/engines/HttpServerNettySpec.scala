@@ -151,7 +151,7 @@ class SampleClientFacade(port: Int, sslPort: Int) extends HttpResponseHandlerCom
     host("localhost"){
       port(port){
         path("/foo/foo/adCode.html"){
-          get[String, HttpResponse[String]]{ simpleHandler }
+          post[String, HttpResponse[String]]("foo"){ simpleHandler }
         }
       }
     }
