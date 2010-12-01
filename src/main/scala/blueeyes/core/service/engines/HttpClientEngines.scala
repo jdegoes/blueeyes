@@ -15,38 +15,44 @@ import blueeyes.core.service.HttpClient
 sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   def contentBijection: Bijection[BodyDataSource, T]
 
-  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    new Future[HttpResponse[T]]() {
-      executeRequest(request, new IHttpResponseHandler() {
-        def onResponse(response: IHttpResponse) {
-          val data = try {
-            Some(contentBijection(response.getBody))
-          } catch {
-            // Need to log here...
-            case _ => None
-          }
-          deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
-        }
+  protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
-        def onException(e: IOException) {
-          val httpStatus = HttpStatus(e match {
-            case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
-            case _ => HttpStatusCodes.InternalServerError
-          })
-          cancel(new Error(e))
-        }
-      })
-    }
+  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
+    val result = new Future[HttpResponse[T]]() 
+    executeRequest(request, result)
+    result
   }
 
-  protected def createSSLContext: SSLContext = SSLContext.getDefault() 
-  
-  private def executeRequest(request: HttpRequest[T], responseHandler: IHttpResponseHandler) {
+  private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
     val httpClient = if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
 
+    httpClient.send(createXLRequest(request), new IHttpResponseHandler() {
+      def onResponse(response: IHttpResponse) {
+        val data = try {
+          Some(contentBijection(response.getBody))
+        } catch {
+          // Need to log here...
+          case _ => None
+        }
+        httpClient.close
+        
+        resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
+      }
+
+      def onException(e: IOException) {
+        val httpStatus = HttpStatus(e match {
+          case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
+          case _ => HttpStatusCodes.InternalServerError
+        })
+        httpClient.close
+
+        resultFuture.cancel(new Error(e))
+      }
+    })
+  }
+  private def createXLRequest(request: HttpRequest[T]): XLHttpRequest =  {
     import blueeyes.util.QueryParser
     import java.net.URI
-    import scala.collection.mutable.LinkedHashMap
 
     // Merge request.parameters and original query params (in uri)
     val origURI = URI.create(request.uri)
@@ -59,26 +65,24 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     val newHeaders         = request.headers + requestContentLength(request)
     val xlRequest          = createXLRequest(request, uri)
 
-    for (pair <- newHeaders; r <- xlRequest)
-      yield r.addHeader(pair._1, pair._2)
+    for (pair <- newHeaders)
+      yield xlRequest.addHeader(pair._1, pair._2)
 
-    // Execute the HTTP request
-    xlRequest.foreach(httpClient.send(_, responseHandler))
-    httpClient.close 
+    xlRequest
   }
 
-  def createXLRequest(request: HttpRequest[T], url: String): Option[XLHttpRequest] = {
+  def createXLRequest(request: HttpRequest[T], url: String): XLHttpRequest = {
     request.method match {
-      case HttpMethods.DELETE     => Some(new DeleteRequest(url))
-      case HttpMethods.GET        => Some(new GetRequest(url))
-      case HttpMethods.HEAD       => Some(new HeadRequest(url))
-      case HttpMethods.OPTIONS    => Some(new OptionsRequest(url))
-      case HttpMethods.POST       => Some(postRequest(request, url))
-      case HttpMethods.PUT        => Some(putRequest(request, url))
-      case HttpMethods.CONNECT    => error("CONNECT is not implemented."); None
-      case HttpMethods.TRACE      => error("TRACE is not implemented.");   None
-      case HttpMethods.PATCH      => error("PATCH is not implemented.");   None
-      case HttpMethods.CUSTOM(x)  => error("CUSTOM is not implemented.");  None
+      case HttpMethods.DELETE     => new DeleteRequest(url)
+      case HttpMethods.GET        => new GetRequest(url)
+      case HttpMethods.HEAD       => new HeadRequest(url)
+      case HttpMethods.OPTIONS    => new OptionsRequest(url)
+      case HttpMethods.POST       => postRequest(request, url)
+      case HttpMethods.PUT        => putRequest(request, url)
+      case HttpMethods.CONNECT    => error("CONNECT is not implemented.")
+      case HttpMethods.TRACE      => error("TRACE is not implemented.")
+      case HttpMethods.PATCH      => error("PATCH is not implemented.")
+      case HttpMethods.CUSTOM(x)  => error("CUSTOM is not implemented.")
     }
   }
 
@@ -87,7 +91,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
       else if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else error("Unsupported body type. Content type canbe either String or Array[Byte].")
+      else error("Unsupported body type. Content type can be either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PostRequest(url))
   }
   private def putRequest(request: HttpRequest[T], url: String) = {
@@ -95,7 +99,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
       else if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else error("Unsupported content type. Content type canbe either String or Array[Byte].")
+      else error("Unsupported content type. Content type can be either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PutRequest(url))
   }
 
@@ -107,7 +111,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     `Content-Length`(request.content.map(v => {
       if (v.isInstanceOf[String]) v.asInstanceOf[String].length
       else if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[Array[Byte]].size
-      else error("Unsupported content type. Content type canbe either String or Array[Byte].")
+      else error("Unsupported content type. Content type can be either String or Array[Byte].")
     }).getOrElse[Int](0))
   }
 }

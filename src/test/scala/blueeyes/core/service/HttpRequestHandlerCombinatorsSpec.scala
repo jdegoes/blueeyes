@@ -6,7 +6,7 @@ import blueeyes.core.http._
 import blueeyes.util.Future
 import blueeyes.util.FutureImplicits
 
-class HttpRequestHandlerCombinatorsSpec extends Specification{
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits{
   "composition of paths" should {
     "have the right type" in {
       val handler: HttpRequestHandler[Int] = {

@@ -126,7 +126,6 @@ class SampleClientFacade(port: Int, sslPort: Int) extends HttpResponseHandlerCom
       }
     }
   }
-  //val future = client.prepareGet("http://localhost:%d/foo?bar=zar".format(port)).execute();
   def httpRequest = protocol("http"){
     host("localhost"){
       port(port){
