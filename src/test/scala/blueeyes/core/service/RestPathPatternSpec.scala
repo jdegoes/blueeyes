@@ -112,6 +112,7 @@ class RestPathPatternSpec extends Specification{
 
 
   /* ---- Suffix Tests ---- */
+  /*
   "match on a symbol with a suffix (ex: 'name.gif)" in {
     ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
   }
@@ -122,6 +123,7 @@ class RestPathPatternSpec extends Specification{
   "not match on a symbol with different suffix (ex: 'name.html)" in {
     ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/example.html") mustBe (false)
   }
+  */
 
 
   "create parameters automatically for complex path specified as string" in {
