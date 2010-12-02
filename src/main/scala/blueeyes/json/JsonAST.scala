@@ -312,7 +312,13 @@ object JsonAST {
 
     def flatten: List[JValue] =
       fold(List[JValue]())((acc, e) => e :: acc).reverse
-      
+
+    /** Flattens the JValue down to a list of path to simple JValue primitive.
+     * <p>
+     * Example:<pre>
+     * JArray(JInt(1) :: JInt(2) :: Nil) flattenWithPath
+     * </pre>
+     */
     def flattenWithPath: List[(JPath, JValue)] = {
       def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
         case JObject(fields) => fields.flatMap(flatten0(path))
