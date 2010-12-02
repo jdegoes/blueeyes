@@ -84,53 +84,5 @@ trait HttpRequestHandlerImplicits {
     
     def && (r2: (V1 => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, V1) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
   }
-  
-  implicit def andRequestHandlerCombinatorSugarExtractor2[T, S, U1, U2, V1, V2](r1: ((U1, U2) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S]) = new {
-    def & (r2: ((V1, V2) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, V1, V2) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = {
-      r1 { (u1, u2) => 
-        r2 { (v1, v2) =>
-          h(u1, u2, v1, v2)
-        }
-      }
-    }
-    
-    def && (r2: ((V1, V2) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, V1, V2) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
-  }
-  
-  implicit def andRequestHandlerCombinatorSugarExtractor3[T, S, U1, U2, U3, V1, V2, V3](r1: ((U1, U2, U3) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S]) = new {
-    def & (r2: ((V1, V2, V3) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, V1, V2, V3) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = {
-      r1 { (u1, u2, u3) => 
-        r2 { (v1, v2, v3) =>
-          h(u1, u2, u3, v1, v2, v3)
-        }
-      }
-    }
-    
-    def && (r2: ((V1, V2, V3) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, V1, V2, V3) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
-  }
-  
-  implicit def andRequestHandlerCombinatorSugarExtractor4[T, S, U1, U2, U3, U4, V1, V2, V3, V4](r1: ((U1, U2, U3, U4) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S]) = new {
-    def & (r2: ((V1, V2, V3, V4) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, U4, V1, V2, V3, V4) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = {
-      r1 { (u1, u2, u3, u4) => 
-        r2 { (v1, v2, v3, v4) =>
-          h(u1, u2, u3, u4, v1, v2, v3, v4)
-        }
-      }
-    }
-    
-    def && (r2: ((V1, V2, V3, V4) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, U4, V1, V2, V3, V4) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
-  }
-  
-  implicit def andRequestHandlerCombinatorSugarExtractor5[T, S, U1, U2, U3, U4, U5, V1, V2, V3, V4, V5](r1: ((U1, U2, U3, U4, U5) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S]) = new {
-    def & (r2: ((V1, V2, V3, V4, V5) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, U4, U5, V1, V2, V3, V4, V5) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = {
-      r1 { (u1, u2, u3, u4, u5) => 
-        r2 { (v1, v2, v3, v4, v5) =>
-          h(u1, u2, u3, u4, u5, v1, v2, v3, v4, v5)
-        }
-      }
-    }
-    
-    def && (r2: ((V1, V2, V3, V4, V5) => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, U2, U3, U4, U5, V1, V2, V3, V4, V5) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
-  }
 }
 object HttpRequestHandlerImplicits extends HttpRequestHandlerImplicits
