@@ -170,9 +170,7 @@ case class PopLastF(path: JPath) extends MongoUpdateField{
 
     case PopLastF(_) | PopFirstF(_)  => Some(this)
 
-    case IncF(_, _) | PullF(_, _)  | PushF(_, _) | PushAllF(_, _) | PullAllF(_, _)  | AddToSetF(_, _, _) => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
-
-    case _ => None
+    case _ => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
   }
 
   private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
@@ -189,13 +187,11 @@ case class PopFirstF(path: JPath) extends MongoUpdateField{
   val filter   = ("" === MongoPrimitiveInt(-1))
 
   override protected def fuseWithImpl(older: Change1) = older match {
-    case SetF(f, v)       => Some(SetF(path, pop(v)))
+    case SetF(f, v)                 => Some(SetF(path, pop(v)))
 
-    case PopLastF(_) | PopFirstF(_)  => Some(this)
+    case PopLastF(_) | PopFirstF(_) => Some(this)
 
-    case IncF(_, _) | PullF(_, _)  | PushF(_, _) | PushAllF(_, _) | PullAllF(_, _)  | AddToSetF(_, _, _) => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
-
-    case _ => None
+    case _ => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
   }
 
   private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
@@ -212,13 +208,11 @@ case class PushF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField
   val filter   = ("" === value)
 
   override protected def fuseWithImpl(older: Change1) = older match {
-    case SetF(f, v)       => Some(SetF(path, push(v, value)))
+    case SetF(f, v)   => Some(SetF(path, push(v, value)))
 
     case PushF(_, _)  => Some(this)
 
-    case IncF(_, _) | PopLastF(_) | PopFirstF(_) | PullF(_, _) | PushAllF(_, _) | PullAllF(_, _)  | AddToSetF(_, _, _) => error("PushF can be only combined with SetF and PushF. Older=" + older)
-
-    case _ => None
+    case _ => error("PushF can be only combined with SetF and PushF. Older=" + older)
   }
 
   private def push(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
@@ -239,9 +233,7 @@ case class PushAllF[T <: MongoPrimitive[_]](path: JPath, value: List[T]) extends
 
     case PushAllF(_, _)  => Some(this)
 
-    case IncF(_, _) | PopLastF(_) | PopFirstF(_) | PullF(_, _) | PushF(_, _) | PullAllF(_, _)  | AddToSetF(_, _, _) => error("PushAllF can be only combined with SetF and PushAllF. Older=" + older)
-
-    case _ => None
+    case _ => error("PushAllF can be only combined with SetF and PushAllF. Older=" + older)
   }
 
   private def pushAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
@@ -262,9 +254,7 @@ case class PullAllF[T <: MongoPrimitive[_]](path: JPath, value: List[T]) extends
 
     case PullAllF(_, _) => Some(this)
 
-    case IncF(_, _) | PopLastF(_) | PopFirstF(_) | PullF(_, _) | PushF(_, _) | PushAllF(_, _)  | AddToSetF(_, _, _) => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
-
-    case _ => None
+    case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
   }
 
   private def pullAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
@@ -278,13 +268,11 @@ case class AddToSetF(path: JPath, value: MongoPrimitive[_], filter: MongoFilter)
   val operator = $addToSet
 
   override protected def fuseWithImpl(older: Change1) = older match {
-    case SetF(f, v)           => Some(SetF(path, addToSet(v, value)))
+    case SetF(f, v)         => Some(SetF(path, addToSet(v, value)))
 
-    case AddToSetF(_, _, _)   => Some(this)
+    case AddToSetF(_, _, _) => Some(this)
 
-    case IncF(_, _) | PopLastF(_) | PopFirstF(_) | PullF(_, _) | PushF(_, _) | PushAllF(_, _)  | PullAllF(_, _) => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
-
-    case _ => None
+    case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
   }
 
   private def addToSet(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitiveArray[_]  = v1 match {
