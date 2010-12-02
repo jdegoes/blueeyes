@@ -1,6 +1,0 @@
-Social Media (socialmedia.com)
-
-Tasks:
-1. Developing plugins for pulling data from social networks:
-    - MySpace: plugins for pulling social graphs (friends and personal information)
-    - Twitter: plugins for pulling  
