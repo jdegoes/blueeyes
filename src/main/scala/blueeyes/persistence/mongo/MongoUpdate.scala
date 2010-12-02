@@ -139,7 +139,7 @@ case class IncF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
     case _ => error("IncF can be only combined with SetF and IncF. Older=" + older)
   }
 
-  private def plus(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_] = (v1, v1) match {
+  private def plus(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_] = (v1, v2) match {
     case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => x1 + x2
     case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => x1 + x2
     case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => x1 + x2
