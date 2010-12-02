@@ -5,6 +5,7 @@ import blueeyes.json.JsonAST.{JField, JObject}
 import blueeyes.json.{JPath}
 import MongoImplicits._
 import MongoFilterOperators._
+import com.mongodb.MongoException
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
@@ -109,22 +110,6 @@ sealed trait MongoUpdateField extends MongoUpdate with Change1{  self =>
   def filter: MongoFilter
 }
 
-case class IncF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
-  val operator = $inc
-
-  val filter   = ("" === value)
-//
-//  override protected def fuseWithImpl(older: Change1) = older match {
-//    case SetF(f, v) => Some(SetF(field, plus(v, value)))
-//
-//    case AdjF(f, v) => Some(AdjF(field, v + value))
-//
-//    case AddF(_, _) | RemF(_, _) | PatchF(_, _) => error("Field cannot be number and not-number")
-//
-//    case _ => None
-//  }
-}
-
 case class SetF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
   val operator = $set
 
@@ -137,6 +122,38 @@ case class UnsetF(path: JPath) extends MongoUpdateField{
   val operator = $unset
 
   val filter   = "" === MongoPrimitiveInt(1)
+
+  override protected def fuseWithImpl(older: Change1) = Some(this)
+}
+
+case class IncF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
+  val operator = $inc
+
+  val filter   = ("" === value)
+
+  override protected def fuseWithImpl(older: Change1) = older match {
+    case SetF(f, v) => Some(SetF(path, plus(v, value)))
+
+    case IncF(f, v) => Some(IncF(path, plus(v, value)))
+
+    case _ => error("IncF can be only combined with SetF and IncF. Older=" + older)
+  }
+
+  private def plus(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_] = (v1, v1) match {
+    case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => x1 + x2
+    case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => x1 + x2
+    case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => x1 + x2
+
+    case (MongoPrimitiveDouble(x1),  MongoPrimitiveDouble(x2)) => x1 + x2
+    case (MongoPrimitiveDouble(x1),  MongoPrimitiveInt(x2))    => x1 + x2
+    case (MongoPrimitiveDouble(x1),  MongoPrimitiveLong(x2))   => x1 + x2
+
+    case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => x1 + x2
+    case (MongoPrimitiveLong(x1),    MongoPrimitiveInt(x2))    => x1 + x2
+    case (MongoPrimitiveLong(x1),    MongoPrimitiveDouble(x2)) => x1 + x2
+
+    case _ => throw new MongoException("Modifier $inc allowed for numbers only")
+  }
 }
 
 case class PopLastF(path: JPath) extends MongoUpdateField{
