@@ -3,6 +3,7 @@ package blueeyes.core.service
 import org.spex.Specification
 import blueeyes.util.Future
 import blueeyes.core.http._
+import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress
 
 class HttpResponseHandlerCombinatorsSpec extends Specification with HttpResponseHandlerCombinators{
@@ -52,15 +53,6 @@ class HttpResponseHandlerCombinatorsSpec extends Specification with HttpResponse
     h(mockClient)
 
     mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("content-length" -> "1")))
-  }
-  "sets cookies request" in{
-    val h = cookies("content-length" -> "1"){
-      get[String, String]{ clientHandler }
-    }
-
-    h(mockClient)
-
-    mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("Cookie" -> "content-length=1")))
   }
   "sets remote host header request" in{
     val h = remoteHost(InetAddress.getLocalHost){

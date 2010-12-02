@@ -1,8 +1,8 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JPath
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST._
+import blueeyes.json.{JPathImplicits, JPath}
 
 sealed trait MongoCollection
 case class MongoCollectionReference(name: String) extends MongoCollection
@@ -17,7 +17,7 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
   def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
 }
 
-trait MongoImplicits {
+trait MongoImplicits extends JPathImplicits with MongoFilterImplicits{
   implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
 
   implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
