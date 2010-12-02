@@ -41,6 +41,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
         }
         catch {
           case e: Throwable => {
+            e.printStackTrace
             log.error("Error while servers start.")
             stop
           }
