@@ -49,16 +49,6 @@ private[mongo] object Changes {
     implicit def listToChangelist(list: List[Change1]): Changelist = Changelist(list)
   }
 
-  trait NoOpF extends Change1 {
-    override protected def commuteWithImpl(older: Change1) = Some((older, this))
-
-    override protected def fuseWithImpl(older: Change1) = Some(older)
-  }
-
-  case class SetF(path: JPath, value: AnyRef) extends Change1 {
-    override protected def fuseWithImpl(older: Change1) = Some(this)
-  }
-
   def compose(older: List[Change1], newer: List[Change1]): List[Change1] = if (newer.isEmpty) older else compose(compose(newer.last, older), newer.take(newer.length - 1))
 
   private def compose(c: Change1, cs: List[Change1]): List[Change1] = if (cs.isEmpty) c :: Nil else c.fuseWith(cs.head) match {

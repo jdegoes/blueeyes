@@ -115,6 +115,8 @@ case class IncF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
 
 case class SetF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
   val operator = $set
+
+  override protected def fuseWithImpl(older: Change1) = Some(this)
 }
 
 case class UnsetF(path: JPath) extends MongoUpdateField{
