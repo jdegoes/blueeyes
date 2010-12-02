@@ -26,15 +26,15 @@ object MongoUpdateOperators {
 
 import MongoUpdateOperators._
 case class MongoUpdateBuilder(jpath: JPath) {
-  def inc [T](value: MongoPrimitive[T]) : MongoUpdateField = IncF(jpath, "" === value)
-  def set [T](value: MongoPrimitive[T]) : MongoUpdateField = SetF(jpath, "" === value)
+  def inc [T](value: MongoPrimitive[T]) : MongoUpdateField = IncF(jpath, value)
+  def set [T](value: MongoPrimitive[T]) : MongoUpdateField = SetF(jpath, value)
   def unset                             : MongoUpdateField = UnsetF(jpath)
   def popLast                           : MongoUpdateField = PopLastF(jpath)
   def popFirst                          : MongoUpdateField = PopFirstF(jpath)
-  def push [T](value: MongoPrimitive[T]): MongoUpdateField = PushF(jpath, "" === value)
+  def push [T](value: MongoPrimitive[T]): MongoUpdateField = PushF(jpath, value)
   def pull(filter: MongoFilter)         : MongoUpdateField = PullF(jpath, filter)
-  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PushAllF(jpath, "" === MongoPrimitiveArray(List(items: _*)))
-  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PullAllF(jpath, "" === MongoPrimitiveArray(List(items: _*)))
+  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PushAllF(jpath, List(items: _*))
+  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PullAllF(jpath, List(items: _*))
 
   def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateField = {
     val itemsList = List(items: _*)
@@ -109,45 +109,68 @@ sealed trait MongoUpdateField extends MongoUpdate with Change1{  self =>
   def filter: MongoFilter
 }
 
-case class IncF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+case class IncF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
   val operator = $inc
+
+  val filter   = ("" === value)
+//
+//  override protected def fuseWithImpl(older: Change1) = older match {
+//    case SetF(f, v) => Some(SetF(field, plus(v, value)))
+//
+//    case AdjF(f, v) => Some(AdjF(field, v + value))
+//
+//    case AddF(_, _) | RemF(_, _) | PatchF(_, _) => error("Field cannot be number and not-number")
+//
+//    case _ => None
+//  }
 }
 
-case class SetF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+case class SetF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
   val operator = $set
+
+  val filter   = ("" === value)
 
   override protected def fuseWithImpl(older: Change1) = Some(this)
 }
 
 case class UnsetF(path: JPath) extends MongoUpdateField{
   val operator = $unset
+
   val filter   = "" === MongoPrimitiveInt(1)
 }
 
 case class PopLastF(path: JPath) extends MongoUpdateField{
   val operator = $pop
+
   val filter   = "" === MongoPrimitiveInt(1)
 }
 
 case class PopFirstF(path: JPath) extends MongoUpdateField{
   val operator = $pop
+
   val filter   = ("" === MongoPrimitiveInt(-1))
 }
 
-case class PushF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+case class PushF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
   val operator = $push
+
+  val filter   = ("" === value)
 }
 
 case class PullF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
   val operator = $pull
 }
 
-case class PushAllF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+case class PushAllF[T <: MongoPrimitive[_]](path: JPath, items: List[T]) extends MongoUpdateField{
   val operator = $pushAll
+
+  val filter   = "" === MongoPrimitiveArray(items)
 }
 
-case class PullAllF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+case class PullAllF[T <: MongoPrimitive[_]](path: JPath, items: List[T]) extends MongoUpdateField{
   val operator = $pullAll
+
+  val filter   = "" === MongoPrimitiveArray(items)
 }
 
 case class AddToSetF(path: JPath, filter: MongoFilter) extends MongoUpdateField{

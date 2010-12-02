@@ -8,7 +8,7 @@ import blueeyes.json.JsonParser
 class MongoUpdateFieldValueSpec  extends Specification{
   "build valid json" in {
     import MongoImplicits._
-    IncF("n", "" === 1).toJValue mustEqual  (JObject(JField("$inc", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
+    IncF("n", 1).toJValue mustEqual  (JObject(JField("$inc", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
   }
   "build valid json for set MongoQuery" in {
     import MongoImplicits._
