@@ -199,7 +199,7 @@ class HttpClientXLightWebSpec extends Specification with HttpResponseHandlerComb
     val f = protocol("http") {
       host("localhost") {
         path[String, HttpResponse[String]]("/test/echo.php") {
-          head[String, HttpResponse[String]]() { r => r }
+          head[String, HttpResponse[String]]{ r => r }
         }
       }
     }(httpClient)

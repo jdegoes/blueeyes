@@ -175,5 +175,4 @@ private[mongo] object Evaluators{
       case _ => false
     }
   }
-
 }
