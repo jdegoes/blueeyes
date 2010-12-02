@@ -312,6 +312,24 @@ object JsonAST {
 
     def flatten: List[JValue] =
       fold(List[JValue]())((acc, e) => e :: acc).reverse
+      
+    def flattenWithPath: List[(JPath, JValue)] = {
+      def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
+        case JObject(fields) => fields.flatMap(flatten0(path))
+
+        case JArray(elements) => elements.zipWithIndex.flatMap { tuple =>
+          val (element, index) = tuple
+
+          flatten0(path(index))(element)
+        }
+
+        case JField(name, value) => flatten0(path \ name)(value)
+
+        case _ => (path -> value) :: Nil
+      }
+
+      flatten0(JPath.Identity)(this)
+    }
 
     /** Concatenate with another JSON.
      * This is a concatenation monoid: (JValue, ++, JNothing)
