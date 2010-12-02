@@ -160,12 +160,46 @@ case class PopLastF(path: JPath) extends MongoUpdateField{
   val operator = $pop
 
   val filter   = "" === MongoPrimitiveInt(1)
+
+  override protected def fuseWithImpl(older: Change1) = older match {
+    case SetF(f, v)       => Some(SetF(path, pop(v)))
+
+    case PopLastF(_) | PopFirstF(_)  => Some(this)
+
+    case IncF(_, _) | PullF(_, _)  | PushF(_, _) | PushAllF(_, _) | PullAllF(_, _)  | AddToSetF(_, _) => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
+
+    case _ => None
+  }
+
+  private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
+    case MongoPrimitiveArray(Nil) => v1
+    case MongoPrimitiveArray(x)   => MongoPrimitiveArray(x.dropRight(1))
+
+    case _ => throw new MongoException("Cannot apply $pop modifier to non-array")
+  }
 }
 
 case class PopFirstF(path: JPath) extends MongoUpdateField{
   val operator = $pop
 
   val filter   = ("" === MongoPrimitiveInt(-1))
+
+  override protected def fuseWithImpl(older: Change1) = older match {
+    case SetF(f, v)       => Some(SetF(path, pop(v)))
+
+    case PopLastF(_) | PopFirstF(_)  => Some(this)
+
+    case IncF(_, _) | PullF(_, _)  | PushF(_, _) | PushAllF(_, _) | PullAllF(_, _)  | AddToSetF(_, _) => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
+
+    case _ => None
+  }
+
+  private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
+    case MongoPrimitiveArray(Nil) => v1
+    case MongoPrimitiveArray(x)   => MongoPrimitiveArray(x.drop(1))
+
+    case _ => throw new MongoException("Cannot apply $pop modifier to non-array")
+  }
 }
 
 case class PushF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
