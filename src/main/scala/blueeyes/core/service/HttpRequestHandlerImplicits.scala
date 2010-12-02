@@ -68,7 +68,11 @@ trait HttpRequestHandlerImplicits {
   }
   
   implicit def andRequestHandlerCombinatorSugar[T, S](r1: HttpRequestHandler2[T, S] => HttpRequestHandler2[T, S]) = new {
-    def & (r2: HttpRequestHandler2[T, S] => HttpRequestHandler2[T, S])(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = r1.andThen(r2)(h)
+    def & (r2: HttpRequestHandler2[T, S] => HttpRequestHandler2[T, S])(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+      def isDefinedAt(r: HttpRequest[T]): Boolean = r1(h).isDefinedAt(r) && r2(h).isDefinedAt(r)
+      
+      def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r1(h).apply(r)
+    }
     
     def && (r2: HttpRequestHandler2[T, S] => HttpRequestHandler2[T, S])(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = r1.andThen(r2)(h)
   }
