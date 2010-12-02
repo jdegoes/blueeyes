@@ -149,6 +149,24 @@ trait MongoFilterImplicits {
     def toJValue = JNull
   }
 
+  implicit def jvalueToMongoPrimitive(value: JValue): Option[MongoPrimitive[_]] = {
+    val mongoPromitive: Option[MongoPrimitive[_]] = value match {
+      case x: JString => Some(MongoPrimitiveString(x.value))
+      case x: JInt    => Some(MongoPrimitiveLong(x.value.longValue))
+      case x: JDouble => Some(MongoPrimitiveDouble(x.value))
+      case x: JBool   => Some(MongoPrimitiveBoolean(x.value))
+      case x: JObject => Some(MongoPrimitiveJObject(x))
+      case x: JArray  => {
+        var values: List[MongoPrimitive[_]] = x.elements.map(jvalueToMongoPrimitive(_)).filter(_ != None).map(_.get)
+        Some(MongoPrimitiveArray(values))
+      }
+      case JNothing   => None
+      case JNull      => None
+      case _          => error("Unknown type for value: " + value)
+    }
+    mongoPromitive
+  }
+
   implicit def stringToMongoPrimitiveString(value: String)    = MongoPrimitiveString(value)
   implicit def longToMongoPrimitiveLong(value: Long)          = MongoPrimitiveLong(value)
   implicit def intToMongoPrimitiveInt(value: Int)             = MongoPrimitiveInt(value)

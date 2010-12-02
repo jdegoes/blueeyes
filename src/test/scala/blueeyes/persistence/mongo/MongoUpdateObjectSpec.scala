@@ -1,24 +1,29 @@
 package blueeyes.persistence.mongo
 
-import org.spex.Specification
-import MongoImplicits._
-import blueeyes.json.JPathImplicits._
-import MongoUpdateOperators._
-import MongoFilterOperators._
-import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, JPath, Printer}
+import org.specs.Specification
+import blueeyes.json.{JsonParser, JPath}
+import blueeyes.json.JsonAST.JObject
+import MongoUpdateObject._
 
-//class MongoUpdateObjectSpec extends Specification{
-//  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
-//  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
+class MongoUpdateObjectSpec  extends Specification {
+  "decompose simple JObject" in{
+    import MongoImplicits._
 
-//  "build valid json with 'AND' MongoUpdateFieldValue" in {
-//    import MongoFilterImplicits._
-//    val updateObject = MongoUpdateObject(jObject)
-//    val updateFields = ("x" inc (1)) & ("address" set (jvalueToMongoPrimitive(jObject.fields.head.value).get))
-//    val andUpdate    = ("x" inc (1)) & updateObject
-//
-//    andUpdate.toJValue mustEqual (updateFields.toJValue)
-//  }
+    val jObject = parse("""{ "id" : 1.0, "name" : "foo" }""")
+    decompose(jObject) mustEqual(List(("id" set 1.0), ("name" set "foo")))
+  }
+  "decompose nested JObject" in{
+    import MongoImplicits._
 
-//}
+    val jObject = parse("""{ "id" : 1.0, "name" : { "first" : "foo" } }""")
+    decompose(jObject) mustEqual(List(("id" set 1.0), (JPath("name") \ "first" set "foo")))
+  }
+  "decompose nested JObject with null element" in{
+    import MongoImplicits._
+
+    val jObject = parse("""{ "id" : 1.0, "name" : null }""")
+    decompose(jObject) mustEqual(List(("id" set 1.0), ("name" unset)))
+  }
+
+  private def parse(value: String) = JsonParser.parse(value).asInstanceOf[JObject]
+}

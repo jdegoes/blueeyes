@@ -7,9 +7,7 @@ import JsonAST._
 sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
   def nodes: List[JPathNode]
   
-  def \ (that: JPath): JPath = new JPath {
-    def nodes = self.nodes ++ that.nodes
-  }
+  def \ (that: JPath): JPath = CompositeJPath(self.nodes ++ that.nodes)
   
   def \ (that: String): JPath = this \ JPath(that)
   

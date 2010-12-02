@@ -32,7 +32,7 @@ trait DatabaseCollection{
   def dropIndexes
   def dropIndex(name: String)
   // seems like there should be upsert here
-  def update(filter: Option[MongoFilter], value : MongoUpdateValue, upsert: Boolean, multi: Boolean)
+  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
 }
 
@@ -146,7 +146,7 @@ trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
     JNothing
   }
   
-  def value : MongoUpdateValue
+  def value : MongoUpdate
   def filter: Option[MongoFilter]
   def upsert: Boolean
   def multi : Boolean
