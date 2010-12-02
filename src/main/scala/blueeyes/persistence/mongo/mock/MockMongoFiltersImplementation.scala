@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo.mock
 
-import blueeyes.persistence.mongo.MongoFilterOperators.MongoFilterOperator
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterOperators._
