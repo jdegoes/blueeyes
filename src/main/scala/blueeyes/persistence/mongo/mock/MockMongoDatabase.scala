@@ -2,16 +2,15 @@ package blueeyes.persistence.mongo.mock
 
 import collection.immutable.List
 import blueeyes.json.JsonAST._
-import MockMongoFiltersImplementation._
-import MockMongoUpdateEvalutors._
+import MockMongoUpdateEvaluators._
 import java.lang.String
 import blueeyes.js.RhinoScript
-import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.json.Printer._
 import blueeyes.json.{JPath}
 import com.mongodb.{MongoException}
 import blueeyes.js.RhinoJson._
 import blueeyes.persistence.mongo._
+import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import blueeyes.persistence.mongo.JPathExtension._
 import org.mozilla.javascript.Scriptable
 
@@ -50,7 +49,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
   def indexed = all
 
-  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(JObjectsFilter(all, _).map(_.asInstanceOf[JObject])).getOrElse(all)
+  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
 
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 
@@ -80,7 +79,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     case MongoUpdateNothing         => jobject
     case x: MongoUpdateObject       => x.value
     case x: MongoUpdateField   => {
-      def updateValue(value: JValue) = Some(UpdateFiledEvalutorFactory(x.operator)(value, x.filter))
+      def updateValue(value: JValue) = Some(UpdateFiledEvaluatorFactory(x.operator)(value, x.filter))
       val (mergeOperation, pathRestorer) = jobject.get(x.path) match {
         case List(JNothing) => (true, jvalueToJObject _)
         case _   => (false, (p: JPath, v: JValue) => {v})
