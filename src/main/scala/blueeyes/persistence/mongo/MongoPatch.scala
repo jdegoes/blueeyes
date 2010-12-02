@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JPath
 
 private[mongo] object Changes {
-  sealed trait Change {
+  trait Change {
     /**
      * The list of changes that make up this change.
      */
@@ -22,17 +22,17 @@ private[mongo] object Changes {
     def *>(list: List[Change]) = Changes.compose(flatten, Changelist(list).flatten)
   }
 
-  sealed trait Change1 extends Change {
+    trait Change1 extends Change {
     /**
-     * The field that will be changed.
+     * The path that will be changed.
      */
-    def field: JPath
+    def path: JPath
 
     def flatten = List(this)
 
-    final def commuteWith(older: Change1): Option[Tuple2[Change1, Change1]] = if (older.field != this.field) Some((older, this)) else commuteWithImpl(older)
+    final def commuteWith(older: Change1): Option[Tuple2[Change1, Change1]] = if (older.path != this.path) Some((older, this)) else commuteWithImpl(older)
 
-    final def fuseWith(change: Change1): Option[Change1] = if (change.field != this.field) None else fuseWithImpl(change)
+    final def fuseWith(change: Change1): Option[Change1] = if (change.path != this.path) None else fuseWithImpl(change)
 
     protected def commuteWithImpl(older: Change1): Option[Tuple2[Change1, Change1]] = None
 
@@ -47,16 +47,6 @@ private[mongo] object Changes {
     implicit def patchToChangelist(patch: Change1): Changelist = Changelist(List(patch))
 
     implicit def listToChangelist(list: List[Change1]): Changelist = Changelist(list)
-  }
-
-  case class NoOpF(field: JPath) extends Change1 {
-    override protected def commuteWithImpl(older: Change1) = Some((older, this))
-
-    override protected def fuseWithImpl(older: Change1) = Some(older)
-  }
-
-  case class SetF(field: JPath, value: AnyRef) extends Change1 {
-    override protected def fuseWithImpl(older: Change1) = Some(this)
   }
 
   def compose(older: List[Change1], newer: List[Change1]): List[Change1] = if (newer.isEmpty) older else compose(compose(newer.last, older), newer.take(newer.length - 1))

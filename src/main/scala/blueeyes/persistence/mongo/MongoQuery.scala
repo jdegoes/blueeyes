@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
 
@@ -17,7 +16,7 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
   def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
 }
 
-trait MongoImplicits extends JPathImplicits with MongoFilterImplicits{
+trait MongoImplicits extends JPathImplicits with MongoFilterImplicits {
   implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
 
   implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
@@ -29,7 +28,6 @@ trait MongoImplicits extends JPathImplicits with MongoFilterImplicits{
   implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
 
   implicit def jvalueToMongoUpdateObject(value: JObject): MongoUpdateObject = MongoUpdateObject(value)
-
 }
 
 object MongoImplicits extends MongoImplicits
@@ -68,7 +66,7 @@ case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject])
 case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: List[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery[JNothing.type] with DropIndexQueryBehaviour
 case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery[JNothing.type] with DropIndexesQueryBehaviour
-case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdateValue, filter: Option[MongoFilter] = None, upsert: Boolean = false,
+case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdate, filter: Option[MongoFilter] = None, upsert: Boolean = false,
                             multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = copy(filter = Some(newFilter))
 }
@@ -97,8 +95,8 @@ object MongoQueryBuilder{
   class OnQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
     def on(collection: MongoCollection): T = f(collection)
   }
-  class SetQueryEntryPoint[T <: MongoQuery[_]](f: (MongoUpdateValue) => T){
-    def set(value: MongoUpdateValue): T = f(value)
+  class SetQueryEntryPoint[T <: MongoQuery[_]](f: (MongoUpdate) => T){
+    def set(value: MongoUpdate): T = f(value)
   }
 
   def select(selection: JPath*)                 = new FromQueryEntryPoint[MongoSelectQuery]   ((collection: MongoCollection) => {MongoSelectQuery(MongoSelection(List(selection: _*)), collection)})
@@ -111,83 +109,10 @@ object MongoQueryBuilder{
   def ensureUniqueIndex(name: String)           = new OnKeysQueryEntryPoint[MongoEnsureIndexQuery]((collection: MongoCollection, keys: List[JPath]) => {MongoEnsureIndexQuery(collection, name, keys, true)})
   def dropIndex(name: String)                   = new OnQueryEntryPoint[MongoDropIndexQuery]((collection: MongoCollection) => {MongoDropIndexQuery(collection, name)})
   def dropIndexes                               = new OnQueryEntryPoint[MongoDropIndexesQuery]((collection: MongoCollection) => {MongoDropIndexesQuery(collection)})
-  def update( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, false, false)})
-  def updateMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, false, true)})
-  def upsert( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, false)})
-  def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdateValue) => {MongoUpdateQuery(collection, value, None, true, true)})
+  def update( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, false, false)})
+  def updateMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, false, true)})
+  def upsert( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, true, false)})
+  def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, true, true)})
   def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint[MongoMapReduceQuery](((collection: MongoCollection) => {MongoMapReduceQuery(map, reduce, collection, None, None)}))
   def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(List(selection: _*)), collection, initial, reduce)})
-}
-
-object MongoUpdateOperators {
-  sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
-    def symbol: String = unmangledName
-
-    override def toString = symbol
-  }
-
-  case object $inc      extends MongoUpdateOperator
-  case object $set      extends MongoUpdateOperator
-  case object $unset    extends MongoUpdateOperator
-  case object $push     extends MongoUpdateOperator
-  case object $pushAll  extends MongoUpdateOperator
-  case object $addToSet extends MongoUpdateOperator
-  case object $pop      extends MongoUpdateOperator
-  case object $pull     extends MongoUpdateOperator
-  case object $pullAll  extends MongoUpdateOperator
-}
-
-import MongoUpdateOperators._
-sealed trait MongoUpdateValue {
-  def  toJValue: JObject;
-  
-  // TODO: def & (that: MongoUpdateValue)
-}
-
-case object MongoUpdateNothing extends MongoUpdateValue {
-  def toJValue: JObject = JObject(Nil)
-
-  // TODO: def & (that: MongoUpdateValue)
-  def & (that: MongoUpdateFieldValue): MongoUpdateFieldValue = that
-}
-
-sealed case class MongoUpdateObject(value: JObject) extends MongoUpdateValue{
-  def toJValue = value
-}
-
-sealed case class MongoUpdateFieldValue(operator: MongoUpdateOperator, path: JPath, filter: MongoFilter) extends MongoUpdateValue{  self =>
-  def toJValue: JObject = JObject(JField(operator.symbol, JObject(JField(JPathExtension.toMongoField(path), filter.filter) :: Nil)) :: Nil)
-
-  // TODO: def & (that: MongoUpdateValue)
-  def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(self :: that :: Nil) 
-  def & (that: MongoUpdateFieldsValues): MongoUpdateFieldsValues = MongoUpdateFieldsValues(List(self) ++ that.values)
-}
-
-sealed case class MongoUpdateFieldsValues(values: List[MongoUpdateValue]) extends MongoUpdateValue{
-  def toJValue: JObject = values.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
-  def & (that: MongoUpdateFieldValue): MongoUpdateFieldsValues = MongoUpdateFieldsValues(values ::: that :: Nil)
-  def & (that: MongoUpdateFieldsValues): MongoUpdateFieldsValues = MongoUpdateFieldsValues(values ++ that.values)
-}
-
-case class MongoUpdateBuilder(jpath: JPath) {
-  import MongoFilterImplicits._
-  import MongoFilterOperators._
-  def inc [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($inc,   jpath, "" === value)
-  def set [T](value: MongoPrimitive[T]) : MongoUpdateFieldValue = MongoUpdateFieldValue($set,   jpath, "" === value)
-  def unset                             : MongoUpdateFieldValue = MongoUpdateFieldValue($unset, jpath, "" === MongoPrimitiveInt(1))
-  def popLast                           : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath, "" === MongoPrimitiveInt(1))
-  def popFirst                          : MongoUpdateFieldValue = MongoUpdateFieldValue($pop,   jpath, "" === MongoPrimitiveInt(-1))
-  def push [T](value: MongoPrimitive[T]): MongoUpdateFieldValue = MongoUpdateFieldValue($push,  jpath, "" === value)
-  def pull(filter: MongoFilter)         : MongoUpdateFieldValue = MongoUpdateFieldValue($pull,  jpath, filter)  
-  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pushAll, jpath, "" === MongoPrimitiveArray(List(items: _*)))
-  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateFieldValue = MongoUpdateFieldValue($pullAll, jpath, "" === MongoPrimitiveArray(List(items: _*)))
-
-  def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateFieldValue = {
-    val itemsList = List(items: _*)
-    if (itemsList.size == 1) {
-      val item: MongoPrimitive[_] = itemsList.head 
-      MongoUpdateFieldValue($addToSet, jpath, "" === item)
-    }
-    else MongoUpdateFieldValue($addToSet, jpath, MongoFieldFilter(JPath(""), $each, MongoPrimitiveArray(itemsList)))
-  }  
 }
