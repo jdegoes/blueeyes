@@ -95,7 +95,10 @@ trait CountQueryBehaviour extends QueryBehaviour[JInt]{
 }
 
 trait SelectQueryBehaviour extends QueryBehaviour[Stream[JObject]]{
-  def apply(collection: DatabaseCollection) = collection.select(selection, filter, sort, skip, limit)
+  def apply(collection: DatabaseCollection) = {
+    val i = 0
+    collection.select(selection, filter, sort, skip, limit)
+  }
 
   def selection : MongoSelection
   def filter    : Option[MongoFilter]

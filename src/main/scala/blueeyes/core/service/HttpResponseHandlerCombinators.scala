@@ -30,7 +30,7 @@ trait HttpResponseHandlerCombinators{
 
       request.copy(headers = request.headers + Tuple2("Cookie", cookieEncoder.encode()))
 
-    })(transformer)  
+    })(transformer)
   }
 
   def remoteHost[T, S](remoteHost: InetAddress)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =

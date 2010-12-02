@@ -235,6 +235,20 @@ trait HttpRequestHandlerCombinators {
     (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
   } { h }
 
+  /** A special-case extractor for cookie.
+   * <pre>
+   * cookies('token) { token =>
+   *   get {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+//  def cookie[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+//    request.parameters(s1)
+//  } { h }
+
+
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.

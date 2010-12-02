@@ -69,25 +69,9 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
     if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
 
-    addCookies(request, response)
-
     val future = e.getChannel().write(nettyResponse)
 
     if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
-  }
-
-  private def addCookies(request: NettyHttpRequest, response: NettyHttpResponse){
-    val cookieString = request.getHeader(COOKIE)
-    if (cookieString != null) {
-      val cookieDecoder = new CookieDecoder()
-      val cookies       = cookieDecoder.decode(cookieString)
-      if(!cookies.isEmpty()) {
-        val cookieEncoder = new CookieEncoder(true)
-        cookies.foreach(cookieEncoder.addCookie(_))
-
-        response.addHeader(SET_COOKIE, cookieEncoder.encode())
-      }
-    }
   }
 }
 
