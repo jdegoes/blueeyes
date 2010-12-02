@@ -248,6 +248,72 @@ trait HttpRequestHandlerCombinators {
 //    request.parameters(s1)
 //  } { h }
 
+  private def extractField[F <: JValue](content: JValue, s: Symbol)(implicit mc: Manifest[F]): F = {
+    val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
+    
+    ((content \ s.name) -->? c).getOrElse("Expected field " + s.name + " to be " + c.getName).asInstanceOf[F]
+  }
+
+
+  def field[S, F1 <: JValue](s1: Symbol)(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = {
+    val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
+    
+    extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
+      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      
+      extractField(content, s1)
+    } (h)
+  }
+  
+  def fields[S, F1 <: JValue, F2 <: JValue](s1: Symbol, s2: Symbol)(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] = {
+    extract { (request: HttpRequest[JValue]) =>
+      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      
+      (
+        extractField(content, s1),
+        extractField(content, s2)
+      )
+    } (h)
+  }
+  
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol)(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] = {
+    extract { (request: HttpRequest[JValue]) =>
+      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      
+      (
+        extractField(content, s1),
+        extractField(content, s2),
+        extractField(content, s3)
+      )
+    } (h)
+  }
+  
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] = {
+    extract { (request: HttpRequest[JValue]) =>
+      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      
+      (
+        extractField(content, s1),
+        extractField(content, s2),
+        extractField(content, s3),
+        extractField(content, s4)
+      )
+    } (h)
+  }
+  
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] = {
+    extract { (request: HttpRequest[JValue]) =>
+      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      
+      (
+        extractField(content, s1),
+        extractField(content, s2),
+        extractField(content, s3),
+        extractField(content, s4),
+        extractField(content, s5)
+      )
+    } (h)
+  }
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
