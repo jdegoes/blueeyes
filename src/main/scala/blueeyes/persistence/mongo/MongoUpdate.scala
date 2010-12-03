@@ -300,5 +300,27 @@ case class AddToSetF(path: JPath, value: MongoPrimitive[_], filter: MongoFilter)
 }
 
 case class PullF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
+  import MongoFilterEvaluator._
+
   val operator = $pull
+
+  override protected def fuseWithImpl(older: Change1) = older match {
+    case SetF(f, v)         => Some(SetF(path, pull(v, filter)))
+
+    case PullF(_, _) => Some(this)
+
+    case _ => error("PullF can be only combined with SetF and PullF. Older=" + older)
+  }
+
+  private def pull(v1: MongoPrimitive[_], filter: MongoFilter): MongoPrimitive[_]  = v1 match{
+    case MongoPrimitiveArray(x)  => {
+      val valuesAndJValues  = x.zip(x.map(_.toJValue))
+      val matchedJVales     = valuesAndJValues.unzip._2.filter(filter)
+      val filtered          = valuesAndJValues.filterNot(v => matchedJVales contains v._2).unzip._1
+
+      MongoPrimitiveArray(filtered)
+    }
+
+    case _ => throw new MongoException("Cannot apply $pull modifier to non-array")
+  }
 }
