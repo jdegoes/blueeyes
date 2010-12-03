@@ -93,13 +93,13 @@ object HttpHeaders {
       ConnectionTokens.parseConnectionTokens(keyValue._2) else None
   }
 
-  class Cookie(val cookie: HttpCookie) extends HttpHeader {
-    val value = cookie.toString
+  class Cookie(val cookies: List[HttpCookie]) extends HttpHeader {
+    val value = cookies.toString
   }
   object Cookie {
-    def apply(cookie: HttpCookie) = new Cookie(cookie)
+    def apply(cookies: List[HttpCookie]) = new Cookie(cookies)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie")
-      HttpCookies.parseHttpCookies(keyValue._2) else None
+      Some(CookiesPattern(keyValue._2)) else None
   }
 
   class `Content-Length`(val length: HttpNumber) extends HttpHeader {
@@ -451,13 +451,13 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
   }
 
-  class `Set-Cookie`(val cookie: HttpCookie) extends HttpHeader {
+  class `Set-Cookie`(val cookie: List[HttpCookie]) extends HttpHeader {
     def value = cookie.toString
   }
   object `Set-Cookie` {
-    def apply(cookie: HttpCookie) = new `Set-Cookie`(cookie)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "set-cookie")
-      HttpCookies.parseHttpCookies(keyValue._2) else None
+    def apply(cookies: List[HttpCookie]) = new `Set-Cookie`(cookies)
+    def unapply(keyValue: (String, String)): Option[List[HttpCookie]] = if (keyValue._1.toLowerCase == "set-cookie")
+      Some(CookiesPattern(keyValue._2)) else None
   }
 
   /* Will take a while to implement */
