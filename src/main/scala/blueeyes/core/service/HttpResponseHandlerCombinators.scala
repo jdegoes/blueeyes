@@ -10,6 +10,8 @@ trait HttpResponseHandlerCombinators{
   def protocol[T, S](protocol: String)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =
     path(protocol + "://")(transformer)
 
+  def secure[T, S](transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = protocol("https")(transformer)  
+
   def host[T, S](host: String)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = path(host)(transformer)
 
   def port[T, S](port: Int)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S]    = path(":" + port.toString)(transformer)
@@ -71,16 +73,6 @@ trait HttpResponseHandlerCombinators{
   def custom[T, S](custom: String)(transformer: HttpResponse[T] => Future[S]): HttpClientTransformer[T, S] =
     invokeClient[T, S](HttpMethods.CUSTOM(custom))(transformer)
 
-  def secure[T, S](transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = {
-    (client: HttpClient[T]) => {
-      val wrappedClient: HttpClient[T] = new HttpClient[T] {
-        def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = client(request)
-        override def isDefinedAt(request: HttpRequest[T]) = request.scheme == "https"
-      }
-      transformer(wrappedClient)
-    }
-  }
-  
   def method[T, S](method: HttpMethod)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = copyRequest { (request: HttpRequest[T]) =>
     request.copy(method = method)
   } (transformer)

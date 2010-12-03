@@ -235,18 +235,48 @@ trait HttpRequestHandlerCombinators {
     (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
   } { h }
 
+  private def extractCookie[T](request: HttpRequest[T], s: Symbol) = {
+    def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse("Expected cookie " + s.name)
+  }
+
   /** A special-case extractor for cookie.
    * <pre>
-   * cookies('token) { token =>
+   * cookie('token) { token =>
    *   get {
    *     ...
    *   }
    * }
    * </pre>
    */
-//  def cookie[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
-//    request.parameters(s1)
-//  } { h }
+  def cookie[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    extractCookie(request, s1)
+  } { h }
+
+  /** A special-case extractor for cookies.
+   * <pre>
+   * cookies('username, 'password) { (username, password) =>
+   *   get {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+  def cookies[T, S](s1: Symbol, s2: Symbol)(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+    (extractCookie(request, s1), extractCookie(request, s2))
+  } { h }
+
+  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3))
+  } { h }
+
+  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4))
+  } { h }
+
+  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4), extractCookie(request, s5))
+  } { h }
 
   private def extractField[F <: JValue](content: JValue, s: Symbol)(implicit mc: Manifest[F]): F = {
     val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]

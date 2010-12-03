@@ -31,51 +31,62 @@ sealed trait HttpCookie {
 
 }
 
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
+object CookiesPattern extends PartialFunction[String, List[HttpCookie]]{
+  import CookiesPatternParsers._
+
+  private def applyParser = cookies
+
+  def isDefinedAt(s: String): Boolean = applyParser.apply(new CharSequenceReader(s)) match {
+    case Success(result, _) => true
+
+    case _ => false
+  }
+
+  def apply(s: String): List[HttpCookie] = applyParser.apply(new CharSequenceReader(s)) match {
+    case Success(result, _) => result.filter(_ != None).map(_.get)
+
+    case Failure(msg, _)    => parseFailure(msg, s)
+
+    case Error(msg, _)      => parseError(msg, s)
+  }
+
+  private def parseFailure(msg: String, s: String) = {
+    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+  }
+  private def parseError(msg: String, s: String) = {
+    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+  }  
+}
+
+object CookiesPatternParsers extends RegexParsers {
+  import HttpCookies._
+
+  def keysParser :       Parser[String]                 = ("expires" | "path" | "domain")
+  def secureParser :     Parser[Any]                    = ";" ~ "secure"
+  def nameParser :       Parser[String]                 = """[a-zA-Z0-9]+""".r
+  def valueParser:       Parser[String]                 = """[^;]+""".r
+  def cookieValueParser: Parser[Option[HttpCookie]]     =  nameParser ~ "=" ~ valueParser ^^ {case n~equal~v => Some(CookieData(n, v))} | (valueParser ^^ (v => None))
+  def parameterParser:   Parser[Tuple2[String, String]] = ";" ~ keysParser  ~ "=" ~ valueParser   ^^ {case sep~k~equal~v => Tuple2[String, String](k, v)}
+  def cookieParser:      Parser[Option[HttpCookie]]     = cookieValueParser ~ ((parameterParser | secureParser)*) ^^ {case cookie~optional => {
+    cookie match{
+      case Some(e : CookieData) => {
+        var result = e
+        optional.foreach(v => result = v match {
+          case ("expires", x: String) => result.copy(expires = HttpDateTimes.parseHttpDateTimes(x))
+          case ("path",    x: String) => result.copy(path = Some(x))
+          case ("domain",  x: String) => result.copy(domain = Some(x))
+          case _ => result
+        })
+        Some(result)
+      }
+      case _ => None
+    }
+  }}
+  def cookies:     Parser[List[Option[HttpCookie]]]  = repsep(cookieParser, ";")
+}
+
 object HttpCookies {
-
-  def parseHttpCookies(inString: String): Option[HttpCookie] = {
-    def NameRegex = """([a-zA-Z\d])+=[^;]*""".r
-
-    /* Ex of date: expires=Mon, 01-Jan-2001 00:00:00 GMT */
-    def DateRegex = """expires=[^;]+""".r
-
-    /* Example of Path: path=/ */
-    def PathRegex = """path=[^;]+""".r
-
-    /* Example of domain: domain=.example.nets/kittens */
-    def DomainRegex = """domain=[^;]+""".r
-
-    def nameValuePair: List[String] = NameRegex.findFirstIn(inString.trim).getOrElse("").split("=").toList
-    if (nameValuePair.length != 2)
-      return None
-    
-    def date: Option[HttpDateTime] = HttpDateTimes.parseHttpDateTimes(DateRegex.findFirstIn(inString).getOrElse("").split("=")(1))
-
-    def path: Option[String] = PathRegex.findFirstIn(inString.trim).map(_.replaceFirst("path=",""))
-
-    def domain: Option[String] = DomainRegex.findFirstIn(inString.trim).map(_.replaceFirst("domain=",""))
-
-    return Some(CookieData(nameValuePair(0), nameValuePair(1), date, path, domain))
-  }
-
-
-  case class CookieData (name: String, cookieValue: String, expires: Option[HttpDateTime], path: Option[String], domain: Option[String]) extends HttpCookie
-
-  object CookieData {
-    def apply(name: String, cookieValue: String): HttpCookie = 
-      new CookieData (name, cookieValue, None, None, None)
-
-    def apply(name: String, cookievalue: String, path: String): HttpCookie = 
-      new CookieData (name, cookievalue, None, Some(path), None)
-
-    def apply(name: String, cookieValue: String, expires: HttpDateTime): HttpCookie = 
-      new CookieData (name, cookieValue, Some(expires), None, None)
-
-    def apply(name: String, cookieValue: String, expires: HttpDateTime, path: String): HttpCookie = 
-      new CookieData (name, cookieValue, Some(expires), Some(path), None)
-
-    def apply(name: String, cookieValue: String, expires: HttpDateTime, path: String, domain: String): HttpCookie = 
-      new CookieData (name, cookieValue, Some(expires), Some(path), Some(domain))
-  }
-
+  case class CookieData (name: String, cookieValue: String, expires: Option[HttpDateTime] = None, path: Option[String] = None, domain: Option[String] = None) extends HttpCookie
 }

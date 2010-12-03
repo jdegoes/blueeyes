@@ -68,7 +68,7 @@ sealed trait MongoUpdate{ self =>
     case (x: MongoUpdateField,   y: MongoUpdateField)  => x *> y
     case (x: MongoUpdateField,   y: MongoUpdateFields) => x *> toChanges(y)
     
-    case (x: MongoUpdateFields, y: MongoUpdateField) => x *> y
+    case (x: MongoUpdateFields, y: MongoUpdateField)   => x *> y
     case (x: MongoUpdateFields, y: MongoUpdateFields)  => x *> toChanges(y)
 
     case (x: MongoUpdateObject, _)   => toUpdateFieldsValues(x) & that
