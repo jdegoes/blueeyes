@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>src/main/scala/blueeyes/BlueEyesDemo.scala</string>
+	<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,20 +21,6 @@
 	<integer>405</integer>
 	<key>metaData</key>
 	<dict>
-		<key>project/build.properties</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>8</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
 		<key>project/build/BlueEyesProject.scala</key>
 		<dict>
 			<key>caret</key>
@@ -119,19 +105,47 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
-		<key>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</key>
+		<key>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>66</integer>
+				<integer>8</integer>
 				<key>line</key>
-				<integer>19</integer>
+				<integer>127</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>99</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>76</integer>
+				<key>line</key>
+				<integer>73</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>103</integer>
+				<key>line</key>
+				<integer>56</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>44</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/RestPathPattern.scala</key>
 		<dict>
@@ -145,7 +159,7 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>32</integer>
+			<integer>0</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/engines/NettyEngines.scala</key>
 		<dict>
@@ -160,6 +174,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>102</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/core/service/package.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/json/Extraction.scala</key>
 		<dict>
@@ -180,30 +208,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>40</integer>
 				<key>line</key>
-				<integer>383</integer>
+				<integer>331</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>357</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>7</integer>
-				<key>line</key>
-				<integer>383</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>383</integer>
-			</dict>
+			<integer>286</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/json/JsonParser.scala</key>
 		<dict>
@@ -319,6 +331,20 @@
 			<key>firstVisibleLine</key>
 			<integer>116</integer>
 		</dict>
+		<key>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>30</integer>
+		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/RealMongo.scala</key>
 		<dict>
 			<key>caret</key>
@@ -397,20 +423,6 @@
 				<integer>1</integer>
 				<key>line</key>
 				<integer>22</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
-		<key>src/test/scala/blueeyes/core/service/HttpResponseHandlerCombinatorsSpec.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>0</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -507,14 +519,16 @@
 	<key>openDocuments</key>
 	<array>
 		<string>project/build/BlueEyesProject.scala</string>
-		<string>project/build.properties</string>
 		<string>src/main/scala/blueeyes/core/service/RestPathPattern.scala</string>
 		<string>src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala</string>
 		<string>src/main/scala/blueeyes/BlueEyesDemo.scala</string>
-		<string>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</string>
+		<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
+		<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala</string>
+		<string>src/main/scala/blueeyes/core/service/package.scala</string>
 		<string>src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala</string>
 		<string>src/main/scala/blueeyes/json/xschema/Serialization.scala</string>
-		<string>src/test/scala/blueeyes/core/service/HttpResponseHandlerCombinatorsSpec.scala</string>
+		<string>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</string>
+		<string>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</string>
 		<string>src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala</string>
 		<string>src/main/scala/blueeyes/core/data/Bijection.scala</string>
 		<string>src/main/scala/blueeyes/BlueEyesServer.scala</string>
@@ -541,6 +555,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{792, 445}, {1392, 979}}</string>
+	<string>{{528, 199}, {1392, 979}}</string>
 </dict>
 </plist>
