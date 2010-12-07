@@ -85,6 +85,27 @@ trait HttpRequestHandlerCombinators {
   def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { toPartial(h) } }
   def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { toPartial(h) } }
 
+  /** Forces a particular combinator to match (if it does not, BadRequest will 
+   * be returned to the client).
+   * <pre>
+   * commit {
+   *   path {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+  def commit[T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = true
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      if (!h.isDefinedAt(r)) {
+        Future.dead(HttpException(HttpStatusCodes.BadRequest))
+      }
+      else h.apply(r)
+    }
+  }
+
   /**
    * Extracts data from the request. The extractor combinators can be used to 
    * factor out extraction logic that's duplicated across a range of paths or
