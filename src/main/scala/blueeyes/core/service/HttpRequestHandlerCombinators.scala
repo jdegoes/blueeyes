@@ -89,7 +89,7 @@ trait HttpRequestHandlerCombinators {
    * be returned to the client).
    * <pre>
    * commit {
-   *   path {
+   *   path("/foo") {
    *     ...
    *   }
    * }
