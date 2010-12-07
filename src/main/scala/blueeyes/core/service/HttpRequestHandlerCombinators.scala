@@ -258,7 +258,7 @@ trait HttpRequestHandlerCombinators {
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse("Expected cookie " + s.name)
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse(error("Expected cookie " + s.name))
   }
 
   /** A special-case extractor for cookie.
@@ -302,7 +302,7 @@ trait HttpRequestHandlerCombinators {
   private def extractField[F <: JValue](content: JValue, s: Symbol)(implicit mc: Manifest[F]): F = {
     val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
     
-    ((content \ s.name) -->? c).getOrElse("Expected field " + s.name + " to be " + c.getName).asInstanceOf[F]
+    ((content \ s.name) -->? c).getOrElse(error("Expected field " + s.name + " to be " + c.getName)).asInstanceOf[F]
   }
 
 

@@ -34,9 +34,9 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
           // Need to log here...
           case _ => None
         }
-        httpClient.close
         
         resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
+        httpClient.close
       }
 
       def onException(e: IOException) {
