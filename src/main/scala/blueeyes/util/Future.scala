@@ -272,6 +272,7 @@ class Future[T] {
         canceled.foreach(f => f(error))
         
         _canceled.clear()
+        _cancelers.clear()
       }
     }
 
@@ -283,16 +284,14 @@ class Future[T] {
       if (isDone) false           // [-- Already done, can't be canceled
       else if (isCanceled) true   // <-- Already canceled, nothing to do
       else {                      // <-- Ask to see if everyone's OK with canceling
-        _error = error
-      
         var shouldCancel = cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
 
         if (shouldCancel) {
+          _error = error
+          
           // Everyone's OK with canceling, mark state & notify:
           forceCancel(error)
         }
-        
-        _cancelers.clear()
 
         shouldCancel
       }
