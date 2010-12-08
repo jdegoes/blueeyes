@@ -12,7 +12,6 @@ trait PublishingProject extends DefaultProject{
     val staleRepositories = NexusStagingList(info.projectPath, log)
     staleRepositories.foreach(NexusStagingDrop(info.projectPath, _, log))
 
-    incrementVersionAction.run
     super.publishAction.run
     
     val repositories = NexusStagingList(info.projectPath, log)
@@ -20,6 +19,7 @@ trait PublishingProject extends DefaultProject{
       case x :: Nil =>{
         NexusStagingClose(info.projectPath, x, log)
         NexusStagingRelease(info.projectPath, x, log)
+        incrementVersionAction.run        
         None
       }
       case x :: xs  => Some("There are more then one staging repostories: %s. Please, release manually.".format(repositories.mkString(", ")))

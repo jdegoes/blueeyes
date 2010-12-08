@@ -66,8 +66,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 	  r 
 	}
       }(httpClient) 
-      f.value must eventually(retries, new Duration(duration))(beSomething)
-      f.value.get.status.code must be(ServiceUnavailable.code)
+      f.error must eventually(retries, new Duration(duration))(beSomething)
     }
     
     "Support GET requests with status OK" in {

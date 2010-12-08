@@ -73,6 +73,25 @@ class Future[T] {
 
     this
   }
+  
+  /** Returns a Future that always succeeds -- if this future is canceled, the
+   * specified default value will be delivered to the returned future.
+   * <p>
+   * <pre>
+   * f.orElse(3).map(_ * 5)
+   * </pre>
+   */
+  def orElse(default: => T): Future[T] = {
+    val f = new Future[T]
+    
+    this.deliverTo(f.deliver _)
+    
+    this.ifCanceled { _ =>
+      f.deliver(default)
+    }
+    
+    f
+  }
 
   /** Attempts to cancel the future. This may succeed only if the future is
    * not already delivered, and if all cancel conditions are satisfied.
@@ -267,6 +286,7 @@ class Future[T] {
   private def forceCancel(error: Option[Throwable]): Future[T] = {
     writeLock {
       if (!_isCanceled) {
+        _error      = error        
         _isCanceled = true
 
         canceled.foreach(f => f(error))
@@ -287,8 +307,6 @@ class Future[T] {
         var shouldCancel = cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
 
         if (shouldCancel) {
-          _error = error
-          
           // Everyone's OK with canceling, mark state & notify:
           forceCancel(error)
         }

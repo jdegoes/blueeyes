@@ -9,7 +9,7 @@ import collection.mutable.ConcurrentMap
 
 trait HealthMonitor{
 //
-  private val counters: ConcurrentMap[String, Int] = new ConcurrentHashMap[String, Int]
+  private val counters: ConcurrentMap[String, Counter] = new ConcurrentHashMap[String, Counter]
   private val timer   = new Timer()
 
 //  def count(path: JPath)(c: Long) = counter(path).inc(c)
