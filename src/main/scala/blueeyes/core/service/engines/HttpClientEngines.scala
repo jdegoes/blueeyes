@@ -10,6 +10,7 @@ import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponse
                       OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
+import blueeyes.core.http.HttpFailure
 import net.lag.logging.Logger
 
 
@@ -43,17 +44,18 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
       }
 
       def onException(e: IOException) {
-        val httpStatus = HttpStatus(e match {
+        val httpStatus = e match {
           case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
 	  case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
           case _ => HttpStatusCodes.InternalServerError
-        })
+        }
 
         httpClient.close
-        resultFuture.deliver(HttpResponse[T](status = httpStatus))
+        resultFuture.cancel(HttpException(httpStatus, e))
       }
     })
   }
+
   private def createXLRequest(request: HttpRequest[T]): XLHttpRequest =  {
     import blueeyes.util.QueryParser
     import java.net.URI
