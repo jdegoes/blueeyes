@@ -6,7 +6,7 @@ import blueeyes.core.data.Bijection
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-trait HttpResponseHandlerCombinators{
+trait HttpClientTransformerCombinators{
   def protocol[T, S](protocol: String)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =
     path(protocol + "://")(transformer)
 

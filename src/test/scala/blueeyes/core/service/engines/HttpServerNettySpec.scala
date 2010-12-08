@@ -116,7 +116,7 @@ object LocalHttpsClient extends HttpClientXLightWebEnginesString{
   }
 }
 
-class SampleClientFacade(port: Int, sslPort: Int) extends HttpResponseHandlerCombinators{
+class SampleClientFacade(port: Int, sslPort: Int) extends HttpClientTransformerCombinators{
   def httpsRequest = protocol("https"){
     host("localhost"){
       port(sslPort){

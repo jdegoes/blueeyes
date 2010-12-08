@@ -5,7 +5,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.service.HttpResponseHandlerCombinators
+import blueeyes.core.service.HttpClientTransformerCombinators
 import blueeyes.util.Future
 import blueeyes.util.FutureImplicits
 import java.util.concurrent.CountDownLatch
@@ -13,7 +13,7 @@ import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
 
-class HttpClientXLightWebSpec extends Specification with HttpResponseHandlerCombinators with FutureImplicits {
+class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCombinators with FutureImplicits{
   import HttpHeaderImplicits._
 
   val duration = 250
