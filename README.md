@@ -67,12 +67,15 @@ The following code builds an e-mail service, together with a server capable of r
 
 Services are automatically provided with *context*, which provides a bundle of functionality essential to every service:
 
- * config. Every service gets its own separate config, namespaced by service name and major version.
- * log. Logging can be configured differently for different services.
- * monitor. Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
+ * *config*. Every service gets its own separate config, namespaced by service name and major version.
+ * *log*. Logging can be configured differently for different services.
+ * *monitor*. Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
 
 Service Construction
 --------------------
+
+Service Consumption
+-------------------
 
 Automated Testing
 -----------------
