@@ -6,6 +6,7 @@ import blueeyes.health.time.{Duration, Clock}
 import collection.generic.Growable
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
+import blueeyes.util.Future
 
 /**
  * A class which tracks the amount of time it takes to perform a particular
@@ -35,6 +36,13 @@ class Timer extends Growable[Duration] {
     val t = f
     this += Duration.nanoseconds(Clock.nanoTime - startTime)
     return t
+  }
+
+  def time[T](f: Future[T]): Future[T] = {
+    val startTime = Clock.nanoTime
+    f.deliverTo(v => {
+      this += Duration.nanoseconds(Clock.nanoTime - startTime)      
+    })
   }
 
   /**
