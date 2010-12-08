@@ -110,13 +110,6 @@ object JPath {
   def apply(n: JPathNodeConcrete*): JPathConcrete = CompositeJPathConcrete(n.toList)
   
   def unapply(path: String): Option[Iterable[JPathNode]] = Some(apply(path).nodes)
-  
-  // 
-  // jvalue.flattenWithPath.transform {
-  //   case (".adId", jstring: JString) =>
-  //   case (".properties.groupId", jstring: JString) => 
-  // }
-  // 
 
   private[this] sealed trait Index
   private[this] case class Start(index: Int) extends Index
