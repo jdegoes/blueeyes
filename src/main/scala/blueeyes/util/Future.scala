@@ -84,6 +84,8 @@ class Future[T] {
   def orElse(default: => T): Future[T] = {
     val f = new Future[T]
     
+    f.allowCancelOnlyIf { _ => false }
+    
     this.deliverTo(f.deliver _)
     
     this.ifCanceled { _ =>
