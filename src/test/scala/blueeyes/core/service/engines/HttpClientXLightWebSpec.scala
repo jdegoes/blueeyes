@@ -4,6 +4,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.service.HttpResponseHandlerCombinators
 import blueeyes.util.Future
 import blueeyes.util.FutureImplicits
@@ -58,6 +59,17 @@ class HttpClientXLightWebSpec extends Specification with HttpResponseHandlerComb
       uri = "http://localhost:%s/echo".format(port)
     }
 
+    "Support GET to invalid server should return http error" in {
+      val f = path[String, HttpResponse[String]]("http://127.0.0.1:666/foo") {
+        get[String, HttpResponse[String]] { r => 
+	  println("response: " + r)
+	  r 
+	}
+      }(httpClient) 
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.status.code must be(ServiceUnavailable.code)
+    }
+    
     "Support GET requests with status OK" in {
       val f = path[String, HttpResponse[String]](uri) {
         get[String, HttpResponse[String]] { r => r }
@@ -71,7 +83,6 @@ class HttpClientXLightWebSpec extends Specification with HttpResponseHandlerComb
             get[String, HttpResponse[String]]{ r => r }
 	  }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beNone)
-//      f.value.get.status.code must be(HttpStatusCodes.NotFound)
     }
 
     "Support GET requests with query params" in {      

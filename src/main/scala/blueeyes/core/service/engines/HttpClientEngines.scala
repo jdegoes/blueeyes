@@ -10,6 +10,7 @@ import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponse
                       OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
+import net.lag.logging.Logger
 
 
 sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
@@ -31,8 +32,10 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
         val data = try {
           Some(contentBijection(response.getBody))
         } catch {
-          // Need to log here...
-          case _ => None
+          case e: Throwable => {
+	    Logger.get.error(e, "Failed to transcode response body")
+	    None
+	  }
         }
         
         resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
@@ -42,11 +45,12 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
       def onException(e: IOException) {
         val httpStatus = HttpStatus(e match {
           case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
+	  case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
           case _ => HttpStatusCodes.InternalServerError
         })
-        httpClient.close
 
-        resultFuture.cancel(new Error(e))
+        httpClient.close
+        resultFuture.deliver(HttpResponse[T](status = httpStatus))
       }
     })
   }
