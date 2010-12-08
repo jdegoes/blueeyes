@@ -13,10 +13,12 @@ The framework has been designed to meet all the following goals:
 
 Blue Eyes does not have any features for generation of static HTML pages from templates. Nor does Blue Eyes have any out of the box support for serving static HTML files. Blue Eyes is intended *only* for creating web services which can be consumed using HTTP clients.
 
-Origin of the Name
-------------------
+Origins
+-------
 
-Loosely inspired by the Ruby library Sinatra and the Scala library Scalatra, which both allow developers to efficient produce RESTful web services.
+Blue Eyes is loosely inspired by the Ruby library Sinatra and the Scala library Scalatra, which both allow developers to efficient produce RESTful web services.
+
+Blue Eyes aims for the same or higher level of productivity as these libraries, but with a more functional design, much higher performance, and compatibility with the rigorous demands of continuous deployment.
 
 Introduction
 ------------
