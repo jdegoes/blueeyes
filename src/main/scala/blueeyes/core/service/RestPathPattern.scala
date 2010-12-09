@@ -121,6 +121,7 @@ object RestPathPatternParsers extends RegexParsers {
   override def skipWhitespace = false
   
   def validUrlFrag:     Parser[String] = """[a-zA-Z0-9$\-_.+!*'()]+""".r
+  def validUrlIdent:    Parser[String] = """[a-zA-Z0-9\-_]+""".r
   def validSymbolName:  Parser[String] = """[a-zA-Z_][a-zA-Z_0-9]*""".r
   def pathSeparator:    Parser[String] = "/"
   def startOfString:    Parser[String] = """^""".r
@@ -158,7 +159,7 @@ object RestPathPatternParsers extends RegexParsers {
     override def toString = "^$"
   }
   case class SymbolPathPattern(symbol: Symbol) extends RestPathPattern {
-    val parser: Parser[Map[Symbol, String]] = validUrlFrag ^^ (s => Map(symbol -> s))
+    val parser: Parser[Map[Symbol, String]] = validUrlIdent ^^ (s => Map(symbol -> s))
     
     override def toString = symbol.toString
   }  
