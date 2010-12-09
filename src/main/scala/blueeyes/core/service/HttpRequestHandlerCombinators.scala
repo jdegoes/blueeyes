@@ -100,10 +100,32 @@ trait HttpRequestHandlerCombinators {
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       if (!h.isDefinedAt(r)) {
-        Future.dead(HttpException(HttpStatusCodes.BadRequest))
+        Future.dead(HttpException(HttpStatusCodes.BadRequest, "Invalid request: " + r))
       }
       else h.apply(r)
     }
+  }
+  
+  /** Attemps to peek to see if a particular combinator will handle a request.
+   * <pre>
+   * justTry {
+   *   path("/foo") {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+  def justTry[T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        h.isDefinedAt(r)
+      }
+      catch {
+        case _ => false
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h.apply(r)
   }
 
   /**
