@@ -94,7 +94,7 @@ object HttpHeaders {
   }
 
   class Cookie(val cookies: List[HttpCookie]) extends HttpHeader {
-    val value = cookies.toString
+    val value = cookies.mkString(";")
   }
   object Cookie {
     def apply(cookies: List[HttpCookie]) = new Cookie(cookies)
