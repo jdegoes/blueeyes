@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import org.specs.Specification
+import org.specs.matcher.Matchers._
 
 import blueeyes.core.http._
 import blueeyes.util.Future
@@ -19,5 +20,18 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
     }
+  }
+
+  "default cookies should propagate correctly" in {
+    val defaultValue = "defaultValue"
+    val f = path("/foo/bar") { 
+      cookie('someCookie, Some(defaultValue)) { cookieVal =>
+        get { (request: HttpRequest[String]) => 
+          Future(HttpResponse[String](content=Some(cookieVal)))
+        }
+      }
+    }(HttpRequest[String](HttpMethods.GET, "/foo/bar"))
+    f.value must eventually(beSomething)
+    f.value.get.content.get must be(defaultValue)
   }
 }

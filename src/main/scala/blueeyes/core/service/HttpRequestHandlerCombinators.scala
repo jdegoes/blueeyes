@@ -256,9 +256,9 @@ trait HttpRequestHandlerCombinators {
     (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
   } { h }
 
-  private def extractCookie[T](request: HttpRequest[T], s: Symbol) = {
+  private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse(error("Expected cookie " + s.name))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(error("Expected cookie " + s.name))
   }
 
   /** A special-case extractor for cookie.
@@ -270,8 +270,8 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookie[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
-    extractCookie(request, s1)
+  def cookie[T, S](s1: Symbol, defaultValue: Option[String] = None)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    extractCookie(request, s1, defaultValue)
   } { h }
 
   /** A special-case extractor for cookies.
