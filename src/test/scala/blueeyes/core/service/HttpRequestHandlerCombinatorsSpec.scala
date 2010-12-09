@@ -19,6 +19,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
+      
+      handler mustBe handler
     }
   }
 

@@ -26,7 +26,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
   private var servers: List[Tuple2[Executor, ServerBootstrap]]  = Nil
 
   override def start: Future[Unit] = {
-    super.start.map(_ => {
+    super.start.flatMapEither(_ => {
 
       startStopLock.writeLock.lock()
 
@@ -37,20 +37,20 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
           startServers(List(Tuple2(port, new HttpServerPipelineFactory("http", host, port)), Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort))))
 
           log.info("Http Netty engine is started using port: " + self.port)
-          log.info("Https Netty engine is started using port: " + self.sslPort)          
+          log.info("Https Netty engine is started using port: " + self.sslPort)
+          Right(())
         }
         catch {
           case e: Throwable => {
             log.error(e, "Error while servers start: %s", e.getMessage)
             stop
+            Left(e)
           }
         }
       }
       finally{
         startStopLock.writeLock.unlock()
       }
-
-      ()
     })
   }
 

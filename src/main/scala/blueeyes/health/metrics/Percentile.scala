@@ -10,8 +10,7 @@ import scala.math.floor
  * @author coda
  * @see Sample
  */
-class Percentile(val sampleSize: Int)
-        extends Growable[Double] {
+class Percentile(val sampleSize: Int) extends Growable[Double] {
   
 
   private val sample = new Sample(sampleSize)(0.0)
