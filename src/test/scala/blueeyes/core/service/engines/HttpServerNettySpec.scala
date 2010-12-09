@@ -6,12 +6,12 @@ import org.specs.Specification
 import blueeyes.util.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilderString
-import net.lag.configgy.Configgy
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
+import net.lag.configgy.{ConfigMap, Configgy}
 
 
 class HttpServerNettySpec extends Specification {
@@ -26,62 +26,64 @@ class HttpServerNettySpec extends Specification {
   private var port = 8585
   private var server: Option[NettyEngineString] = None
   private var clientFacade: SampleClientFacade = _
-  
+  private var client: LocalHttpsClient = _
+
   "HttpServer" should{
     doFirst{
-      var success = false
+      var error: Option[Throwable] = None
       do{
-        SampleServer.sampleService
-        success = try {
-          val doneSignal = new CountDownLatch(1)
+        val sampleServer = new SampleServer()
+        val doneSignal   = new CountDownLatch(1)
 
-          Configgy.configureFromString(configPattern.format(port, port + 1))
+        Configgy.configureFromString(configPattern.format(port, port + 1))
 
-          SampleServer.start.deliverTo { _ => doneSignal.countDown()}
-          true
+        val startFuture = sampleServer.start
+        startFuture.deliverTo { _ =>
+          error = None
+          doneSignal.countDown()
         }
-        catch {
-          case e: Throwable => {
-            e.printStackTrace()
-            port = port + 2
-            false
-          }
+        startFuture.ifCanceled{v =>
+          error = v
+          port  = port + 2
+          doneSignal.countDown()
         }
-      }while(!success)
+
+        server       = Some(sampleServer)        
+      }while(error != None)
 
       clientFacade = new SampleClientFacade(port, port + 1)
-      server       = Some(SampleServer)
+      client       = new LocalHttpsClient(server.get.config)
     }
 
     "return html by correct URI by https" in{
-      val response =  LocalHttpsClient.execSynch(clientFacade.httpsRequest)
+      val response =  client.execSynch(clientFacade.httpsRequest)
       response.content.get mustEqual (Context.context)
     }
 
     "return html by correct URI" in{
-      val response =  LocalHttpsClient.execSynch(clientFacade.httpRequest)
+      val response =  client.execSynch(clientFacade.httpRequest)
 
       response.status       mustEqual (HttpStatus(OK))
       response.content.get  mustEqual (Context.context)
     }
 
     "return not found error by wrong URI" in{
-      val response = LocalHttpsClient.execSynch(clientFacade.wrongHttpRequest)
+      val response = client.execSynch(clientFacade.wrongHttpRequest)
 
       response.status mustEqual (HttpStatus(NotFound))
     }
     "return Internall error when handling request crushes" in{
-      val response = LocalHttpsClient.execSynch(clientFacade.errorHttpRequest)
+      val response = client.execSynch(clientFacade.errorHttpRequest)
 
       response.status mustEqual (HttpStatus(InternalServerError))
     }
     "return Http error when handling request throws HttpException" in{
-    val response = LocalHttpsClient.execSynch(clientFacade.httpErrorHttpRequest)
+    val response = client.execSynch(clientFacade.httpErrorHttpRequest)
       response.status mustEqual (HttpStatus(BadRequest))
     }
 
     "return html by correct URI with parameters" in{
-      val response = LocalHttpsClient.execSynch(clientFacade.httpRequestWithParams)
+      val response = client.execSynch(clientFacade.httpRequestWithParams)
 
       response.status       mustEqual (HttpStatus(OK))
       response.content.get  mustEqual (Context.context)
@@ -93,11 +95,11 @@ class HttpServerNettySpec extends Specification {
   }
 }
 
-object SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
+class SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
 
-object LocalHttpsClient extends HttpClientXLightWebEnginesString{
+class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesString{
   override protected def createSSLContext = {
-    val keyStore            = BlueEyesKeyStoreFactory(SampleServer.config)
+    val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
     trustManagerFactory.init(keyStore)
 

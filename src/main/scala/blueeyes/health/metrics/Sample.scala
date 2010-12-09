@@ -11,10 +11,7 @@ import java.util.concurrent.atomic.{AtomicReferenceArray, AtomicLong}
  * @author coda
  * @see <a href="http://www.cs.umd.edu/~samir/498/vitter.pdf">Random Sampling with a Reservoir</a>
  */
-class Sample[A](val window: Int)
-               (init: => A)
-               (implicit evidence : ClassManifest[A])
-        extends Iterable[A] with Growable[A] {
+class Sample[A](val window: Int)(init: => A)(implicit evidence : ClassManifest[A]) extends Iterable[A] with Growable[A] {
 
   private val random = new Random()
   private val values = new AtomicReferenceArray[A](window)

@@ -8,24 +8,32 @@ import java.util.concurrent.ConcurrentHashMap
 import collection.mutable.ConcurrentMap
 
 trait HealthMonitor{
-//
-  private val counters: ConcurrentMap[String, Counter] = new ConcurrentHashMap[String, Counter]
-  private val timer   = new Timer()
 
-//  def count(path: JPath)(c: Long) = counter(path).inc(c)
-//
-//  private def counter(path: JPath): Counter = {
-//    counters.get(path).getOrElse({
-//      val counter = new Counter()
-//      counters.putIfAbsent(path, counter).getOrElse(counter)
-//    })
-//  }
+  private val counters: ConcurrentMap[JPath, Counter] = new ConcurrentHashMap[JPath, Counter]
+  private val timers:   ConcurrentMap[JPath, Timer]   = new ConcurrentHashMap[JPath, Timer]
 
-  def time[T](path: JPath)(f: => T): T              = timer.time(f)
+  def count(path: JPath)(c: Long)       = counter(path).inc(c)
 
-  def time[T](path: JPath)(f: Future[T]): Future[T] = timer.time(f)
+  def time[T](path: JPath)(f: => T): T  = timer(path).time(f)
+
+  def futureTime[T](path: JPath)(f: Future[T]): Future[T] = timer(path).time(f)
 
   def error[T <: Throwable](path: JPath)(t: T): T = t
+
+  def countStats = counters.toMap
+
+  def timerStats = timers.toMap
+
+  private def counter(path: JPath): Counter = statObject(path, counters,  {new Counter()})
+
+  private def timer(path: JPath):   Timer   = statObject(path, timers,    {new Timer()})
+
+  private def statObject[T](path: JPath, container: ConcurrentMap[JPath, T], factory: => T): T = {
+    container.get(path).getOrElse({
+      val statObject = factory
+      container.putIfAbsent(path, statObject).getOrElse(statObject)
+    })
+  }
 }
 
 //trait HealthMonitor {
