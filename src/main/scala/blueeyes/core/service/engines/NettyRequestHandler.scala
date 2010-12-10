@@ -14,7 +14,7 @@ import blueeyes.util.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
 import org.jboss.netty.handler.timeout.TimeoutException
-import org.jboss.netty.handler.codec.http.{CookieEncoder, CookieDecoder, HttpRequest => NettyHttpRequest, HttpResponse => NettyHttpResponse}
+import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
 private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   private val futures = new FuturesList[HttpResponse[T]]()
@@ -31,6 +31,15 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
         futures - requestFuture
         writeResponse(event) (response)
       })
+
+      requestFuture.ifCanceled{th =>
+        futures - requestFuture
+        th.foreach(t => writeResponse(event) (toResponse(t)))
+        th.orElse{
+          event.getChannel.close
+          None
+        }
+      }
     }
     catch {
       case e: Throwable => log.error(e, "Error while request handling. Request=" + event); writeResponse(event) (toResponse(e))

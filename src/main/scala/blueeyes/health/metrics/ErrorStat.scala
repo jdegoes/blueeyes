@@ -10,7 +10,7 @@ class ErrorStat extends ConcurrentMaps{
   private val _count = new AtomicLong(0)
   private val _distribution : ConcurrentMap[Class[_], AtomicLong] = new ConcurrentHashMap[Class[_], AtomicLong]
 
-  def error[T <: Throwable](t: T): T = {
+  def +=[T <: Throwable](t: T): T = {
     _count.getAndAdd(1)
 
     createIfAbsent(t.getClass, _distribution, {new AtomicLong(0)}).getAndAdd(1)

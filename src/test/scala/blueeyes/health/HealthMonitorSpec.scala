@@ -10,7 +10,9 @@ class HealthMonitorSpec extends Specification{
 
   private val precision = 5.0
 
-  private val montor = new HealthMonitor{}
+  private val montor = new HealthMonitor{
+    def sampleSize = 1000
+  }
 
   "records count" in{
     montor.count("foo")(2)
@@ -50,6 +52,13 @@ class HealthMonitorSpec extends Specification{
 
     montor.timerStats.get(JPath("foo")).get.mean.ms.value mustEqual(0)
   }
+
+  "records sample event" in {
+    montor.sample("foo")(1.1)
+    montor.sampleStats.size must be (1)
+    montor.sampleStats.get(JPath("foo")).get.count mustEqual(1)
+  }
+
 
   "traps error" in {
     try {
