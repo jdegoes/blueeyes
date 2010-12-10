@@ -3,10 +3,10 @@ package blueeyes.health.metrics
 import org.scalatest.Spec
 import org.scalatest.matchers.MustMatchers
 
-class SampleTest extends Spec with MustMatchers {
+class RandomSampleTest extends Spec with MustMatchers {
   describe("a sample of 100 out of 1000 elements") {
     val elements = Range(0, 1000)
-    val sample = new Sample[Int](100)(0)
+    val sample = new RandomSample[Int](100)(0)
     sample ++= elements
 
     it("has 100 elements") {
@@ -22,7 +22,7 @@ class SampleTest extends Spec with MustMatchers {
 
   describe("a sample with only 10 elements") {
     val elements = Range(0, 10)
-    val sample = new Sample[Int](100)(0)
+    val sample = new RandomSample[Int](100)(0)
     sample ++= elements
 
     it("is convertable to an array") {

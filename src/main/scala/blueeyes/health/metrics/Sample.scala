@@ -1,62 +1,111 @@
 package blueeyes.health.metrics
 
-import util.Random
-import collection.generic.Growable
-import java.util.concurrent.atomic.{AtomicReferenceArray, AtomicLong}
+import java.util.concurrent.atomic.AtomicLong
+import scala.collection.JavaConversions._
+import java.util.concurrent.ConcurrentHashMap
+import blueeyes.health.ConcurrentMaps
+import scala.math.floor
+import scala.math.round
+import scala.math.max
+import collection.mutable.{HashMap, ConcurrentMap}
+import blueeyes.json.JsonAST.{JInt, JField, JObject}
 
-/**
- * A random sample of a stream. Uses Vitter's Algorithm R to produce a
- * statistically representative sample.
- *
- * @author coda
- * @see <a href="http://www.cs.umd.edu/~samir/498/vitter.pdf">Random Sampling with a Reservoir</a>
- */
-class Sample[A](val window: Int)(init: => A)(implicit evidence : ClassManifest[A]) extends Iterable[A] with Growable[A] {
+class Sample(val size: Int) extends ConcurrentMaps with Histogram with Statistic{
+  private val _count = new AtomicLong(0)
+  private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
-  private val random = new Random()
-  private val values = new AtomicReferenceArray[A](window)
-  private val count = new AtomicLong(0)
-  clear()
+  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
+  private var _histogram: Option[Map[Int, Int]] = None
 
-  /**
-   * Returns the number of values recorded.
-   */
-  override def size = count.get.toInt.min(window)
+  def +=(elem: Double): this.type = {
 
-  /**
-   * Clears all recorded values.
-   */
-  def clear() {
-    for (i <- 0 until window) {
-      values.set(i, init)
+    if (count < size){
+      
+      container(elem).addAndGet(1)
+      val currentCount = _count.addAndGet(1)
     }
-    count.set(0)
-  }
 
-  /**
-   * Adds a new recorded value.
-   */
-  def +=(elem : A): this.type = {
-    val c = count.incrementAndGet
-    if (c < window) {
-      values.set(c.toInt - 1, elem)
-    } else {
-      val r = random.nextLong.abs % c
-      if (r < window) {
-        values.set(r.toInt, elem)
-      }
-    }
     this
   }
 
-  /**
-   * Returns an iterator for a snapshot of the sample set.
-   */
-  def iterator = {
-    val copy: Array[A] = Array.fill(size)(init)
-    for (i <- 0 until size) {
-      copy(i) = values.get(i)
+  def count = _count.get
+
+  def rawData = _rawData.toMap.mapValues(_.get.intValue)
+
+  def toJValue = {
+    val histogramJValue: List[JField] = histogram.map(v => v.toList.map(kv => JField(kv._1.toString, JInt(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
+
+    JObject(JField("count", JInt(count)) :: histogramJValue)
+  }
+
+  def histogram: Option[Map[Int, Int]] = {
+    writeLock{
+      if (count >= size && !_histogram.isDefined){
+        _histogram = Some(build)
+      }
+      _histogram
     }
-    copy.iterator
+  }
+
+  private def writeLock[S](f: => S): S = {
+    lock.writeLock.lock()
+    try {
+      f
+    }
+    finally {
+      lock.writeLock.unlock()
+    }
+  }
+
+  private def container(key: Double) = createIfAbsent(key, _rawData, {new AtomicLong(0)})
+}
+
+trait Histogram{
+  def rawData: Map[Double, Int]
+
+  def build = {
+    val sorted      = rawData.toList.sortWith((e1, e2) => (e1._1 < e2._1))
+    val bucketSize  = bucket(sorted)
+
+    val buckets = createBuckets(bucketSize, sorted)
+
+    fillMissing(bucketSize, sorted, buckets).toMap
+  }
+
+  private def fillMissing(bucketSize: Int, sorted: List[(Double, Int)], buckets: HashMap[Int, Int]): HashMap[Int, Int] = {
+    val minV          = floor(sorted.head._1).intValue
+    val maxV          = floor(sorted.last._1).intValue
+    var bucketNumber  = minV
+
+    while (bucketNumber < maxV){
+      val bucket = buckets.get(bucketNumber)
+      
+      if (!bucket.isDefined) buckets.put(bucketNumber, 0)
+
+      bucketNumber = bucketNumber + bucketSize
+    }
+
+    buckets
+  }
+
+  private def createBuckets(bucketSize: Int, sorted: List[(Double, Int)]) = {
+    val buckets     = new HashMap[Int, Int]()
+    val minV        = floor(sorted.head._1).intValue
+
+    sorted.foreach(kv => {
+      val bucketNumber: Int = minV + (floor((kv._1 - sorted.head._1) / bucketSize).intValue * bucketSize)
+
+      val bucket = buckets.get(bucketNumber)
+      buckets.put(bucketNumber, bucket.getOrElse(0) + kv._2)
+    })
+
+    buckets
+  }
+
+  private def bucket(sorted: List[(Double, Int)]) = {
+    val minV = sorted.head._1
+    val maxV = sorted.last._1
+
+    max(floor(minV), round((maxV - minV) / sorted.size)).intValue
   }
 }

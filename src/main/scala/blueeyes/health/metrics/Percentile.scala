@@ -13,7 +13,7 @@ import scala.math.floor
 class Percentile(val sampleSize: Int) extends Growable[Double] {
   
 
-  private val sample = new Sample(sampleSize)(0.0)
+  private val sample = new RandomSample(sampleSize)(0.0)
 
   /**
    * Adds a value to the data set.

@@ -6,39 +6,76 @@ import metrics._
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap
 import collection.mutable.ConcurrentMap
+import blueeyes.json.JsonAST.{JField, JObject, JValue}
 
-trait HealthMonitor{
+trait HealthMonitor extends ConcurrentMaps{
 
-  private val counters: ConcurrentMap[JPath, Counter] = new ConcurrentHashMap[JPath, Counter]
-  private val timers:   ConcurrentMap[JPath, Timer]   = new ConcurrentHashMap[JPath, Timer]
+  private val _countsStats: ConcurrentMap[JPath, Counter]   = new ConcurrentHashMap[JPath, Counter]
+  private val _timersStats: ConcurrentMap[JPath, Timer]     = new ConcurrentHashMap[JPath, Timer]
+  private val _errorsStats: ConcurrentMap[JPath, ErrorStat] = new ConcurrentHashMap[JPath, ErrorStat]
+  private val _sampleStats: ConcurrentMap[JPath, Sample]    = new ConcurrentHashMap[JPath, Sample]
 
-  def count(path: JPath)(c: Long)       = counter(path).inc(c)
+  def count(path: JPath)(c: Long) = counterStat(path).inc(c)
 
-  def time[T](path: JPath)(f: => T): T  = timer(path).time(f)
+  def time[T](path: JPath)(f: => T): T = timerStat(path).time(f)
 
-  def futureTime[T](path: JPath)(f: Future[T]): Future[T] = timer(path).time(f)
+  def futureTime[T](path: JPath)(f: Future[T]): Future[T] = timerStat(path).time(f)
 
-  def error[T <: Throwable](path: JPath)(t: T): T = t
+  def error[T <: Throwable](path: JPath)(t: T): T = errorStat(path) += t
 
-  def countStats = counters.toMap
+  def sample(path: JPath)(d: Double) = sampleStat(path) += d  
 
-  def timerStats = timers.toMap
-
-  private def counter(path: JPath): Counter = statObject(path, counters,  {new Counter()})
-
-  private def timer(path: JPath):   Timer   = statObject(path, timers,    {new Timer()})
-
-  private def statObject[T](path: JPath, container: ConcurrentMap[JPath, T], factory: => T): T = {
-    container.get(path).getOrElse({
-      val statObject = factory
-      container.putIfAbsent(path, statObject).getOrElse(statObject)
-    })
+  def monitor[T](path: JPath)(f: Future[T]): Future[T] = {
+    f.ifCanceled(_.foreach(error(path)(_)))    
+    futureTime(path)(f)
   }
-}
 
-//trait HealthMonitor {
-//  def sample[T](path: JPath)(m: Measurable[T]): T // Ints, longs, floats, and doubles, things that must be sampled & bucketed
-//  def monitor[T](path: JPath)(f: Future[T]): Future[T]
-//
-//  def trap[T](f: => T): T
-//}
+  def trap[T](path: JPath)(f: => T): T = {
+    try {
+      f
+    }
+    catch {
+      case t: Throwable => error(path)(t)
+      throw t
+    }
+  }
+
+  def countStats  = _countsStats.toMap
+
+  def timerStats  = _timersStats.toMap
+
+  def sampleStats = _sampleStats.toMap
+
+  def errorStats  = _errorsStats.toMap
+
+  def toJValue    = {
+    val statistics: List[Map[JPath, Statistic]]  = List(timerStats, errorStats, sampleStats, countStats)
+    val jObjects    = statistics.map(toJObject(_))
+    jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
+  }
+
+  def sampleSize: Int
+
+  private def toJObject(stat: Map[JPath, Statistic]) = {
+    val jObjects = stat.toList.map(kv => jvalueToJObject(kv._1, kv._2.toJValue))
+    jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
+  }
+
+  private def normolizePath(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
+
+  private def jvalueToJObject(path: JPath, value: JValue): JObject = {
+    val elements = normolizePath(path).split("\\.").reverse
+    elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
+  }
+
+
+  private def toMongoField(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
+
+  private def sampleStat(path: JPath):  Sample    = createIfAbsent(path, _sampleStats, {new Sample(sampleSize)})
+
+  private def counterStat(path: JPath): Counter   = createIfAbsent(path, _countsStats, {new Counter()})
+
+  private def timerStat(path: JPath):   Timer     = createIfAbsent(path, _timersStats, {new Timer()})
+
+  private def errorStat(path: JPath):   ErrorStat = createIfAbsent(path, _errorsStats, {new ErrorStat()})
+}

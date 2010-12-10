@@ -7,6 +7,7 @@ import collection.generic.Growable
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
 import blueeyes.util.Future
+import blueeyes.json.JsonAST.{JDouble, JField, JObject}
 
 /**
  * A class which tracks the amount of time it takes to perform a particular
@@ -14,7 +15,7 @@ import blueeyes.util.Future
  *
  * @author coda
  */
-class Timer extends Growable[Duration] {
+class Timer extends Growable[Duration] with Statistic{
   private val count_ = new AtomicLong(0)
   private val min_ = new AtomicLong(Long.MaxValue)
   private val max_ = new AtomicLong(Long.MinValue)
@@ -127,6 +128,8 @@ class Timer extends Growable[Duration] {
    * Adds a duration recorded elsewhere.
    */
   def +=(duration: Duration): this.type = (this += duration.ns.value.toLong)
+
+  def toJValue = JObject(JField("minimumTime", JDouble(min.value)) :: JField("maximumTime", JDouble(max.value)) :: JField("averageTime", JDouble(mean.value)) :: JField("standardDeviation", JDouble(standardDeviation.value)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank
