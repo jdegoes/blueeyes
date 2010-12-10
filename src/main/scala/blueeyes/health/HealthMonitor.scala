@@ -49,23 +49,23 @@ trait HealthMonitor extends ConcurrentMaps{
   def errorStats  = _errorsStats.toMap
 
   def toJValue    = {
-    val statistics: List[(String, Map[JPath, Statistic])]  = List(("requestTimer", timerStats), ("errors", errorStats), ("sample", sampleStats), ("count", countStats))
-    val jObjects    = statistics.map(stat => toJObject(stat._1, stat._2))
+    val statistics: List[Map[JPath, Statistic]]  = List(timerStats, errorStats, sampleStats, countStats)
+    val jObjects    = statistics.map(toJObject(_))
     jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
   }
 
   def sampleSize: Int
 
-  private def toJObject(name: String, stat: Map[JPath, Statistic]) = {
-    val jObjects = stat.toList.map(kv => jvalueToJObject(name, kv._1, kv._2.toJValue))
+  private def toJObject(stat: Map[JPath, Statistic]) = {
+    val jObjects = stat.toList.map(kv => jvalueToJObject(kv._1, kv._2.toJValue))
     jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
   }
 
   private def normolizePath(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
 
-  private def jvalueToJObject(name: String, path: JPath, value: JValue): JObject = {
+  private def jvalueToJObject(path: JPath, value: JValue): JObject = {
     val elements = normolizePath(path).split("\\.").reverse
-    elements.foldLeft(JObject(JField(name, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
+    elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
   }
 
 
