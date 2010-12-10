@@ -8,8 +8,9 @@ import scala.math.floor
 import scala.math.round
 import scala.math.max
 import collection.mutable.{HashMap, ConcurrentMap}
+import blueeyes.json.JsonAST.{JInt, JField, JObject}
 
-class Sample(val size: Int) extends ConcurrentMaps with Histogram{
+class Sample(val size: Int) extends ConcurrentMaps with Histogram with Statistic{
   private val _count = new AtomicLong(0)
   private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
@@ -30,6 +31,12 @@ class Sample(val size: Int) extends ConcurrentMaps with Histogram{
   def count = _count.get
 
   def rawData = _rawData.toMap.mapValues(_.get.intValue)
+
+  def toJValue = {
+    val histogramJValue: List[JField] = histogram.map(v => v.toList.map(kv => JField(kv._1.toString, JInt(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
+
+    JObject(JField("count", JInt(count)) :: histogramJValue)
+  }
 
   def histogram: Option[Map[Int, Int]] = {
     writeLock{

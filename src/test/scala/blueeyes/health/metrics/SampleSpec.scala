@@ -1,6 +1,7 @@
 package blueeyes.health.metrics
 
 import org.spex.Specification
+import blueeyes.json.JsonAST.{JInt, JField, JObject}
 
 class SampleSpec extends Specification{
   private val sample = new Sample(10)
@@ -27,11 +28,17 @@ class SampleSpec extends Specification{
 
     sample.histogram            mustEqual (None)
   }
-  "create Histogram when data is full" in{
+  "creates Histogram when data is full" in{
     val sample = new Sample(2)
     sample += 1.1
     sample += 2.2
 
     sample.histogram            mustNotEq (None)
+  }
+  "creates JValue" in{
+    val sample = new Sample(1)
+    sample += 1.1
+
+    sample.toJValue mustEqual (JObject(JField("count", JInt(1)) :: JField("histogram", JObject(JField("1", JInt(1)))) :: Nil))
   }
 }

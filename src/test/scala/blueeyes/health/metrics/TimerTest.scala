@@ -4,6 +4,7 @@ import org.scalatest.matchers.MustMatchers
 import org.scalatest.Spec
 import blueeyes.health.time.Duration
 import blueeyes.util.Future
+import blueeyes.json.JsonAST._
 
 class TimerTest extends Spec with MustMatchers {
   val precision = 5.0 // milliseconds
@@ -32,6 +33,12 @@ class TimerTest extends Spec with MustMatchers {
       timer.time { Thread.sleep(10) }
 
       timer.count must be(1)
+    }
+    it("creates JValue") {
+      val timer = new Timer
+      timer.time { 1 + 1 } must equal(2)
+
+      JObject(JField("minimumTime", JDouble(2.0)) :: JField("maximumTime", JDouble(2.0)) :: JField("averageTime", JDouble(2.0)) :: JField("standardDeviation", JDouble(0.0)) :: Nil)
     }
   }
 
