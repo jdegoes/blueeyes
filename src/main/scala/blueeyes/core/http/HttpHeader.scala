@@ -451,8 +451,8 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
   }
 
-  class `Set-Cookie`(val cookie: List[HttpCookie]) extends HttpHeader {
-    def value = cookie.toString
+  class `Set-Cookie`(val cookies: List[HttpCookie]) extends HttpHeader {
+    val value = cookies.mkString(";")
   }
   object `Set-Cookie` {
     def apply(cookies: List[HttpCookie]) = new `Set-Cookie`(cookies)

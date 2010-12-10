@@ -27,7 +27,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
   "default cookies should propagate correctly" in {
     val defaultValue = "defaultValue"
     val f = path("/foo/bar") { 
-      cookie('someCookie, Some(defaultValue)) { cookieVal =>
+      cookie('someCookie, defaultValue) { cookieVal =>
         get { (request: HttpRequest[String]) => 
           Future(HttpResponse[String](content=Some(cookieVal)))
         }
