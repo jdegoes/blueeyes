@@ -292,8 +292,21 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookie[T, S](s1: Symbol, defaultValue: Option[String] = None)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
-    extractCookie(request, s1, defaultValue)
+  def cookie[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    extractCookie(request, s1)
+  } { h }
+
+  /** A special-case extractor for cookie supporting a default value.
+   * <pre>
+   * cookie('token, "defaultValue") { token =>
+   *   get {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
+  def cookie[T, S](s1: Symbol, defaultValue: => String)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    extractCookie(request, s1, Some(defaultValue))
   } { h }
 
   /** A special-case extractor for cookies.
