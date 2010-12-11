@@ -6,7 +6,6 @@ import metrics._
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap
 import collection.mutable.ConcurrentMap
-import blueeyes.json.JsonAST.{JField, JObject, JValue}
 
 trait HealthMonitor extends ConcurrentMaps{
 
@@ -48,26 +47,7 @@ trait HealthMonitor extends ConcurrentMaps{
 
   def errorStats  = _errorsStats.toMap
 
-  def toJValue    = {
-    val statistics: List[Map[JPath, Statistic]]  = List(timerStats, errorStats, sampleStats, countStats)
-    val jObjects    = statistics.map(toJObject(_))
-    jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
-  }
-
   def sampleSize: Int
-
-  private def toJObject(stat: Map[JPath, Statistic]) = {
-    val jObjects = stat.toList.map(kv => jvalueToJObject(kv._1, kv._2.toJValue))
-    jObjects.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
-  }
-
-  private def normolizePath(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
-
-  private def jvalueToJObject(path: JPath, value: JValue): JObject = {
-    val elements = normolizePath(path).split("\\.").reverse
-    elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
-  }
-
 
   private def toMongoField(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
 

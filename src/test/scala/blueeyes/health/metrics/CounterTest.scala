@@ -2,7 +2,6 @@ package blueeyes.health.metrics
 
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.Spec
-import blueeyes.json.JsonAST.JInt
 
 class CounterTest extends Spec with MustMatchers {
   describe("a counter of zero") {
@@ -41,14 +40,6 @@ class CounterTest extends Spec with MustMatchers {
 
       it("equals negative two") {
         counter.count must equal(-2)
-      }
-    }
-    describe("create JValue") {
-      val counter = makeCounter
-      counter.inc(2)
-
-      it("equals JInt(2)") {
-        counter.toJValue must equal(JInt(2))
       }
     }
   }

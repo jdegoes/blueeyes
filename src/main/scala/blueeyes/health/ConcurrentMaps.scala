@@ -2,7 +2,7 @@ package blueeyes.health
 
 import collection.mutable.ConcurrentMap
 
-trait ConcurrentMaps{
+private[health] trait ConcurrentMaps{
   def createIfAbsent[K, V](key: K, container: ConcurrentMap[K, V], factory: => V): V = {
     container.get(key).getOrElse({
       val statObject = factory

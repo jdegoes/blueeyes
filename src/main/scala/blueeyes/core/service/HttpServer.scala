@@ -1,8 +1,7 @@
 package blueeyes.core.service
 
-import java.lang.reflect.{Method, Field}
+import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
-import scala.collection.mutable.{ListBuffer}
 
 import blueeyes.core.http._
 import blueeyes.util.Future
@@ -194,12 +193,12 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   private lazy val descriptors: List[BoundStateDescriptor[T, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
     val logger = Logger.configure(config.configMap("log"), false, false)
-    
-    val context = HttpServiceContext(config, logger)
-    
+
+    val context = HttpServiceContext(config, logger, new ServiceHealthMonitor(config, service.name, service.majorVersion))
+
     BoundStateDescriptor(context, service)
   }
-  
+
   private case class BoundStateDescriptor[T, S](context: HttpServiceContext, service: HttpService[T]) {
     val descriptor: HttpServiceDescriptor[T, S] = service.descriptorFactory(context).asInstanceOf[HttpServiceDescriptor[T, S]]
     
