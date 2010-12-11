@@ -62,21 +62,23 @@ private[service] trait StatisticComposer{
 }
 
 import blueeyes.core.http.MimeTypes._
-class HealthService(monitors: List[ServiceHealthMonitor]) extends BlueEyesServiceBuilder{
+class HeatlhMonitorService(monitors: List[ServiceHealthMonitor]) extends BlueEyesServiceBuilder{
   val healthService = service("health", "1.0.0") {
     context => {
       request {
         path("/blueeyes/health") {
           produce(application/json) {
             get {
-              request: HttpRequest[Array[Byte]] => {
-                val servicesJObject = monitors.foldLeft(JObject(Nil)){(result, element) => result.merge(element.toJValue).asInstanceOf[JObject]}
-                HttpResponse[JValue](content=Some(JObject(JField("services", servicesJObject) :: Nil)))
-              }
+              request: HttpRequest[Array[Byte]] => HttpResponse[JValue](content=Some(servicesJObject))
             }
           }
         }
       }
     }
+  }
+
+  private def servicesJObject = {
+    val services = monitors.foldLeft(JObject(Nil)){(result, element) => result.merge(element.toJValue).asInstanceOf[JObject]}
+    JObject(JField("services", services) :: Nil)
   }
 }
