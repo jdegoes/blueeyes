@@ -194,7 +194,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
     val logger = Logger.configure(config.configMap("log"), false, false)
 
-    val context = HttpServiceContext(config, logger, new ServiceHealthMonitor(config, service.name, service.majorVersion))
+    val context = HttpServiceContext(config, logger, new HealthMonitorImpl(config, service.name, service.majorVersion))
 
     BoundStateDescriptor(context, service)
   }

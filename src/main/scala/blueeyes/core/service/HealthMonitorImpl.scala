@@ -2,13 +2,11 @@ package blueeyes.core.service
 
 import blueeyes.health.HealthMonitor
 import net.lag.configgy.ConfigMap
-import blueeyes.BlueEyesServiceBuilder
-import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import blueeyes.health.metrics._
 
-private[service] class ServiceHealthMonitor(val config: ConfigMap, val serviceName: String, val serviceVersion: Int) extends HealthMonitor with SerializableHealthMonitor{
+private[service] class HealthMonitorImpl(val config: ConfigMap, val serviceName: String, val serviceVersion: Int) extends HealthMonitor with SerializableHealthMonitor{
   def sampleSize = config.getInt("sampleSize", 1000)
 }
 
@@ -58,27 +56,5 @@ private[service] trait StatisticComposer{
   private def jvalueToJObject(path: JPath, value: JValue): JObject = {
     val elements = normalizePath(path).split("\\.").reverse
     elements.tail.foldLeft(JObject(JField(elements.head, value) :: Nil)){(result, element) => JObject(JField(element, result) :: Nil)}
-  }
-}
-
-import blueeyes.core.http.MimeTypes._
-class HeatlhMonitorService(monitors: List[ServiceHealthMonitor]) extends BlueEyesServiceBuilder{
-  val healthService = service("health", "1.0.0") {
-    context => {
-      request {
-        path("/blueeyes/health") {
-          produce(application/json) {
-            get {
-              request: HttpRequest[Array[Byte]] => HttpResponse[JValue](content=Some(servicesJObject))
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private def servicesJObject = {
-    val services = monitors.foldLeft(JObject(Nil)){(result, element) => result.merge(element.toJValue).asInstanceOf[JObject]}
-    JObject(JField("services", services) :: Nil)
   }
 }
