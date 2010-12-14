@@ -6,26 +6,32 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import blueeyes.health.metrics._
 
-private[service] class HealthMonitorImpl(val config: ConfigMap, val serviceName: String, val serviceVersion: Int) extends HealthMonitor with SerializableHealthMonitor{
+private[service] case class HealthMonitorImpl(config: ConfigMap, serviceName: String, serviceVersion: Int) extends HealthMonitor{
   def sampleSize = config.getInt("sampleSize", 1000)
 }
 
-private[service] trait SerializableHealthMonitor extends StatisticComposer{ self: HealthMonitor =>
-  def toJValue: JObject = {
-    val healthJObject = JObject(JField("helth", statisticsJObject) :: Nil)
-    
-    JObject(JField(serviceName, JObject(JField("v" + serviceVersion, healthJObject) :: Nil)) :: Nil)
+private[service] trait HealthMonitorImplicits extends StatisticComposer{
+  implicit def serializableHealthMonitorSugar(monitor: HealthMonitorImpl) = new {
+    def toJValue = {
+      val healthJObject = JObject(JField("helth", statisticsJObject) :: Nil)
+
+      JObject(JField(monitor.serviceName, JObject(JField("v" + monitor.serviceVersion, healthJObject) :: Nil)) :: Nil)
+    }
+    private def statisticsJObject = {
+      val statistics    = List(composeStatistics(monitor.timerStats, composeTimer _), composeStatistics(monitor.errorStats, composeErrorStat _), composeStatistics(monitor.sampleStats, composeSample _), composeStatistics(monitor.countStats, composeCounter _))
+
+      statistics.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
+    }
   }
+}
 
-  def statisticsJObject = {
-    val statistics    = List(composeStatistics(timerStats, composeTimer _), composeStatistics(errorStats, composeErrorStat _), composeStatistics(sampleStats, composeSample _), composeStatistics(countStats, composeCounter _))
-
-    statistics.foldLeft(JObject(Nil)){(result, element) => result.merge(element).asInstanceOf[JObject]}
+private[service] trait HealthMonitorsImplicits extends HealthMonitorImplicits{
+  implicit def serializableHealthMonitorsSugar(monitors: List[HealthMonitorImpl]) = new {
+    def toJValue = {
+      val services = monitors.foldLeft(JObject(Nil)){(result, element) => result.merge(element.toJValue).asInstanceOf[JObject]}
+      JObject(JField("services", services) :: Nil)
+    }
   }
-
-  def serviceName: String
-
-  def serviceVersion: Int
 }
 
 private[service] trait StatisticComposer{
