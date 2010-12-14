@@ -6,7 +6,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress
 
-class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators{
+class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators with HttpClientTransformerImplicits{
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "")
   private val responseFuture = Future[String]("")
   private val mockClient = new HttpClient[String]{
@@ -71,6 +71,12 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
     h(mockClient)
 
     mockClient.request.get mustEqual(initialRequest.copy(version = HttpVersions.`HTTP/1.0`))
+  }
+  "HttpClientTransformerImplicits ~: creates composite transformer" in{
+
+    val h = get[String, String]{ response => Future[String]("foo")} ~ get[String, String]{ response => Future[String]("bar")}
+
+    h(mockClient).value must beSome(("foo", "bar"))
   }
 
   private def clientHandler = (response: HttpResponse[String]) => responseFuture

@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
-trait HttpResponseHandlerImplicits{
-  def httpResponseHandlerCompositionSugar[T, S](h1: HttpClientTransformer[T, S]) = new {
+trait HttpClientTransformerImplicits{
+  implicit def httpResponseHandlerCompositionSugar[T, S](h1: HttpClientTransformer[T, S]) = new {
     def ~ [V](h2: HttpClientTransformer[T, V]) = {
       (client: HttpClient[T]) => {
         h1(client).flatMap(v1 => {
@@ -11,4 +11,4 @@ trait HttpResponseHandlerImplicits{
     }
   }
 }
-object HttpResponseHandlerImplicits extends HttpResponseHandlerImplicits
+object HttpClientTransformerImplicits extends HttpClientTransformerImplicits
