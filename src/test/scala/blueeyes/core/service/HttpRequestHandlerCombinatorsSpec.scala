@@ -39,7 +39,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
   "request parameters are available using combinator" in {
     val f = path("/foo/'bar") { 
-      parameter('foo) { foo =>
+      parameter[String, String]('foo) { foo =>
         get { (request: HttpRequest[String]) => 
           Future(HttpResponse[String](content=Some(foo)))
         }
