@@ -6,7 +6,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress
 
-class HttpResponseHandlerCombinatorsSpec extends Specification with HttpClientTransformerCombinators{
+class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators{
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "")
   private val responseFuture = Future[String]("")
   private val mockClient = new HttpClient[String]{
