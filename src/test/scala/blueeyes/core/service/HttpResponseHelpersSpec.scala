@@ -4,6 +4,7 @@ import org.spex.Specification
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
+import org.specs.matcher.Matchers._
 import blueeyes.util.Future
 
 class HttpResponseHelpersSpec extends Specification{
@@ -28,6 +29,8 @@ class HttpResponseHelpersSpec extends Specification{
     val error   = new NullPointerException()
     val content = new Future[String]
     content.cancel(None)
-    HttpResponseHelpers.respondLater[String](content).value.get.status.code mustEqual(InternalServerError)
+
+    val status = HttpResponseHelpers.respondLater[String](content).value.get.status
+    status.code mustEqual(InternalServerError)
   }
 }

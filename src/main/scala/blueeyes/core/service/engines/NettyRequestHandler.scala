@@ -32,13 +32,13 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
         writeResponse(event) (response)
       })
 
-      requestFuture.ifCanceled{th =>
+      requestFuture.ifCanceled{why =>
         futures - requestFuture
-        th.foreach{t => if (!t.isInstanceOf[TimeoutException]) {
+        why.foreach{t => if (!t.isInstanceOf[TimeoutException]) {
             writeResponse(event) (toResponse(t))
           }
         }
-        th.orElse{
+        why.orElse{
           event.getChannel.close
           None
         }
@@ -69,8 +69,8 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   private def toResponse(th: Throwable) = th match{
     case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
     case _ => {
-      val trace = th.fullStackTrace.replace("\n", " ")
-      HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (trace.length > 3500) trace.substring(0, 3500) else trace))
+      val reason = th.fullStackTrace
+      HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
     }
   }
 
