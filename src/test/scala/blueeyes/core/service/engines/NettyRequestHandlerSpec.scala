@@ -12,9 +12,10 @@ import blueeyes.util.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
-import blueeyes.core.http.{HttpVersions, HttpResponse, HttpStatus, HttpStatusCodes}
 import java.net.InetSocketAddress
 import net.lag.logging.Logger
+import blueeyes.core.http._
+import blueeyes.core.http.HttpStatusCodes._
 
 class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters{
   private val handler       = mock[HttpRequestHandler[String]]
@@ -28,7 +29,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
   private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
 
-  "write OK responce service when path is match" in {
+  "write OK response service when path is match" in {
     val event  = mock[MessageEvent]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
@@ -48,7 +49,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
     assert(true)
   }
 
-  "write Not Found responce service when path is not match" in {
+  "write Not Found response when path is not match" in {
     val event        = mock[MessageEvent]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/foo/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
@@ -64,6 +65,29 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
 
     assert(true)
   }
+  "write response when Future is cancelled" in {
+
+    val event  = mock[MessageEvent]
+    val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
+    val request      = fromNettyRequest(nettyRequest, remoteAddress)
+    val future       = new Future[HttpResponse[String]]()
+
+    when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
+    when(event.getRemoteAddress()).thenReturn(remoteAddress)
+    when(handler.isDefinedAt(request)).thenReturn(true)
+    when(handler.apply(request)).thenReturn(future, future)
+    when(event.getChannel()).thenReturn(channel, channel)
+    when(channel.write(Matchers.argThat(new RequestMatcher(toNettyResponse(HttpResponse[String](HttpStatus(HttpStatusCodes.InternalServerError, InternalServerError.defaultMessage))))))).thenReturn(channelFuture, channelFuture)
+
+    nettyHandler.messageReceived(context, event)
+
+    future.cancel(HttpException(InternalServerError, InternalServerError.defaultMessage))
+
+    Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
+
+    assert(true)
+  }
+
   "cancel Future when connection closed" in {
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]

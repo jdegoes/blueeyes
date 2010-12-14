@@ -34,7 +34,10 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
       requestFuture.ifCanceled{th =>
         futures - requestFuture
-        th.foreach(t => writeResponse(event) (toResponse(t)))
+        th.foreach{t => if (!t.isInstanceOf[TimeoutException]) {
+            writeResponse(event) (toResponse(t))
+          }
+        }
         th.orElse{
           event.getChannel.close
           None
