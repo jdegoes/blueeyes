@@ -45,8 +45,6 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
     nettyHandler.messageReceived(context, event)
 
     Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
-
-    assert(true)
   }
 
   "write Not Found response when path is not match" in {
@@ -62,8 +60,6 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
     nettyHandler.messageReceived(context, event)
 
     Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
-
-    assert(true)
   }
   "write response when Future is cancelled" in {
 
@@ -84,8 +80,6 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
     future.cancel(HttpException(InternalServerError, InternalServerError.defaultMessage))
 
     Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
-
-    assert(true)
   }
 
   "cancel Future when connection closed" in {
