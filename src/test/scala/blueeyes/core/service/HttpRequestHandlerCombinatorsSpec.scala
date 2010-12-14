@@ -36,4 +36,16 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     f.value must eventually(beSomething)
     f.value.get.content.get must be(defaultValue)
   }
+
+  "request parameters are available using combinator" in {
+    val f = path("/foo/'bar") { 
+      parameter[String, String]('bar) { bar =>
+        get { (request: HttpRequest[String]) => 
+          Future(HttpResponse[String](content=Some(bar)))
+        }
+      }
+    }(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
+    f.value must eventually(beSomething)
+    f.value.get.content must beSome("blahblah")
+  }
 }
