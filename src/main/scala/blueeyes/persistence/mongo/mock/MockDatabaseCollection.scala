@@ -31,6 +31,10 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   def distinct(selection: JPath, filter: Option[MongoFilter]) =
     search(filter).map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).filter(_.isDefined).map(_.get).distinct
 
+  def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = GroupFunction(selection, initial, reduce, search(filter))
+
+  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = MapReduceFunction(map, reduce, outputCollection, search(filter))
+
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
     var updated = objects.map(update(_, value))
@@ -72,10 +76,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
     selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject]).toStream
   }
-
-  def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = GroupFunction(selection, initial, reduce, search(filter))
-
-  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = MapReduceFunction(map, reduce, outputCollection, search(filter))
 }
 
 private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
