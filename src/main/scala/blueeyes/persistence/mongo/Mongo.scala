@@ -23,13 +23,13 @@ trait Mongo{
  * import blueeyes.persistence.mongo.MongoImplicits._
  * import blueeyes.persistence.mongo.MongoQueryBuilder._
  *
- * lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
+ * val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
  *
  * val mongo = injector.getInstance(classOf[Mongo])
  *
  * val database  = mongo.database( "mydb" );
  *
- * database(selectOne().from("mycollection").sortBy("foo.bar" <<))
+ * database(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  * </pre
  */
 trait MongoDatabase{

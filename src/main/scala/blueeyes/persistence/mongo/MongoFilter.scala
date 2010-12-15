@@ -202,25 +202,29 @@ trait MongoFilterImplicits {
   implicit val MongoPrimitiveJBoolWitness   = new MongoPrimitiveWitness[JBool](8)
   implicit val MongoPrimitiveJNullWitness   = new MongoPrimitiveWitness[JNull.type](10)
   implicit val MongoPrimitiveJIntWitness    = new MongoPrimitiveWitness[JInt](18)
-  
-
-    // case class MongoPrimitiveString    - def toMongoValue: String
-    // case class MongoPrimitiveLong      - def toMongoValue: java.lang.Long
-    // case class MongoPrimitiveInteger   - def toMongoValue: java.lang.Integer
-    // case class MongoPrimitiveDouble    - def toMongoValue: java.lang.Double
-    // case class MongoPrimitiveFloat     - def toMongoValue: java.lang.Float
-    // case class MongoPrimitiveBoolean   - def toMongoValue: java.lang.Boolean
-    // case class MongoPrimitiveArrayList - def toMongoValue: java.util.ArrayList[AnyRef]
-    // case class MongoPrimitiveDBObject  - def toMongoValue: DBObject
-    // case class MongoPrimitiveNull      -   def toMongoValue: null
-    // case class MongoPrimitiveObjectId  - def toMongoValue: com.mongodb.ObjectId
-    // case class MongoPrimitivePattern   - def toMongoValue: java.util.regex.Pattern
-    // case class MongoPrimitiveDate      - def toMongoValue: java.util.Date
-    // case class MongoPrimitiveDBRef     - def toMongoValue: com.mongodb.DBRef
-    // case class MongoPrimitiveByte      - def toMongoValue: byte[]
 }
 object MongoFilterImplicits extends MongoFilterImplicits
 
+/** The MongoFilterBuilder creates mongo filters. Filters can be used in MongoQuery in where clause.
+ * <p>
+ * <pre>
+ * import blueeyes.persistence.mongo.MongoImplicits._
+ * import blueeyes.persistence.mongo.MongoQueryBuilder._
+ *
+ * val filter = "foo.bar" === "blahblah"
+ *
+ * val query  = selectOne().from("mycollection").where(filter)
+ * val query2 = selectOne().from("mycollection").where("foo.bar" === "blahblah")
+ * </pre>
+ * <p>
+ * Filters can be combined.
+ * <p>
+ * <pre>
+ * val filter  = ("foo.bar" === "blahblah") | ("foo.bar" === "blah")
+ * val filter2 = ("foo" === "blahblah") & ("bar" === "blah")
+ * </pre>
+ * <p>
+ */
 case class MongoFilterBuilder(jpath: JPath) {
   import MongoFilterImplicits._
   def === [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $eq, value)
