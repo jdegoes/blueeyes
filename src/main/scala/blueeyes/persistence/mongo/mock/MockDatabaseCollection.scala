@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo.mock
 
 import blueeyes.json.JsonAST._
-import MockMongoUpdateEvaluators._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
@@ -37,7 +36,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
-    var updated = objects.map(update(_, value))
+    var updated = UpdateFunction(value, objects)
 
     if (objects.isEmpty && upsert){
       objects = value match{
@@ -50,22 +49,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     index(updated)
     remove(objects)
     insert0(updated)
-  }
-
-  private def update(jobject: JObject, value : MongoUpdate): JObject = value match {
-    case MongoUpdateNothing         => jobject
-    case x: MongoUpdateObject       => x.value
-    case x: MongoUpdateField   => {
-      def updateValue(value: JValue) = Some(UpdateFiledEvaluatorFactory(x.operator)(value, x.filter))
-      val (mergeOperation, pathRestorer) = jobject.get(x.path) match {
-        case List(JNothing) => (true, jvalueToJObject _)
-        case _   => (false, (p: JPath, v: JValue) => {v})
-      }
-
-      val jfield = selectByPath(x.path, jobject, updateValue _, pathRestorer)
-      jfield.map(newValue => (if (mergeOperation) jobject.merge(newValue) else jobject.replace(x.path, v => {newValue})).asInstanceOf[JObject]).getOrElse(jobject)
-    }
-    case x: MongoUpdateFields => x.list.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
   }
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
