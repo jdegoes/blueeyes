@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
+import UpdateFieldFunctions._
 
 class PullFSpec extends Specification{
   "fuse applies pull to set update" in {

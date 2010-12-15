@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
+import QueryBehaviours._
 
 sealed trait MongoCollection
 case class MongoCollectionReference(name: String) extends MongoCollection

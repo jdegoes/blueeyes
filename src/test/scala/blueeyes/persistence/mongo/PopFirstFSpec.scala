@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
+import UpdateFieldFunctions._
 
 class PopFirstFSpec extends Specification{
   "fuse applies pop to set update" in {

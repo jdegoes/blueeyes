@@ -4,6 +4,7 @@ import org.spex.Specification
 import MongoUpdateOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JsonParser
+import UpdateFieldFunctions._
 
 class MongoUpdateFieldValueSpec  extends Specification{
   "build valid json" in {
