@@ -22,5 +22,7 @@
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/test-interface-0.3.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/xlightweb-2.13.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/xSocket-2.8.14.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/commons-codec-1.4.jar"/>
+	<classpathentry kind="lib" path="project/boot/scala-2.8.0/lib/scala-compiler.jar"/>
 	<classpathentry kind="output" path="target/scala_2.8.0/classes"/>
 </classpath>

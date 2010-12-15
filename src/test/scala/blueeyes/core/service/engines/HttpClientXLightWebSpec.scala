@@ -1,5 +1,6 @@
 package blueeyes.core.service.engines
 
+import blueeyes.core.data.BijectionsByteArray._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
@@ -20,6 +21,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
   val retries = 10
   
   private val httpClient = new HttpClientXLightWebEnginesString { }
+  private val httpClientArrayByte = new HttpClientXLightWebEnginesArrayByte { }
 
   private val configPattern = """server {
     port = %d
@@ -32,7 +34,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
   private var server: Option[NettyEngineString] = None
   private var clientFacade: SampleClientFacade = _
   private var uri = ""
-  
+
   "HttpClientXLightWeb" should {
     doFirst {
       var success = false
@@ -61,11 +63,11 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support GET to invalid server should return http error" in {
       val f = path[String, HttpResponse[String]]("http://127.0.0.1:666/foo") {
-        get[String, HttpResponse[String]] { r => 
+        get[String, HttpResponse[String]] { r =>
 	  println("response: " + r)
-	  r 
+	  r
 	}
-      }(httpClient) 
+      }(httpClient)
       f.error must eventually(retries, new Duration(duration))(beSomething)
     }
     
@@ -84,7 +86,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.value must eventually(retries, new Duration(duration))(beNone)
     }
 
-    "Support GET requests with query params" in {      
+    "Support GET requests with query params" in {
       val f = path[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
         get[String, HttpResponse[String]]{ r => r }
       }(httpClient)
@@ -104,7 +106,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
-    "Support POST requests with query params" in {      
+    "Support POST requests with query params" in {
       val f = path[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
             post[String, HttpResponse[String]]("") { r => r }
           }(httpClient)
@@ -146,7 +148,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
-    "Support PUT requests with body" in {      
+    "Support PUT requests with body" in {
       val content = "Hello, world"
       val f = path[String, HttpResponse[String]](uri) {
         headers(`Content-Length`(100)) {
@@ -208,7 +210,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
           get[String, HttpResponse[String]] { r => r }
         }(httpClient)
       }
-      val responses = futures.foldLeft(0) { 
+      val responses = futures.foldLeft(0) {
 	(acc, f) => {
           f.value must eventually(retries, new Duration(duration))(beSomething)
           f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -217,6 +219,25 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       }
 
       responses must beEqual(total)
+    }
+
+    "Support GET requests with query params with Array[Byte]" in {
+      val f = path[Array[Byte], HttpResponse[Array[Byte]]](uri + "?param1=a&param2=b") {
+        get[Array[Byte], HttpResponse[Array[Byte]]]{ r => r }
+      }(httpClientArrayByte)
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+    }
+
+    "Support POST requests with body with Array[Byte]" in {
+      val content = "Hello, world"
+      val f = path[Array[Byte], HttpResponse[Array[Byte]]](uri) {
+        post[Array[Byte], HttpResponse[Array[Byte]]](StringToByteArray(content)) { r => r }
+      }(httpClientArrayByte)
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace(content))
+      f.value.get.status.code must be(HttpStatusCodes.OK)
     }
   }
 }
@@ -228,14 +249,14 @@ object EchoServer extends EchoService with HttpReflectiveServiceList[String] wit
 
 trait EchoService extends BlueEyesServiceBuilderString {
   import blueeyes.core.http.MimeTypes._
-  
+
   private implicit val ordering = new Ordering[Symbol] {
     def compare(l: Symbol, r: Symbol): Int = {
       l.name.compare(r.name)
     }
   }
 
-  private def response(content: Option[String] = None) = 
+  private def response(content: Option[String] = None) =
     HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content)
 
   private def handler(request: HttpRequest[String]) = {
@@ -248,7 +269,7 @@ trait EchoService extends BlueEyesServiceBuilderString {
       }.mkString("&")
     }.getOrElse("")
     val content = params + request.content.getOrElse("") + headers
-    
+
     new Future[HttpResponse[String]]().deliver(response(content=Some(content)))
   }
 
@@ -260,7 +281,7 @@ trait EchoService extends BlueEyesServiceBuilderString {
 	  post(handler) ~
 	  put(handler) ~
 	  head(handler)
-        } 
+        }
       }
     }
   }
