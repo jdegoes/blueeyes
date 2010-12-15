@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import blueeyes.json.JPath
-import java.lang.String
 import blueeyes.json.JsonAST._
 
 /** The Mongo creates a MongoDatabase by  database name.

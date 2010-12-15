@@ -2,7 +2,6 @@ package blueeyes.persistence.mongo
 
 import blueeyes.persistence.mongo.json.MongoJson._
 import scala.collection.JavaConversions._
-import java.lang.String
 import blueeyes.json.JsonAST._
 import com.mongodb._
 import com.google.inject.{Provider, Inject}
