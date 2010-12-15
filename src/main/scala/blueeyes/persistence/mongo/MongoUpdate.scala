@@ -27,6 +27,25 @@ object MongoUpdateOperators {
 
 import MongoUpdateOperators._
 import UpdateFieldFunctions._
+/** The MongoUpdateBuilder creates update value for mongo update query.
+ * <p>
+ * <pre>
+ * import blueeyes.persistence.mongo.MongoImplicits._
+ * import blueeyes.persistence.mongo.MongoQueryBuilder._
+ *
+ * val value = "foo.bar" popFirst
+ *
+ * val query  = updateMany(collection).set(value)
+ * val query2 = updateMany(collection).set("address" popFirst)
+ * </pre>
+ * <p>
+ * Update values can be combined.
+ * <p>
+ * <pre>
+ * val value   = ("foo" popLast) & ("bar" popFirst)
+ * </pre>
+ * <p>
+ */
 case class MongoUpdateBuilder(jpath: JPath) {
   def inc [T](value: MongoPrimitive[T]) : MongoUpdateField = IncF(jpath, value)
   def set [T](value: MongoPrimitive[T]) : MongoUpdateField = SetF(jpath, value)

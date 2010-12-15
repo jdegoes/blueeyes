@@ -47,6 +47,8 @@ object MongoImplicits extends MongoImplicits
 
 case class MongoSelection(selection: List[JPath])
 
+/** Basic trait for mongo queries.
+ */
 sealed trait MongoQuery[T] extends QueryBehaviour[T]{
   def collection: MongoCollection;
 }
@@ -94,6 +96,16 @@ trait MapReduceOutput{
   def outpotCollection: MongoCollection
   def drop: Unit
 }
+
+/** The MongoQueryBuilder creates mongo queries.
+ * <p>
+ * <pre>
+ * import blueeyes.persistence.mongo.MongoImplicits._
+ * import blueeyes.persistence.mongo.MongoQueryBuilder._
+ *
+ * val query = selectOne().from("mycollection")
+ * </pre>
+ */
 
 object MongoQueryBuilder{
   class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
