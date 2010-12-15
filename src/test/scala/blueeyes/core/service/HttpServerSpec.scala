@@ -21,6 +21,14 @@ class HttpServerSpec extends Specification{
   "HttpServer start: sets status to Starting" in{
     server.status must be (RunningStatus.Started)
   }
+  "HttpServer: adds handlers" in{
+    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (false)
+    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
+  }
+  "HttpServer: path start up value to handler" in{
+    server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+  }
+
   "HttpServer stop: executes shut down function" in{
     server.stop
 
@@ -30,14 +38,7 @@ class HttpServerSpec extends Specification{
     server.stop
 
     server.status must be (RunningStatus.Stopped)
-  }
-  "HttpServer: adds handlers" in{
-    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (false)
-    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
-  }
-    "HttpServer: path start up value to handler" in{
-    server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
-  }
+  }  
 }
 
 class TestServer extends TestService with HttpReflectiveServiceList[String]
