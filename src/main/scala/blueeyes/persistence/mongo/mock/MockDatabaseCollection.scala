@@ -18,22 +18,22 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
   def count(filter: Option[MongoFilter]) = search(filter).size
 
-  def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
-
   def indexed = all
-
-  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
-
-  private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
-
-  private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) =
     search(filter).map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).filter(_.isDefined).map(_.get).distinct
 
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) = GroupFunction(selection, initial, reduce, search(filter))
 
-  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = MapReduceFunction(map, reduce, outputCollection, search(filter))
+  def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = MapReduceFunction(map, reduce, outputCollection, search(filter))  
+
+  private def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
+
+  private def search(filter: Option[MongoFilter]): List[JObject] = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
+
+  private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
+
+  private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
