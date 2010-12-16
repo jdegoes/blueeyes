@@ -16,15 +16,15 @@ class HealthMonitor(rootPath: JPath){
   private val _errorsStats: ConcurrentMap[JPath, ErrorStat] = new ConcurrentHashMap[JPath, ErrorStat]
   private val _sampleStats: ConcurrentMap[JPath, Sample]    = new ConcurrentHashMap[JPath, Sample]
 
-  def increment(path: JPath)(c: Long) = counterStat(path) += c
+  def increment(path: JPath)(c: Long): Unit = counterStat(path) += c
 
-  def count(path: JPath)              = increment(path)(1)
+  def count(path: JPath)                    = increment(path)(1)
 
-  def time[T](path: JPath)(f: => T): T = timerStat(path).time(f)
+  def time[T](path: JPath)(f: => T): T      = timerStat(path).time(f)
 
   def timeFuture[T](path: JPath)(f: Future[T]): Future[T] = timerStat(path).time(f)
 
-  def sample(path: JPath)(d: Double) = sampleStat(path) += d
+  def sample(path: JPath)(d: Double): Unit = sampleStat(path) += d
 
   def error[T <: Throwable](path: JPath)(t: T): T = {
     errorStat(path) += t
