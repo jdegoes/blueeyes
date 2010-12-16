@@ -103,6 +103,16 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     _status = RunningStatus.Stopping
     
+    // Turn off the request handler so we don't handle any more requests for any service:
+    handlerLock.writeLock.lock()
+    
+    try {
+      _handler = Map[HttpRequest[T], Future[HttpResponse[T]]]()
+    }
+    finally {
+      handlerLock.writeLock.unlock()
+    }
+    
     val shutdownFutures = descriptors.map { descriptor =>
       log.info("Shutting down service " + descriptor.service.toString)
       

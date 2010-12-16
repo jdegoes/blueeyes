@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
+	<string>src/main/scala/blueeyes/health/time/Clock.scala</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -110,14 +110,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>8</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>127</integer>
+				<integer>0</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>99</integer>
+			<integer>97</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala</key>
 		<dict>
@@ -132,20 +132,6 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>103</integer>
-				<key>line</key>
-				<integer>56</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>44</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/RestPathPattern.scala</key>
 		<dict>
@@ -176,6 +162,160 @@
 			<integer>102</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/core/service/package.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/ConcurrentMaps.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>11</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/HealthMonitor.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>110</integer>
+				<key>line</key>
+				<integer>51</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>5</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/Counter.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/ErrorStat.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/Meter.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>2</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/Sample.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/Statistic.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/metrics/WeightedMeter.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/time/Clock.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>3</integer>
+				<key>line</key>
+				<integer>28</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/time/Duration.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/health/time/Rate.scala</key>
 		<dict>
 			<key>caret</key>
 			<dict>
@@ -523,11 +663,21 @@
 		<string>src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala</string>
 		<string>src/main/scala/blueeyes/BlueEyesDemo.scala</string>
 		<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala</string>
+		<string>src/main/scala/blueeyes/health/HealthMonitor.scala</string>
+		<string>src/main/scala/blueeyes/health/time/Clock.scala</string>
+		<string>src/main/scala/blueeyes/health/ConcurrentMaps.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/Sample.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/Statistic.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/Counter.scala</string>
+		<string>src/main/scala/blueeyes/health/time/Duration.scala</string>
+		<string>src/main/scala/blueeyes/health/time/Rate.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/WeightedMeter.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/Meter.scala</string>
+		<string>src/main/scala/blueeyes/health/metrics/ErrorStat.scala</string>
 		<string>src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala</string>
 		<string>src/main/scala/blueeyes/core/service/package.scala</string>
 		<string>src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala</string>
 		<string>src/main/scala/blueeyes/json/xschema/Serialization.scala</string>
-		<string>src/main/scala/blueeyes/core/service/HttpResponseHandlerCombinators.scala</string>
 		<string>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</string>
 		<string>src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala</string>
 		<string>src/main/scala/blueeyes/core/data/Bijection.scala</string>
