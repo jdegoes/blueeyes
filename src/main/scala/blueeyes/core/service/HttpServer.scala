@@ -8,6 +8,8 @@ import blueeyes.util.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
+import blueeyes.health.HealthMonitor
+import blueeyes.json.JPath
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -204,7 +206,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
     val logger = Logger.configure(config.configMap("log"), false, false)
 
-    val context = HttpServiceContext(config, logger, HealthMonitorImpl(config, service.name, service.majorVersion))
+    val context = HttpServiceContext(config, logger, new HealthMonitor(JPath("%s.v%d.health".format(service.name, service.majorVersion))))
 
     BoundStateDescriptor(context, service)
   }

@@ -1,13 +1,14 @@
 package blueeyes.health.metrics
 
 import java.util.concurrent.atomic.AtomicLong
+import blueeyes.json.JsonAST.{JValue, JInt}
 
 /**
  * A thread-safe counter which can go up or down from its initial value.
  *
  * @author coda
  */
-class Counter(initial: Long){
+class Counter(initial: Long) extends Statistic[Long, Long]{
   protected val value = new AtomicLong(initial)
 
   /**
@@ -16,35 +17,20 @@ class Counter(initial: Long){
   def this() = this(0)
 
   /**
-   * Increments the counter by one.
-   */
-  def inc() {
-    inc(1)
-  }
-
-  /**
    * Increments the counter by an arbitrary amount.
    */
-  def inc(delta: Long) {
+  def +=(delta: Long): this.type = {
     value.getAndAdd(delta)
-  }
 
-  /**
-   * Decrements the counter by one.
-   */
-  def dec() {
-    dec(1)
-  }
-
-  /**
-   * Decrements the counter by an arbitrary amount.
-   */
-  def dec(delta: Long) {
-    inc(0 - delta)
+    this
   }
 
   /**
    * Returns the current count.
    */
   def count = value.get
+
+  def details = count
+
+  def toJValue: JValue =  JInt(count)
 }

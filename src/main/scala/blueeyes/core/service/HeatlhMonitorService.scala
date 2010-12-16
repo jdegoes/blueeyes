@@ -5,7 +5,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.BlueEyesServiceBuilder
 
-class HeatlhMonitorService(monitors: List[HealthMonitorImpl]) extends BlueEyesServiceBuilder with HealthMonitorsImplicits{
+/*class HeatlhMonitorService(monitors: List[HealthMonitorImpl]) extends BlueEyesServiceBuilder with HealthMonitorsImplicits{
   val healthService = service("health", "1.0.0") {
     context => {
       request {
@@ -19,4 +19,4 @@ class HeatlhMonitorService(monitors: List[HealthMonitorImpl]) extends BlueEyesSe
       }
     }
   }
-}
+}*/

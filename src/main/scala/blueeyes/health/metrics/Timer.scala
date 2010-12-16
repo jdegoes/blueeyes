@@ -7,6 +7,7 @@ import collection.generic.Growable
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
 import blueeyes.util.Future
+import blueeyes.json.JsonAST._
 
 /**
  * A class which tracks the amount of time it takes to perform a particular
@@ -14,17 +15,13 @@ import blueeyes.util.Future
  *
  * @author coda
  */
-class Timer extends Growable[Duration]{
+class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duration, Duration]]{
   private val count_ = new AtomicLong(0)
   private val min_ = new AtomicLong(Long.MaxValue)
   private val max_ = new AtomicLong(Long.MinValue)
   private val sum_ = new AtomicLong(0)
   private val varianceM = new AtomicLong(-1)
   private val varianceS = new AtomicLong(0)
-  // Using a sample size of 1028, which offers a 99.9% confidence level with a
-  // 5% margin of error assuming a normal distribution. This might need to be
-  // parameterized, but I'm only going to do that when someone complains.
-  private val percentile = new Percentile(1028)
 
   /**
    * Record the amount of time it takes to execute the given function.
@@ -50,6 +47,9 @@ class Timer extends Growable[Duration]{
    */
   def count = count_.get
 
+
+  def details = (count, max, min, mean, standardDeviation)
+
   /**
    * Returns the greatest amount of time recorded.
    */
@@ -71,44 +71,6 @@ class Timer extends Growable[Duration]{
   def standardDeviation = safeNS(sqrt(variance))
 
   /**
-   * Returns the duration at the 50th percentile.
-   */
-  def median = safeNS(percentile.value(50))
-
-  /**
-   * Returns the duration at the 95th percentile.
-   */
-  def p95 = safeNS(percentile.value(95))
-
-  /**
-   * Returns the duration at the 98th percentile.
-   */
-  def p98 = safeNS(percentile.value(98))
-
-  /**
-   * Returns the duration at the 99th percentile.
-   */
-  def p99 = safeNS(percentile.value(99))
-
-  /**
-   * Returns the duration at the 99.9th percentile.
-   */
-  def p999 = safeNS(percentile.value(99.9))
-
-  /**
-   * Clears all timings.
-   */
-  def clear() {
-    count_.set(0)
-    min_.set(Long.MaxValue)
-    max_.set(Long.MinValue)
-    sum_.set(0)
-    varianceM.set(-1)
-    varianceS.set(0)
-    percentile.clear()
-  }
-
-  /**
    * Adds a timing in nanoseconds.
    */
   def +=(ns: Long): this.type = {
@@ -118,7 +80,6 @@ class Timer extends Growable[Duration]{
       setMin(ns)
       sum_.getAndAdd(ns)
       updateVariance(ns)
-      percentile += ns.toDouble
     }
     this
   }
@@ -126,7 +87,13 @@ class Timer extends Growable[Duration]{
   /**
    * Adds a duration recorded elsewhere.
    */
-  def +=(duration: Duration): this.type = (this += duration.ns.value.toLong)
+  def +=(duration: Duration): this.type = {
+    this += duration.ns.value.toLong
+
+    this
+  }
+
+  def toJValue: JValue = JObject(JField("minimumTime", JDouble(min.value)) :: JField("maximumTime", JDouble(max.value)) :: JField("averageTime", JDouble(mean.value)) :: JField("standardDeviation", JDouble(standardDeviation.value)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank
