@@ -2,29 +2,9 @@ package blueeyes.js
 
 import scala.collection.JavaConversions._
 import blueeyes.json.JsonAST._
-import RhinoJson._
 import org.mozilla.javascript.{ScriptableObject, Scriptable, Context}
 
-case class RhinoScript(script: String){
-  def apply(scopedObjects: Map[String, _] = Map()): Option[JObject] = {
-    val context = Context.enter();
-    try{
-      val scope = context.initStandardObjects();
-
-      scopedObjects.foreach(scopedObject => ScriptableObject.putProperty(scope, scopedObject._1, scopedObject._2))
-
-      context.evaluateString(scope, script, "javascript.log", 1, null) match {
-        case e: Scriptable => Some(e)
-        case _             => None
-      }
-    }
-    finally{
-      Context.exit();
-    }
-  }
-}
-
-object RhinoJson{
+trait RhinoJsonImplicits{
   trait CanConvertToJValue { def toJValue: JValue }
 
   implicit def string2JValue(v: String)             = new CanConvertToJValue { def toJValue: JString = JString(v) }
@@ -58,5 +38,25 @@ object RhinoJson{
     case null                            => JNull
     case _                               => error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
   }
+}
 
+object RhinoJsonImplicits extends RhinoJsonImplicits
+
+case class RhinoScript(script: String) extends RhinoJsonImplicits{
+  def apply(scopedObjects: Map[String, _] = Map()): Option[JObject] = {
+    val context = Context.enter();
+    try{
+      val scope = context.initStandardObjects();
+
+      scopedObjects.foreach(scopedObject => ScriptableObject.putProperty(scope, scopedObject._1, scopedObject._2))
+
+      context.evaluateString(scope, script, "javascript.log", 1, null) match {
+        case e: Scriptable => Some(e)
+        case _             => None
+      }
+    }
+    finally{
+      Context.exit();
+    }
+  }
 }

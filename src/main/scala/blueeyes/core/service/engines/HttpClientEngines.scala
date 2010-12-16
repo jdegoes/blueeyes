@@ -96,7 +96,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     request.content.map(v => {
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      else if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[Array[Byte]])
       else error("Unsupported body type. Content type can be either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PostRequest(url))
   }
@@ -104,7 +104,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     request.content.map(v => {
       val contentType = requestContentType(request).value
       if (v.isInstanceOf[String])       new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
+      else if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[Array[Byte]])
       else error("Unsupported content type. Content type can be either String or Array[Byte].")
     }).getOrElse[XLHttpRequest](new PutRequest(url))
   }

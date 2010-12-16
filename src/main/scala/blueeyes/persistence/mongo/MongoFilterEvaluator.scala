@@ -3,11 +3,11 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
 
-object MongoFilterEvaluator{
+private[mongo] object MongoFilterEvaluator{
   implicit def valuesToEvaluator(values: List[JValue]) = MongoFilterEvaluator(values)
 }
 
-case class MongoFilterEvaluator(values: List[JValue]){
+private[mongo] case class MongoFilterEvaluator(values: List[JValue]){
   import Evaluators._
   
   def filter(filter: MongoFilter):  List[JValue] = filter match{

@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
+import QueryBehaviours._
 
 sealed trait MongoCollection
 case class MongoCollectionReference(name: String) extends MongoCollection
@@ -11,6 +12,18 @@ sealed abstract class MongoSortOrder(val order: Int)
 case object MongoSortOrderAscending extends MongoSortOrder(1)
 case object MongoSortOrderDescending extends MongoSortOrder(-1)
 
+/** The MongoSort defines sort order of mongo search result. 
+ * <p>
+ * <pre>
+ * import blueeyes.persistence.mongo.MongoImplicits._
+ * import blueeyes.persistence.mongo.MongoQueryBuilder._
+ *
+ * val sortOrder = "foo.bar" <<
+ *
+ * val query  = selectOne().from("mycollection").sortBy(sortOrder)
+ * val query2 = selectOne().from("mycollection").sortBy("foo.bar" <<)
+ * </pre>
+ */
 case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
   def >> : MongoSort = MongoSort(sortField, MongoSortOrderAscending)
   def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
@@ -34,6 +47,8 @@ object MongoImplicits extends MongoImplicits
 
 case class MongoSelection(selection: List[JPath])
 
+/** Basic trait for mongo queries.
+ */
 sealed trait MongoQuery[T] extends QueryBehaviour[T]{
   def collection: MongoCollection;
 }
@@ -81,6 +96,16 @@ trait MapReduceOutput{
   def outpotCollection: MongoCollection
   def drop: Unit
 }
+
+/** The MongoQueryBuilder creates mongo queries.
+ * <p>
+ * <pre>
+ * import blueeyes.persistence.mongo.MongoImplicits._
+ * import blueeyes.persistence.mongo.MongoQueryBuilder._
+ *
+ * val query = selectOne().from("mycollection")
+ * </pre>
+ */
 
 object MongoQueryBuilder{
   class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
