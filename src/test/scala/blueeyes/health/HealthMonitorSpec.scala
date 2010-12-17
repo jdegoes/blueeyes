@@ -11,7 +11,7 @@ class HealthMonitorSpec extends Specification{
 
   private val precision = 5.0
 
-  private val montor = new HealthMonitor("foo")
+  private val montor = new HealthMonitor()
 
   "records count" in{
     montor.increment("foo")(2)
@@ -72,11 +72,11 @@ class HealthMonitorSpec extends Specification{
 
   "composes into JValue" in{
 
-    val monitor = new HealthMonitor("foo.v1.health")
+    val monitor = new HealthMonitor()
     monitor.increment("requestCount")(2)
     monitor.increment("requestCount")(3)
 
-    val monitorJson = JObject(List(JField("foo", JObject(List(JField("v1", JObject(List(JField("health", JObject(List(JField("requestCount",JInt(5)))))))))))))
+    val monitorJson = JObject(List(JField("requestCount",JInt(5))))
 
     monitor.toJValue mustEqual(monitorJson)
   }

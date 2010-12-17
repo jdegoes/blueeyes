@@ -1,15 +1,22 @@
 package blueeyes.core.service
 
 import blueeyes.health.HealthMonitor
-import blueeyes.json.JPath
 import net.lag.logging.Logger
+import blueeyes.core.http.{HttpRequest, HttpResponse}
+import blueeyes.util.FutureImplicits
+import blueeyes.json.JsonAST.JValue
+import blueeyes.core.data.Bijection
 
-trait HttpServiceDescriptorFactoryCombinators {
-  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
+trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits{
+  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val monitor = new HealthMonitor(JPath("%s.v%d.health".format(context.serviceName, context.serviceVersion.majorVersion)))
+      val monitor = new HealthMonitor()
 
-      f(monitor)(context)
+      f(monitor)(context) ~ path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
+        get {
+          request: HttpRequest[T] => HttpResponse[T](content=Some(jValueBijection(monitor.toJValue)))
+        }
+      }
     }
   }
 
