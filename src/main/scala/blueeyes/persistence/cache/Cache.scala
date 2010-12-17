@@ -21,7 +21,7 @@ class Cache[K, V](
   val es: ScheduledExecutorService,
   val onEviction: (K, V) => Unit) extends ConcurrentMap[K, V] {
 
-  import Cache._
+  import Cache.ExpirationTask
 
   override def size: Int = delegate.size
 
