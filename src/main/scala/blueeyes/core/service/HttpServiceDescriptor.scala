@@ -10,4 +10,14 @@ case class HttpServiceDescriptor[T, S](startup: () => Future[S], request: S => H
       shutdown = (pair: (S, R)) => self.shutdown(pair._1).zip(that.shutdown(pair._2)).map(_ => Unit)
     )
   }
+  
+  def + (that: HttpRequestHandler[T]): HttpServiceDescriptor[T, S] = {
+    HttpServiceDescriptor[T, S](
+      startup  = self.startup,
+      request  = (s: S) => {
+        self.request(s).orElse(that)
+      },
+      shutdown = self.shutdown
+    )
+  }
 }
