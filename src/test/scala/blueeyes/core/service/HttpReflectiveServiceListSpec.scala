@@ -24,7 +24,7 @@ class HttpReflectiveServiceListSpec extends Specification{
 
     def descriptorFactory = null
 
-    def version = "1.2.3"
+    def version = HttpServiceVersion(1, 2, "3")
 
     def name = null
   }

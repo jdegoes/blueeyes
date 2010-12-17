@@ -20,7 +20,7 @@ val emailService = {
   }
 }
 */
-trait HttpServiceBuilder[T] {
+trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
   protected case class StartupDescriptor[S](startup: () => Future[S]) {
     def -> (request: RequestDescriptor[S]) = new {
       def -> (shutdown: ShutdownDescriptor[S]) = HttpServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
@@ -48,7 +48,7 @@ trait HttpServiceBuilder[T] {
 
   def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService[T] = new HttpServiceImpl[T](name, version, descriptorFactory)
 
-  private class HttpServiceImpl[T](val name: String, val version: String, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
+  private class HttpServiceImpl[T](val name: String, val version: HttpServiceVersion, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
     def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
   }
 }

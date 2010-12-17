@@ -9,7 +9,7 @@ import collection.mutable.ConcurrentMap
 import ConcurrentMaps._
 import blueeyes.json.JsonAST.{JValue, JField, JObject}
 
-class HealthMonitor(rootPath: JPath){
+class HealthMonitor{
 
   private val _countsStats: ConcurrentMap[JPath, Counter]   = new ConcurrentHashMap[JPath, Counter]
   private val _timersStats: ConcurrentMap[JPath, Timer]     = new ConcurrentHashMap[JPath, Timer]
@@ -55,9 +55,7 @@ class HealthMonitor(rootPath: JPath){
 
   def errorStats  = _errorsStats.toMap
 
-  def toJValue = jvalueToJObject(rootPath, statisticsJObject)
-
-  private def statisticsJObject = {
+  def toJValue: JValue = {
     val statistics = List[Map[JPath, Statistic[_, _]]](timerStats, errorStats, sampleStats, countStats)
     statistics.foldLeft(JObject(Nil)) {(result, element) => result.merge(composeStatistics(element)).asInstanceOf[JObject]}
   }
