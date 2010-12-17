@@ -7,7 +7,7 @@ import net.lag.logging.Logger
 trait HttpServiceDescriptorFactoryCombinators {
   def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val monitor = new HealthMonitor(JPath("%s.v%d.health".format(context.serviceName, context.serviceVersion)))
+      val monitor = new HealthMonitor(JPath("%s.v%d.health".format(context.serviceName, context.serviceMajorVersion)))
 
       f(monitor)(context)
     }

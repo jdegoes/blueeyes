@@ -205,7 +205,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   private lazy val descriptors: List[BoundStateDescriptor[T, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
 
-    val context = HttpServiceContext(config, service.name, service.majorVersion)
+    val context = HttpServiceContext(config, service.name, service.majorVersion, service.minorVersion)
 
     BoundStateDescriptor(context, service)
   }
