@@ -8,6 +8,8 @@ import blueeyes.util.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
+import blueeyes.health.HealthMonitor
+import blueeyes.json.JPath
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -103,6 +105,16 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     _status = RunningStatus.Stopping
     
+    // Turn off the request handler so we don't handle any more requests for any service:
+    handlerLock.writeLock.lock()
+    
+    try {
+      _handler = Map[HttpRequest[T], Future[HttpResponse[T]]]()
+    }
+    finally {
+      handlerLock.writeLock.unlock()
+    }
+    
     val shutdownFutures = descriptors.map { descriptor =>
       log.info("Shutting down service " + descriptor.service.toString)
       
@@ -191,10 +203,9 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   }
   
   private lazy val descriptors: List[BoundStateDescriptor[T, _]] = services.map { service =>
-    val config = rootConfig.configMap("services." + service.name + ".v" + service.majorVersion)
-    val logger = Logger.configure(config.configMap("log"), false, false)
+    val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
 
-    val context = HttpServiceContext(config, logger, HealthMonitorImpl(config, service.name, service.majorVersion))
+    val context = HttpServiceContext(config, service.name, service.version)
 
     BoundStateDescriptor(context, service)
   }

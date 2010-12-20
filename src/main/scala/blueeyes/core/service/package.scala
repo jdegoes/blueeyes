@@ -11,4 +11,6 @@ package object service{
   type HttpRequestHandlerFull2[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
 
   type HttpClientTransformer[T, S] = HttpClient[T] => Future[S]
+
+  type HttpServiceDescriptorFactory[T, S] = HttpServiceContext => HttpServiceDescriptor[T, S]
 }

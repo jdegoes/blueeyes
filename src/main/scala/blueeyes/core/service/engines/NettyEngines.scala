@@ -3,7 +3,6 @@ package blueeyes.core.service.engines
 import blueeyes.core.service._
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.Bijection
-import java.lang.String
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import blueeyes.util.Future
 import org.jboss.netty.bootstrap.ServerBootstrap

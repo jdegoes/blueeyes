@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
+import UpdateFieldFunctions._
 
 class IncFSpec extends Specification{
   "fuse increases set update" in {

@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
+import UpdateFieldFunctions._
 
 class AddToSetFSpec extends Specification{
   "fuse applies addtoSet to set update" in {

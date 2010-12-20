@@ -8,15 +8,11 @@ package blueeyes.core.service
 trait HttpService[T] {
   def name: String
   
-  def version: String
-  
-  def majorVersion: Int = version.split("\\.").drop(0).headOption.map(_.toInt).getOrElse(0)
-  
-  def minorVersion: Int = version.split("\\.").drop(1).headOption.map(_.toInt).getOrElse(0)
-  
+  def version: HttpServiceVersion
+
   def descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _]
   
   def ioClass: Class[T]
   
-  override def toString = name + "." + majorVersion
+  override def toString = name + "." + version.majorVersion
 }

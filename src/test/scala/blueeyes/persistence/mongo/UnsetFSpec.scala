@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.spex.Specification
+import UpdateFieldFunctions._
 
 class UnsetFSpec extends Specification{
   "fuse does not change update" in {
