@@ -202,6 +202,15 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
+   "Support response headers" in {
+      val f = path[String, HttpResponse[String]](uri) {
+        get[String, HttpResponse[String]] { r => r }
+      }(httpClient)
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+      f.value.get.headers must haveKey("kludgy")
+    }
+
     "Support GET requests of 1000 requests" in {
       val total = 1000
       val duration = 1000
@@ -257,7 +266,7 @@ trait EchoService extends BlueEyesServiceBuilderString {
   }
 
   private def response(content: Option[String] = None) =
-    HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content)
+    HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content, headers = Map("kludgy" -> "header test"))
 
   private def handler(request: HttpRequest[String]) = {
     val params = request.parameters.toList.sorted.foldLeft(List[String]()) { (l: List[String], p: Tuple2[Symbol, String]) =>
@@ -269,8 +278,7 @@ trait EchoService extends BlueEyesServiceBuilderString {
       }.mkString("&")
     }.getOrElse("")
     val content = params + request.content.getOrElse("") + headers
-
-    new Future[HttpResponse[String]]().deliver(response(content=Some(content)))
+    new Future[HttpResponse[String]]().deliver(response(content = Some(content)))
   }
 
   val echoService: HttpService[String] = service("echo", "1.0.0") { context =>

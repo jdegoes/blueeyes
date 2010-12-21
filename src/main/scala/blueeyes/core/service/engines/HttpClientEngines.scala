@@ -12,6 +12,7 @@ import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
 import blueeyes.core.http.HttpFailure
 import net.lag.logging.Logger
+import scala.collection.JavaConversions._
 
 
 sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
@@ -34,19 +35,22 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
           Some(contentBijection(response.getBody))
         } catch {
           case e: Throwable => {
-	    Logger.get.error(e, "Failed to transcode response body")
-	    None
-	  }
+          	Logger.get.error(e, "Failed to transcode response body")
+          	None
+          }
         }
         
-        resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data))
+        val headers = response.getHeaderNameSet.toList.asInstanceOf[List[String]].foldLeft(Map[String, String]()) { (acc: Map[String, String], name: String) =>
+          acc + (name -> response.getHeader(name))
+        }
+        resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
         httpClient.close
       }
 
       def onException(e: IOException) {
         val httpStatus = e match {
           case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
-	  case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
+          case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
           case _ => HttpStatusCodes.InternalServerError
         }
 
