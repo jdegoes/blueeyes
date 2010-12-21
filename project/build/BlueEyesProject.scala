@@ -73,7 +73,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val commonscodec   = "commons-codec"               % "commons-codec"     % "1.4"          % "compile"
   val clhm_lru       = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
 
-  override def mainClass = Some("blueeyes.BlueEyesDemo")
+  override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
 
 trait Repositories {
