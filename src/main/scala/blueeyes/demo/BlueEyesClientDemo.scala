@@ -5,25 +5,26 @@ import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
 import blueeyes.BlueEyesClientTransformerBuilder
-import blueeyes.json.JsonAST.{JString, JArray, JValue}
+import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
 import blueeyes.util.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
+import blueeyes.json.JsonParser.{parse => j}
 
-object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEnginesArrayByte{
+object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEnginesArrayByte with Data{
 
   Configgy.configure("/etc/default/blueeyes.conf")
 
   val port = Configgy.config.configMap("server").getInt("port", 8888)
-
-  private val contact = Contact("John", Some("john@google.com"), Some("UK"), Some("London"), None)
 
   def main(args: Array[String]){
 
     ->?(create(contact))
 
     ->?(list) foreach println
+
+    ->?(search(j("""{ "name" : "%s" }""".format(contact.name)))) foreach println
 
     ->?(contact(contact.name)) foreach println
 
@@ -49,21 +50,41 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
 
   def port: Int
 
+  def create(contact: Contact)  = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/contacts"){
+          contentType[JValue, Array[Byte], Option[JValue]](application/json){
+            post[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] =>
+              response.content
+            }
+          }
+        }
+      }
+    }
+  }
+
   def list =  protocol("http"){
     host("localhost"){
       port(port){
         path("/contacts"){
           contentType[JValue, Array[Byte], List[String]](application/json){
             get[JValue, List[String]]{response: HttpResponse[JValue] =>
-              response.content match{
-                case Some(e: JArray) => e.elements.map(v => {
-                  v match{
-                    case JString(x) => x
-                    case _ => error("wrong type")
-                  }
-                })
-                case _ => Nil
-              }
+              namesFromJValue(response.content)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def search(filter: JValue) =  protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/contacts/search"){
+          contentType[JValue, Array[Byte], List[String]](application/json){
+            post[JValue, List[String]](filter){response: HttpResponse[JValue] =>
+              namesFromJValue(response.content)
             }
           }
         }
@@ -88,18 +109,6 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def create(contact: Contact)  = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts"){
-          contentType[JValue, Array[Byte], Option[JValue]](application/json){
-            post[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] => response.content}
-          }
-        }
-      }
-    }
-  }
-  
   def remove(name: String)  = protocol("http"){
     host("localhost"){
       port(port){
@@ -111,4 +120,19 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
       }
     }
   }
+
+  private def namesFromJValue(jValue: Option[JValue]) = jValue match{
+    case Some(e: JArray) => e.elements.map(v => {
+      v match{
+        case JString(x) => x
+        case _ => error("wrong type")
+      }
+    })
+    case _ => Nil
+  }
+
+}
+
+trait Data{
+  val contact = Contact("John", Some("john@google.com"), Some("UK"), Some("London"), None)
 }

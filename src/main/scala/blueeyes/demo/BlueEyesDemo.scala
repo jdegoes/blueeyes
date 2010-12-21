@@ -2,7 +2,6 @@ package blueeyes.demo
 
 import blueeyes.config.ConfiggyModule
 import blueeyes.persistence.mongo.mock.MockMongoModule
-import blueeyes.persistence.mongo.Mongo
 import com.google.inject.Guice
 import blueeyes.BlueEyesServer
 import net.lag.configgy.ConfigMap
@@ -14,6 +13,7 @@ import blueeyes.persistence.mongo.MongoQueryBuilder._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
+import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 
 object BlueEyesDemo extends BlueEyesServer with ContactListService{
 
@@ -37,15 +37,28 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
 
         config
       } -> {
-        request { config: ContactListConfig =>
-          import config._
+        request { conatctsConfig: ContactListConfig =>
+          import conatctsConfig._
           path("/contacts"){
             produce(application/json) {
               get {
                 request: HttpRequest[Array[Byte]] => {
-                  val names = JArray(database(select(".name").from(collection)).flatMap(
+                  val contacts = JArray(database(select(".name").from(collection)).flatMap(
                   row => (row \\ "name").value).toList)
-                  HttpResponse[JValue](content=Some(names))
+                  HttpResponse[JValue](content=Some(contacts))
+                }
+              }
+            } ~
+            jvalue {
+              post {
+                refineContentType[JValue, JObject] {
+                  requireContent((j: JObject) => !((j \ "name" -->? classOf[JString]).isEmpty)) {
+                    request => {
+                      val name = (request.content.get \ "name" --> classOf[JString]).value
+                      database[JNothing.type](upsert(collection).set(request.content.get).where("name" === name))
+                      HttpResponse[JValue]()
+                    }
+                  }
                 }
               }
             } ~
@@ -66,14 +79,13 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
                 }
               }
             } ~
-            jvalue {
-              post {
-                refineContentType[JValue, JObject] {
-                  requireContent((j: JObject) => !((j \ "name" -->? classOf[JString]).isEmpty)) {
-                    request => {
-                      val name = (request.content.get \ "name" --> classOf[JString]).value
-                      database[JNothing.type](upsert(collection).set(request.content.get).where("name" === name))
-                      HttpResponse[JValue]()
+            path("/search") {
+              produce(application/json) {
+                jvalue {
+                  post {
+                    refineContentType[JValue, JObject] { request =>
+                      val contacts = JArray(searchContacts(request.content, conatctsConfig))
+                      HttpResponse[JValue](content=Some(contacts))
                     }
                   }
                 }
@@ -84,6 +96,23 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
       }->
         shutdown { config: ContactListConfig =>
       }
+    }
+  }
+
+  private def searchContacts(filterJObject: Option[JObject], config: ContactListConfig): List[JString] = {
+    createFilter(filterJObject).map { filter =>
+      for {
+        nameJObject <- config.database(select().from(config.collection).where(filter)).toList
+        name <- nameJObject \ "name" -->? classOf[JString]
+      } yield name
+    }.getOrElse(Nil)
+  }
+
+  private def createFilter(filterJObject: Option[JObject]) = filterJObject.map {
+    _.flatten.collect {
+      case f @ JField(_, JString(_)) => f
+    }.foldLeft(MongoFilterAll.asInstanceOf[MongoFilter]) { (filter, field) =>
+      filter && field.name === field.value.asInstanceOf[JString].value
     }
   }
 }
