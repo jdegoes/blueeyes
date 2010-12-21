@@ -11,34 +11,30 @@ import blueeyes.util.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 
-object BlueEyesClientDemo extends HttpClientXLightWebEnginesArrayByte{
-  private var clientFacade: ContactListFacade = _
-  private var client: HttpClient[Array[Byte]] = _
+object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEnginesArrayByte{
+
+  Configgy.configure("/etc/default/blueeyes.conf")
+
+  val port = Configgy.config.configMap("server").getInt("port", 8888)
+
+  private val contact = Contact("John", Some("john@google.com"), Some("UK"), Some("London"), None)
+
   def main(args: Array[String]){
 
-    client        = new HttpClientXLightWebEnginesArrayByte{}
-    clientFacade  = createClientFacade
+    ->?(create(contact))
 
-    ->?(clientFacade.createContact(contact))
+    ->?(list) foreach println
 
-    ->?(clientFacade.contacts) foreach println
+    ->?(contact(contact.name)) foreach println
 
-    ->?(clientFacade.contact(contact.name)) foreach println
-  }
+    ->?(remove(contact.name))
 
-  private def contact = Contact("John", Some("john@google.com"), Some("UK"), Some("London"), None)
-
-  private def createClientFacade = {
-    Configgy.configure("/etc/default/blueeyes.conf")
-
-    val port = Configgy.config.configMap("server").getInt("port", 8888)
-
-    new ContactListFacade(port)    
+    ->?(list) foreach println
   }
 
   private def ->?[T](f: HttpClient[Array[Byte]] => Future[T]) = {
 
-    val future    = client.exec(f) 
+    val future    = exec(f) 
     val counDown  = new CountDownLatch(1)
 
     future.deliverTo(response =>{
@@ -49,8 +45,11 @@ object BlueEyesClientDemo extends HttpClientXLightWebEnginesArrayByte{
   }
 }
 
-class ContactListFacade(port: Int) extends BlueEyesClientTransformerBuilder{
-  def contacts =  protocol("http"){
+trait ContactListFacade extends BlueEyesClientTransformerBuilder{
+
+  def port: Int
+
+  def list =  protocol("http"){
     host("localhost"){
       port(port){
         path("/contacts"){
@@ -89,12 +88,24 @@ class ContactListFacade(port: Int) extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def createContact(contact: Contact)  = protocol("http"){
+  def create(contact: Contact)  = protocol("http"){
     host("localhost"){
       port(port){
         path("/contacts"){
           contentType[JValue, Array[Byte], Option[JValue]](application/json){
             post[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] => response.content}
+          }
+        }
+      }
+    }
+  }
+  
+  def remove(name: String)  = protocol("http"){
+    host("localhost"){
+      port(port){
+        path("/contacts/" + name){
+          contentType[JValue, Array[Byte], Option[JValue]](application/json){
+            delete[JValue, Option[JValue]]{response: HttpResponse[JValue] => response.content}
           }
         }
       }
