@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
 
 
 sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
-  def contentBijection: Bijection[BodyDataSource, T]
+  def contentBijection: Bijection[BodyDataSource, Option[T]]
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
@@ -32,7 +32,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     httpClient.send(createXLRequest(request), new IHttpResponseHandler() {
       def onResponse(response: IHttpResponse) {
         val data = try {
-          Some(contentBijection(response.getBody))
+          contentBijection(response.getBody)
         } catch {
           case e: Throwable => {
           	Logger.get.error(e, "Failed to transcode response body")
@@ -135,14 +135,17 @@ trait HttpClientXLightWebEnginesString extends HttpClientXLightWebEngines[String
 }
 
 object XLightWebRequestBijections{
-  val BodyDataSourceToByteArray = new Bijection[BodyDataSource, Array[Byte]]{
-    def apply(content: BodyDataSource) = content.readBytes
-    def unapply(content: Array[Byte])  = error("Not imlemented")
+  val BodyDataSourceToByteArray = new Bijection[BodyDataSource, Option[Array[Byte]]]{
+    def apply(content: BodyDataSource) = {
+      val bytes = content.readBytes
+      if (!bytes.isEmpty) Some(bytes) else None
+  }
+    def unapply(content: Option[Array[Byte]])  = error("Not imlemented")
   }
 
-  val BodyDataSourceToString = new Bijection[BodyDataSource, String]{
-    def apply(content: BodyDataSource) = content.readString
-    def unapply(content: String)       = error("Not imlemented")
+  val BodyDataSourceToString = new Bijection[BodyDataSource, Option[String]]{
+    def apply(content: BodyDataSource)    = Some(content.readString)
+    def unapply(content: Option[String])  = error("Not imlemented")
   }
 }
 

@@ -48,12 +48,17 @@ object JavaKeyTool{
 
     val process = Process(command)
 
+    log.info("JavaKeyTool finished with exit code: " + process.exitValue)
+    process.stdout.foreach(log.info(_))
+    process.stderr.foreach(log.error(_))    
+
     Tuple3(process.exitValue, process.stdout, process.stderr)
   }
 }
 object CertificateGenerator{
+
   def apply(keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
-    val keyStorePath = System.getProperty("java.io.tmpdir") + "/" + System.currentTimeMillis + ".jks"
+    val keyStorePath  = System.getProperty("java.io.tmpdir") + "/" + System.currentTimeMillis + ".jks"
 
     JavaKeyTool(keyStorePath, keyalg, alias, dname, validity, password)
 
