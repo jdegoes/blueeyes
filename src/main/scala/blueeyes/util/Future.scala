@@ -39,15 +39,8 @@ class Future[T] {
           _isSet  = true
 
           listeners.foreach { listener =>
-            try {
+            trapError {
               listener(deliverable)
-            }
-            catch { 
-              case error: Throwable =>
-                Thread.getDefaultUncaughtExceptionHandler match {
-                  case handler: Thread.UncaughtExceptionHandler =>
-                    handler.uncaughtException(Thread.currentThread(), error)
-                }
             }
           }
 
@@ -202,15 +195,12 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      try {
+      cancelFutureOnError(fut) {
         f(t).deliverTo { s =>
           fut.deliver(s)
         }.ifCanceled {
           fut.forceCancel
         }
-      }
-      catch {
-        case error: Throwable => fut.cancel(error)
       }
     }
     
@@ -223,10 +213,12 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      f(t) match {
-        case None => fut.cancel()
+      cancelFutureOnError(fut) {
+        f(t) match {
+          case None => fut.cancel()
         
-        case Some(s) => fut.deliver(s)
+          case Some(s) => fut.deliver(s)
+        }
       }
     }
 
@@ -239,15 +231,12 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      try {
+      cancelFutureOnError(fut) {
         f(t) match {
           case Left(error) => fut.cancel(error)
         
           case Right(result) => fut.deliver(result)
         }
-      }
-      catch {
-        case error: Throwable => fut.cancel(error)
       }
     }
 
@@ -266,11 +255,8 @@ class Future[T] {
     var fut: Future[T] = new Future
 
     deliverTo { t => 
-      try {
+      cancelFutureOnError(fut) {
         if (f(t)) fut.deliver(t) else fut.forceCancel(None)
-      }
-      catch {
-        case error: Throwable => fut.cancel(error)
       }
     }
 
@@ -330,7 +316,11 @@ class Future[T] {
         _error      = error        
         _isCanceled = true
 
-        canceled.foreach(f => f(error))
+        canceled.foreach { listener =>
+          trapError {
+            listener(error)
+          }
+        }
         
         _canceled.clear()
         _cancelers.clear()
@@ -374,6 +364,28 @@ class Future[T] {
     }
     finally {
       lock.writeLock.unlock()
+    }
+  }
+  
+  private def cancelFutureOnError[T](future: Future[_])(f: => T): Unit = {
+    try {
+      f
+    }
+    catch {
+      case error: Throwable => future.cancel(error)
+    }
+  }
+  
+  private def trapError[T](f: => T): Unit = {
+    try {
+      f
+    }
+    catch { 
+      case error: Throwable =>
+        Thread.getDefaultUncaughtExceptionHandler match {
+          case handler: Thread.UncaughtExceptionHandler =>
+            handler.uncaughtException(Thread.currentThread(), error)
+        }
     }
   }
 }

@@ -61,4 +61,16 @@ class FutureSpec extends Specification {
       }.error must eventually (beEqualTo(Some(e)))
     }
   }
+  
+  "Future.filter" should {
+    "cancel filtered future when filtering function throws error" in {
+      val e = new Exception("foo")
+      
+      val f = Future("foo")
+      
+      f.filter { string =>
+        throw e
+      }.error must eventually (beEqualTo(Some(e)))
+    }
+  }
 }
