@@ -309,6 +309,11 @@ class Future[T] {
   def toOption: Option[T] = value
 
   def toList: List[T] = value.toList
+  
+  /** Converts the Future to an Either. This function may only be called if the
+   * future is done.
+   */
+  def toEither: Either[Throwable, T] = if (isCanceled) Left(error.get) else Right(value.get)
 
   private def forceCancel(error: Option[Throwable]): Future[T] = {
     writeLock {
