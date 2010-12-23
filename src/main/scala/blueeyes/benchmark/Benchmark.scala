@@ -3,14 +3,16 @@ package blueeyes.benchmark
 import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
 import blueeyes.core.service.HttpClient
 import blueeyes.demo.{BlueEyesDemo, Contact, ContactListFacade}
-import java.util.concurrent.CountDownLatch
 import blueeyes.util.Future
 import net.lag.configgy.Configgy
+import blueeyes.health.metrics.Timer
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+import blueeyes.json.JsonParser.{parse => j}
 
 object Benchmark extends ServerStart{
 
-  private val threadsCount = 3
-  private val contactsSize = 1000
+  private val threadsCount = 2
+  private val contactsSize = 200
 
   def main(args: Array[String]){
     startServer
@@ -23,53 +25,60 @@ object Benchmark extends ServerStart{
   }
 
   private def benchmark(streams: List[Stream[Contact]]) = {
-    val start = System.currentTimeMillis
+    val timer = new Timer()
 
-    runBenchmarkTasks(streams)
+    runBenchmarkTasks(streams, timer)
 
-    val end   = System.currentTimeMillis
-
-    (end - start)
+    timer.mean.convert(TimeUnit.MILLISECONDS).value    
   }
 
-  private def runBenchmarkTasks(streams: List[Stream[Contact]]){
-    val benchmarkTasks = streams.map(startBenchmarkTask(_))
+  private def runBenchmarkTasks(streams: List[Stream[Contact]], timer: Timer){
+    val benchmarkTasks = streams.map(startBenchmarkTask(_, timer))
 
-    benchmarkTasks.foreach(_.taskCounDown.await)    
+    benchmarkTasks.foreach(_.taskCounDown.await)
   }
 
-  private def startBenchmarkTask(contactsStream: Stream[Contact]) = {
-    val benchmarkTask = new BenchmarkTask(port, contactsStream)
+  private def startBenchmarkTask(contactsStream: Stream[Contact], timer: Timer) = {
+    val benchmarkTask = new BenchmarkTask(port, contactsStream, timer)
     new Thread(benchmarkTask).start
     benchmarkTask
   }
 }
 
-class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact]) extends Runnable with ContactListFacade with HttpClientXLightWebEnginesArrayByte{
+class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val timer: Timer) extends Runnable with ContactListFacade with HttpClientXLightWebEnginesArrayByte{
   val taskCounDown  = new CountDownLatch(1)
   def run = {
-    val counDown = processStream({contact: Contact => create(contact)})
 
-    counDown.await
+    timer.time{
+      processAndWait({c: Contact => create(c)})
+      processAndWait({c: Contact => contact(c.name)})
+      processAndWait({c: Contact => remove(c.name)})
+    }
 
     taskCounDown.countDown
   }
 
-  private def processStream[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
-    val counDown      = new CountDownLatch(contactsStream.size)
+  private def processAndWait[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
+    val countDown = process[T](f)
+
+    countDown.await
+  }
+
+  private def process[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
+    val countDown      = new CountDownLatch(contactsStream.size)
 
     contactsStream.foreach(contact => {
       val future    = exec[T](f(contact))
       future.deliverTo(response =>{
-        counDown.countDown
+        countDown.countDown
       })
       future.ifCanceled{v =>
-        counDown.countDown
+        countDown.countDown
         v.foreach(_.printStackTrace)
       }
     })
 
-    counDown
+    countDown
   }
 }
 
