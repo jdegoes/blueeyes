@@ -33,8 +33,13 @@ class HealthMonitor{
   }
 
   def monitor[T](path: JPath)(f: Future[T]): Future[T] = {
-    f.ifCanceled(_.foreach(error(path)(_)))    
+    trapFuture(path)(f)
     timeFuture(path)(f)
+  }
+
+  def trapFuture[T](path: JPath)(f: Future[T]): Future[T] = {
+    f.ifCanceled(_.foreach(error(path)(_)))
+    f
   }
 
   def trap[T](path: JPath)(f: => T): T = {
