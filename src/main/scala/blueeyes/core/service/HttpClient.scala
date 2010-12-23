@@ -10,3 +10,7 @@ trait HttpClient[T] extends HttpRequestHandler[T] {
 
   def exec[R](f: HttpClient[T] => Future[R]) = f(this)
 }
+
+class HttpClientProxy[T](r: HttpRequestHandler[T]) {
+  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = r.apply(request)
+}

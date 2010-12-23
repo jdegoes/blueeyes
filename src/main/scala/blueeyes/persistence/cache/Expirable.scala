@@ -6,7 +6,7 @@ import java.lang.System.{nanoTime}
 
 /** An expirable entry in a cache.
  */
-private[cache] case class Expirable[K, V] private (key: K, val _value: V, policy: ExpirationPolicy, creationTimeNanos: Long) {
+case class Expirable[K, V] private (key: K, val _value: V, policy: ExpirationPolicy, creationTimeNanos: Long) {
   private var _accessTimeNanos = nanoTime()
   
   /** The access time in nanosecons. */
@@ -28,7 +28,7 @@ private[cache] case class Expirable[K, V] private (key: K, val _value: V, policy
   }
 }
 
-private[cache] object Expirable {
+object Expirable {
   /** Creates a new expirable entry given the specified creatione time and time unit. */
   def apply[K, V](key: K, value: V, policy: ExpirationPolicy, creationTime: Long, unit: TimeUnit): Expirable[K, V] = {
     new Expirable[K, V](key, value, policy, unit.toNanos(creationTime))

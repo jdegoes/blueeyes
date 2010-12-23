@@ -20,7 +20,8 @@ case class ExpirationPolicy private (timeToIdleNanos: Option[Long], timeToLiveNa
 
 object ExpirationPolicy {
   /** Creates a new policy from the specified time to idle and time to live
-   * settings, using the specified time unit. */
+   * settings, using the specified time unit. 
+   */
   def apply(timeToIdle: Option[Long], timeToLive: Option[Long], unit: TimeUnit): ExpirationPolicy = {
     new ExpirationPolicy(timeToIdle.map(unit.toNanos _), timeToLive.map(unit.toNanos _))
   }
