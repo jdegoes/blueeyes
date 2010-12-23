@@ -50,12 +50,12 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
 
   def port: Int
 
-  def create(contact: Contact)  = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts"){
-          contentType[JValue, Array[Byte], Option[JValue]](application/json){
-            post[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] =>
+  def create(contact: Contact)  = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/contacts"){
+          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
+            post$[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] =>
               response.content
             }
           }
@@ -64,12 +64,12 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def list =  protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts"){
-          contentType[JValue, Array[Byte], List[String]](application/json){
-            get[JValue, List[String]]{response: HttpResponse[JValue] =>
+  def list =  protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/contacts"){
+          contentType$[JValue, Array[Byte], List[String]](application/json){
+            get$[JValue, List[String]]{response: HttpResponse[JValue] =>
               namesFromJValue(response.content)
             }
           }
@@ -78,12 +78,12 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def search(filter: JValue) =  protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts/search"){
-          contentType[JValue, Array[Byte], List[String]](application/json){
-            post[JValue, List[String]](filter){response: HttpResponse[JValue] =>
+  def search(filter: JValue) =  protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/contacts/search"){
+          contentType$[JValue, Array[Byte], List[String]](application/json){
+            post$[JValue, List[String]](filter){response: HttpResponse[JValue] =>
               namesFromJValue(response.content)
             }
           }
@@ -92,12 +92,12 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def contact(name: String) =  protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts/" + name){
-          contentType[JValue, Array[Byte], Option[Contact]](application/json){
-            get[JValue, Option[Contact]]{response: HttpResponse[JValue] =>
+  def contact(name: String) =  protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/contacts/" + name){
+          contentType$[JValue, Array[Byte], Option[Contact]](application/json){
+            get$[JValue, Option[Contact]]{response: HttpResponse[JValue] =>
               response.content match{
                 case Some(x) => Some(x.deserialize[Contact]) 
                 case _ => None
@@ -109,12 +109,12 @@ trait ContactListFacade extends BlueEyesClientTransformerBuilder{
     }
   }
 
-  def remove(name: String)  = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/contacts/" + name){
-          contentType[JValue, Array[Byte], Option[JValue]](application/json){
-            delete[JValue, Option[JValue]]{response: HttpResponse[JValue] => response.content}
+  def remove(name: String)  = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/contacts/" + name){
+          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
+            delete$[JValue, Option[JValue]]{response: HttpResponse[JValue] => response.content}
           }
         }
       }

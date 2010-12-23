@@ -119,58 +119,58 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesStri
 }
 
 class SampleClientFacade(port: Int, sslPort: Int) extends HttpClientTransformerCombinators{
-  def httpsRequest = protocol("https"){
-    host("localhost"){
-      port(sslPort){
-        path("/bar/foo/adCode.html"){
-          get[String, HttpResponse[String]]{ simpleHandler }
+  def httpsRequest = protocol$("https"){
+    host$("localhost"){
+      port$(sslPort){
+        path$("/bar/foo/adCode.html"){
+          get$[String, HttpResponse[String]]{ simpleHandler }
         }
       }
     }
   }
-  def httpRequest = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/bar/foo/adCode.html"){
-          get[String, HttpResponse[String]]{ simpleHandler }
+  def httpRequest = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/bar/foo/adCode.html"){
+          get$[String, HttpResponse[String]]{ simpleHandler }
         }
       }
     }
   }
-  def httpRequestWithParams = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/foo"){
-          parameters('bar -> "zar"){
-            get[String, HttpResponse[String]]{ simpleHandler }
+  def httpRequestWithParams = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/foo"){
+          parameters$('bar -> "zar"){
+            get$[String, HttpResponse[String]]{ simpleHandler }
           }
         }
       }
     }
   }
-  def wrongHttpRequest = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/foo/foo/adCode.html"){
-          post[String, HttpResponse[String]]("foo"){ simpleHandler }
+  def wrongHttpRequest = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/foo/foo/adCode.html"){
+          post$[String, HttpResponse[String]]("foo"){ simpleHandler }
         }
       }
     }
   }
-  def errorHttpRequest = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/error"){
-          get[String, HttpResponse[String]]{ simpleHandler }
+  def errorHttpRequest = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/error"){
+          get$[String, HttpResponse[String]]{ simpleHandler }
         }
       }
     }
   }
-  def httpErrorHttpRequest = protocol("http"){
-    host("localhost"){
-      port(port){
-        path("/http/error"){
-          get[String, HttpResponse[String]]{ simpleHandler }
+  def httpErrorHttpRequest = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/http/error"){
+          get$[String, HttpResponse[String]]{ simpleHandler }
         }
       }
     }
