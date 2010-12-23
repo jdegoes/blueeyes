@@ -11,7 +11,7 @@ import blueeyes.json.JsonParser.{parse => j}
 
 object Benchmark extends ServerStart{
 
-  private val threadsCount = 2
+  private val threadsCount = 4
   private val contactsSize = 200
 
   def main(args: Array[String]){
@@ -48,26 +48,18 @@ object Benchmark extends ServerStart{
 class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val timer: Timer) extends Runnable with ContactListFacade with HttpClientXLightWebEnginesArrayByte{
   val taskCounDown  = new CountDownLatch(1)
   def run = {
-
     timer.time{
-      processAndWait({c: Contact => create(c)})
-      processAndWait({c: Contact => contact(c.name)})
-      processAndWait({c: Contact => remove(c.name)})
+      process({c: Contact => create(c)})
+      process({c: Contact => contact(c.name)})
+      process({c: Contact => remove(c.name)})
     }
 
     taskCounDown.countDown
   }
 
-  private def processAndWait[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
-    val countDown = process[T](f)
-
-    countDown.await
-  }
-
   private def process[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
-    val countDown      = new CountDownLatch(contactsStream.size)
-
     contactsStream.foreach(contact => {
+      val countDown      = new CountDownLatch(1)
       val future    = exec[T](f(contact))
       future.deliverTo(response =>{
         countDown.countDown
@@ -76,9 +68,8 @@ class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val time
         countDown.countDown
         v.foreach(_.printStackTrace)
       }
+      countDown.await
     })
-
-    countDown
   }
 }
 
