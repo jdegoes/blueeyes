@@ -385,6 +385,8 @@ class Future[T] {
         Thread.getDefaultUncaughtExceptionHandler match {
           case handler: Thread.UncaughtExceptionHandler =>
             handler.uncaughtException(Thread.currentThread(), error)
+            
+          case null => 
         }
     }
   }

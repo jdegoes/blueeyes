@@ -22,6 +22,21 @@ class FutureSpec extends Specification {
 
       f.error must eventually (beEqualTo(Some(e)))
     }
+    
+    "deliver to a second listener even when the first one throws an error" in {
+      val f = new Future[String]()
+      var result: String = null
+      
+      f.deliverTo { s => 
+        error("misbehaving delivery handler")
+      }.deliverTo { s => 
+        result = s
+      }
+      
+      f.deliver("foo")
+      
+      result must eventually (beEqualTo("foo"))
+    }
   }
   
   "Future.map" should {
