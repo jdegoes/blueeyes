@@ -215,7 +215,9 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     val state: Future[S] = new Future[S]
     
-    def startup(): Future[S] = descriptor.startup().deliverTo(state.deliver _)
+    def startup(): Future[S] = descriptor.startup().deliverTo { result =>
+      state.deliver(result)
+    }
 
     lazy val request: Future[HttpRequestHandler[T]] = state.map(state => descriptor.request(state))
     

@@ -2,32 +2,63 @@ package blueeyes.util
 
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.util.Future
 import blueeyes.util.FutureImplicits._
 
 class FutureSpec extends Specification {
-  val duration = 250
-  val retries = 10
-  
-  "Futures should support cancel" in { 
-    def returnsAFuture(t: String): Future[String] = { 
-      val f = new Future[String]()
-      f.cancel(new Exception("canceled future"))
-      f
+  "Future" should {
+    "support cancel" in { 
+      val f = Future.dead[String](new Exception("error"))
+
+      f.error must eventually (beSomething)
     }
-
-    returnsAFuture("test").error must eventually(retries, new Duration(duration))(beSomething)
   }
-
-  "Futures should support cancel with a canceled flatMap chain" in { 
-    def returnsAFuture(t: String): Future[String] = { 
+  
+  "Future.deliver" should {
+    "automatically canceled when delivering a lazy value that throws an error" in {
+      val e = new Exception("foo")
       val f = new Future[String]()
-      f.cancel(new Exception("canceled future"))
-      f
+
+      f.deliver(throw e)
+
+      f.error must eventually (beEqualTo(Some(e)))
+    }
+  }
+  
+  "Future.map" should {
+    "propagate cancel" in {
+      val f = Future.dead[String](new Exception("error"))
+      
+      f.map(s => s + s).error must eventually (beSomething)
     }
     
-    returnsAFuture("test").flatMap { s =>
-      "future should not deliver this handler"
-    }.error must eventually(retries, new Duration(duration))(beSomething)
+    "cancel mapped future when mapping function throws error" in {
+      val e = new Exception("foo")
+      
+      val f = Future("foo")
+      
+      f.map { string =>
+        throw e
+      }.error must eventually (beEqualTo(Some(e)))
+    }
+  }
+  
+  "Future.flatMap" should {
+    "propagate cancel" in { 
+      val f = Future.dead[String](new Exception("error"))
+    
+      f.flatMap { s =>
+        "future should not deliver this handler"
+      }.error must eventually (beSomething)
+    }
+    
+    "cancel mapped future when mapping function throws error" in {
+      val e = new Exception("foo")
+      
+      val f = Future("foo")
+      
+      f.flatMap { string =>
+        throw e
+      }.error must eventually (beEqualTo(Some(e)))
+    }
   }
 }

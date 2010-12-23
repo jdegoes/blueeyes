@@ -8,11 +8,14 @@ import blueeyes.util.Future
 /** A stage is a particular kind of cache that is used for staging IO updates.
  * Many kinds of IO updates can be combined (e.g. instead of writing a single
  * log line to a file, you can collect ten lines and write them all at once).
- * This has the capacity to greatly improve performance when IO is the primary
- * bottleneck.
+ * This has the capacity to greatly improve performance when IO is a limiting 
+ * factor.
  * <p>
  * Built on a cache, stage supports standards eviction, settings such as time 
  * to idle, time to live, and maximum weighted capacity.
+ * <p>
+ * Stopping a stage evicts all entries from the stage. As part of shutdown, in
+ * order to avoid data loss, every stage should be stopped.
  */
 class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) extends Map[K, V] {
   private type This = this.type

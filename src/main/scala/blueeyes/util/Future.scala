@@ -23,22 +23,44 @@ class Future[T] {
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
+   * <p>
+   * If when evaluating the lazy value, an error is thrown, the error will be
+   * used to cancel the future.
    */
-  def deliver(t: T): Future[T] = {
+  def deliver(computation: => T): Future[T] = {
     writeLock {
       if (_isCanceled) this
       else if (_isSet) Predef.error("Future already delivered")
       else {
-        _result = Some(t)
-        _isSet  = true
+        try {
+          val deliverable = computation
+          
+          _result = Some(deliverable)
+          _isSet  = true
 
-        listeners.foreach(l => l(t))
-        
-        _listeners.clear()
+          listeners.foreach { listener =>
+            try {
+              listener(deliverable)
+            }
+            catch { 
+              case error: Throwable =>
+                Thread.getDefaultUncaughtExceptionHandler match {
+                  case handler: Thread.UncaughtExceptionHandler =>
+                    handler.uncaughtException(Thread.currentThread(), error)
+                }
+            }
+          }
 
-        this
+          _listeners.clear()
+        }
+        catch {
+          case error: Throwable => 
+            cancel(error)
+        }
       }
     }
+    
+    this
   }
 
   /** Installs the specified canceler on the future. Under ordinary
@@ -86,7 +108,9 @@ class Future[T] {
     
     f.allowCancelOnlyIf { _ => false }
     
-    this.deliverTo(f.deliver _)
+    this.deliverTo { result =>
+      f.deliver(result)
+    }
     
     this.ifCanceled { _ =>
       f.deliver(default)
@@ -166,11 +190,11 @@ class Future[T] {
    * <p>
    * <pre>
    * <code>
-   * urlLoader.load("config.xml").flatMap(xml =>
+   * urlLoader.load("config.xml").flatMap { xml =>
    *   urlLoader.load(parse(xml).mediaUrl)
-   * ).deliverTo(loadedMedia =>
+   * }.deliverTo { loadedMedia =>
    *   container.add(loadedMedia)
-   * )
+   * }
    * </code>
    * </pre>
    */
@@ -178,13 +202,18 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      f(t).deliverTo { s =>
-        fut.deliver(s)
-      }.ifCanceled {
-        fut.forceCancel
+      try {
+        f(t).deliverTo { s =>
+          fut.deliver(s)
+        }.ifCanceled {
+          fut.forceCancel
+        }
+      }
+      catch {
+        case error: Throwable => fut.cancel(error)
       }
     }
-
+    
     ifCanceled(fut.forceCancel)
 
     return fut
@@ -210,10 +239,15 @@ class Future[T] {
     var fut: Future[S] = new Future
 
     deliverTo { t =>
-      f(t) match {
-        case Left(f) => fut.cancel(f)
+      try {
+        f(t) match {
+          case Left(error) => fut.cancel(error)
         
-        case Right(s) => fut.deliver(s)
+          case Right(result) => fut.deliver(result)
+        }
+      }
+      catch {
+        case error: Throwable => fut.cancel(error)
       }
     }
 
@@ -232,7 +266,12 @@ class Future[T] {
     var fut: Future[T] = new Future
 
     deliverTo { t => 
-      if (f(t)) fut.deliver(t) else fut.forceCancel(None)
+      try {
+        if (f(t)) fut.deliver(t) else fut.forceCancel(None)
+      }
+      catch {
+        case error: Throwable => fut.cancel(error)
+      }
     }
 
     ifCanceled(fut.forceCancel)
