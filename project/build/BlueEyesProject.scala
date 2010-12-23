@@ -80,7 +80,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   <version>3.2.1</version>
   */
 
-  override def mainClass = Some("blueeyes.BlueEyesDemo")
+  override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
 
 trait Repositories {

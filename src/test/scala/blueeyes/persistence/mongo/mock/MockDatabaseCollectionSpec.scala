@@ -26,7 +26,7 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val objects = parse("""{ "id" : 1, "tags" : ["dog", "cat"] }""") :: parse("""{ "id" : 2, "tags" : ["cat"] }""") :: parse("""{ "id" : 3, "tags" : ["mouse", "cat", "dog"] }""") :: parse("""{ "id" : 4, "tags" : []  }""") :: Nil
     val map     = """function(){ this.tags.forEach( function(z){ emit( z , { count : 1 } ); } );};"""
-    val reduce  = """function( key , values ){ var total = 0; for ( var i=0; i<values.length; i++ ) total += values[i].count; return { count : total }; };"""    
+    val reduce  = """function( key , values ){ var total = 0; for ( var i=0; i<values.length; i++ ) total += values[i].count; return { count : total }; };"""
 
     val collection = newCollection
     collection.insert(objects)
@@ -255,6 +255,17 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val collection = newCollection
 
+    collection.update(None, MongoUpdateObject(jObject2), true, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+  }
+  "update by update when upsert is true and index exist" in{
+    import MongoImplicits._
+
+    val collection = newCollection
+
+    collection.ensureIndex("index", JPath("address.city") :: Nil, true)
+    collection.update(None, MongoUpdateObject(jObject2), true, false)
     collection.update(None, MongoUpdateObject(jObject2), true, false)
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)

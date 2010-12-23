@@ -38,12 +38,17 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
     var updated = UpdateFunction(value, objects)
 
-    if (objects.isEmpty && upsert){
-      objects = value match{
-        case MongoUpdateObject(value) => value :: Nil
-        case _ => Nil
+    if (upsert){
+      if (objects.isEmpty){
+        objects = value match{
+          case MongoUpdateObject(value) => value :: Nil
+          case _ => Nil
+        }
+        updated = objects
       }
-      updated = objects
+      else{
+        remove(objects)
+      }
     }
 
     index(updated)
