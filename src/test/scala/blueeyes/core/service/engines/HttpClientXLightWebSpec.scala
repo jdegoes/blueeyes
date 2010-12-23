@@ -62,8 +62,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support GET to invalid server should return http error" in {
-      val f = path[String, HttpResponse[String]]("http://127.0.0.1:666/foo") {
-        get[String, HttpResponse[String]] { r =>
+      val f = path$[String, HttpResponse[String]]("http://127.0.0.1:666/foo") {
+        get$[String, HttpResponse[String]] { r =>
 	  println("response: " + r)
 	  r
 	}
@@ -72,23 +72,23 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
     
     "Support GET requests with status OK" in {
-      val f = path[String, HttpResponse[String]](uri) {
-        get[String, HttpResponse[String]] { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        get$[String, HttpResponse[String]] { r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
     }
     
     "Support GET requests with status Not Found" in {
-      val f = path[String, HttpResponse[String]]("/bogus") {
-            get[String, HttpResponse[String]]{ r => r }
+      val f = path$[String, HttpResponse[String]]("/bogus") {
+            get$[String, HttpResponse[String]]{ r => r }
 	  }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beNone)
     }
 
     "Support GET requests with query params" in {
-      val f = path[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
-        get[String, HttpResponse[String]]{ r => r }
+      val f = path$[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
+        get$[String, HttpResponse[String]]{ r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -96,9 +96,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support GET requests with request params" in {
-      val f = path[String, HttpResponse[String]](uri) {
-        parameters('param1 -> "a", 'param2 -> "b") {
-          get[String, HttpResponse[String]] { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        parameters$('param1 -> "a", 'param2 -> "b") {
+          get$[String, HttpResponse[String]] { r => r }
         }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -107,8 +107,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support POST requests with query params" in {
-      val f = path[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
-            post[String, HttpResponse[String]]("") { r => r }
+      val f = path$[String, HttpResponse[String]](uri + "?param1=a&param2=b") {
+            post$[String, HttpResponse[String]]("") { r => r }
           }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -116,9 +116,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support POST requests with request params" in {
-      val f = path[String, HttpResponse[String]](uri) {
-        parameters('param1 -> "a", 'param2 -> "b") {
-          post[String, HttpResponse[String]]("") { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        parameters$('param1 -> "a", 'param2 -> "b") {
+          post$[String, HttpResponse[String]]("") { r => r }
         }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -128,8 +128,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support POST requests with body" in {
       val content = "Hello, world"
-      val f = path[String, HttpResponse[String]](uri) {
-        post[String, HttpResponse[String]](content) { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        post$[String, HttpResponse[String]](content) { r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.get.trim must eventually(equalIgnoreSpace(content))
@@ -138,9 +138,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support POST requests with body and request params" in {
       val content = "Hello, world"
-      val f = path[String, HttpResponse[String]](uri) {
-        parameters('param1 -> "a", 'param2 -> "b") {
-          post[String, HttpResponse[String]](content) { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        parameters$('param1 -> "a", 'param2 -> "b") {
+          post$[String, HttpResponse[String]](content) { r => r }
         }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -150,9 +150,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support PUT requests with body" in {
       val content = "Hello, world"
-      val f = path[String, HttpResponse[String]](uri) {
-        headers(`Content-Length`(100)) {
-          put[String, HttpResponse[String]](content) { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        headers$(`Content-Length`(100)) {
+          put$[String, HttpResponse[String]](content) { r => r }
         }
       }(httpClient)
       f.deliverTo((res: HttpResponse[String]) => {})
@@ -162,9 +162,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support GET requests with header" in {
-      val f = path[String, HttpResponse[String]](uri + "?headers=true") {
-        headers("Fooblahblah" -> "washere", "param2" -> "1") {
-          get[String, HttpResponse[String]] { r => r }
+      val f = path$[String, HttpResponse[String]](uri + "?headers=true") {
+        headers$("Fooblahblah" -> "washere", "param2" -> "1") {
+          get$[String, HttpResponse[String]] { r => r }
         }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -174,9 +174,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
       val content = "<html></html>"
-      val f = path[String, HttpResponse[String]](uri) {
-        headers(`Content-Type`(text/html), `Content-Length`(100)) {
-          post[String, HttpResponse[String]](content) { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        headers$(`Content-Type`(text/html), `Content-Length`(100)) {
+          post$[String, HttpResponse[String]](content) { r => r }
         }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -186,8 +186,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support POST requests with large payload" in {
       val content = Array.fill(1024*1000)(0).toList.mkString("")
-      val f = path[String, HttpResponse[String]](uri) {
-        post[String, HttpResponse[String]](content) { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        post$[String, HttpResponse[String]](content) { r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.get.trim must beEqual(content)
@@ -195,16 +195,16 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
    "Support HEAD requests" in {
-      val f = path[String, HttpResponse[String]](uri) {
-        head[String, HttpResponse[String]]{ r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        head$[String, HttpResponse[String]]{ r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
    "Support response headers" in {
-      val f = path[String, HttpResponse[String]](uri) {
-        get[String, HttpResponse[String]] { r => r }
+      val f = path$[String, HttpResponse[String]](uri) {
+        get$[String, HttpResponse[String]] { r => r }
       }(httpClient)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -215,8 +215,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       val total = 1000
       val duration = 1000
       val futures = (0 until total).map { i =>
-	path[String, HttpResponse[String]](uri + "?test=true") {
-          get[String, HttpResponse[String]] { r => r }
+	path$[String, HttpResponse[String]](uri + "?test=true") {
+          get$[String, HttpResponse[String]] { r => r }
         }(httpClient)
       }
       val responses = futures.foldLeft(0) {
@@ -231,8 +231,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
     }
 
     "Support GET requests with query params with Array[Byte]" in {
-      val f = path[Array[Byte], HttpResponse[Array[Byte]]](uri + "?param1=a&param2=b") {
-        get[Array[Byte], HttpResponse[Array[Byte]]]{ r => r }
+      val f = path$[Array[Byte], HttpResponse[Array[Byte]]](uri + "?param1=a&param2=b") {
+        get$[Array[Byte], HttpResponse[Array[Byte]]]{ r => r }
       }(httpClientArrayByte)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
@@ -241,8 +241,8 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support POST requests with body with Array[Byte]" in {
       val content = "Hello, world"
-      val f = path[Array[Byte], HttpResponse[Array[Byte]]](uri) {
-        post[Array[Byte], HttpResponse[Array[Byte]]](StringToByteArray(content)) { r => r }
+      val f = path$[Array[Byte], HttpResponse[Array[Byte]]](uri) {
+        post$[Array[Byte], HttpResponse[Array[Byte]]](StringToByteArray(content)) { r => r }
       }(httpClientArrayByte)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace(content))

@@ -19,12 +19,12 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
   }
 
   "sets protocol, host, port and path to request" in{
-    val h = protocol("https"){
-      host("localhost"){
-        port(8080){
-          path("/foo"){
-            path[String, String]("/bar"){
-              get[String, String]{ clientHandler }
+    val h = protocol$("https"){
+      host$("localhost"){
+        port$(8080){
+          path$("/foo"){
+            path$[String, String]("/bar"){
+              get$[String, String]{ clientHandler }
             }
           }
         }
@@ -37,8 +37,8 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
   }
 
   "sets parameters request" in{
-    val h = parameters('foo -> "bar"){
-      get[String, String]{ clientHandler }
+    val h = parameters$('foo -> "bar"){
+      get$[String, String]{ clientHandler }
     }
 
     h(mockClient)
@@ -46,8 +46,8 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
     mockClient.request.get mustEqual(initialRequest.copy(parameters = Map[Symbol, String]('foo -> "bar")))
   }
   "sets headers request" in{
-    val h = headers("content-length" -> "1"){
-      get[String, String]{ clientHandler }
+    val h = headers$("content-length" -> "1"){
+      get$[String, String]{ clientHandler }
     }
 
     h(mockClient)
@@ -55,8 +55,8 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
     mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("content-length" -> "1")))
   }
   "sets remote host header request" in{
-    val h = remoteHost(InetAddress.getLocalHost){
-      get[String, String]{ clientHandler }
+    val h = remoteHost$(InetAddress.getLocalHost){
+      get$[String, String]{ clientHandler }
     }
 
     h(mockClient)
@@ -64,8 +64,8 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
     mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress())))
   }
   "sets http version" in{
-    val h = version(HttpVersions.`HTTP/1.0`){
-      get[String, String]{ clientHandler }
+    val h = version$(HttpVersions.`HTTP/1.0`){
+      get$[String, String]{ clientHandler }
     }
 
     h(mockClient)
@@ -74,7 +74,7 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
   }
   "HttpClientTransformerImplicits ~: creates composite transformer" in{
 
-    val h = get[String, String]{ response => Future[String]("foo")} ~ get[String, String]{ response => Future[String]("bar")}
+    val h = get$[String, String]{ response => Future[String]("foo")} ~ get$[String, String]{ response => Future[String]("bar")}
 
     h(mockClient).value must beSome(("foo", "bar"))
   }
