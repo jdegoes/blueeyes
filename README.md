@@ -70,8 +70,52 @@ The following code builds an e-mail service, together with a server capable of r
 Services are automatically provided with *context*, which provides a bundle of functionality essential to every service:
 
  * *config*. Every service gets its own separate config, namespaced by service name and major version.
- * *log*. Logging can be configured differently for different services.
- * *monitor*. Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
+ * *serviceName*. Name of the service the *context* belongs to.
+ * *serviceVersion*. Version of the service the *context* belongs to.
+
+Logging and Monitor usage
+--------------------
+Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
+
+To use logging and health monitor a service should mixed in *HttpServiceDescriptorFactoryCombinators*.
+
+The following code builds an e-mail service with logging and health.
+
+     trait EmailServices extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators{
+       val emailService = service("email", "1.32") {
+        logging {
+          log =>
+            healthMonitor {
+              monitor =>
+                context =>
+                  startup {
+                    Future.async {
+                      // return state
+                      ...
+                    }
+                  } ->
+                  request { state =>
+                    path("/foo") {
+                      contentType(application/json) {
+                        get { request =>
+                          ...
+                        } ~
+                        post { request =>
+                          ...
+                        }
+                      } ~
+                      path("/bar") {
+                       ...
+                      }
+                    }
+                  } ->
+                  shutdown { state =>
+                    ...
+                  }
+                }
+            }
+        }        
+     }
 
 Service Construction
 --------------------
