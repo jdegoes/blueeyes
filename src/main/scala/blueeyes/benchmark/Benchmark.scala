@@ -12,7 +12,7 @@ import blueeyes.json.JsonParser.{parse => j}
 object Benchmark extends ServerStart{
 
   private val threadsCount = 4
-  private val contactsSize = 200
+  private val contactsSize = 600
 
   def main(args: Array[String]){
     startServer
@@ -51,6 +51,7 @@ class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val time
     timer.time{
       process({c: Contact => create(c)})
       process({c: Contact => contact(c.name)})
+      process({c: Contact => search(j("""{ "name" : "%s" }""".format(c.name)))})
       process({c: Contact => remove(c.name)})
     }
 
