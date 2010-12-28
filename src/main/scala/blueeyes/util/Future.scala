@@ -3,8 +3,8 @@ package blueeyes.util
 /** A future based on time-stealing rather than threading. Unlike Scala's future, 
  * this future has three possible states: undecided (not done), canceled (aborted
  * due to request or error), or delivered. The triune nature of the future makes
- * it easy to propagate errors asynchronously through chains of futures -- 
- * something not possible with bi-state futures.
+ * it easy to propagate errors through chains of futures -- something not possible 
+ * with bi-state futures.
  * <p>
  * A time-stealing future has certain requirements that other futures do not. In 
  * particular, a time-stealing future cannot abort delivery just because a single
