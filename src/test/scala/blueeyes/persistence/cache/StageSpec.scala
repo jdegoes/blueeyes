@@ -53,6 +53,8 @@ class StageSpec extends Specification{
       val latch = new CountDownLatch(1)
       future.deliverTo({f => latch.countDown()})
 
+      latch.await
+
       future.value must beSome(Some("bar"))
     }
     "evicts when idle time is expired" in{
