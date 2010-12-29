@@ -356,8 +356,8 @@ trait HttpRequestHandlerCombinators {
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1),
-        extractField(content, s2)
+        extractField(content, s1)(mc1),
+        extractField(content, s2)(mc2)
       )
     } (h)
   }
@@ -367,9 +367,9 @@ trait HttpRequestHandlerCombinators {
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1),
-        extractField(content, s2),
-        extractField(content, s3)
+        extractField(content, s1)(mc1),
+        extractField(content, s2)(mc2),
+        extractField(content, s3)(mc3)
       )
     } (h)
   }
@@ -379,10 +379,10 @@ trait HttpRequestHandlerCombinators {
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1),
-        extractField(content, s2),
-        extractField(content, s3),
-        extractField(content, s4)
+        extractField(content, s1)(mc1),
+        extractField(content, s2)(mc2),
+        extractField(content, s3)(mc3),
+        extractField(content, s4)(mc4)
       )
     } (h)
   }
@@ -392,11 +392,11 @@ trait HttpRequestHandlerCombinators {
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1),
-        extractField(content, s2),
-        extractField(content, s3),
-        extractField(content, s4),
-        extractField(content, s5)
+        extractField(content, s1)(mc1),
+        extractField(content, s2)(mc2),
+        extractField(content, s3)(mc3),
+        extractField(content, s4)(mc4),
+        extractField(content, s5)(mc5)
       )
     } (h)
   }
