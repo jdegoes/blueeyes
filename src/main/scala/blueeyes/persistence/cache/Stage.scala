@@ -50,32 +50,32 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
       while (running) {
         try receive {
           case Get(k) =>
-            Got(accumulator.remove(k))
+            reply(Got(accumulator.get(k)))
 
           case Add(k, v1) =>
-            Added(
-              accumulator.put(k, 
+            reply(Added(
+              accumulator.put(k,
                 accumulator.get(k) match {
                   case None     => v1
                   case Some(v2) => coalesce(k, v1, v2)
                 }
               )
-            )
+            ))
 
           case Remove(k) =>
-            Removed(accumulator.remove(k))
-            
+            reply(Removed(accumulator.remove(k)))
+
           case Stop =>
             accumulator.foreach { entry =>
               settings.evict(entry._1, entry._2)
             }
-            
+
             running = false
-            
-            Stopped
-            
+
+            reply(Stopped)
+
           case GetAll =>
-            GotAll(accumulator.toList)
+            reply(GotAll(accumulator.toList))
         }
         catch { case e => e.printStackTrace }
       }
@@ -102,7 +102,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
     future
   }
   
-  def iterator: Iterator[(K, V)] = actor !? Stop match {
+  def iterator: Iterator[(K, V)] = actor !? GetAll match {
     case GotAll(all) => all.iterator
   }
   
@@ -119,7 +119,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   
   def += (kv: (K, V)): This = {
     actor !? Add(kv._1, kv._2) match {
-      case Added(_) => 
+      case Added(_) =>
     }
     
     this
