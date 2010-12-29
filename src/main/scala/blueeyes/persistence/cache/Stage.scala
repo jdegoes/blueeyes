@@ -38,16 +38,8 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   private val actor = new Actor {
     val accumulator: Map[K, V] = Cache.nonConcurrent(settings)
     
-    var running: Boolean = false
-    
-    override def start = {
-      running = true
-      
-      super.start
-    }
-    
     def act = {
-      while (running) {
+      loop {
         try receive {
           case Get(k) =>
             reply(Got(accumulator.get(k)))
@@ -70,9 +62,9 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
               settings.evict(entry._1, entry._2)
             }
 
-            running = false
-
             reply(Stopped)
+
+            exit()
 
           case GetAll =>
             reply(GotAll(accumulator.toList))
@@ -82,7 +74,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
     }
   }
   
-  actor.start
+  start
   
   def get(key: K): Option[V] = actor !? Get(key) match {
     case Got(v) => v
@@ -92,12 +84,8 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
    */
   def getLater(key: K): Future[Option[V]] = {
     val future = new Future[Option[V]]
-    
-    (actor !! Get(key)) foreach { value =>
-      value match {
-        case Got(v) => future.deliver(v)
-      }
-    }
+
+    actor !! (Get(key), {case Got(v) => future.deliver(v)})
     
     future
   }
