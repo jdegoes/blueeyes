@@ -65,7 +65,8 @@ trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with
   HttpNumberImplicits with
   HttpRequestHandlerCombinators with 
   HttpRequestHandlerImplicits with
-  RestPathPatternImplicits {
+  RestPathPatternImplicits with
+  HttpServiceDescriptorFactoryCombinators{
 
 }
 trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[Array[Byte]] with BijectionsByteArray
