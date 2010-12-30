@@ -8,7 +8,7 @@ import blueeyes.core.service._
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 
-class BlueEyesServiceSpecification2[T] extends Specification with HttpClientTransformerCombinators with HttpServer[T] with HttpReflectiveServiceList[T]{ self: HttpServer[T] =>
+class BlueEyesServiceSpecification[T] extends Specification with HttpClientTransformerCombinators with HttpServer[T] with HttpReflectiveServiceList[T]{ self: HttpServer[T] =>
 
   shareVariables()
   doBeforeSpec{startServer}

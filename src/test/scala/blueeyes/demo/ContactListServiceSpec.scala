@@ -1,6 +1,6 @@
 package blueeyes.demo
 
-import blueeyes.core.service.test.BlueEyesServiceSpecification2
+import blueeyes.core.service.test.BlueEyesServiceSpecification
 import blueeyes.persistence.mongo.Mongo
 import blueeyes.config.ConfiggyModule
 import blueeyes.persistence.mongo.mock.MockMongoModule
@@ -9,7 +9,7 @@ import com.google.inject.Guice
 import blueeyes.json.JsonAST.{JArray}
 import blueeyes.core.http.HttpStatusCodes._
 
-class ContactListServiceSpec extends BlueEyesServiceSpecification2[Array[Byte]] with ContactListService{
+class ContactListServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] with ContactListService{
   path$("/contacts"){
     get${ response: HttpResponse[Array[Byte]] =>
       response.status  mustEqual(HttpStatus(OK))

@@ -10,7 +10,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import TestService._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification2[String] with TestService{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService{
 
   path$("/bar/id/bar.html"){
     get${ response: HttpResponse[String] =>

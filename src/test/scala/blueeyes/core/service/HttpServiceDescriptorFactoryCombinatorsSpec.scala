@@ -1,13 +1,13 @@
 package blueeyes.core.service
 
 import blueeyes.core.http.HttpStatusCodes._
-import test.BlueEyesServiceSpecification2
+import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
 import blueeyes.json.JsonAST.{JInt, JNothing}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification2[String] with HeatlhMonitorService{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[String] with HeatlhMonitorService{
 
   path$("/foo"){
     get${ response: HttpResponse[String] =>
