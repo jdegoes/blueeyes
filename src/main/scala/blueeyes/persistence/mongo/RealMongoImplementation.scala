@@ -29,7 +29,9 @@ private[mongo] object RealMongoImplementation{
         }
       })
       if (servers.isEmpty) error("""MongoServers are not configured. Configure the value '%s'. Format is '["host1:port1", "host2:port2", ...]'""".format(MongoServers))
-      new com.mongodb.Mongo(servers)
+      val mongo = new com.mongodb.Mongo(servers)
+      mongo.slaveOk()
+      mongo
     }
 
     def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))

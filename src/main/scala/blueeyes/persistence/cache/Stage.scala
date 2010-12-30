@@ -38,51 +38,43 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   private val actor = new Actor {
     val accumulator: Map[K, V] = Cache.nonConcurrent(settings)
     
-    var running: Boolean = false
-    
-    override def start = {
-      running = true
-      
-      super.start
-    }
-    
     def act = {
-      while (running) {
+      loop {
         try receive {
           case Get(k) =>
-            Got(accumulator.remove(k))
+            reply(Got(accumulator.get(k)))
 
           case Add(k, v1) =>
-            Added(
-              accumulator.put(k, 
+            reply(Added(
+              accumulator.put(k,
                 accumulator.get(k) match {
                   case None     => v1
                   case Some(v2) => coalesce(k, v1, v2)
                 }
               )
-            )
+            ))
 
           case Remove(k) =>
-            Removed(accumulator.remove(k))
-            
+            reply(Removed(accumulator.remove(k)))
+
           case Stop =>
             accumulator.foreach { entry =>
               settings.evict(entry._1, entry._2)
             }
-            
-            running = false
-            
-            Stopped
-            
+
+            reply(Stopped)
+
+            exit()
+
           case GetAll =>
-            GotAll(accumulator.toList)
+            reply(GotAll(accumulator.toList))
         }
         catch { case e => e.printStackTrace }
       }
     }
   }
   
-  actor.start
+  start
   
   def get(key: K): Option[V] = actor !? Get(key) match {
     case Got(v) => v
@@ -92,17 +84,13 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
    */
   def getLater(key: K): Future[Option[V]] = {
     val future = new Future[Option[V]]
-    
-    (actor !! Get(key)) foreach { value =>
-      value match {
-        case Got(v) => future.deliver(v)
-      }
-    }
+
+    actor !! (Get(key), {case Got(v) => future.deliver(v)})
     
     future
   }
   
-  def iterator: Iterator[(K, V)] = actor !? Stop match {
+  def iterator: Iterator[(K, V)] = actor !? GetAll match {
     case GotAll(all) => all.iterator
   }
   
@@ -119,7 +107,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   
   def += (kv: (K, V)): This = {
     actor !? Add(kv._1, kv._2) match {
-      case Added(_) => 
+      case Added(_) =>
     }
     
     this

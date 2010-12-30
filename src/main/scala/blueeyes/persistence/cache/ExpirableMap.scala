@@ -100,7 +100,7 @@ private[cache] class ExpirableMap[K, V](
     scheduleTimeToIdle(expirable)
     
     if (old == null) None
-    else if (hasExpired(old)) { handleExpirationAfterRemoval(expirable); None }
+    else if (hasExpired(old)) { handleExpirationAfterRemoval(old); None }
     else Some(old.value)
   }
   

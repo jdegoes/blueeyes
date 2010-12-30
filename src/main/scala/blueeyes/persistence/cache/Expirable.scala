@@ -6,7 +6,7 @@ import java.lang.System.{nanoTime}
 
 /** An expirable entry in a cache.
  */
-case class Expirable[K, V] private (key: K, val _value: V, policy: ExpirationPolicy, creationTimeNanos: Long) {
+case class Expirable[K, V] private (key: K, _value: V, policy: ExpirationPolicy, creationTimeNanos: Long) {
   private var _accessTimeNanos = nanoTime()
   
   /** The access time in nanosecons. */
