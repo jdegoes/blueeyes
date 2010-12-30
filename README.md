@@ -119,6 +119,12 @@ The following code builds an e-mail service with logging and health.
 
 Service Construction
 --------------------
+
+Service Consumption
+-------------------
+
+Automated Testing
+-----------------
 The Blue Eyes concept allows to test services without starting server.
 
 The following code tests an e-mail (from the example above).
@@ -132,12 +138,6 @@ The following code tests an e-mail (from the example above).
         }
       } should "return 'foo'"
     }
-
-Service Consumption
--------------------
-
-Automated Testing
------------------
 
 Continuous Deployment
 ---------------------
