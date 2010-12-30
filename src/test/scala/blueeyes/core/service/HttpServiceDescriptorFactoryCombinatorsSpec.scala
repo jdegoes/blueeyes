@@ -1,34 +1,31 @@
 package blueeyes.core.service
 
 import blueeyes.core.http.HttpStatusCodes._
-import test.BlueEyesServiceSpecification
+import test.BlueEyesServiceSpecification2
 import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
 import blueeyes.json.JsonAST.{JInt, JNothing}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[String] with HeatlhMonitorService{
-  "HttpServiceDescriptorFactoryCombinators: adds health monitor service" in{
-    path("/foo"){
-      get{
-        responseStatus  mustEqual(HttpStatus(OK))
-        responseContent mustEqual(None)
-        ()
-      }
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification2[String] with HeatlhMonitorService{
+
+  path$("/foo"){
+    get${ response: HttpResponse[String] =>
+      response.status  mustEqual(HttpStatus(OK))
+      response.content mustEqual(None)
     }
+  } should "adds health monitor service"
 
-    path("/blueeyes/services/email/v1/health"){
-      get{
-        responseStatus  mustEqual(HttpStatus(OK))
+  path$("/blueeyes/services/email/v1/health"){
+    get${ response: HttpResponse[String] =>
+      response.status  mustEqual(HttpStatus(OK))
 
-        val response  = j(responseContent.get)
+      val content  = j(response.content.get)
 
-        response \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
-        response \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
-        ()
-      }
+      content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
+      content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
     }
-  }
+  } should "adds health monitor statistics"
 }
 
 trait HeatlhMonitorService extends BlueEyesServiceBuilderString with HttpServiceDescriptorFactoryCombinators{

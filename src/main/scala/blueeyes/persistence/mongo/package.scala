@@ -1,5 +1,7 @@
 package blueeyes.persistence
 
+import blueeyes.persistence.mongo._
+
 package object mongo {
-  type MockMongoModule = blueeyes.persistence.mongo.mock.MockMongoModule
+  type MockMongoModule = mock.MockMongoModule
 }

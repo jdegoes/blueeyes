@@ -125,6 +125,19 @@ Service Consumption
 
 Automated Testing
 -----------------
+The Blue Eyes concept allows to test services without starting server.
+
+The following code tests an e-mail (from the example above).
+
+    class EmailServicesSpec extends BlueEyesServiceSpecification[Array[Byte]] with EmailServices{
+      path$("/foo"){
+        get${ response: HttpResponse[Array[Byte]] =>
+          response.status mustEqual(HttpStatus(OK))
+
+          ...
+        }
+      } should "return 'foo'"
+    }
 
 Continuous Deployment
 ---------------------
