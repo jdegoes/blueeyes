@@ -10,35 +10,19 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import TestService._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification2[String] with TestService{
 
-  "SampeService" should{
-    "calls test function" in {
-      var executed = false
-      path("/bar/id/bar.html"){
-        get{
-          executed = true
-        }
-      }
-      executed mustEqual (true)
+  path$("/bar/id/bar.html"){
+    get${ response: HttpResponse[String] =>
+      response mustEqual(serviceResponse)
     }
-    "gets responce" in {
-      path("/bar/id/bar.html"){
-        get{
-          response mustEqual (serviceResponse)
-          ()
-        }
-      }
+  } should "calls test function"
+
+  path$("/asynch/future"){
+    get${ response: HttpResponse[String] =>
+      response mustEqual(serviceResponse)
     }
-    "gets responce when future is set asynchronously" in {
-      path("/asynch/future"){
-        get{
-          response mustEqual (serviceResponse)
-          ()
-        }
-      }
-    }
-  }
+  } should "gets responce when future is set asynchronously"
 }
 
 trait TestService extends BlueEyesServiceBuilderString {
@@ -49,7 +33,7 @@ trait TestService extends BlueEyesServiceBuilderString {
           get { request: HttpRequest[String] =>
             serviceResponse
           }
-        } ~
+        }~
         path("/asynch/future") {
           get { request: HttpRequest[String] =>
             Future.async {
