@@ -64,7 +64,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val scalaspec      = "org.scala-tools.testing"      % "specs_2.8.0"         % "1.6.6-SNAPSHOT"       % "compile"  
   val netty          = "org.jboss.netty"              % "netty"               % "3.2.3.Final"   % "compile"
   val async          = "com.ning"                     % "async-http-client"   % "1.3.3"         % "compile"
-  val mongo          = "org.mongodb"                  % "mongo-java-driver"   % "2.1"           % "compile"
+  val mongo          = "org.mongodb"                  % "mongo-java-driver"   % "2.4"           % "compile"
   val jodatime       = "joda-time"                    % "joda-time"           % "1.6.2"         % "compile"
   val configgy       = "net.lag"                      % "configgy"            % "2.0.0"         % "compile"
   val guice          = "com.google.inject"            % "guice"               % "2.0"           % "compile"
