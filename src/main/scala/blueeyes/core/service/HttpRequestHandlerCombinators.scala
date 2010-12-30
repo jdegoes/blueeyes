@@ -106,6 +106,14 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
+  def commit[T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = true
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      h.apply(r)
+    }
+  }
+  
   /** Attemps to peek to see if a particular combinator will handle a request.
    * <pre>
    * justTry {

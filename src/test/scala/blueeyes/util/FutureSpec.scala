@@ -25,17 +25,17 @@ class FutureSpec extends Specification {
     
     "deliver to a second listener even when the first one throws an error" in {
       val f = new Future[String]()
-      var result: String = null
+      var result: Option[String] = None
       
       f.deliverTo { s => 
         error("misbehaving delivery handler")
       }.deliverTo { s => 
-        result = s
+        result = Some(s)
       }
       
       f.deliver("foo")
       
-      result must eventually (beEqualTo("foo"))
+      result must eventually (beEqualTo(Some("foo")))
     }
   }
   

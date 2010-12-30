@@ -3,6 +3,7 @@ package blueeyes.core.service
 import blueeyes.json.JPathImplicits
 import blueeyes.health.HealthMonitor
 import net.lag.logging.Logger
+import net.lag.configgy.Configgy
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST.JValue
 import blueeyes.core.data.Bijection
@@ -31,6 +32,39 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       f(logger)(context)
     }
   }
+  
+  private type T0[T, S, X] = ((String, HttpServiceVersion) => HttpClientTransformer[T, X] => Future[X]) => HttpServiceDescriptorFactory[T, S]
+  
+  /**
+   * serviceLocator { service =>
+   *   ...
+   *   val content = service("email", "1.01") { 
+   *     get$ { response =>
+   *       response.content.get
+   *     }
+   *   }
+   * }
+   */
+  /*def serviceLocator[T, S](f: T0[T, S, X] forSome { type X })(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
+    object TransformerCombinators extends HttpClientTransformerCombinators
+    import TransformerCombinators.{path$}
+    
+    (context: HttpServiceContext) => {
+      f {
+        (name: String, version: HttpServiceVersion) => {
+          val serviceRootUrl = Configgy.config("services." + context.serviceName + ".v" + context.serviceVersion.majorVersion.toString + ".serviceRootUrl")
+          
+          (transformer: HttpClientTransformer[T, X]) => {
+            client.exec {
+              path$(serviceRootUrl) {
+                transformer
+              }
+            }
+          }
+        }
+      }
+    }
+  }*/
 
   private[service] class MonitorHttpRequestHandler[T](underlying: HttpRequestHandler[T], healthMonitor: HealthMonitor) extends HttpRequestHandler[T] with JPathImplicits{
     def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
