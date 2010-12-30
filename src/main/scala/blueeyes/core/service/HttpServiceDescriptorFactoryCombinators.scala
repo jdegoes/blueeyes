@@ -36,9 +36,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   private type T0[T, S, X] = ((String, HttpServiceVersion) => HttpClientTransformer[T, X] => Future[X]) => HttpServiceDescriptorFactory[T, S]
   
   /**
-   * serviceLocator { service =>
+   * serviceLocator { locator =>
    *   ...
-   *   val content = service("email", "1.01") { 
+   *   val content = locator("email", "1.01") { 
    *     get$ { response =>
    *       response.content.get
    *     }
