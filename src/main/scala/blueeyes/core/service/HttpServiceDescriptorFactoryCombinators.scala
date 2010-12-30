@@ -45,26 +45,30 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    *   }
    * }
    */
-  /*def serviceLocator[T, S](f: T0[T, S, X] forSome { type X })(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
+  def serviceLocator[T, S](f: T0[T, S, _])(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
     object TransformerCombinators extends HttpClientTransformerCombinators
     import TransformerCombinators.{path$}
+    
+    implicit def hack[X1, X2](f: Future[X1]): Future[X2] = f.asInstanceOf[Future[X2]]
     
     (context: HttpServiceContext) => {
       f {
         (name: String, version: HttpServiceVersion) => {
           val serviceRootUrl = Configgy.config("services." + context.serviceName + ".v" + context.serviceVersion.majorVersion.toString + ".serviceRootUrl")
           
-          (transformer: HttpClientTransformer[T, X] forSome { type X }) => {
+          (transformer: HttpClientTransformer[T, _]) => {
             client.exec {
               path$(serviceRootUrl) {
-                transformer
+                (client: HttpClient[T]) => {
+                  transformer(client)
+                }
               }
             }
           }
         }
-      }
+      } (context)
     }
-  }*/
+  }
 
   private[service] class MonitorHttpRequestHandler[T](underlying: HttpRequestHandler[T], healthMonitor: HealthMonitor) extends HttpRequestHandler[T] with JPathImplicits{
     def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
