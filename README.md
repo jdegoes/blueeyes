@@ -220,21 +220,26 @@ Team
 -------
 
 <table>
+  <thead>
+    <tr>
+      <td>Name</td>               <td>Role</td>                                                                    <td>Twitter</td>
+    </tr>
+  </thead>
   <tbody>
     <tr>
-      <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>
+      <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>                                    <td>@jdegoes</td>
     </tr>
     <tr>
-      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>
+      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td></td>
     </tr>
     <tr>
-      <td>Josh Hoak</td>          <td>HTTP headers</td>
+      <td>Josh Hoak</td>          <td>HTTP headers</td>                                                             <td></td>
     </tr>
     <tr>
-      <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>
+      <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
     </tr>
     <tr>
-      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>
+      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>         <td></td>
     </tr>
   </tbody>
 </table>
