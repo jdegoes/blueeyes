@@ -216,6 +216,29 @@ Blue Eyes provides support for both pillars:
  1. Blue Eyes makes testing web services extremely easy, and the tests do not start a real server so they run very quickly.
  2. Blue Eyes makes it easy to export real-time health metrics (and, if you use health monitor, automatically exports all the critical metrics).
 
+Team
+-------
+
+<table>
+  <tbody>
+    <tr>
+      <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>
+    </tr>
+    <tr>
+      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>
+    </tr>
+    <tr>
+      <td>Josh Hoak</td>          <td>HTTP headers</td>
+    </tr>
+    <tr>
+      <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>
+    </tr>
+    <tr>
+      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>
+    </tr>
+  </tbody>
+</table>
+
 License
 -------
 
