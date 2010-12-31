@@ -202,14 +202,14 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
 Continuous Deployment
 ---------------------
 
-Blue Eyes is designed to support the lean practice of _continuous deployment_. In continuous deployment, the goal is to attain the ability to safely deploy code as often as required by business needs -- even many times a day.
+Blue Eyes is designed to support the lean development practice of _continuous deployment_. In continuous deployment, the team can safely deploy code as often as required by business needs -- even many times a day.
 
-In order for a team to practice continuous deployment successfully, two critical conditions must be met:
+In order for a team to practice continuous deployment successfully, two critical requirements must be met:
 
  1. The entire code base needs to have comprehensive, fast automated tests, typically at the unit level (integration and system tests can be included only if they run quickly).
  2. The application needs to export real-time health metrics for use in detecting quality issues post-deployment (for the most part, these metrics supplant integration and system tests)
 
-On top of this foundation, a continuous deployment system can be built, which does rolling deployments with health checks, and either backs out defective releases automatically, or makes it easy for team members to do so.
+On top of this foundation, a continuous deployment system can be built, which does incremental deployments with health checks, and which either backs out defective releases automatically, or makes it easy for team members to do so.
 
 Blue Eyes provides support for both pillars:
 
