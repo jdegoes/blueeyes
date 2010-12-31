@@ -146,6 +146,8 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
       } should "return OK status"
     }
 
+These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
+
 ### Running
 
 Services are run through a *server* (server in this context refers to a process, not a machine -- any number of servers can run on the same physical machine). To create a command-line server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended from an *object*. Specifying the services that the server should run is as easy as mixing in all the traits that use service builder to define services:
@@ -258,13 +260,15 @@ Health metrics are exported in JSON form through an HTTP GET. For a particular s
 
 For example:  */blueeyes/services/healthmon/v1/health*
 
+#### Service Locator
+
 ## Data
 
 ### JSON
 
 ## Persistence
 
-### Mongo
+### MongoDB
 
 ## Continuous Deployment
 
@@ -311,6 +315,6 @@ Blue Eyes provides support for both pillars:
 
 ## License
 
-Copyright (c) 2010
+Copyright (c) 2010-2011
 
 Published under The MIT License
