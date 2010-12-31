@@ -1,7 +1,8 @@
-Blue Eyes
-=========
+# Blue Eyes
 
 Blue Eyes is a lightweight web 3.0 framework for the Scala programming language. The framework is designed to allow developers to quickly and easily create high-performing web services that embrace the machinery and language of HTTP.
+
+Blue Eyes has been used in production across large clusters of instances deployed in cloud computing environments, reliably handling tens of thousands of requests a second.
 
 The framework has been designed to meet all the following goals:
 
@@ -11,17 +12,17 @@ The framework has been designed to meet all the following goals:
   * Declarative service construction;
   * Baked in support for continuous deployment and automated testing.
 
-Blue Eyes does not have any features for generation of static HTML pages from templates. Nor does Blue Eyes have any out of the box support for serving static HTML files. Blue Eyes is intended *only* for creating web services which can be consumed using HTTP clients.
+Blue Eyes does not have any features for server-side generation of HTML, CSS, or JavaScript. Nor does Blue Eyes have any out of the box support for serving static files. Blue Eyes is intended *only* for creating web services which can be consumed using HTTP clients.
 
-Origins
--------
+Those looking for a traditional web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
 
-Blue Eyes is loosely inspired by the Ruby library Sinatra and the Scala library Scalatra, which both allow developers to efficient produce RESTful web services.
+## Origins
+
+Blue Eyes is loosely inspired by the Ruby library *Sinatra* and the Scala library *Scalatra*, which both allow developers to efficient produce RESTful web services.
 
 Blue Eyes aims for the same or higher level of productivity as these libraries, but with a more functional design, much higher performance, and compatibility with the rigorous demands of continuous deployment.
 
-Introduction
-------------
+## Introduction
 
 The fundamental concept in Blue Eyes is the *service*. A *service* responds to requests. Every service is uniquely identified by a name and a version.
 
@@ -29,7 +30,7 @@ A service generally goes through three distinct phases:
 
   1. *Startup*. The service performs any setup operations required to perform its duties, such as loading data.
   2. *Request*. The service responds to requests.
-  3. *Shutdown*. The service performs any cleanup operations, such as closing files.
+  3. *Shutdown*. The service performs any cleanup operations, such as disposing of resources.
 
 In the request phase, services typically handle different HTTP verbs (GET, POST, PUT, DELETE) on different paths, accepting and producing different mime types.
 
@@ -73,65 +74,11 @@ Services are automatically provided with *context*, which provides a bundle of f
  * *serviceName*. Name of the service.
  * *serviceVersion*. Version of the service.
 
-Logging
---------------------
-Blue Eyes provides a combinator that provides services with a logger that can be configured independently for each service.
+## Services
 
-     trait LogDemo extends BlueEyesServiceBuilder {
-       val logDemoService = service("logdemo", "1.32") {
-        logging { log =>
-          context =>
-            startup {
-            request { state =>
-              path("/foo") {
-                contentType(application/json) {
-                  get { request =>
-                    log.info("request at /foo")
-                    ...
-                  }
-                }
-              }
-            }
-        }    
-     }
+### Construction
 
-A service's logger is configured through a *log* block inside the root config for the service.
-
-Health Monitor
---------------------
-Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
- 
-The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests.
-
-      trait HealthMonitorDemo extends BlueEyesServiceBuilder {
-        val healthMonitorService = service("healthmon", "1.32") {         
-         healthMonitor { monitor =>
-           context =>
-             request { state =>
-               path("/foo") {
-                 contentType(application/json) {
-                   get { request =>
-                     monitor.time(".requests.foo.timing") {
-                       ...
-                     }
-                   }
-                 }
-               }
-             }
-         }
-      }
-
-Health metrics are exported in JSON form through an HTTP GET. For a particular service, the health can be queried at the following URL:
-
- * /blueeyes/services/[serviceName]/v[serviceMajorVersion]/health
-
-For example:  */blueeyes/services/healthmon/v1/health*
-
-Service Construction
---------------------
-
-Service Consumption
--------------------
+### Consumption
 
 The dual of providing HTTP services is consuming them. Blue Eyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the Blue Eyes stack.
 
@@ -183,8 +130,8 @@ Similarly, if you're going to perform a lot of requests that all share the same 
 
 Contrary to these toy examples, in real world usage, you would not simply return the content of the response. Rather, you'd extract out whatever information you need and transform it into the desired value.
 
-Automated Testing
------------------
+### Testing
+
 Blue Eyes is built from the ground up to support automated, comprehensive, fast-running tests.
 
 The testing framework is currently compatible with *Specs*, and extends the *Specification* trait to make testing services easy.
@@ -199,8 +146,92 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
       } should "return OK status"
     }
 
-Continuous Deployment
----------------------
+### Augmentation
+
+### Running
+
+Services are run through a *server* (server in this context refers to a process, not a machine -- any number of servers can run on the same physical machine). To create a command-line server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended from an *object*. Specifying the services that the server should run is as easy as mixing in all the traits that use service builder to define services:
+
+    object AppServer extends BlueEyesServer with EmailServices with OrderProcessingServices with LoginServices with CatalogServices
+
+A server created in this way has *start* and *stop* methods, which can be used for starting and stopping the services. The server also gets a *main* method that accepts a *--configFile* command-line option to indicate which configuration file should be used to configure the server and all the services.
+
+    java -jar appserver.jar --configFile /etc/default/appserver.conf
+
+A single server can run any number of services, although the recommended practice is to run each service on a separate server, on a separate port, and use a load balancer like *HAProxy* to unify the HTTP interface to the services. This approach confers a number of benefits:
+
+ * Independent provisioning of services based on requirements (some services may be needed to maintain 100% uptime and thus may be replicated across instances and data centers, while others may not need such high-availability);
+ * Independent scaling of services based on load; 
+ * Isolation of services so that the crash of one services has no effect on others;
+ * Independent deployment of services so that risk to production is minimized.
+
+#### Server Configuration Options
+
+
+
+#### Logging
+
+Blue Eyes provides a combinator that provides services with a logger that can be configured independently for each service.
+
+     trait LogDemo extends BlueEyesServiceBuilder {
+       val logDemoService = service("logdemo", "1.32") {
+        logging { log =>
+          context =>
+            startup {
+            request { state =>
+              path("/foo") {
+                contentType(application/json) {
+                  get { request =>
+                    log.info("request at /foo")
+                    ...
+                  }
+                }
+              }
+            }
+        }    
+     }
+
+A service's logger is configured through a *log* block inside the root config for the service.
+
+#### Health Monitor
+
+Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
+ 
+The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests.
+
+      trait HealthMonitorDemo extends BlueEyesServiceBuilder {
+        val healthMonitorService = service("healthmon", "1.32") {         
+         healthMonitor { monitor =>
+           context =>
+             request { state =>
+               path("/foo") {
+                 contentType(application/json) {
+                   get { request =>
+                     monitor.time(".requests.foo.timing") {
+                       ...
+                     }
+                   }
+                 }
+               }
+             }
+         }
+      }
+
+Health metrics are exported in JSON form through an HTTP GET. For a particular service, the health can be queried at the following URL:
+
+ * /blueeyes/services/[serviceName]/v[serviceMajorVersion]/health
+
+For example:  */blueeyes/services/healthmon/v1/health*
+
+## Data
+
+### JSON
+
+## Persistence
+
+### Mongo
+
+## Continuous Deployment
 
 Blue Eyes is designed to support the lean development practice of _continuous deployment_. In continuous deployment, the team can safely deploy code as often as required by business needs -- even many times a day.
 
@@ -216,8 +247,7 @@ Blue Eyes provides support for both pillars:
  1. Blue Eyes makes testing web services extremely easy, and the tests do not start a real server so they run very quickly.
  2. Blue Eyes makes it easy to export real-time health metrics (and, if you use health monitor, automatically exports all the critical metrics).
 
-Team
--------
+## Team
 
 <table>
   <thead>
@@ -244,8 +274,7 @@ Team
   </tbody>
 </table>
 
-License
--------
+## License
 
 Copyright (c) 2010
 
