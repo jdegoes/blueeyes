@@ -16,6 +16,36 @@ Blue Eyes does not have any features for server-side generation of HTML, CSS, or
 
 Those looking for a traditional web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
 
+## Maven
+
+<table>
+  <thead>
+    <tr>
+      <td>Name</td>             <td>Value</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>repository</td>       <td>http://oss.sonatype.org/content/repositories/releases</td>
+    </tr>
+    <tr>
+      <td>group id</td>         <td>com.github.blueeyes</td>
+    </tr>
+    <tr>
+      <td>artifact id</td>      <td>blueeyes</td>
+    </tr>
+    <tr>
+      <td>version</td>          <td>0.1.32</td>
+    </tr>
+  </tbody>
+</table>
+
+### SBT
+
+    val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
+    
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.32" % "compile"
+
 ## Origins
 
 Blue Eyes is loosely inspired by the Ruby library *Sinatra* and the Scala library *Scalatra*, which both allow developers to efficient produce RESTful web services.
