@@ -150,11 +150,13 @@ These combinators produce very descriptive *Specs* messages, because they are fu
 
 ### Running
 
-Services are run through a *server* (server in this context refers to a process, not a machine -- any number of servers can run on the same physical machine). To create a command-line server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended from an *object*. Specifying the services that the server should run is as easy as mixing in all the traits that use service builder to define services:
+Services are run through a *server*. A "server" in this context refers to a *process*, not a *machine* -- any number of servers can run on the same physical machine.
+
+To create a server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended by an *object*. You can specify all the services you want the server to run just by mixing in the traits that build them. For example, the following code creates a server that runs four services:
 
     object AppServer extends BlueEyesServer with EmailServices with OrderProcessingServices with LoginServices with CatalogServices
 
-A server created in this way has *start* and *stop* methods, which can be used for starting and stopping the services. The server also gets a *main* method that accepts a *--configFile* command-line option to indicate which configuration file should be used to configure the server and all the services.
+A server created in this way has *start* and *stop* methods, which can be used for starting and stopping the services. The server also defines a *main* method that accepts a *--configFile* command-line option to indicate which configuration file should be used to configure the server and all the services.
 
     java -jar appserver.jar --configFile /etc/default/appserver.conf
 
