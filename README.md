@@ -146,8 +146,6 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
       } should "return OK status"
     }
 
-### Augmentation
-
 ### Running
 
 Services are run through a *server* (server in this context refers to a process, not a machine -- any number of servers can run on the same physical machine). To create a command-line server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended from an *object*. Specifying the services that the server should run is as easy as mixing in all the traits that use service builder to define services:
@@ -167,7 +165,44 @@ A single server can run any number of services, although the recommended practic
 
 #### Server Configuration Options
 
+### Augmentation
 
+Services can be augmented in a variety of ways -- for example, with loggers, health monitors, and service locators. The augmentation facility is based on composition of so-called *service descriptor factories*, which are functions that accept a service context and return a service descriptor.
+
+A service descriptor factory is at the heart of every service declaration. For example, take the following minimal service declaration:
+
+    val myService = service("myservice", "2.39.23") { context =>
+       request { state =>
+         path("/foo") {
+           contentType(application/json) {
+             get { request =>
+               ...
+             }
+           }
+         }
+       }
+    }
+
+The anonymous final argument passed to the *service* function is actually a service descriptor factory. That is, the argument is a function takes the context of the service, and returns a service descriptor, which describes the service lifecycle (startup, request handling, and shutdown).
+
+Blue Eyes ships with many useful service descriptor factory combinators that are designed to augment your service with additional features. For example, the *logging* combinator adds logging to your service:
+
+    val myService = service("myservice", "2.39.23") { 
+      logging { logger =>
+        context =>
+         request { state =>
+           path("/foo") {
+             contentType(application/json) {
+               get { request =>
+                 ...
+               }
+             }
+           }
+         }
+      }
+    }
+
+The sections that follow describe the most common ways to augment your services.
 
 #### Logging
 
