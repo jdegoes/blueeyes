@@ -239,7 +239,7 @@ Team
       <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
     </tr>
     <tr>
-      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>         <td></td>
+      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>         <td>@mconigliaro</td>
     </tr>
   </tbody>
 </table>
