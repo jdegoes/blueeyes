@@ -23,8 +23,8 @@
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.0/compile/xSocket-2.8.14.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.0/compile/commons-codec-1.4.jar"/>
 	<classpathentry exported="true" kind="lib" path="project/boot/scala-2.8.0/lib/scala-compiler.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/concurrentlinkedhashmap-lru-1.1.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/commons-collections-3.2.1.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.0/compile/mongo-java-driver-2.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.0/compile/concurrentlinkedhashmap-lru-1.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.0/compile/commons-collections-3.2.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.0/compile/mongo-java-driver-2.4.jar"/>
 	<classpathentry kind="output" path="target/scala_2.8.0/classes"/>
 </classpath>

@@ -144,7 +144,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
    */
-  lazy val log: Logger = Logger.configure(config.configMap("log"), false, false)
+  lazy val log: Logger = Logger.configure(config.configMap("log"), false, true)
   
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
