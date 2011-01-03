@@ -33,7 +33,7 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
 
     h(mockClient)
     
-    mockClient.request.get mustEqual(initialRequest.copy(uri = "https://localhost:8080/foo/bar"))
+    mockClient.request.get mustEqual(HttpRequest[String](HttpMethods.GET, "https://localhost:8080/foo/bar"))
   }
 
   "sets parameters request" in{

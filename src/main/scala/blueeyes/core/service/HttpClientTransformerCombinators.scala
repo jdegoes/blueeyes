@@ -14,7 +14,8 @@ trait HttpClientTransformerCombinators{
 
   def host$[T, S](host: String)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = path$(host)(transformer)
 
-  def port$[T, S](port: Int)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S]    = path$(":" + port.toString)(transformer)
+  def port$[T, S](port: Int)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S]    =
+    copyRequest((request: HttpRequest[T]) => request.copy(uri = ":" + port.toString + request.uri))(transformer)
 
   def path$[T, S](path: String)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =
     copyRequest{request: HttpRequest[T] =>
