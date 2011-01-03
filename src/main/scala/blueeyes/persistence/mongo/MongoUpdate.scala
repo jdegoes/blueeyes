@@ -231,7 +231,8 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = older match {
       case SetF(f, v)   => Some(SetF(path, push(v, value)))
 
-      case PushF(_, _)  => Some(this)
+      case PushF(_, olderValue)     => Some(PushAllF(path, value :: List(olderValue)))
+      case PushAllF(_, olderValue)  => Some(PushAllF(path, value :: olderValue))
 
       case _ => error("PushF can be only combined with SetF and PushF. Older=" + older)
     }
@@ -253,6 +254,7 @@ private[mongo] object UpdateFieldFunctions{
       case SetF(f, v)       => Some(SetF(path, pushAll(v, value)))
 
       case PushAllF(_, olderValue)  => Some(PushAllF(path, value ::: olderValue))
+      case PushF(_, olderValue)     => Some(PushAllF(path, value ::: List(olderValue)))
 
       case _ => error("PushAllF can be only combined with SetF and PushAllF. Older=" + older)
     }
@@ -273,9 +275,10 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = older match {
       case SetF(f, v)     => Some(SetF(path, pullAll(v, value)))
 
-      case PullAllF(_, olderValue) => Some(PullAllF(path, value ::: olderValue))
+      case PullAllF(_, olderValue)       => Some(PullAllF(path, value ::: olderValue))
+      case PullF(_, e: MongoFieldFilter) if (e.lhs == JPath("") && e.operator == $eq) => Some(PullAllF(path, value ::: List(e.rhs)))
 
-      case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
+      case _ => error("""PullAllF can be only combined with SetF, PullAllF and PullF(when filter is ("" === value)). Older=""" + older)
     }
 
     private def pullAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
@@ -332,12 +335,13 @@ private[mongo] object UpdateFieldFunctions{
 
     val operator = $pull
 
-    override protected def fuseWithImpl(older: Change1) = older match {
-      case SetF(f, v)         => Some(SetF(path, pull(v, filter)))
+    override protected def fuseWithImpl(older: Change1) = (filter, older) match {
+      case (_, SetF(f, v))         => Some(SetF(path, pull(v, filter)))
 
-      case PullF(_, _) => Some(this)
+      case (x: MongoFieldFilter, PullF(_, y: MongoFieldFilter)) if (x.lhs == JPath("") && x.operator == $eq && y.lhs == JPath("") && y.operator == $eq) => Some(PullAllF(path, List(x.rhs, y.rhs)))
+      case (x: MongoFieldFilter, PullAllF(_, oldValue)) if (x.lhs == JPath("") && x.operator == $eq) => Some(PullAllF(path, x.rhs :: oldValue))
 
-      case _ => error("PullF can be only combined with SetF and PullF. Older=" + older)
+      case (_, _) => error("""PullF can be only combined with SetF PullAllF (when self.filter is ("" === value)) and PullF (when self.filter is ("" === value) and older.filter is ("" === value)). Older=""" + older)
     }
 
     private def pull(v1: MongoPrimitive[_], filter: MongoFilter): MongoPrimitive[_]  = v1 match{

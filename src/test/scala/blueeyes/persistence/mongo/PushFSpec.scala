@@ -9,9 +9,14 @@ class PushFSpec extends Specification{
 
     PushF("n", "bar").fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
   }
-  "fuse with push leaves push" in {
+  "fuse with push composes push" in {
     import MongoImplicits._
 
-    PushF("n", "bar").fuseWith(PushF("n", "foo")) mustEqual(Some(PushF("n", "bar")))
+    PushF("n", "bar").fuseWith(PushF("n", "foo")) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
+  }
+  "fuse withAll push composes push" in {
+    import MongoImplicits._
+
+    PushF("n", "bar").fuseWith(PushAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
 }
