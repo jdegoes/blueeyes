@@ -234,7 +234,7 @@ private[mongo] object UpdateFieldFunctions{
       case PushF(_, olderValue)     => Some(PushAllF(path, value :: List(olderValue)))
       case PushAllF(_, olderValue)  => Some(PushAllF(path, value :: olderValue))
 
-      case _ => error("PushF can be only combined with SetF and PushF. Older=" + older)
+      case _ => error("PushF can be only combined with SetF, PushAllF and PushF. Older=" + older)
     }
 
     private def push(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
@@ -256,7 +256,7 @@ private[mongo] object UpdateFieldFunctions{
       case PushAllF(_, olderValue)  => Some(PushAllF(path, value ::: olderValue))
       case PushF(_, olderValue)     => Some(PushAllF(path, value ::: List(olderValue)))
 
-      case _ => error("PushAllF can be only combined with SetF and PushAllF. Older=" + older)
+      case _ => error("PushAllF can be only combined with SetF, PushF and PushAllF. Older=" + older)
     }
 
     private def pushAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
