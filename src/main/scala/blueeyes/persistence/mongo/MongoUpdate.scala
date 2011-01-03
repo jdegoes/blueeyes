@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST.{JField, JObject}
-import blueeyes.json.{JPath}
+import blueeyes.json.JPath
 import MongoImplicits._
 import MongoFilterOperators._
 import com.mongodb.MongoException
@@ -291,7 +291,14 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = older match {
       case SetF(f, v)         => Some(SetF(path, addToSet(v, value)))
 
-      case AddToSetF(_, _, _) => Some(this)
+      case AddToSetF(_, olderValue, _) => {
+        (olderValue, value) match {
+          case (MongoPrimitiveArray(x), MongoPrimitiveArray(y)) => Some(path.addToSet(y ::: x :_*))
+          case (MongoPrimitiveArray(x), y)                      => Some(path.addToSet(y :: x :_*))
+          case (x, MongoPrimitiveArray(y))                      => Some(path.addToSet((y ::: List(x)) :_*))
+          case (x, y)                                           => Some(path.addToSet(y, x))
+        }
+      }
 
       case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
     }
