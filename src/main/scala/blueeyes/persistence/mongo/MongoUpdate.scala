@@ -252,7 +252,7 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = older match {
       case SetF(f, v)       => Some(SetF(path, pushAll(v, value)))
 
-      case PushAllF(_, _)  => Some(this)
+      case PushAllF(_, olderValue)  => Some(PushAllF(path, value ::: olderValue))
 
       case _ => error("PushAllF can be only combined with SetF and PushAllF. Older=" + older)
     }
@@ -273,7 +273,7 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = older match {
       case SetF(f, v)     => Some(SetF(path, pullAll(v, value)))
 
-      case PullAllF(_, _) => Some(this)
+      case PullAllF(_, olderValue) => Some(PullAllF(path, value ::: olderValue))
 
       case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
     }

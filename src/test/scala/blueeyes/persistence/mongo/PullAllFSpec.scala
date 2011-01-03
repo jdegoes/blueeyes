@@ -9,9 +9,9 @@ class PullAllFSpec extends Specification{
 
     PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))))
   }
-  "fuse with pullAll leaves pullAll" in {
+  "fuse with pullAll composes pullAll" in {
     import MongoImplicits._
 
-    PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PullAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("bar")))))
+    PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PullAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
 }

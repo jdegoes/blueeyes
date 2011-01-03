@@ -9,9 +9,9 @@ class PushAllFSpec extends Specification{
 
     PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
   }
-  "fuse with pushAll leaves pushAll" in {
+  "fuse with pushAll composes pushAll" in {
     import MongoImplicits._
 
-    PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PushAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar")))))
+    PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PushAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
 }
