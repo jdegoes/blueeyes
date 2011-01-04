@@ -12,7 +12,7 @@ import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
 
-object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEnginesArrayByte with Data{
+object BlueEyesClientDemo extends BlueEyesDemoFacade with HttpClientXLightWebEnginesArrayByte with Data{
 
   Configgy.configure("/etc/default/blueeyes.conf")
 
@@ -35,7 +35,7 @@ object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEngi
 
   private def ->?[T](f: HttpClient[Array[Byte]] => Future[T]) = {
 
-    val future    = exec(f) 
+    val future    = apply(f) 
     val counDown  = new CountDownLatch(1)
 
     future.deliverTo(response =>{
@@ -46,7 +46,7 @@ object BlueEyesClientDemo extends ContactListFacade with HttpClientXLightWebEngi
   }
 }
 
-trait ContactListFacade extends BlueEyesClientTransformerBuilder{
+trait BlueEyesDemoFacade extends BlueEyesClientTransformerBuilder{
 
   def port: Int
 

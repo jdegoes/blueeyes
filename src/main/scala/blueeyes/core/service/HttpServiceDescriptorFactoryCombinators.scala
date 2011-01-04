@@ -57,7 +57,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
           val serviceRootUrl = Configgy.config("services." + context.serviceName + ".v" + context.serviceVersion.majorVersion.toString + ".serviceRootUrl")
           
           (transformer: HttpClientTransformer[T, _]) => {
-            client.exec {
+            client.apply[T] {
               path$(serviceRootUrl) {
                 (client: HttpClient[T]) => {
                   transformer(client)

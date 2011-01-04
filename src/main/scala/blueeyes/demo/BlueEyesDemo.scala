@@ -15,7 +15,7 @@ import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 
-object BlueEyesDemo extends BlueEyesServer with ContactListService{
+object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService{
 
   private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)
 
@@ -24,21 +24,21 @@ object BlueEyesDemo extends BlueEyesServer with ContactListService{
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinators {
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators {
 
   def mongo: Mongo
 
   val contactListService = service("contact.list", "1.0.0") {
     context => {
       startup {
-        val config = ContactListConfig(context.config, mongo)
+        val config = BlueEyesDemoConfig(context.config, mongo)
 
         config.database[JNothing.type](ensureUniqueIndex("contact.list.name").on(config.collection, "name"))
 
         config
       } -> {
-        request { conatctsConfig: ContactListConfig =>
-          import conatctsConfig._
+        request { demoConfig: BlueEyesDemoConfig =>
+          import demoConfig._
           path("/contacts"){
             produce(application/json) {
               get {
@@ -84,7 +84,7 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
                 jvalue {
                   post {
                     refineContentType[JValue, JObject] { request =>
-                      val contacts = JArray(searchContacts(request.content, conatctsConfig))
+                      val contacts = JArray(searchContacts(request.content, demoConfig))
                       HttpResponse[JValue](content=Some(contacts))
                     }
                   }
@@ -94,12 +94,12 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
           }
         }
       }->
-        shutdown { config: ContactListConfig =>
+        shutdown { config: BlueEyesDemoConfig =>
       }
     }
   }
 
-  private def searchContacts(filterJObject: Option[JObject], config: ContactListConfig): List[JString] = {
+  private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): List[JString] = {
     createFilter(filterJObject).map { filter =>
       for {
         nameJObject <- config.database(select().from(config.collection).where(filter)).toList
@@ -117,7 +117,7 @@ trait ContactListService extends BlueEyesServiceBuilder with HttpRequestCombinat
   }
 }
 
-case class ContactListConfig(config: ConfigMap, mongo: Mongo){
+case class BlueEyesDemoConfig(config: ConfigMap, mongo: Mongo){
   val database    = mongo.database(config.getString("mongo.database.contact.list").getOrElse("contact.list"))
   val collection  = config.getString("mongo.collection.contact.list").getOrElse("contact.list")
 }
