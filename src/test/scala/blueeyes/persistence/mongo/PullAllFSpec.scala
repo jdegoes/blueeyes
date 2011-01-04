@@ -6,23 +6,15 @@ import com.mongodb.MongoException
 
 class PullAllFSpec extends Specification{
   "fuse applies pullAll to set update" in {
-    import MongoImplicits._
-
     PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))))
   }
   "fuse with pullAll composes pullAll" in {
-    import MongoImplicits._
-
     PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PullAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
   "fuse with pull (with '' === value filter) composes pullAll" in {
-    import MongoImplicits._
-
     PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PullF("n", "" === "foo")) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
   "fuse with pull (with another then '' === value) filter fails" in {
-    import MongoImplicits._
-
     PullAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PullF("n", "bar" === "foo")) must throwA[RuntimeException]
   }
 }

@@ -5,18 +5,12 @@ import UpdateFieldFunctions._
 
 class PushAllFSpec extends Specification{
   "fuse applies pushAll to set update" in {
-    import MongoImplicits._
-
     PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
   }
   "fuse with pushAll composes pushAll" in {
-    import MongoImplicits._
-
     PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PushAllF("n", List(MongoPrimitiveString("foo")))) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
   "fuse with push composes pushAll" in {
-    import MongoImplicits._
-
     PushAllF("n", List(MongoPrimitiveString("bar"))).fuseWith(PushF("n", "foo")) mustEqual(Some(PushAllF("n", List(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))))
   }
 }

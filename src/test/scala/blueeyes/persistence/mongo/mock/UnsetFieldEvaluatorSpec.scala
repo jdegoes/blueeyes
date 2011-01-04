@@ -4,7 +4,6 @@ import org.spex.Specification
 import MockMongoUpdateEvaluators._
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo._
-import blueeyes.persistence.mongo.MongoImplicits._
 
 class UnsetFieldEvaluatorSpec extends Specification{
   "returns value as it is" in {

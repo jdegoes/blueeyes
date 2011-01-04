@@ -10,8 +10,6 @@ import blueeyes.json.JPath
 class EnsureIndexQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
   "Call collection method" in{
-    import MongoImplicits._
-    
     val query  = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
     val result = query(collection)
 
