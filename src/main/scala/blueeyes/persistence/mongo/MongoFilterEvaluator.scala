@@ -97,8 +97,9 @@ private[mongo] object Evaluators{
     def apply(v1: JValue, v2: JValue) = v1 != v2
   }
   case object GtFieldFilterEvaluator extends FieldFilterEvaluator{
+    import Predef._
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
-      case (JString(x1),  JString(x2)) => x1 > x2
+      case (JString(x1),  JString(x2)) => augmentString(x1) > augmentString(x2)
       case (JInt(x1),     JInt(x2))    => x1 > x2
       case (JDouble(x1),  JDouble(x2)) => x1 > x2
       case (JDouble(x1),  JInt(x2))    => x1 > x2.doubleValue
@@ -111,8 +112,9 @@ private[mongo] object Evaluators{
     def apply(v1: JValue, v2: JValue) = EqFieldFilterEvaluator(v1, v2) || GtFieldFilterEvaluator(v1, v2)
   }
   case object LtFieldFilterEvaluator extends FieldFilterEvaluator{
+    import Predef._
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
-      case (JString(x1),  JString(x2)) => x1 < x2
+      case (JString(x1),  JString(x2)) => augmentString(x1) < augmentString(x2)
       case (JInt(x1),     JInt(x2))    => x1 < x2
       case (JDouble(x1),  JDouble(x2)) => x1 < x2
       case (JDouble(x1),  JInt(x2))    => x1 < x2.doubleValue

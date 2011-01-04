@@ -7,8 +7,8 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.json._
 
 class MongoElementsMatchFilterSpec extends Specification{
-  private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoFilterImplicits.MongoPrimitiveInt(1))
-  private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoFilterImplicits.MongoPrimitiveInt(5))
+  private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
+  private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val andFilter  = filter1 && filter2
 
   "create valid json for or filter" in {

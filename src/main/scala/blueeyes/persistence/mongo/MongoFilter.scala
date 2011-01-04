@@ -113,6 +113,31 @@ sealed trait MongoPrimitive[T] {
   def toJValue: JValue
 }
 
+case class MongoPrimitiveString(value: String) extends MongoPrimitive[String] {
+  def toJValue = JString(value)
+}
+case class MongoPrimitiveLong(value: Long) extends MongoPrimitive[Long] {
+  def toJValue = JInt(value)
+}
+case class MongoPrimitiveInt(value: Int) extends MongoPrimitive[Int] {
+  def toJValue = JInt(value)
+}
+case class MongoPrimitiveDouble(value: Double) extends MongoPrimitive[Double] {
+  def toJValue = JDouble(value)
+}
+case class MongoPrimitiveBoolean(value: Boolean) extends MongoPrimitive[Boolean] {
+  def toJValue = JBool(value)
+}
+case class MongoPrimitiveArray[T <: MongoPrimitive[_]](value: List[T]) extends MongoPrimitive[List[T]] {
+  def toJValue = JArray(value.map(_.toJValue))
+}
+case class MongoPrimitiveJObject(value: JObject) extends MongoPrimitive[JObject] {
+  def toJValue = value
+}
+case object MongoPrimitiveNull extends MongoPrimitive[Any] {
+  def toJValue = JNull
+}
+
 sealed class MongoPrimitiveWitness[T](val typeNumber: Int)
 
 trait MongoFilterImplicits {
@@ -123,31 +148,6 @@ trait MongoFilterImplicits {
   implicit def stringToMongoFilterBuilder(string: String): MongoFilterBuilder = MongoFilterBuilder(JPath(string))
   
   implicit def jpathToMongoFilterBuilder(jpath: JPath): MongoFilterBuilder = MongoFilterBuilder(jpath)
-  
-  case class MongoPrimitiveString(value: String) extends MongoPrimitive[String] {
-    def toJValue = JString(value)
-  }
-  case class MongoPrimitiveLong(value: Long) extends MongoPrimitive[Long] {
-    def toJValue = JInt(value)
-  }
-  case class MongoPrimitiveInt(value: Int) extends MongoPrimitive[Int] {
-    def toJValue = JInt(value)
-  }
-  case class MongoPrimitiveDouble(value: Double) extends MongoPrimitive[Double] {
-    def toJValue = JDouble(value)
-  }
-  case class MongoPrimitiveBoolean(value: Boolean) extends MongoPrimitive[Boolean] {
-    def toJValue = JBool(value)
-  }
-  case class MongoPrimitiveArray[T <: MongoPrimitive[_]](value: List[T]) extends MongoPrimitive[List[T]] {
-    def toJValue = JArray(value.map(_.toJValue))
-  }
-  case class MongoPrimitiveJObject(value: JObject) extends MongoPrimitive[JObject] {
-    def toJValue = value
-  }
-  case object MongoPrimitiveNull extends MongoPrimitive[Any] {
-    def toJValue = JNull
-  }
 
   implicit def jvalueToMongoPrimitive(value: JValue): Option[MongoPrimitive[_]] = {
     val mongoPromitive: Option[MongoPrimitive[_]] = value match {
@@ -211,7 +211,7 @@ object MongoFilterImplicits extends MongoFilterImplicits
  * import blueeyes.persistence.mongo.MongoImplicits._
  * import blueeyes.persistence.mongo.MongoQueryBuilder._
  *
- * val filter = "foo.bar" === "blahblah"
+ * val filter = "foo.bar" === "blahbMongoPrimitiveJObjectlah"
  *
  * val query  = selectOne().from("mycollection").where(filter)
  * val query2 = selectOne().from("mycollection").where("foo.bar" === "blahblah")
@@ -239,7 +239,7 @@ case class MongoFilterBuilder(jpath: JPath) {
 
   def <= [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $lt, value)
 
-  def in [T <: MongoPrimitive[_]](items: T*): MongoFieldFilter = MongoFieldFilter(jpath, $in, List(items: _*))
+  def anyOf [T <: MongoPrimitive[_]](items: T*): MongoFieldFilter = MongoFieldFilter(jpath, $in, List(items: _*))
 
   def contains [T <: MongoPrimitive[_]](items: T*): MongoFieldFilter = MongoFieldFilter(jpath, $all, List(items: _*))
 

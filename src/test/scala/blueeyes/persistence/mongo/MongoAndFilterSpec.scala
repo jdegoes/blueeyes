@@ -4,11 +4,13 @@ import org.specs.Specification
 import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
+import MongoFilterImplicits._
+
 
 class MongoAndFilterSpec extends Specification{
-  private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoFilterImplicits.MongoPrimitiveInt(1))
-  private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoFilterImplicits.MongoPrimitiveInt(5))
-  private val filter3    = MongoFilterBuilder(JPath("rar")).<(MongoFilterImplicits.MongoPrimitiveInt(6))
+  private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
+  private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
+  private val filter3    = MongoFilterBuilder(JPath("rar")).<(MongoPrimitiveInt(6))
   private val andFilter  = filter1 && filter2
 
   "create valid json for or filter" in {
@@ -22,7 +24,6 @@ class MongoAndFilterSpec extends Specification{
   }
 
   "combine ANDs with ORs" in {
-    import MongoFilterImplicits._
     val exam: MongoFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
     val cfilter: MongoFilter = ((filter1 && filter2 && filter3) || (filter2 && filter3) || (filter1 && filter3)) //|| (filter1 && filter2)
     cfilter.filter mustEqual
