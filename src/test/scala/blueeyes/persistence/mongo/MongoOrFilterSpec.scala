@@ -4,10 +4,11 @@ import org.specs.Specification
 import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
+import MongoFilterImplicits._
 
 class MongoOrFilterSpec extends Specification{
-  private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoFilterImplicits.MongoPrimitiveInt(1))
-  private val filter2  = MongoFilterBuilder(JPath("bar")).<(MongoFilterImplicits.MongoPrimitiveInt(5))
+  private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
+  private val filter2  = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val orFilter = filter1 || filter2
   
   "create valid json for or filter" in {
@@ -17,7 +18,6 @@ class MongoOrFilterSpec extends Specification{
     (orFilter).unary_! mustEqual (filter1.unary_! && filter2.unary_!)
   }
   "several or does not create recursion" in{
-    import MongoFilterImplicits._
     ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(("address.city" === "B") :: ("address.street" === "2") :: ("address.code" === 1) :: Nil))
     ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(("address.city" === "B") :: ("address.street" === "2") :: ("address.code" === 1) :: Nil))
   }
