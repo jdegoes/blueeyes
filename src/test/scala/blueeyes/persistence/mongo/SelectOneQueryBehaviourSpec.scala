@@ -15,8 +15,6 @@ class SelectOneQueryBehaviourSpec extends Specification {
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road 1")) ::  Nil)) :: Nil)
 
   "Call collection method" in{
-    import MongoImplicits._
-    
     when(collection.select(keys, None, None, None, Some(1))).thenReturn(List(jObject1).toStream)
 
     val query  = selectOne("foo", "bar").from("collection")

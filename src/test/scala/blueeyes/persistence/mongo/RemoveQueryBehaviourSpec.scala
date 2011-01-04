@@ -10,8 +10,6 @@ class RemoveQueryBehaviourSpec extends Specification {
   private val collection  = mock[DatabaseCollection]
 
   "Call collection method" in{
-    import MongoImplicits._
-
     val filter = Some("name" === "Joe")
 
     val query  = remove.from("collection").where("name" === "Joe")
@@ -22,8 +20,6 @@ class RemoveQueryBehaviourSpec extends Specification {
     result must be (JNothing)
   }
   "Call collection method with dummy JObject when filter is not specified" in{
-    import MongoImplicits._
-
     val query = remove.from("collection")
     val result = query(collection)
 

@@ -4,7 +4,6 @@ import org.spex.Specification
 import blueeyes.json.JsonAST._
 import MockMongoUpdateEvaluators._
 import blueeyes.persistence.mongo._
-import blueeyes.persistence.mongo.MongoImplicits._
 
 class PopFieldEvaluatorSpec  extends Specification{
   "pop first element" in {

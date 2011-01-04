@@ -39,43 +39,34 @@ class MongoFilterEvaluatorSpec extends Specification{
 
 
   "selects all objects by MongoFilterAll" in{
-    import MongoImplicits._
     MongoFilterEvaluator(jobjects).filter(MongoFilterAll) mustEqual(jobjects)
   }
   "selects objects by field query" in{
-    import MongoImplicits._
     MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B")) mustEqual(jObject1 :: jObject2 :: Nil)
   }
   "selects objects by 'or' query" in{
-    import MongoImplicits._
     val result = jObject1 :: jObject2 :: jObject3 :: Nil
     MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") || MongoFieldFilter("street.street", $eq,"4")).filterNot (result contains) mustEqual(Nil)
   }
   "selects objects by 'and' query" in{
-    import MongoImplicits._
     val result = jObject2 :: Nil
     MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") && MongoFieldFilter("street.street", $eq,"3")).filterNot (result contains) mustEqual(Nil)
   }
 
   "select object using elemeMatch" in {
-    import MongoImplicits._
      MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"purple")))) mustEqual(jobjectsWithArray.head :: Nil)
   }
   "does not select object using elemeMatch and wrong query" in {
-    import MongoImplicits._
      MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
   }
   "select element from array" in {
-    import MongoImplicits._
      MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JInt(1) :: Nil)
   }
 
   "select element by complex filter " in {
-    import MongoImplicits._
      MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
   }
   "select element from array by element match " in {
-    import MongoImplicits._
      MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(MongoFieldFilter("foo", $eq, 1) :: Nil).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
   }
 }

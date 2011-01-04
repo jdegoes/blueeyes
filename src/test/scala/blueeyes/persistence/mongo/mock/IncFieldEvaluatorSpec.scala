@@ -5,7 +5,6 @@ import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
 import MockMongoUpdateEvaluators._
 import blueeyes.persistence.mongo._
-import blueeyes.persistence.mongo.MongoImplicits._
 
 class IncFieldEvaluatorSpec extends Specification{
   "increare Integers" in {

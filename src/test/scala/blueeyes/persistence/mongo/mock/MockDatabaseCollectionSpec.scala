@@ -22,8 +22,6 @@ class MockDatabaseCollectionSpec extends Specification{
   private def parse(value: String) = JsonParser.parse(value).asInstanceOf[JObject]
 
   "mapReduce objects" in{
-    import MongoImplicits._
-
     val objects = parse("""{ "id" : 1, "tags" : ["dog", "cat"] }""") :: parse("""{ "id" : 2, "tags" : ["cat"] }""") :: parse("""{ "id" : 3, "tags" : ["mouse", "cat", "dog"] }""") :: parse("""{ "id" : 4, "tags" : []  }""") :: Nil
     val map     = """function(){ this.tags.forEach( function(z){ emit( z , { count : 1 } ); } );};"""
     val reduce  = """function( key , values ){ var total = 0; for ( var i=0; i<values.length; i++ ) total += values[i].count; return { count : total }; };"""
@@ -37,10 +35,7 @@ class MockDatabaseCollectionSpec extends Specification{
     outputCollection.select(MongoSelection(Nil), None, None, None, None) mustEqual(JObject(List(JField("count",JDouble(2.0)))) :: JObject(List(JField("count",JDouble(3.0)))) :: JObject(List(JField("count",JDouble(1.0)))) :: Nil)
   }
 
-
   "group objects" in{
-    import MongoImplicits._
-
     val objects = parse("""{"address":{ "city":"A", "code":2, "street":"1"  } }""") :: parse("""{"address":{ "city":"A", "code":5, "street":"3"  } }""") :: parse("""{"address":{ "city":"C", "street":"1"  } }""") :: parse("""{"address":{ "code":3, "street":"1"  } }""") :: Nil
     val initial = parse("""{ "csum": 10.0 }""")
 
@@ -58,8 +53,6 @@ class MockDatabaseCollectionSpec extends Specification{
   }
 
   "store jobjects" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
@@ -73,8 +66,6 @@ class MockDatabaseCollectionSpec extends Specification{
   }
 
   "does not store jobject when unique index exists and objects are the same" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
@@ -83,8 +74,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
   "store jobject when index is dropped and objects are the same" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
@@ -94,8 +83,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject :: jObject :: Nil)
   }
   "store jobject when indexes are dropped and objects are the same" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
@@ -105,8 +92,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject :: jObject :: Nil)
   }
   "does not store jobject when unique index exists and the same object exists" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: Nil, true)
@@ -116,8 +101,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: Nil)
   }
   "store jobject when unique index exists and objects are different" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
@@ -127,8 +110,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse.toStream)
   }
   "update jobject field" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject1 :: Nil)
@@ -137,8 +118,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject2 :: Nil).toStream)
   }
   "update not existing jobject field" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject1 :: Nil)
@@ -147,8 +126,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject1.merge(JObject(JField("name", JString("foo")) :: Nil)) :: Nil).toStream)
   }
   "update jobject fields" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject :: Nil)
@@ -157,8 +134,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual((jObject2 :: Nil).toStream)
   }
   "pull jobject by field query" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
@@ -181,8 +156,6 @@ class MockDatabaseCollectionSpec extends Specification{
   }
 
   "pull jobject by element match" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
@@ -209,8 +182,6 @@ class MockDatabaseCollectionSpec extends Specification{
 ] }""").asInstanceOf[JObject] :: Nil).toStream)
   }
   "update all objects" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -219,8 +190,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: jObject2:: Nil)
   }
   "update object by filter" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -229,8 +198,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jObject2 :: jObject1  :: Nil)
   }
   "does not update object by MongoUpdateNothing" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -239,8 +206,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jObject1  :: jObject :: Nil)
   }
   "update only one object when multi is false" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -251,8 +216,6 @@ class MockDatabaseCollectionSpec extends Specification{
     (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be (true)
   }
   "insert by update when upsert is true" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.update(None, MongoUpdateObject(jObject2), true, false)
@@ -260,8 +223,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
   }
   "update by update when upsert is true and index exist" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.ensureIndex("index", JPath("address.city") :: Nil, true)
@@ -281,8 +242,6 @@ class MockDatabaseCollectionSpec extends Specification{
   */
 
   "does not insert by update when upsert is false" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.update(None, MongoUpdateObject(jObject2), false, false)
@@ -290,8 +249,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
   "removes all jobjects when filter is not specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
@@ -299,24 +256,18 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
   }
   "count all jobjects when filter is not specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
     collection.count(None) mustEqual(4)
   }
   "count jobjects which match filter" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
     collection.count(Some(MongoFieldFilter("address.city", $eq,"A"))) mustEqual(1)
   }
   "removes jobjects which match filter" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
@@ -324,32 +275,24 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
   }
   "select all jobjects when filter is not specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jobjects)
   }
   "select jobjects by filter" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None) mustEqual(jObject :: Nil)
   }
   "select jobjects with array when array element field filter is specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo.shape", $eq,"square") && MongoFieldFilter("foo.color", $eq,"purple")), None, None, None) mustEqual(jobjectsWithArray)
   }
   "select jobjects with array when array element filter is specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
@@ -357,8 +300,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo", $eq, filterObject)), None, None, None) mustEqual(List(jobjectsWithArray.head).toStream)
   }
   "select jobjects with array when elemMatch filter is specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
@@ -366,8 +307,6 @@ class MockDatabaseCollectionSpec extends Specification{
   }
 
   "does not select jobjects with array when wrong array element filter is specified" in{
-    import MongoImplicits._
-
     val collection = newCollection
 
     collection.insert(jobjectsWithArray)
@@ -375,24 +314,18 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("foo", $eq, filterObject)), None, None, None) mustEqual(Nil.toStream)
   }
   "select ordered objects" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, Some(sort), None, None) mustEqual(jobjects.reverse)
   }
   "skip objects" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), None, Some(sort), Some(2), None) mustEqual(jObject1 :: jObject:: Nil)
   }
   "limit objects" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jobjects)
@@ -400,8 +333,6 @@ class MockDatabaseCollectionSpec extends Specification{
   }
 
   "select specified objects fields" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -410,8 +341,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(JPath("address.city") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
   }
   "select specified objects fields when some fields are missing" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
@@ -420,8 +349,6 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(JPath("address.city") :: JPath("address.phone") :: Nil), None, Some(sort), None, None) mustEqual(fields1 :: fields :: Nil)
   }
   "select nothing when wwong selection is specified" in{
-    import MongoImplicits._
-
     val collection  = newCollection
 
     collection.insert(jObject :: jObject1 :: Nil)
