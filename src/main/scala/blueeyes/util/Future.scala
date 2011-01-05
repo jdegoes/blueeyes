@@ -471,15 +471,10 @@ object Future {
   def async[T](f: => T): Future[T] = {
     val result = new Future[T]
     
-    import scala.actors.Actor._
+    import scala.actors.Actor.actor
     
     actor {
-      try {
-        result.deliver(f)
-      }
-      catch {
-        case t: Throwable => result.cancel(t)
-      }
+      result.deliver(f)
     }
     
     result

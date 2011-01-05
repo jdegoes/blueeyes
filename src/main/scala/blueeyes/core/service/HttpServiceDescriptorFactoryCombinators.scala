@@ -33,7 +33,19 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
   
-  private type T0[T, S, X] = ((String, HttpServiceVersion) => HttpClientTransformer[T, X] => Future[X]) => HttpServiceDescriptorFactory[T, S]
+  
+  private[this] object TransformerCombinators extends HttpClientTransformerCombinators
+  import TransformerCombinators.{path$}
+  
+  type ServiceLocator[T] = (String, HttpServiceVersion) => ServiceInvoker[T]
+  
+  case class ServiceInvoker[T](serviceRootUrl: String)(implicit client: HttpClient[T]) {
+    def apply[X](transformer: HttpClientTransformer[T, X]): Future[X] = {
+      client.exec {
+        path$(serviceRootUrl) { transformer }
+      }
+    }
+  }
   
   /**
    * serviceLocator { locator =>
@@ -45,26 +57,15 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    *   }
    * }
    */
-  def serviceLocator[T, S](f: T0[T, S, _])(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
-    object TransformerCombinators extends HttpClientTransformerCombinators
-    import TransformerCombinators.{path$}
-    
+  def serviceLocator[T, S](f: ServiceLocator[T] => HttpServiceDescriptorFactory[T, S])(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
     implicit def hack[X1, X2](f: Future[X1]): Future[X2] = f.asInstanceOf[Future[X2]]
     
     (context: HttpServiceContext) => {
       f {
-        (name: String, version: HttpServiceVersion) => {
-          val serviceRootUrl = Configgy.config("services." + context.serviceName + ".v" + context.serviceVersion.majorVersion.toString + ".serviceRootUrl")
+        (serviceName: String, serviceVersion: HttpServiceVersion) => {
+          val serviceRootUrl = Configgy.config("services." + serviceName + ".v" + serviceVersion.majorVersion.toString + ".serviceRootUrl")
           
-          (transformer: HttpClientTransformer[T, _]) => {
-            client.exec {
-              path$(serviceRootUrl) {
-                (client: HttpClient[T]) => {
-                  transformer(client)
-                }
-              }
-            }
-          }
+          ServiceInvoker(serviceRootUrl)
         }
       } (context)
     }
