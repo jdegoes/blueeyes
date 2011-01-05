@@ -2,7 +2,7 @@ package blueeyes.benchmark
 
 import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
 import blueeyes.core.service.HttpClient
-import blueeyes.demo.{BlueEyesDemo, Contact, ContactListFacade}
+import blueeyes.demo.{BlueEyesDemo, Contact, BlueEyesDemoFacade}
 import blueeyes.util.Future
 import net.lag.configgy.Configgy
 import blueeyes.health.metrics.Timer
@@ -45,7 +45,7 @@ object Benchmark extends ServerStart{
   }
 }
 
-class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val timer: Timer) extends Runnable with ContactListFacade with HttpClientXLightWebEnginesArrayByte{
+class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val timer: Timer) extends Runnable with BlueEyesDemoFacade with HttpClientXLightWebEnginesArrayByte{
   val taskCounDown  = new CountDownLatch(1)
   def run = {
     timer.time{
@@ -62,7 +62,7 @@ class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val time
   private def process[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
     contactsStream.foreach(contact => {
       val countDown      = new CountDownLatch(1)
-      val future    = exec[T](f(contact))
+      val future    = apply[T](f(contact))
       future.deliverTo(response =>{
         countDown.countDown
       })

@@ -51,7 +51,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
         val countDownLatch = new CountDownLatch(1)  
 
         val client = new SpecClient(example, what)
-        val result = client.exec(clientTransformer)
+        val result = client(clientTransformer)
 
         result.ifCanceled{ why =>
           countDownLatch.countDown()

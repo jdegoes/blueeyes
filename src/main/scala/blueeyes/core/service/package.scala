@@ -13,4 +13,8 @@ package object service{
   type HttpClientTransformer[T, S] = HttpClient[T] => Future[S]
 
   type HttpServiceDescriptorFactory[T, S] = HttpServiceContext => HttpServiceDescriptor[T, S]
+
+  def anyRequestHandlerToHttpClient[T](h: HttpRequestHandler[T]): HttpClient[T] = new HttpClient[T]{
+    def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = h(request)
+  }
 }
