@@ -118,15 +118,17 @@ For the most part, the client transformer combinators mirror the request handler
 
 Given a reference to *client*, you could perform a simple HTTP GET on the path "/foo" with the following code:
 
-    val content = client.exec path$("http://myservice.com/foo") {
-      get$ { response =>
-        response.content.get
+    val content = client {
+      path$("http://myservice.com/foo") {
+        get$ { response =>
+          response.content.get
+        }
       }
     }
 
-The great power of this design lies in its composability. If you wanted to perform an HTTP GET on path "/foo/bar" at the same time as the first GET, without duplicating all the same code, you could do so using the client transformer join operator ('~'):
+The great power of this design lies in its composability. If you wanted to perform an HTTP GET on path "/foo/bar" at the same time as the first GET, without duplicating all the same code, you could do so using the join operator ('~'):
 
-    val (fooContent, fooBarContent) = client.exec {
+    val contentTuple = client {
       path$("http://myservice.com/foo") {
         get$ { response =>
           response.content.get
@@ -150,7 +152,7 @@ Similarly, if you're going to perform a lot of requests that all share the same 
     }
 
     ...
-    client.exec {
+    client {
       myService {
         get$ { response =>
           response.content.get

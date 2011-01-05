@@ -41,7 +41,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   
   case class ServiceInvoker[T](serviceRootUrl: String)(implicit client: HttpClient[T]) {
     def apply[X](transformer: HttpClientTransformer[T, X]): Future[X] = {
-      client.exec {
+      client {
         path$(serviceRootUrl) { transformer }
       }
     }
