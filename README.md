@@ -1,98 +1,92 @@
-# Blue Eyes
+# BlueEyes
 
-Blue Eyes is a lightweight web 3.0 framework for the Scala programming language. The framework is designed to allow developers to quickly and easily create high-performing web services that embrace the machinery and language of HTTP.
+BlueEyes is a lightweight web 3.0 framework for the Scala programming language. The framework is designed to allow developers to quickly and easily create high-performing web services that embrace the machinery and language of HTTP.
 
-Blue Eyes has been used in production across large clusters of instances deployed in cloud computing environments, reliably handling tens of thousands of requests a second.
+BlueEyes has been used in production across large clusters of instances deployed in Amazon EC2, reliably handling tens of thousands of requests a second.
 
-The framework has been designed to meet all the following goals:
+The framework has been designed to meet the following requirements:
 
   * Stateless design, to achieve massive scalability;
   * Purely asynchronous request handling, to achieve extremely fast per-instance performance;
-  * Highly composable, modular design;
+  * Highly composable, modular design that minimizes bloat and surface area;
   * Declarative service construction;
-  * Baked in support for continuous deployment and automated testing.
+  * Support for continuous deployment and automated testing;
+  * Idiomatic Scala interfaces to highly-scalable databases such as MongoDB.
 
-Blue Eyes does not have any features for server-side generation of HTML, CSS, or JavaScript. Nor does Blue Eyes have any out of the box support for serving static files. Blue Eyes is intended *only* for creating web services which can be consumed using HTTP clients.
+BlueEyes does not have any features for server-side generation of HTML, CSS, or JavaScript. BlueEyes does not (natively) serve static files, like Apache or Jetty. And BlueEyes will *never* have any support for forms, AJAX, widgets, and other client-side components.
 
-Those looking for a traditional web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
+BlueEyes is intended *only* for creating RESTful web services.
+
+Those looking for a traditional MVC web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
 
 ## Maven
 
-<table>
-  <thead>
-    <tr>
-      <td>Name</td>             <td>Value</td>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>repository</td>       <td>http://oss.sonatype.org/content/repositories/releases</td>
-    </tr>
-    <tr>
-      <td>group id</td>         <td>com.github.blueeyes</td>
-    </tr>
-    <tr>
-      <td>artifact id</td>      <td>blueeyes</td>
-    </tr>
-    <tr>
-      <td>version</td>          <td>0.1.32</td>
-    </tr>
-  </tbody>
-</table>
+Repository: http://oss.sonatype.org/content/repositories/releases
+
+    <dependency>
+      <groupId>com.github.blueeyes</groupId>
+      <artifactId>blueeyes</artifactId>
+      <version>0.1.36</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
 
 ### SBT
 
     val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
     
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.32" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.36" % "compile"
 
 ## Origins
 
-Blue Eyes is loosely inspired by the Ruby library *Sinatra* and the Scala library *Scalatra*, which both allow developers to efficient produce RESTful web services.
+BlueEyes is loosely inspired by the Ruby library *Sinatra* and the Scala library *Scalatra*. These lightweight libraries allow developers to easily create RESTful services without the feature bloat and poor usability common to most web frameworks.
 
-Blue Eyes aims for the same or higher level of productivity as these libraries, but with a more functional design, much higher performance, and compatibility with the rigorous demands of continuous deployment.
+BlueEyes aims for the same or higher level of productivity as these libraries, but with a more functional design, much higher performance, and compatibility with the rigorous demands of continuous deployment.
 
-## Introduction
+## Services
 
-The fundamental concept in Blue Eyes is the *service*. A *service* responds to requests. Every service is uniquely identified by a name and a version.
+The fundamental concept in BlueEyes is the *service*. A *service* responds to requests. Every service is uniquely identified by a name and a version.
 
-A service generally goes through three distinct phases:
+A service goes through three distinct phases in its lifecycle:
 
   1. *Startup*. The service performs any setup operations required to perform its duties, such as loading data.
   2. *Request*. The service responds to requests.
   3. *Shutdown*. The service performs any cleanup operations, such as disposing of resources.
 
-In the request phase, services typically handle different HTTP verbs (GET, POST, PUT, DELETE) on different paths, accepting and producing different mime types.
+In the request phase, services handle different HTTP verbs (GET, POST, PUT, DELETE) on different paths, accepting and producing different mime types.
 
-Services are generally built using *BlueEyesServiceBuilder*, which mixes in numerous traits to make building services fast and painless.
+Services are generally built using *BlueEyesServiceBuilder*, which allows easy, declarative service construction.
 
 The following code builds an e-mail service, together with a server capable of running the service from the command-line:
 
      trait EmailServices extends BlueEyesServiceBuilder {
        val emailService = service("email", "1.32") { context =>
          startup {
-           Future.async {
-             // return state
-             ...
-           }
+           loadContactList(context.config("contactFile"))
          } ->
-         request { state =>
-           path("/foo") {
+         request { contactList =>
+           path("/emails/") {
              contentType(application/json) {
                 get { request =>
                   ...
+                  HttpResponse(content = Some(JArray(emailIds)))
                 } ~
                 post { request =>
                   ...
+                  HttpResponse(status = OK)
+                } ~
+                path('emailId) {
+                  get { request =>
+                    val emailId = request.parameters('emailId)
+                    ...
+                    HttpResponse(content = Some(emailObj))
+                  }
                 }
-             } ~     
-             path("/bar") {
-               ...
              }
            }
          } ->
-         shutdown { state =>
-            ...
+         shutdown { contactList =>
+           contactList.finalize
          }
        }
      }
@@ -100,19 +94,117 @@ The following code builds an e-mail service, together with a server capable of r
 
 Services are automatically provided with *context*, which provides a bundle of functionality essential to every service:
 
- * *config*. Every service gets its own separate config, namespaced by service name and major version (*services.[serviceName].v[serviceMajorVersion]*)
+ * *config*. Every service gets its own separate config block, namespaced by service name and major version (*services.[serviceName].v[serviceMajorVersion]*)
  * *serviceName*. Name of the service.
  * *serviceVersion*. Version of the service.
 
-## Services
+The sections that follow explore different aspects of dealing with services.
 
 ### Construction
 
+Fundamentally, a service is a request handler -- that is, it processes incoming HTTP requests, and responds to them with HTTP responses.
+
+In BlueEyes, a request handler is a *partial function from request to a future of response*. Formally:
+
+    type HttpRequestHandler2[T, S] = PartialFunction[HttpRequest[T], Future[HttpResponse[S]]]
+
+Since a request handler is just an ordinary partial function, it's possible to construct one in many ways:
+
+    new PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
+      def isDefinedAt(request: HttpRequest[T]): Boolean = ...
+      
+      def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = ...
+    }
+    
+    {
+      case HttpRequest(...) => ...
+      case HttpRequest(...) => ...
+      case HttpRequest(...) => ...
+    }
+
+However, these approaches to constructing partial functions are tedious, do not compose, and are difficult to read. BlueEyes ships with *request handler combinators* that enable declarative construction of request handlers. A few of the more common combinators are listed below:
+
+ * path(*pattern*) { ... }
+ * get { ... }
+ * put { ... }
+ * post { ... }
+ * delete { ... }
+ * contentType(*mimeType*) { ... }
+ * accepts(*mimeType*) { ... }
+ * produces(*mimeType*) { ... }
+ * parameter(*parameterId*) { parameterValue => ... }
+
+These combinators can be combined in the obvious ways:
+
+    path("/users/'userId") {
+      produces(application/json) {
+        get { request =>
+          // get user
+          val userId = request.parameters('userId)
+          ...
+        }
+      }
+    }
+
+The only limitation is that the *get*/*put*/*post*/*delete* combinators must be innermost expressions. These combinators accept *full* functions (not partial functions).
+
+As partial functions, request handlers can be combined through the standard Scala *orElse* method, which will delegate to the first handler that is defined for a specified request:
+
+    path("/food") {
+      ...
+    }.orElse {
+      path("/foo/'fooId") {
+        ...
+      }
+    }
+
+BlueEyes provides the join operator '~' as an alternative to *orElse*. Using the join operator can make your request handlers easier to read:
+
+    produces(application/json) {
+      path("/users/") {
+        get { request =>
+          // get list of all users
+          ...
+        } ~
+        path('userId) {
+          parameter('userId) { userId =>
+            get { request =>
+              // get user
+              ...
+            } ~
+            put { request =>
+              // update user
+              ...
+            }
+          }
+        }
+      }
+    }
+
+An entire category of combinators is devoted to extracting data from requests in order to reduce duplication (in the above snippet, the *parameter* combinator is used to avoid duplicate extraction of the user ID). The next section explains these combinators in greater depth.
+
+#### Extractor Combinators
+
+#### Path Combinator
+
+The path combinator deserves special treatment. Although in the preceding examples, we passed strings to the path combinator, the function actually accepts a *RestPathPattern*, which can be implicitly created from a string.
+
+Rest path patterns are composed from the following building blocks:
+
+ * String literals, such as "/foo/bar".
+ * Symbols, which are placeholders for url fragments, such as "/foo/'fooId". Symbols do not match path separator characters or periods, although they do match underscores, dashes, numbers, and spaces.
+ * Regular expressions.
+
+Although it's most common to create patterns from strings or symbols, you can also create them using the methods available on an existing pattern. For example:
+
+    pattern / 'foo
+    pattern / "foo"
+
 ### Consumption
 
-The dual of providing HTTP services is consuming them. Blue Eyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the Blue Eyes stack.
+The dual of providing HTTP services is consuming them. BlueEyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the BlueEyes stack.
 
-The core client interface is *HttpClient*, which is a partial function from request to a future of response. The *apply* method is seldom used directly. Instead, Blue Eyes provides so-called *client transformer combinators*, which are functions that map an *HttpClient* into a future of some value.
+The core client interface is *HttpClient*, which is a partial function from request to a future of response. The *apply* method is seldom used directly. Instead, BlueEyes provides so-called *client transformer combinators*, which are functions that map an *HttpClient* into a future of some value.
 
 For the most part, the client transformer combinators mirror the request handler combinators, except all methods are suffixed with a dollar sign character ('$'). This means you can consume services using a syntax almost identical to the one you use to construct them.
 
@@ -145,14 +237,14 @@ Similarly, if you're going to perform a lot of requests that all share the same 
 
     def myService[T, S](r: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = {
       port(123) {
-        path$("http://myservice.com") {
+        path$("http://myservice.com/api/v1") {
           r 
         }
       }
     }
 
     ...
-    client {
+    val content = client {
       myService {
         get$ { response =>
           response.content.get
@@ -164,14 +256,14 @@ Contrary to these toy examples, in real world usage, you would not simply return
 
 ### Testing
 
-Blue Eyes is built from the ground up to support automated, comprehensive, fast-running tests.
+BlueEyes is built from the ground up to support automated, comprehensive, fast-running tests.
 
 The testing framework is currently compatible with *Specs*, and extends the *Specification* trait to make testing services easy.
 
 To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a variety of helper methods, including client transformer combinators.
 
     class EmailServicesSpec extends BlueEyesServiceSpecification[Array[Byte]] with EmailServices {
-      path$("/foo") {
+      path$("/emails/") {
         get$ { response =>
           response.status mustEqual(HttpStatus(OK))
         }
@@ -180,11 +272,11 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
 
-### Running
+### Execution
 
 Services are run through a *server*. A "server" in this context refers to a *process*, not a *machine* -- any number of servers can run on the same physical machine.
 
-To create a server, Blue Eyes includes the *BlueEyesServer* trait, which is typically extended by an *object*. You can specify all the services you want the server to run just by mixing in the traits that build them. For example, the following code creates a server that runs four services:
+To create a server, BlueEyes includes the *BlueEyesServer* trait, which is typically extended by an *object*. You can specify all the services you want the server to run just by mixing in the traits that build them. For example, the following code creates a server that runs four services:
 
     object AppServer extends BlueEyesServer with EmailServices with OrderProcessingServices with LoginServices with CatalogServices
 
@@ -196,7 +288,7 @@ A single server can run any number of services, although the recommended practic
 
  * Independent provisioning of services based on requirements (some services may be needed to maintain 100% uptime and thus may be replicated across instances and data centers, while others may not need such high-availability);
  * Independent scaling of services based on load; 
- * Isolation of services so that the crash of one services has no effect on others;
+ * Isolation of services so that the crash of one service has no effect on others;
  * Independent deployment of services so that risk to production is minimized.
 
 #### Server Configuration Options
@@ -221,7 +313,7 @@ A service descriptor factory is at the heart of every service declaration. For e
 
 The anonymous final argument passed to the *service* function is actually a service descriptor factory. That is, the argument is a function takes the context of the service, and returns a service descriptor, which describes the service lifecycle (startup, request handling, and shutdown).
 
-Blue Eyes ships with many useful service descriptor factory combinators that are designed to augment your service with additional features. For example, the *logging* combinator adds logging to your service:
+BlueEyes ships with many useful service descriptor factory combinators that are designed to augment your service with additional features. For example, the *logging* combinator adds logging to your service:
 
     val myService = service("myservice", "2.39.23") { 
       logging { logger =>
@@ -242,7 +334,7 @@ The sections that follow describe the most common ways to augment your services.
 
 #### Logging
 
-Blue Eyes provides a combinator that provides services with a logger that can be configured independently for each service.
+BlueEyes provides a combinator that provides services with a logger that can be configured independently for each service.
 
      trait LogDemo extends BlueEyesServiceBuilder {
        val logDemoService = service("logdemo", "1.32") {
@@ -296,17 +388,25 @@ For example:  */blueeyes/services/healthmon/v1/health*
 
 #### Service Locator
 
-## Data
+## Data Exchange
 
 ### JSON
 
+BlueEyes comes with the most fully-featured Scala library for JSON parsing, rendering, and manipulation.
+
 ## Persistence
+
+### Cache
+
+BlueEyes has several kinds of caches.
 
 ### MongoDB
 
+BlueEyes has a full-featured Scala facade to MongoDB.
+
 ## Continuous Deployment
 
-Blue Eyes is designed to support the lean development practice of _continuous deployment_. In continuous deployment, the team can safely deploy code as often as required by business needs -- even many times a day.
+BlueEyes is designed to support the lean development practice of _continuous deployment_. In continuous deployment, the team can safely deploy code as often as required by business needs -- even many times a day.
 
 In order for a team to practice continuous deployment successfully, two critical requirements must be met:
 
@@ -315,10 +415,10 @@ In order for a team to practice continuous deployment successfully, two critical
 
 On top of this foundation, a continuous deployment system can be built, which does incremental deployments with health checks, and which either backs out defective releases automatically, or makes it easy for team members to do so.
 
-Blue Eyes provides support for both pillars:
+BlueEyes provides support for both pillars:
 
- 1. Blue Eyes makes testing web services extremely easy, and the tests do not start a real server so they run very quickly.
- 2. Blue Eyes makes it easy to export real-time health metrics (and, if you use health monitor, automatically exports all the critical metrics).
+ 1. BlueEyes makes testing web services extremely easy, and the tests do not start a real server so they run very quickly.
+ 2. BlueEyes makes it easy to export real-time health metrics (and, if you use health monitor, automatically exports all the critical metrics).
 
 ## Team
 
@@ -330,7 +430,7 @@ Blue Eyes provides support for both pillars:
   </thead>
   <tbody>
     <tr>
-      <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>                                    <td>@jdegoes</td>
+      <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>                                    <td><a href="http://twitter.com/jdegoes">@jdegoes</a></td>
     </tr>
     <tr>
       <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td></td>
@@ -342,7 +442,7 @@ Blue Eyes provides support for both pillars:
       <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
     </tr>
     <tr>
-      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for Blue Eyes Services (unreleased)</td>         <td>@mconigliaro</td>
+      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for BlueEyes Services (unreleased)</td>         <td><a href="http://twitter.com/jdegoes">@mconigliaro</a></td>
     </tr>
   </tbody>
 </table>
