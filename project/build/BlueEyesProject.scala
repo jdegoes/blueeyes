@@ -55,7 +55,7 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin  {
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin with CoverageProject {
   val scalatest      = "org.scalatest"                % "scalatest"           % "1.2"           % "test"
   val scalacheck     = "org.scala-tools.testing"      % "scalacheck_2.8.0"    % "1.7"           % "compile"
   val mockito        = "org.mockito"                  % "mockito-all"         % "1.8.4"         % "compile"

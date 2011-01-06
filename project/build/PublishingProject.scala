@@ -1,3 +1,4 @@
+import java.io.File
 import sbt._
 import scala.xml._
 
@@ -13,14 +14,20 @@ trait PublishingProject extends DefaultProject{
     staleRepositories.foreach(NexusStagingDrop(info.projectPath, _, log))
 
     super.publishAction.run
-    
+
     val repositories = NexusStagingList(info.projectPath, log)
     val result = repositories match{
       case x :: Nil =>{
         NexusStagingClose(info.projectPath, x, log)
         NexusStagingRelease(info.projectPath, x, log)
-        incrementVersionAction.run        
-        None
+
+        val update = updateReadMe
+        update.orElse{
+          incrementVersionAction.run
+          None
+        }
+
+        update
       }
       case x :: xs  => Some("There are more then one staging repostories: %s. Please, release manually.".format(repositories.mkString(", ")))
       case x        => Some("There are no staging repostories.")
@@ -28,7 +35,24 @@ trait PublishingProject extends DefaultProject{
     result
   }
 
+  private def updateReadMe = projectVersion.get match {
+    case Some(value: BasicVersion) => {
+      val readMeFile    = new File("README.md")
 
+      FileUtilities.readString(readMeFile, log) match {
+        case Left(e)              => Some(e)
+        case Right(readMeContent) => {
+          val previousVersion = BasicVersion(value.major, value.minor, Some(value.micro.getOrElse(0) - 1), value.extra)
+          FileUtilities.write(readMeFile, readMeContent.replaceAll(previousVersion.toString, value.toString), log)
+
+          log.info("README.md was updated.")
+
+          None
+        }
+      }
+    }
+    case _ => None
+  }
 
 //  lazy val publishSnapshot = publishSnapshotAction
 //  def publishSnapshotAction = task{
