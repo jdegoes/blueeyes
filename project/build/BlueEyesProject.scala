@@ -79,7 +79,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   <artifactId>commons-collections</artifactId>
   <version>3.2.1</version>
   */
-
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
 
@@ -90,4 +89,5 @@ trait Repositories {
   val sonatyperelease = MavenRepository("Sonatype Releases",          "http://oss.sonatype.org/content/repositories/releases")
   val nexusscalatools = MavenRepository("Nexus Scala Tools",          "http://nexus.scala-tools.org/content/repositories/releases")
   val mavenrepo1      = MavenRepository("Maven Repo 1",               "http://repo1.maven.org/maven2/")
+  val scalablerepo    = MavenRepository("Maven Repo 1",               "http://scalablesolutions.se/akka/repository")
 }
