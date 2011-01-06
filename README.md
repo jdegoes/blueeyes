@@ -398,12 +398,10 @@ If you have multiple services, and one service needs to consume another, you can
               path("/foo") {
                 get { request: HttpRequest[String] =>
                   // Locate foo/v1 service and perform HTTP GET on /bar path
-                  val content = locator("foo", "1.02.32") { fooService =>
-                    fooService {
-                      path$("/bar") {
-                        get$ { response =>
-                          response.content.get
-                        }
+                  val content = locator("foo", "1.02.32") {
+                    path$("/bar") {
+                      get$ { response =>
+                        response.content.get
                       }
                     }
                   }
