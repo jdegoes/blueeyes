@@ -390,21 +390,26 @@ For example:  */blueeyes/services/healthmon/v1/health*
 
 If you have multiple services, and one service needs to consume another, you can use the service locator combinator. This combinator uses information in a config file to determine where to locate services, and provides a tailor-made client that can be used to communicate with them.
 
-trait ServiceLocatorDemo extends BlueEyesServiceBuilder {
-  val serviceLocatorService = service ("email", "1.01") {
-    serviceLocator { locator =>
-      context => {
-        request {
-          path("/foo") {
-            get { request: HttpRequest[String] =>
-              // Locate foo/v1 service and perform HTTP GET on /bar path
-              locator("foo", "1.02.32") { fooService =>
-                fooService {
-                  path$("/bar") {
-                    get$ { response =>
-                      response.content.get
+    trait ServiceLocatorDemo extends BlueEyesServiceBuilder {
+      val serviceLocatorService = service ("email", "1.01") {
+        serviceLocator { locator =>
+          context => {
+            request {
+              path("/foo") {
+                get { request: HttpRequest[String] =>
+                  // Locate foo/v1 service and perform HTTP GET on /bar path
+                  val content = locator("foo", "1.02.32") { fooService =>
+                    fooService {
+                      path$("/bar") {
+                        get$ { response =>
+                          response.content.get
+                        }
+                      }
                     }
                   }
+                  
+                  // Do something with content
+                  ...
                 }
               }
             }
@@ -412,8 +417,6 @@ trait ServiceLocatorDemo extends BlueEyesServiceBuilder {
         }
       }
     }
-  }
-}
 
 ## Data Exchange
 
