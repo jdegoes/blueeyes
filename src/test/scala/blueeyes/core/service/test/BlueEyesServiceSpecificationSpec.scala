@@ -36,13 +36,25 @@ trait TestService extends BlueEyesServiceBuilderString {
         }~
         path("/asynch/future") {
           get { request: HttpRequest[String] =>
-            Future.async {
+            async {
               serviceResponse
             }
           }
         }
       }
     }
+  }
+
+  private def async[T](f: => T): Future[T] = {
+    val result = new Future[T]
+
+    import scala.actors.Actor.actor
+    actor {
+      Thread.sleep(1000)
+      result.deliver(f)
+    }
+
+    result
   }
 } 
 

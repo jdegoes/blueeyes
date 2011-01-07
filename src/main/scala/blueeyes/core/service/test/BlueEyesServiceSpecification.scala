@@ -2,11 +2,11 @@ package blueeyes.core.service.test
 
 import org.specs.Specification
 import blueeyes.util.Future
-import blueeyes.core.http.{HttpRequest}
 import org.specs.specification.{Result, Example, ExampleDescription}
 import blueeyes.core.service._
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
+import blueeyes.core.http.HttpRequest
 
 class BlueEyesServiceSpecification[T] extends Specification with HttpClientTransformerCombinators with HttpServer[T] with HttpReflectiveServiceList[T]{ self: HttpServer[T] =>
 
@@ -18,8 +18,8 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
   def stopTimeOut   = 60000
   def configuration = ""
 
-  private def startServer = waitForResponse[Unit](start, startTimeOut)
-  private def stopServer  = waitForResponse[Unit](stop, stopTimeOut)
+  private def startServer = waitForResponse[Unit](start, Some(startTimeOut), {why => throw why})
+  private def stopServer  = waitForResponse[Unit](stop, Some(stopTimeOut),   {why => throw why})
 
   override def main(args: Array[String]): Unit = super.main(args)
 
@@ -28,17 +28,21 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
     Configgy.config
   }  
   
-  implicit def resultToFuture[V, S](result: Result[V]) = new Future[S]()
+  implicit def resultToFuture[V, S](result: Result[V]) = Future.dead[S]
 
   implicit def specifyExample[S](clientTransformer: HttpClientTransformer[T, S]): SpecifiedExample[S] = new SpecifiedExample[S](clientTransformer)
 
-  private def waitForResponse[V](future: Future[V], timeout: Long) = {
+  private def waitForResponse[V](future: Future[V], timeout: Option[Long], f: Throwable => Unit) = {
     if (!future.isDelivered){
       val latch        = new CountDownLatch(1)
 
       future.deliverTo(v => {latch.countDown})
+      future.ifCanceled{ why =>
+        latch.countDown()
+        why.foreach(f(_))
+      }      
 
-      latch.await(timeout, TimeUnit.MILLISECONDS)
+      timeout.map(latch.await(_, TimeUnit.MILLISECONDS)).getOrElse(latch.await())
     }
     future.value
   }
@@ -48,27 +52,14 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
       val example = forExample
 
       example.in({
-        val countDownLatch = new CountDownLatch(1)  
-
-        val client = new SpecClient(example, what)
-        val result = client(clientTransformer)
-
-        result.ifCanceled{ why =>
-          countDownLatch.countDown()
-          why.foreach(throw _)
-
-        }
-        result.deliverTo{ f =>
-          countDownLatch.countDown()
-        }
+        val future = new SpecClient(example, what)(clientTransformer)
+        waitForResponse(future, Some(1000 * 60 * 5), {why => ()})
       })
     }
   }
 
   private class SpecClient(example: Example, what: String) extends HttpClient[T]{
-
     def apply(request: HttpRequest[T]) = {
-
       example.exampleDescription = ExampleDescription(("HTTP %s %s should " + what).format(request.method.value, request.uri))
 
       self.apply(request)
