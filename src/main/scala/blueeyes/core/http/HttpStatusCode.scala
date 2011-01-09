@@ -38,7 +38,7 @@ object HttpStatusCodes {
   case object Transformation            extends Warning(214, "A transformation changed the content-coding of the response, or the entity-body of the response.")
   case object MiscellaneousPersistent   extends Warning(299, "Miscellaneous persistent warning.")
   
-  case object OK              extends Success(200, "The request was successful.")
+  case object OK              extends Success(200, "")
   case object Created         extends Success(201, "The request has been fulfilled and resulted in a new resource being created.")
   case object Accepted        extends Success(202, "The request has been accepted for processing, but the processing has not been completed.")
   case object Non             extends Success(203, "The server successfully processed the request, but is returning information that may be from another source.")

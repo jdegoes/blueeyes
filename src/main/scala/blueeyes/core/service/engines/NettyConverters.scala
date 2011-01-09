@@ -16,8 +16,13 @@ trait NettyConverters {
     case "HTTP/1.0" => `HTTP/1.0`
     case "HTTP/1.1" => `HTTP/1.1`
   }
+  
   implicit def toNettyVersion(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
-  implicit def toNettyStatus(status : HttpStatus) : HttpResponseStatus = new HttpResponseStatus(status.code.value, status.reason)
+  
+  implicit def toNettyStatus(status : HttpStatus) : HttpResponseStatus = status.code match {
+    case HttpStatusCodes.OK => HttpResponseStatus.OK
+    case _ => new HttpResponseStatus(status.code.value, status.reason)
+  }
   
   implicit def fromNettyMethod(method: NettyHttpMethod): HttpMethod = method match{
     case NettyHttpMethod.GET      => HttpMethods.GET
@@ -48,7 +53,7 @@ trait NettyConverters {
     val content             = if (nettyContent.readable()) Some(contentBijection(nettyContent)) else None
   
     val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
-    val remoteHost          =  xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
+    val remoteHost = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }

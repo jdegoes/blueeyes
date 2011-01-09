@@ -27,20 +27,24 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
       futures + requestFuture
 
-      requestFuture.deliverTo(response => {
+      requestFuture.deliverTo { response => 
         futures - requestFuture
-        writeResponse(event) (response)
-      })
+        writeResponse(event)(response)
+      }
 
-      requestFuture.ifCanceled{why =>
+      requestFuture.ifCanceled { why =>
         futures - requestFuture
-        why.foreach{t => if (!t.isInstanceOf[TimeoutException]) {
-            writeResponse(event) (toResponse(t))
-          }
-        }
-        why.orElse{
-          event.getChannel.close
-          None
+        
+        why match {
+          case Some(throwable) =>
+            if (!throwable.isInstanceOf[TimeoutException]) {
+              writeResponse(event) {
+                toResponse(throwable)
+              }
+            }
+            
+          case None =>
+            event.getChannel.close
         }
       }
     }
