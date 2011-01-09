@@ -55,7 +55,7 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin  {
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin with CoverageProject {
   val scalatest      = "org.scalatest"                % "scalatest"           % "1.2"           % "test"
   val scalacheck     = "org.scala-tools.testing"      % "scalacheck_2.8.0"    % "1.7"           % "compile"
   val mockito        = "org.mockito"                  % "mockito-all"         % "1.8.4"         % "compile"
@@ -79,7 +79,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   <artifactId>commons-collections</artifactId>
   <version>3.2.1</version>
   */
-
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
 
@@ -90,4 +89,5 @@ trait Repositories {
   val sonatyperelease = MavenRepository("Sonatype Releases",          "http://oss.sonatype.org/content/repositories/releases")
   val nexusscalatools = MavenRepository("Nexus Scala Tools",          "http://nexus.scala-tools.org/content/repositories/releases")
   val mavenrepo1      = MavenRepository("Maven Repo 1",               "http://repo1.maven.org/maven2/")
+  val scalablerepo    = MavenRepository("Maven Repo 1",               "http://scalablesolutions.se/akka/repository")
 }

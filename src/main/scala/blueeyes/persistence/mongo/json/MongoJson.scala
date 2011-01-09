@@ -18,7 +18,7 @@ object MongoJson {
   implicit def dbObject2JValue(v: DBObject) = new CanConvertToJValue { def toJValue: JObject = mongoObject2JObject(v) }
 
   implicit def mongoObject2JObject(dbObject: DBObject): JObject = {
-    val allKeys  = asSet(dbObject.keySet)
+    val allKeys  = asScalaSet(dbObject.keySet)
     val pureKeys = allKeys.filter(_ != "_id")
 
     def toJField(key: String): JField = {

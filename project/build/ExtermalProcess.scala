@@ -1,24 +1,30 @@
+import java.io.{File, InputStream, ByteArrayOutputStream, IOException}
 import sbt._
 import Process._
-import java.io.{InputStream, ByteArrayOutputStream, IOException}
+import java.lang.{ProcessBuilder => JProcessBuilder}
 
 object ExtermalProcess{
-  def apply(command: List[String], input: Option[String], log: Logger) ={
+  def apply(command: List[String], input: Option[String], directory: Option[String], log: Logger) ={
 
     val outputStream = new ByteArrayOutputStream
     val errorStream  = new ByteArrayOutputStream
 
-    val process = command run (new ProcessIO(writeTo(input), pumpStream(outputStream, log) _, pumpStream(errorStream, log) _ ))
+    var builder = new JProcessBuilder(command.toArray : _*)  
+    builder = directory.map(v => builder.directory(new File(v))).getOrElse(builder)
 
-    if (process.exitValue != 0){
-      throw new Exception("Process exitValue=" + process.exitValue)
-    }
+    val process = builder run (new ProcessIO(writeTo(input), pumpStream(outputStream, log) _, pumpStream(errorStream, log) _))
+
+    val exitValue = process.exitValue
 
     if (errorStream.size() != 0) log.error(new String(errorStream.toByteArray))
 
     val output = new String(outputStream.toByteArray)
 
-    log.info(output)
+    log.info(output)    
+
+    if (exitValue != 0) {
+      throw new Exception("Process exitValue=" + process.exitValue)
+    }
 
     output
   }
