@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>src/main/scala/blueeyes/util/Future.scala</string>
+	<string>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,6 +21,20 @@
 	<integer>405</integer>
 	<key>metaData</key>
 	<dict>
+		<key>README.md</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>43</integer>
+				<key>line</key>
+				<integer>403</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>369</integer>
+		</dict>
 		<key>src/main/scala/blueeyes/core/http/HttpRequest.scala</key>
 		<dict>
 			<key>caret</key>
@@ -29,6 +43,20 @@
 				<integer>64</integer>
 				<key>line</key>
 				<integer>6</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/core/service/HttpClient.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>4</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -48,6 +76,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>102</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/demo/BlueEyesDemo.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>28</integer>
+				<key>line</key>
+				<integer>41</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>13</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/health/time/Duration.scala</key>
 		<dict>
@@ -163,6 +205,20 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
+		<key>src/main/scala/blueeyes/persistence/mongo/Mongo.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>5</integer>
+		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/MongoFilter.scala</key>
 		<dict>
 			<key>caret</key>
@@ -182,14 +238,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>41</integer>
+				<integer>172</integer>
 				<key>line</key>
-				<integer>160</integer>
+				<integer>128</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>116</integer>
+			<integer>91</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</key>
 		<dict>
@@ -203,7 +259,7 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>30</integer>
+			<integer>46</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/RealMongo.scala</key>
 		<dict>
@@ -266,14 +322,60 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>33</integer>
 				<key>line</key>
-				<integer>6</integer>
+				<integer>387</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>176</integer>
+			<integer>366</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>14</integer>
+				<key>line</key>
+				<integer>387</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>33</integer>
+				<key>line</key>
+				<integer>387</integer>
+			</dict>
+		</dict>
+		<key>src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>3</integer>
+				<key>line</key>
+				<integer>81</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>30</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>60</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>3</integer>
+				<key>line</key>
+				<integer>81</integer>
+			</dict>
 		</dict>
 		<key>src/test/scala/blueeyes/core/service/engines/NettyRequestHandlerSpec.scala</key>
 		<dict>
@@ -321,11 +423,18 @@
 	<key>openDocuments</key>
 	<array>
 		<string>src/main/scala/blueeyes/util/Future.scala</string>
+		<string>src/main/scala/blueeyes/core/service/HttpClient.scala</string>
+		<string>README.md</string>
+		<string>src/main/scala/blueeyes/persistence/mongo/Mongo.scala</string>
+		<string>src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala</string>
+		<string>src/main/scala/blueeyes/persistence/mongo/MongoQuery.scala</string>
+		<string>src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala</string>
 		<string>src/test/scala/blueeyes/util/FutureSpec.scala</string>
+		<string>src/main/scala/blueeyes/demo/BlueEyesDemo.scala</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{528, 199}, {1392, 979}}</string>
+	<string>{{550, 111}, {1392, 979}}</string>
 </dict>
 </plist>

@@ -42,32 +42,60 @@ class Future[T] {
    */
   def deliver(computation: => T): Future[T] = {
     writeLock {
-      if (_isCanceled) this
-      else if (_isSet) Predef.error("Future already delivered")
+      if (_isSet) Predef.error("Future already delivered")
+      else if (_isCanceled) None
       else {
         try {
-          val deliverable = computation
+          val deliverable = computation // This line could throw an exception since it's the first time we evaluate the computaiton
           
+          // No exception was thrown, so future can be marked as delivered:
           _result = Some(deliverable)
           _isSet  = true
-
-          listeners.foreach { listener =>
-            trapError {
-              listener(deliverable)
-            }
-          }
-
-          _listeners.clear()
+          
+          Some(Right(deliverable))
         }
         catch {
           case error: Throwable => 
-            cancel(error)
+            Some(Left(error))
         }
       }
+    } match {
+      case None => 
+      
+      case Some(Left(why)) => cancel(why)
+      
+      case Some(Right(deliverable)) =>
+        // This is actually safe despite the absence of a write lock,
+        // because the future's state is set to delivered, so _listeners
+        // list cannot possibly change except through this method.
+        
+        _listeners.foreach { listener =>
+          trapError {
+            listener(deliverable)
+          }
+        }
+        
+        _listeners.clear()
     }
     
     this
   }
+  
+  /** Attempts to cancel the future. This may succeed only if the future is
+   * not already delivered, and if all cancel conditions are satisfied.
+   * <p>
+   * If a future is canceled, the result will never be delivered.
+   *
+   * @return true if the future is canceled, false otherwise.
+   */
+  def cancel(): Boolean = cancel(None)
+
+  /** Attempts to cancel the future. This may succeed only if the future is
+   * not already delivered, and if all cancel conditions are satisfied.
+   */
+  def cancel(e: Throwable): Boolean = cancel(Some(e))
+  
+  def cancel(o: Option[Throwable]): Boolean = internalCancel(o)
 
   /** Installs the specified canceler on the future. Under ordinary
    * circumstances, the future will not be canceled unless all cancelers
@@ -89,7 +117,7 @@ class Future[T] {
    * <p>
    * This method does not normally need to be called, since there is no
    * difference between a future being canceled and a future taking an
-   * arbitrarily long amount of time to evaluate. It's provided primarily
+   * arbitrarily long amount of time to complete. It's provided primarily
    * for implementation of future primitives to save resources when it's
    * explicitly known the result of a future will not be used.
    */
@@ -124,22 +152,6 @@ class Future[T] {
     
     f
   }
-
-  /** Attempts to cancel the future. This may succeed only if the future is
-   * not already delivered, and if all cancel conditions are satisfied.
-   * <p>
-   * If a future is canceled, the result will never be delivered.
-   *
-   * @return true if the future is canceled, false otherwise.
-   */
-  def cancel(): Boolean = cancel(None)
-
-  /** Attempts to cancel the future. This may succeed only if the future is
-   * not already delivered, and if all cancel conditions are satisfied.
-   */
-  def cancel(e: Throwable): Boolean = cancel(Some(e))
-  
-  def cancel(o: Option[Throwable]): Boolean = internalCancel(o)
 
   /** Determines if the future is "done" -- that is, delivered or canceled.
    */
@@ -330,11 +342,18 @@ class Future[T] {
 
   private def forceCancel(error: Option[Throwable]): Future[T] = {
     writeLock {
-      if (!_isCanceled) {
+      if (_isCanceled) false
+      else {
         _error      = error        
         _isCanceled = true
-
-        canceled.foreach { listener =>
+        
+        true
+      }
+    } match {
+      case false =>
+      
+      case true =>
+        _canceled.foreach { listener =>
           trapError {
             listener(error)
           }
@@ -342,26 +361,25 @@ class Future[T] {
         
         _canceled.clear()
         _cancelers.clear()
-      }
     }
 
-    return this
+    this
   }
   
   private def internalCancel(error: Option[Throwable]): Boolean = {
     writeLock {
-      if (isDone) false           // [-- Already done, can't be canceled
-      else if (isCanceled) true   // <-- Already canceled, nothing to do
-      else {                      // <-- Ask to see if everyone's OK with canceling
-        var shouldCancel = cancelers.foldLeft(true){ (v, canceller) => v && canceller()}
-
-        if (shouldCancel) {
-          // Everyone's OK with canceling, mark state & notify:
-          forceCancel(error)
-        }
-
-        shouldCancel
+      if (isDone) Left(false)           // <-- Already done, can't be canceled
+      else if (isCanceled) Left(true)   // <-- Already canceled, nothing to do
+      else {                            
+        // Ask to see if everyone's OK with canceling:
+        Right(cancelers.foldLeft(true){ (v, canceller) => v && canceller()})
       }
+    } match {
+      case Left(canceled) => canceled
+      
+      case Right(true) => forceCancel(error); true
+      
+      case Right(false) => false
     }
   }
   
@@ -402,7 +420,7 @@ class Future[T] {
       case error: Throwable =>
         Thread.getDefaultUncaughtExceptionHandler match {
           case handler: Thread.UncaughtExceptionHandler =>
-            handler.uncaughtException(Thread.currentThread(), error)
+            handler.uncaughtException(Thread.currentThread, error)
             
           case null => 
         }

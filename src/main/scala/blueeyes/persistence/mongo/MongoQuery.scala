@@ -125,6 +125,7 @@ object MongoQueryBuilder{
   }
 
   def select(selection: JPath*)                 = new FromQueryEntryPoint[MongoSelectQuery]   ((collection: MongoCollection) => {MongoSelectQuery(MongoSelection(List(selection: _*)), collection)})
+  def selectAll                                 = select()
   def distinct(selection: JPath)                = new FromQueryEntryPoint[MongoDistinctQuery] ((collection: MongoCollection) => {MongoDistinctQuery(selection, collection)})
   def selectOne(selection: JPath*)              = new FromQueryEntryPoint[MongoSelectOneQuery]((collection: MongoCollection) => {MongoSelectOneQuery(MongoSelection(List(selection: _*)), collection)})
   def remove                                    = new FromQueryEntryPoint[MongoRemoveQuery]   ((collection: MongoCollection) => {MongoRemoveQuery(collection)})
