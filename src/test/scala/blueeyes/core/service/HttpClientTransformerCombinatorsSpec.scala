@@ -61,7 +61,8 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
 
     h(mockClient)
 
-    mockClient.request.get mustEqual(initialRequest.copy(remoteHost = Some(InetAddress.getLocalHost)))
+    mockClient.request.get mustEqual(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress()), 
+      remoteHost = Some(InetAddress.getLocalHost)))
   }
   "sets http version" in{
     val h = version$(HttpVersions.`HTTP/1.0`){

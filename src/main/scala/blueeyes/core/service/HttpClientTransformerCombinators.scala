@@ -39,7 +39,8 @@ trait HttpClientTransformerCombinators{
   }
 
   def remoteHost$[T, S](remoteHost: InetAddress)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =
-    copyRequest((request: HttpRequest[T]) => request.copy(remoteHost = Some(remoteHost)))(transformer)
+    copyRequest((request: HttpRequest[T]) => request.copy(remoteHost = Some(remoteHost),  
+      headers = request.headers + Tuple2("X-Forwarded-For", remoteHost.getHostAddress())))(transformer)
 
   def version$[T, S](version: HttpVersion)(transformer: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] =
     copyRequest((request: HttpRequest[T]) => request.copy(version = version))(transformer)
