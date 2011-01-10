@@ -11,7 +11,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.util.Future
 import blueeyes.util.FutureImplicits
 
-class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits {
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits{
   "composition of paths" should {
     "have the right type" in {
       val handler: HttpRequestHandler[Int] = {
@@ -31,7 +31,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
   "default cookies should propagate correctly" in {
     val defaultValue = "defaultValue"
     val f = path("/foo/bar") {
-      cookie('someCookie, defaultValue) { cookieVal =>
+      cookie('someCookie ?: defaultValue) { cookieVal =>
         get { (request: HttpRequest[String]) =>
           Future(HttpResponse[String](content=Some(cookieVal)))
         }

@@ -29,7 +29,7 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
   def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
 }
 
-trait MongoImplicits extends JPathImplicits with MongoFilterImplicits {
+trait MongoImplicits extends JPathImplicits with MongoFilterImplicits with MongoQueryBuilder{
   implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
 
   implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
@@ -107,7 +107,7 @@ trait MapReduceOutput{
  * </pre>
  */
 
-object MongoQueryBuilder{
+trait MongoQueryBuilder{
   class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
     def from (collection: MongoCollection): T = f(collection)
   }
@@ -142,3 +142,5 @@ object MongoQueryBuilder{
   def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint[MongoMapReduceQuery](((collection: MongoCollection) => {MongoMapReduceQuery(map, reduce, collection, None, None)}))
   def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(List(selection: _*)), collection, initial, reduce)})
 }
+
+object MongoQueryBuilder extends MongoQueryBuilder

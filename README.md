@@ -432,6 +432,126 @@ BlueEyes has several kinds of caches.
 
 BlueEyes has a full-featured Scala facade to MongoDB.
 
+First of all it is necessary to inject mongo database.
+
+    import blueeyes.persistence.mongo._
+
+    lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
+    val mongo         = injector.getInstance(classOf[Mongo])
+    val database      = mongo.database( "mydb" )
+
+To modify/get documents from mongo database it is necessary to create mongo query then execute it using mongo database instance (created in previous example).
+
+    val query    = selectOne().from("mycollection").sortBy("foo.bar" <<)
+    val document = database(query)
+
+To restrict documents scope it is possible to create filter. Possible filters are: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches).
+  * Equals filter:
+      "foo" === "bar"
+
+  * Greater filter:
+      "foo" > "bar"
+
+It is possible to combine queries in more complex complex query using "|" (or) and "&" (and) operators.
+     "foo" === "bar" | "foo" > "baz"
+
+BlueEyes supports documents manipulations queries: querying, removing, updating (whole document and some documents fields) and inserting, index queries, group/map reduce queries:
+
+ 1. Querying documents queries
+
+ * Select all documents:
+    val query    = select().from("mycollection")
+
+ * Select multiple documents and sort by a field:
+    val query    = select().from("mycollection").sortBy("foo.bar" <<)
+
+ * Select multiple documents by criteria:
+    val query    = select().from("mycollection").where("foo.bar" === "blahblah")
+
+ * Select multiple documents and skip some documents:
+    val query    = select().from("mycollection").skip(20)
+
+ * Select limited count of documents:
+    val query    = select().from("mycollection").limit(20)
+
+ * Select only some documents fields:
+    val query    = select("foo", "bar").from("mycollection")
+
+ * Distinct multiple documents. It is possible to sort documents, select by criteria, skip documents, select limited count of documents and select only some documents fields (see examples above):
+    val query    = distinct().from("mycollection")
+
+ * Select one document. It is possible to sort documents and select by criteria (see examples above):
+    val query    = selectOne().from("mycollection")
+
+ * Select documents count in collection:
+    val query    = count.from("mycollection")
+
+ * Select documents count by criteria:
+    val query    = count.from("mycollection")
+
+ 2. Removing documents queries
+
+ * Remove all documents:
+    val query    = remove.from("mycollection")
+
+ * Remove documents by criteria:
+    val query    = remove.from("mycollection").where("foo.bar" === "blahblah")
+
+ 3. Inserting documents queries
+
+ * Insert documents:
+    val query    = insert(jObject1, jObject2).into("mycollection")
+
+ 4. Index modification queries
+
+ * Ensure index exists:
+    val query    = ensureIndex("index1").on("mycollection", "foo", "bar")
+
+ * Ensure unique index exists:
+    ensureUniqueIndex("index1").on("mycollection", "foo", "bar")
+
+ * Drop index:
+    val query    = dropIndex("index1").on("mycollection")
+
+ * Drop indexes:
+    val query    = dropIndexes.on("mycollection")
+
+ 5. Updating documents queries (It is possible to update both and some documents fields)
+
+ * Update one document:
+    val query    = update("mycollection").set(MongoUpdateObject(jObject))
+
+ * Update one document by criteria:
+    update("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
+
+ * Update many documents:
+    val query    = updateMany("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
+
+ * Upsert one document:
+    val query    = upsert("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
+
+ * Upsert many documents:
+    val query    = upsertMany("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
+
+ 6. Group/map reduce queries
+
+ * Group query
+    val intial = JsonParser.parse("""{ "csum": 10.0 }""").asInstanceOf[JObject]
+    val query  = group(initial, "function(obj,prev) { prev.csum += obj.bar}", "foo").from("mycollection")
+
+ * Map reduce query
+    val map     = """function(){ this.tags.forEach( function(z){ emit( z , { count : 1 } ); } );};"""
+    val reduce  = """function( key , values ){ var total = 0; for ( var i=0; i<values.length; i++ ) total += values[i].count; return { count : total }; };"""
+
+    val query   = map(map, reduce).from("mycollection")
+
+To update document field it is necessary to create Mongo Update. Possible updates: "inc" (increments field), "set" (sets field), "unset" (unset fields), "popLast" (removes the last element in an array), "popFirst" (removes the first element in an array), "push" (appends value to array field), "pull" (removes all occurrences of value from array field), "pushAll" (appends each value to array field), "pullAll" (removes all occurrences of each value from array field).
+ * Mongo update
+    val query   = "foo" unset
+
+It is possible to combine simple updates into complex update using & (and) operator"
+    val query   = "foo" unset & "bar" set (1)
+
 ## Continuous Deployment
 
 BlueEyes is designed to support the lean development practice of _continuous deployment_. In continuous deployment, the team can safely deploy code as often as required by business needs -- even many times a day.

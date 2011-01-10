@@ -9,7 +9,6 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
-import blueeyes.persistence.mongo.MongoQueryBuilder._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
@@ -118,6 +117,6 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
 }
 
 case class BlueEyesDemoConfig(config: ConfigMap, mongo: Mongo){
-  val database    = mongo.database(config.getString("mongo.database.contact.list").getOrElse("contact.list"))
-  val collection  = config.getString("mongo.collection.contact.list").getOrElse("contact.list")
+  val database    = mongo.database(config.getString("mongo.database.contacts").getOrElse("contacts"))
+  val collection  = config.getString("mongo.collection.contacts").getOrElse("contacts")
 }

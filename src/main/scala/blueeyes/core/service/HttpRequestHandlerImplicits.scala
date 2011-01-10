@@ -88,5 +88,11 @@ trait HttpRequestHandlerImplicits {
     
     def && (r2: (V1 => HttpRequestHandler2[T, S]) => HttpRequestHandler2[T, S])(h: (U1, V1) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = & (r2)(h)
   }
+
+  implicit def identifierToIdentifierWithDefault[S](default: => S) = new {
+    def ?: [T](identifier: T) = {
+      IdentifierWithDefault[T, S](identifier, () => default)
+    }
+  }
 }
 object HttpRequestHandlerImplicits extends HttpRequestHandlerImplicits

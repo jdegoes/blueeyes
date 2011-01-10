@@ -261,6 +261,10 @@ trait HttpRequestHandlerCombinators {
     request.parameters(s1)
   } { h }
 
+  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String])(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
+  } { h }
+
   /** A special-case extractor for parameters.
    * <pre>
    * parameters('username, 'password) { (username, password) =>
@@ -274,16 +278,32 @@ trait HttpRequestHandlerCombinators {
     (request.parameters(s1), request.parameters(s2))
   } { h }
   
+  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default))
+  } { h }
+
   def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
     (request.parameters(s1), request.parameters(s2), request.parameters(s3))
   } { h }
   
+  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default))
+  } { h }
+
   def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
     (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4))
   } { h }
   
+  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default))
+  } { h }
+
   def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
     (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
+  } { h }
+
+  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default), request.parameters.get(s5AndDefault.identifier).getOrElse(s5AndDefault.default))
   } { h }
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
@@ -313,8 +333,8 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookie[T, S](s1: Symbol, defaultValue: => String)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
-    extractCookie(request, s1, Some(defaultValue))
+  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String])(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+    extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
   } { h }
 
   /** A special-case extractor for cookies.
@@ -330,84 +350,115 @@ trait HttpRequestHandlerCombinators {
     (extractCookie(request, s1), extractCookie(request, s2))
   } { h }
 
+  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)))
+  } { h }
+
   def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3))
+  } { h }
+
+  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)))
   } { h }
 
   def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4))
   } { h }
 
+  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s4AndDefault.default)))
+  } { h }
+
   def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4), extractCookie(request, s5))
   } { h }
 
-  private def extractField[F <: JValue](content: JValue, s: Symbol)(implicit mc: Manifest[F]): F = {
+  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)))
+  } { h }
+
+  private def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
     val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
-    
-    ((content \ s.name) -->? c).getOrElse(error("Expected field " + s.name + " to be " + c.getName)).asInstanceOf[F]
+
+    ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
   }
 
+  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
 
-  def field[S, F1 <: JValue](s1: Symbol)(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = {
+  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = {
     val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
     
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
-      extractField(content, s1)
+      extractField(content, s1AndDefault)
     } (h)
   }
   
-  def fields[S, F1 <: JValue, F2 <: JValue](s1: Symbol, s2: Symbol)(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] = {
+  def field[S, F1 <: JValue](s1: Symbol)(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = field(IdentifierWithDefault(s1, fieldError(s1, mc1) _))(h)(mc1)
+
+  def fields[S, F1 <: JValue, F2 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2])(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] = {
     extract { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1)(mc1),
-        extractField(content, s2)(mc2)
+        extractField(content, s1AndDefault)(mc1),
+        extractField(content, s2AndDefault)(mc2)
       )
     } (h)
   }
   
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol)(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] = {
+  def fields[S, F1 <: JValue, F2 <: JValue](s1: Symbol, s2: Symbol)(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] =
+    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _))(h)(mc1, mc2)
+
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3])(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] = {
     extract { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1)(mc1),
-        extractField(content, s2)(mc2),
-        extractField(content, s3)(mc3)
+        extractField(content, s1AndDefault)(mc1),
+        extractField(content, s2AndDefault)(mc2),
+        extractField(content, s3AndDefault)(mc3)
       )
     } (h)
   }
+
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol)(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] =
+    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _))(h)(mc1, mc2, mc3)
   
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] = {
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4])(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] = {
     extract { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1)(mc1),
-        extractField(content, s2)(mc2),
-        extractField(content, s3)(mc3),
-        extractField(content, s4)(mc4)
+        extractField(content, s1AndDefault)(mc1),
+        extractField(content, s2AndDefault)(mc2),
+        extractField(content, s3AndDefault)(mc3),
+        extractField(content, s4AndDefault)(mc4)
       )
     } (h)
   }
+
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] =
+    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _), IdentifierWithDefault(s4, fieldError(s4, mc4) _))(h)(mc1, mc2, mc3, mc4)
   
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] = {
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4], s5AndDefault: IdentifierWithDefault[Symbol, F5])(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] = {
     extract { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
-        extractField(content, s1)(mc1),
-        extractField(content, s2)(mc2),
-        extractField(content, s3)(mc3),
-        extractField(content, s4)(mc4),
-        extractField(content, s5)(mc5)
+        extractField(content, s1AndDefault)(mc1),
+        extractField(content, s2AndDefault)(mc2),
+        extractField(content, s3AndDefault)(mc3),
+        extractField(content, s4AndDefault)(mc4),
+        extractField(content, s5AndDefault)(mc5)
       )
     } (h)
   }
+
+  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] =
+    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _), IdentifierWithDefault(s4, fieldError(s4, mc4) _), IdentifierWithDefault(s5, fieldError(s5, mc5) _))(h)(mc1, mc2, mc3, mc4, mc5)
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
@@ -468,4 +519,9 @@ trait HttpRequestHandlerCombinators {
   
     def apply(request: HttpRequest[T]): Future[HttpResponse[S]] = full.apply(request)
   }
+}
+
+
+case class IdentifierWithDefault[T, S](identifier: T, default_ : () => S) {
+  def default = default_ ()
 }

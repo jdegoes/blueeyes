@@ -26,7 +26,7 @@ trait Mongo{
  *
  * val mongo = injector.getInstance(classOf[Mongo])
  *
- * val database  = mongo.database( "mydb" );
+ * val database  = mongo.database( "mydb" )
  *
  * database(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  * </pre
