@@ -69,7 +69,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val configgy       = "net.lag"                      % "configgy"            % "2.0.0"         % "compile"
   val guice          = "com.google.inject"            % "guice"               % "2.0"           % "compile"
   val rhino          = "rhino"                        % "js"                  % "1.7R2"         % "compile"
-  val xlightweb      = "org.xlightweb"                % "xlightweb"           % "2.13"          % "compile"
+  val xlightweb      = "org.xlightweb"                % "xlightweb"           % "2.13.2"        % "compile"
   val commonscodec   = "commons-codec"                % "commons-codec"       % "1.4"           % "compile"
   val clhm_lru       = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
   val apacheColl     = "commons-collections"          % "commons-collections" % "3.2.1"         % "compile"
