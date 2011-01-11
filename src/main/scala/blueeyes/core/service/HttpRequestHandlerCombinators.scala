@@ -148,8 +148,8 @@ trait HttpRequestHandlerCombinators {
    * factor out extraction logic that's duplicated across a range of handlers.
    * <p>
    * Extractors are fail-fast combinators. If they cannot extract the required
-   * information during evaluation of isDefinedAt() method, they throw an 
-   * HttpException. 
+   * information during evaluation of isDefinedAt() method, they immediately
+   * throw an HttpException. 
    * <pre>
    * extract(_.parameters('username)) { username =>
    *   ...
