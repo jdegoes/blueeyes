@@ -63,18 +63,8 @@ trait PartialFunctionCombinators {
     def || (r2: ((V1, V2, V3, V4, V5) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3, U4, U5), (V1, V2, V3, V4, V5)] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
   }
 
-  implicit def andPartialFunctionCombinatorSugar[T, S](r1: PartialFunction[T, S] => PartialFunction[T, S]) = new {
-    def & (r2: PartialFunction[T, S] => PartialFunction[T, S])(h: PartialFunction[T, S]): PartialFunction[T, S] = new PartialFunction[T, S] {
-      def isDefinedAt(r: T): Boolean = r1(h).isDefinedAt(r) && r2(h).isDefinedAt(r)
-
-      def apply(r: T): S = r1(h).apply(r)
-    }
-
-    def && (r2: PartialFunction[T, S] => PartialFunction[T, S])(h: PartialFunction[T, S]): PartialFunction[T, S] = r1.andThen(r2)(h)
-  }
-
   implicit def andPartialFunctionCombinatorSugarExtractor1[T, S, U1, V1](r1: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def & (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S])(h: (U1, V1) => PartialFunction[T, S]): PartialFunction[T, S] = {
+    def & (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, V1) => PartialFunction[T, S]) => {
       r1 { u1 => 
         r2 { v1 =>
           h(u1, v1)
@@ -82,6 +72,54 @@ trait PartialFunctionCombinators {
       }
     }
 
-    def && (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S])(h: (U1, V1) => PartialFunction[T, S]): PartialFunction[T, S] = & (r2)(h)
+    def && (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, V1) => PartialFunction[T, S]) => & (r2)(h)
+  }
+  
+  implicit def andPartialFunctionCombinatorSugarExtractor2[T, S, U1, U2](r1: ((U1, U2) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
+    def & [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, V1) => PartialFunction[T, S]) => {
+      r1 { (u1, u2) => 
+        r2 { v1 =>
+          h(u1, u2, v1)
+        }
+      }
+    }
+
+    def && [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, V1) => PartialFunction[T, S]) => & (r2)(h)
+  }
+  
+  implicit def andPartialFunctionCombinatorSugarExtractor3[T, S, U1, U2, U3](r1: ((U1, U2, U3) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
+    def & [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, V1) => PartialFunction[T, S]) => {
+      r1 { (u1, u2, u3) => 
+        r2 { v1 =>
+          h(u1, u2, u3, v1)
+        }
+      }
+    }
+
+    def && [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, V1) => PartialFunction[T, S]) => & (r2)(h)
+  }
+  
+  implicit def andPartialFunctionCombinatorSugarExtractor4[T, S, U1, U2, U3, U4](r1: ((U1, U2, U3, U4) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
+    def & [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, U4, V1) => PartialFunction[T, S]) => {
+      r1 { (u1, u2, u3, u4) => 
+        r2 { v1 =>
+          h(u1, u2, u3, u4, v1)
+        }
+      }
+    }
+
+    def && [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, U4, V1) => PartialFunction[T, S]) => & (r2)(h)
+  }
+  
+  implicit def andPartialFunctionCombinatorSugarExtractor5[T, S, U1, U2, U3, U4, U5](r1: ((U1, U2, U3, U4, U5) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
+    def & [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, U4, U5, V1) => PartialFunction[T, S]) => {
+      r1 { (u1, u2, u3, u4, u5) => 
+        r2 { v1 =>
+          h(u1, u2, u3, u4, u5, v1)
+        }
+      }
+    }
+
+    def && [V1](r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, U2, U3, U4, U5, V1) => PartialFunction[T, S]) => & (r2)(h)
   }
 }
