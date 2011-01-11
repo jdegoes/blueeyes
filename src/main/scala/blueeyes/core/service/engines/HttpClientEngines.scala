@@ -28,6 +28,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
 
   private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
     val httpClient = if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
+    httpClient.setAutoHandleCookies(false)
 
     httpClient.send(createXLRequest(request), new IHttpResponseHandler() {
       def onResponse(response: IHttpResponse) {
