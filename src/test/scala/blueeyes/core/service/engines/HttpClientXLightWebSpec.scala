@@ -63,12 +63,9 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
 
     "Support GET to invalid server should return http error" in {
       val f = path$[String, HttpResponse[String]]("http://127.0.0.1:666/foo") {
-        get$[String, HttpResponse[String]] { r =>
-	  println("response: " + r)
-	  r
-	}
+        get$[String, HttpResponse[String]] { r => r }
       }(httpClient)
-      f.error must eventually(retries, new Duration(duration))(beSomething)
+      f.error must eventually(retries, new Duration(duration))(beNone)
     }
     
     "Support GET requests with status OK" in {

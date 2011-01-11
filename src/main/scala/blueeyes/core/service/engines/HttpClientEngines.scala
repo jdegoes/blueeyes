@@ -6,7 +6,7 @@ import blueeyes.util.Future
 import org.xlightweb.client.{HttpClient => XLHttpClient}
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
+import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, FutureResponseHandler, DeleteRequest, GetRequest, HeadRequest,
                       OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
@@ -53,8 +53,8 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     })
     httpClientInstance.setAutoHandleCookies(false)
 
-    httpClientInstance.send(createXLRequest(request), new IHttpResponseHandler() {
-      def onResponse(response: IHttpResponse) {
+    httpClientInstance.send(createXLRequest(request), new FutureResponseHandler() { self =>
+      override def onResponse(response: IHttpResponse) {
         val data = try {
           contentBijection(response.getBody)
         } catch {
@@ -70,7 +70,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
         resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
       }
 
-      def onException(e: IOException) {
+      override def onException(e: IOException) {
         val httpStatus = e match {
           case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
           case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
@@ -78,6 +78,10 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
         }
 
         resultFuture.cancel(HttpException(httpStatus, e))
+      }
+
+      resultFuture.ifCanceled { t =>
+        self.cancel(true)
       }
     })
   }
