@@ -3,7 +3,7 @@ import FileUtilities._
 import java.io.File
 
 trait CoverageProject extends BasicManagedProject{
-  private val processor      = "coverage is com.proinnovate sbt-coverage 0.1-SNAPSHOT"
+  private val processor      = "coverage is com.proinnovate sbt-coverage 0.1" // -SNAPSHOT"
   private val processorRepo  = "undercoverRepo at http://undercover.googlecode.com/svn/maven/repository/"
 
   override def updateAction = task {
