@@ -10,6 +10,21 @@ import blueeyes.core.data.Bijection
 import blueeyes.util.{Future, FutureImplicits}
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits{
+  private[this] object TransformerCombinators extends HttpClientTransformerCombinators
+  import TransformerCombinators.{path$}
+
+  /** Augments the service with health monitoring. By default, various metrics 
+   * relating to request type, request timing, and request fulfillment are
+   * exported to the health monitor.
+   *
+   * {{{
+   * healthMonitor { monitor =>
+   *   request { state =>
+   *     ...
+   *   }
+   * }
+   * }}}
+   */  
   def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
       val monitor = new HealthMonitor()
@@ -25,6 +40,16 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
+  /** Augments the service with logging.
+   *
+   * {{{
+   * logging { logger =>
+   *   request { state =>
+   *     ...
+   *   }
+   * }
+   * }}}
+   */
   def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
       val logger = Logger.configure(context.config.configMap("log"), false, false)
@@ -33,9 +58,35 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
   
-  
-  private[this] object TransformerCombinators extends HttpClientTransformerCombinators
-  import TransformerCombinators.{path$}
+  /** Augments the service with a configurable root path. If this combinator 
+   * is used, the config for the service may contain a "rootPath" setting,
+   * which is used as the root path for the service.
+   * 
+   * {{{
+   * configurableRoot {
+   *   request { state =>
+   *     ...
+   *   }
+   * }
+   * }}}
+   */
+  def configurableRoot[T, S](f: HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
+    (context: HttpServiceContext) => {
+      val underlying = f(context)
+      
+      underlying.copy(
+        request = (state: S) => {
+          val handler = underlying.request(state)
+          
+          context.config.getString("rootPath") match {
+            case None => handler
+            
+            case Some(rootPath) => path(rootPath) { handler }
+          }
+        }
+      )
+    }
+  }
   
   type ServiceLocator[T] = (String, HttpServiceVersion) => ServiceInvoker[T]
   
@@ -48,6 +99,13 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   }
   
   /**
+   * Augments the service with a locator, which is capable of creating HTTP
+   * clients that connect to other BlueEyes services based on settings
+   * in the config file.
+   * 
+   * To locate foo/v1, the locator will look at the config setting:
+   * services.foo.v1.serviceRootUrl
+   * {{{
    * serviceLocator { locator =>
    *   ...
    *   val content = locator("email", "1.01") { 
@@ -56,6 +114,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    *     }
    *   }
    * }
+   * }}}
    */
   def serviceLocator[T, S](f: ServiceLocator[T] => HttpServiceDescriptorFactory[T, S])(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
     implicit def hack[X1, X2](f: Future[X1]): Future[X2] = f.asInstanceOf[Future[X2]]
