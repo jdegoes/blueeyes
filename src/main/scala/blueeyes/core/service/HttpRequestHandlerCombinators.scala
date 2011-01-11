@@ -19,7 +19,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def path[T, S](path: RestPathPattern)(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def path[T, S](path: RestPathPattern) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.subpath) && h.isDefinedAt(path.shift(r))
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
@@ -34,7 +34,7 @@ trait HttpRequestHandlerCombinators {
   /** The method combinator creates a handler that is defined only for the 
    * specified HTTP method.
    */
-  def method[T, S](method: HttpMethod)(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def method[T, S](method: HttpMethod) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = r.method == method
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
@@ -75,38 +75,34 @@ trait HttpRequestHandlerCombinators {
    */
   def $ [T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
   
-  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { toPartial(h) } }
-  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { toPartial(h) } }
-  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { toPartial(h) } }
-  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.DELETE)   { toPartial(h) } }
-  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.HEAD)     { toPartial(h) } }
-  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PATCH)    { toPartial(h) } }
-  def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { toPartial(h) } }
-  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { toPartial(h) } }
-  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { toPartial(h) } }
-
-  /** Forces a particular combinator to match (if it does not, BadRequest will 
-   * be returned to the client).
+  /** Forces a particular combinator to match.
    * <pre>
-   * commit {
+   * commit(r => BadRequest -> "Bad path: " + r.path) {
    *   path("/foo") {
    *     ...
    *   }
    * }
    * </pre>
    */
-  def commit[T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       if (!h.isDefinedAt(r)) {
-        Future.dead(HttpException(HttpStatusCodes.BadRequest, "Invalid request: " + r))
+        val (statusCode, reason) = msgGen(r)
+        
+        Future.dead(HttpException(statusCode, reason))
       }
       else h.apply(r)
     }
   }
   
-  def commit[T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  /** Converts a full request handler into a partial request handler that 
+   * handles every input. Note: This is an implicit and will automatically
+   * convert all full request handlers into partial request handlers,
+   * as required by type signatures.
+   */
+  implicit def commit[T, S](h: HttpRequest[T] => Future[HttpResponse[S]]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
@@ -114,7 +110,8 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  /** Attemps to peek to see if a particular combinator will handle a request.
+  /** Attemps to peek to see if a particular handler will handle a request. 
+   * Used to convert a fast-failing handler into a skipping one.
    * <pre>
    * justTry {
    *   path("/foo") {
@@ -135,18 +132,31 @@ trait HttpRequestHandlerCombinators {
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h.apply(r)
   }
+  
+  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { commit { h } } }
+  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { commit { h } } }
+  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { commit { h } } }
+  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.DELETE)   { commit { h } } }
+  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.HEAD)     { commit { h } } }
+  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PATCH)    { commit { h } } }
+  def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { commit { h } } }
+  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { commit { h } } }
+  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { commit { h } } }
 
   /**
    * Extracts data from the request. The extractor combinators can be used to 
-   * factor out extraction logic that's duplicated across a range of paths or
-   * methods.
+   * factor out extraction logic that's duplicated across a range of handlers.
+   * <p>
+   * Extractors are fail-fast combinators. If they cannot extract the required
+   * information during evaluation of isDefinedAt() method, they throw an 
+   * HttpException. 
    * <pre>
    * extract(_.parameters('username)) { username =>
    *   ...
    * }
    * </pre>
    */
-  def extract[T, S, E1](extractor: HttpRequest[T] => E1)(h: E1 => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def extract[T, S, E1](extractor: HttpRequest[T] => E1) = (h: E1 => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
@@ -172,7 +182,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def extract[T, S, E1, E2](extractor: HttpRequest[T] => (E1, E2))(h: (E1, E2) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def extract2[T, S, E1, E2](extractor: HttpRequest[T] => (E1, E2)) = (h: (E1, E2) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
@@ -191,7 +201,7 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  def extract[T, S, E1, E2, E3](extractor: HttpRequest[T] => (E1, E2, E3))(h: (E1, E2, E3) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def extract3[T, S, E1, E2, E3](extractor: HttpRequest[T] => (E1, E2, E3)) = (h: (E1, E2, E3) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
@@ -210,7 +220,7 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  def extract[T, S, E1, E2, E3, E4](extractor: HttpRequest[T] => (E1, E2, E3, E4))(h: (E1, E2, E3, E4) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def extract4[T, S, E1, E2, E3, E4](extractor: HttpRequest[T] => (E1, E2, E3, E4)) = (h: (E1, E2, E3, E4) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
@@ -229,7 +239,7 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  def extract[T, S, E1, E2, E3, E4, E5](extractor: HttpRequest[T] => (E1, E2, E3, E4, E5))(h: (E1, E2, E3, E4, E5) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  def extract5[T, S, E1, E2, E3, E4, E5](extractor: HttpRequest[T] => (E1, E2, E3, E4, E5)) = (h: (E1, E2, E3, E4, E5) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
@@ -257,11 +267,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def parameter[T, S](s1: Symbol)(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
-    request.parameters(s1)
-  } { h }
-
-  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String])(h: String => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String] { request =>
+  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]) = (h: String => HttpRequestHandler2[T, S]) => extract[T, S, String] { request =>
     request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
   } { h }
 
@@ -274,35 +280,19 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */  
-  def parameters[T, S](s1: Symbol, s2: Symbol)(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
-    (request.parameters(s1), request.parameters(s2))
-  } { h }
-  
-  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+  def parameters2[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
     (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default))
   } { h }
-
-  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
-    (request.parameters(s1), request.parameters(s2), request.parameters(s3))
-  } { h }
   
-  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+  def parameters3[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
     (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default))
   } { h }
-
-  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
-    (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4))
-  } { h }
   
-  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+  def parameters4[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
     (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default))
   } { h }
 
-  def parameters[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
-    (request.parameters(s1), request.parameters(s2), request.parameters(s3), request.parameters(s4), request.parameters(s5))
-  } { h }
-
-  def parameters[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+  def parameters5[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
     (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default), request.parameters.get(s5AndDefault.identifier).getOrElse(s5AndDefault.default))
   } { h }
 
@@ -346,35 +336,35 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookies[T, S](s1: Symbol, s2: Symbol)(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+  def cookies2[T, S](s1: Symbol, s2: Symbol) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2))
   } { h }
 
-  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String] { request =>
+  def cookies2[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
     (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)))
   } { h }
 
-  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol)(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+  def cookies3[T, S](s1: Symbol, s2: Symbol, s3: Symbol) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3))
   } { h }
 
-  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String] { request =>
+  def cookies3[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
     (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)))
   } { h }
 
-  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+  def cookies4[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4))
   } { h }
 
-  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String] { request =>
+  def cookies4[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
     (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s4AndDefault.default)))
   } { h }
 
-  def cookies[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+  def cookies5[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
     (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4), extractCookie(request, s5))
   } { h }
 
-  def cookies[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String])(h: (String, String, String, String, String) => HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = extract[T, S, String, String, String, String, String] { request =>
+  def cookies5[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
     (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)))
   } { h }
 
@@ -386,7 +376,7 @@ trait HttpRequestHandlerCombinators {
 
   private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
 
-  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = {
+  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
     val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
     
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
@@ -396,10 +386,10 @@ trait HttpRequestHandlerCombinators {
     } (h)
   }
   
-  def field[S, F1 <: JValue](s1: Symbol)(h: F1 => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1]): HttpRequestHandler2[JValue, S] = field(IdentifierWithDefault(s1, fieldError(s1, mc1) _))(h)(mc1)
+  //def field[S, F1 <: JValue](s1: Symbol)(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => field(IdentifierWithDefault(s1, fieldError(s1, mc1) _))(mc1)(h)
 
-  def fields[S, F1 <: JValue, F2 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2])(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] = {
-    extract { (request: HttpRequest[JValue]) =>
+  def fields2[S, F1 <: JValue, F2 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2])(implicit mc1: Manifest[F1], mc2: Manifest[F2]) = (h: (F1, F2) => HttpRequestHandler2[JValue, S]) => {
+    extract2 { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
@@ -409,11 +399,8 @@ trait HttpRequestHandlerCombinators {
     } (h)
   }
   
-  def fields[S, F1 <: JValue, F2 <: JValue](s1: Symbol, s2: Symbol)(h: (F1, F2) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2]): HttpRequestHandler2[JValue, S] =
-    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _))(h)(mc1, mc2)
-
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3])(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] = {
-    extract { (request: HttpRequest[JValue]) =>
+  def fields3[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]) = (h: (F1, F2, F3) => HttpRequestHandler2[JValue, S]) => {
+    extract3 { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
@@ -423,12 +410,9 @@ trait HttpRequestHandlerCombinators {
       )
     } (h)
   }
-
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol)(h: (F1, F2, F3) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]): HttpRequestHandler2[JValue, S] =
-    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _))(h)(mc1, mc2, mc3)
   
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4])(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] = {
-    extract { (request: HttpRequest[JValue]) =>
+  def fields4[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]) = (h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S]) => {
+    extract4 { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
@@ -439,12 +423,9 @@ trait HttpRequestHandlerCombinators {
       )
     } (h)
   }
-
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol)(h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]): HttpRequestHandler2[JValue, S] =
-    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _), IdentifierWithDefault(s4, fieldError(s4, mc4) _))(h)(mc1, mc2, mc3, mc4)
-  
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4], s5AndDefault: IdentifierWithDefault[Symbol, F5])(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] = {
-    extract { (request: HttpRequest[JValue]) =>
+ 
+  def fields5[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4], s5AndDefault: IdentifierWithDefault[Symbol, F5])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]) = (h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S]) => {
+    extract5 { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       (
@@ -456,10 +437,7 @@ trait HttpRequestHandlerCombinators {
       )
     } (h)
   }
-
-  def fields[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol)(h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]): HttpRequestHandler2[JValue, S] =
-    fields(IdentifierWithDefault(s1, fieldError(s1, mc1) _), IdentifierWithDefault(s2, fieldError(s2, mc2) _), IdentifierWithDefault(s3, fieldError(s3, mc3) _), IdentifierWithDefault(s4, fieldError(s4, mc4) _), IdentifierWithDefault(s5, fieldError(s5, mc5) _))(h)(mc1, mc2, mc3, mc4, mc5)
-
+  
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
@@ -513,12 +491,6 @@ trait HttpRequestHandlerCombinators {
    * Requires an implicit bijection used for transcoding.
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }
-  
-  private def toPartial[T, S](full: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
-    def isDefinedAt(request: HttpRequest[T]) = true
-  
-    def apply(request: HttpRequest[T]): Future[HttpResponse[S]] = full.apply(request)
-  }
 }
 
 
