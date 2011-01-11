@@ -177,7 +177,7 @@ trait HttpRequestHandlerCombinators {
   
   /**
    * <pre>
-   * extract(r => (r.parameters('username), r.parameters('password))) { (username, password) =>
+   * extract2(r => (r.parameters('username), r.parameters('password))) { (username, password) =>
    *   ...
    * }
    * </pre>
@@ -273,7 +273,7 @@ trait HttpRequestHandlerCombinators {
 
   /** A special-case extractor for parameters.
    * <pre>
-   * parameters('username, 'password) { (username, password) =>
+   * parameters2('username, 'password) { (username, password) =>
    *   get {
    *     ...
    *   }
@@ -329,7 +329,7 @@ trait HttpRequestHandlerCombinators {
 
   /** A special-case extractor for cookies.
    * <pre>
-   * cookies('username, 'password) { (username, password) =>
+   * cookies2('username, 'password) { (username, password) =>
    *   get {
    *     ...
    *   }
