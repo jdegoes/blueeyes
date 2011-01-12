@@ -11,6 +11,7 @@ import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponse
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
 import blueeyes.core.http.HttpFailure
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import net.lag.logging.Logger
 import scala.collection.JavaConversions._
 
@@ -20,6 +21,26 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
+  private var _httpClient: Option[XLHttpClient] = None
+  private val lock = new ReentrantReadWriteLock
+
+  private def httpClient( fn: () => XLHttpClient): XLHttpClient = _httpClient match {
+    case None =>
+      lock.writeLock.lock()
+      try {
+        _httpClient match {
+          case None => {
+            _httpClient = Some(fn())
+            _httpClient.get
+          }
+          case Some(client) => client
+        }
+      }
+      finally lock.writeLock.unlock()
+
+    case Some(client) => client
+  }
+
   def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
     val result = new Future[HttpResponse[T]]() 
     executeRequest(request, result)
@@ -27,9 +48,12 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   }
 
   private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
-    val httpClient = if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
+    val httpClientInstance = httpClient(() => { 
+      if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
+    })
+    httpClientInstance.setAutoHandleCookies(false)
 
-    httpClient.send(createXLRequest(request), new IHttpResponseHandler() {
+    httpClientInstance.send(createXLRequest(request), new IHttpResponseHandler() { 
       def onResponse(response: IHttpResponse) {
         val data = try {
           contentBijection(response.getBody)
@@ -44,7 +68,6 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
           acc + (name -> response.getHeader(name))
         }
         resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
-        httpClient.close
       }
 
       def onException(e: IOException) {
@@ -54,7 +77,6 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
           case _ => HttpStatusCodes.InternalServerError
         }
 
-        httpClient.close
         resultFuture.cancel(HttpException(httpStatus, e))
       }
     })
