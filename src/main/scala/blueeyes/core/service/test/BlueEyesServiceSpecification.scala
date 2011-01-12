@@ -2,11 +2,12 @@ package blueeyes.core.service.test
 
 import org.specs.Specification
 import blueeyes.util.Future
+import blueeyes.util.RichThrowableImplicits._
 import org.specs.specification.{Result, Example, ExampleDescription}
 import blueeyes.core.service._
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
-import blueeyes.core.http.HttpRequest
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
 class BlueEyesServiceSpecification[T] extends Specification with HttpClientTransformerCombinators with HttpServer[T] with HttpReflectiveServiceList[T]{ self: HttpServer[T] =>
 
@@ -59,10 +60,24 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
   }
 
   private class SpecClient(example: Example, what: String) extends HttpClient[T]{
+    def convertErrorToResponse(th: Throwable): HttpResponse[T] = th match {
+      case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
+      case _ => {
+        val reason = th.fullStackTrace
+        
+        HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
+      }
+    }
+    
     def apply(request: HttpRequest[T]) = {
       example.exampleDescription = ExampleDescription(("HTTP %s %s should " + what).format(request.method.value, request.uri))
 
-      self.apply(request)
+      try {
+        self.apply(request)
+      }
+      catch {
+        case t: Throwable => Future[HttpResponse[T]](convertErrorToResponse(t))
+      }
     }
   }
 }
