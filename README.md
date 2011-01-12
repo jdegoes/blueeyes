@@ -416,6 +416,28 @@ If you have multiple services, and one service needs to consume another, you can
       }
     }
 
+#### Configurable Root
+
+The configurable root combinator uses the *rootPath* setting in the service's config block to shift the request handler rightward by the specified string. This is useful when you want to combine many services on a single server, but avoid name clashes.
+
+    trait ConfigurableRootDemo extends BlueEyesServiceBuilder {
+      val configurableRootService = service("configurableroot", "1.0.2") {
+        configurableRoot {
+          request {
+            path("/foo") { // true path will be context.config("services.configurableroot.v1.rootPath") + "/foo"
+              ...
+            }
+          }
+        }
+      }
+    }
+
+#### Request Logging
+
+The request logging combinator allows you to log all requests.
+
+
+
 ## Data Exchange
 
 ### JSON

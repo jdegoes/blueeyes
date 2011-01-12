@@ -23,46 +23,14 @@ trait PartialFunctionCombinators {
     def || (r2: PartialFunction[T, S] => PartialFunction[T, S])(h: PartialFunction[T, S]): PartialFunction[T, S] = r1(h).orElse(r2(h))
   }
 
-  implicit def orPartialFunctionCombinatorSugarExtractor1[T, S, U1, V1](r1: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def | (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[U1, V1] => PartialFunction[T, S]): PartialFunction[T, S] = {
-      r1(u1 => h(Left(u1))).orElse(r2(v1 => h(Right(v1))))
+  implicit def orPartialFunctionCombinatorSugarExtractor1[T, S, U1](r1: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
+    def | (r2: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: U1 => PartialFunction[T, S]) => {
+      r1(u1 => h(u1)).orElse(r2(v1 => h(v1)))
     }
 
-    def || (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[U1, V1] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
+    def || (r2: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: U1 => PartialFunction[T, S]) => | (r2)(h)
   }
-
-  implicit def orPartialFunctionCombinatorSugarExtractor2[T, S, U1, U2, V1, V2](r1: ((U1, U2) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def | (r2: ((V1, V2) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2), (V1, V2)] => PartialFunction[T, S]): PartialFunction[T, S] = {
-      r1((u1, u2) => h(Left((u1, u2)))).orElse(r2((v1, v2) => h(Right((v1, v2)))))
-    }
-
-    def || (r2: ((V1, V2) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2), (V1, V2)] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
-  }
-
-  implicit def orPartialFunctionCombinatorSugarExtractor3[T, S, U1, U2, U3, V1, V2, V3](r1: ((U1, U2, U3) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def | (r2: ((V1, V2, V3) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3), (V1, V2, V3)] => PartialFunction[T, S]): PartialFunction[T, S] = {
-      r1((u1, u2, u3) => h(Left((u1, u2, u3)))).orElse(r2((v1, v2, v3) => h(Right((v1, v2, v3)))))
-    }
-
-    def || (r2: ((V1, V2, V3) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3), (V1, V2, V3)] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
-  }
-
-  implicit def orPartialFunctionCombinatorSugarExtractor4[T, S, U1, U2, U3, U4, V1, V2, V3, V4](r1: ((U1, U2, U3, U4) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def | (r2: ((V1, V2, V3, V4) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3, U4), (V1, V2, V3, V4)] => PartialFunction[T, S]): PartialFunction[T, S] = {
-      r1((u1, u2, u3, u4) => h(Left((u1, u2, u3, u4)))).orElse(r2((v1, v2, v3, v4) => h(Right((v1, v2, v3, v4)))))
-    }
-
-    def || (r2: ((V1, V2, V3, V4) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3, U4), (V1, V2, V3, V4)] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
-  }
-
-  implicit def orPartialFunctionCombinatorSugarExtractor5[T, S, U1, U2, U3, U4, U5, V1, V2, V3, V4, V5](r1: ((U1, U2, U3, U4, U5) => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
-    def | (r2: ((V1, V2, V3, V4, V5) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3, U4, U5), (V1, V2, V3, V4, V5)] => PartialFunction[T, S]): PartialFunction[T, S] = {
-      r1((u1, u2, u3, u4, u5) => h(Left((u1, u2, u3, u4, u5)))).orElse(r2((v1, v2, v3, v4, v5) => h(Right((v1, v2, v3, v4, v5)))))
-    }
-
-    def || (r2: ((V1, V2, V3, V4, V5) => PartialFunction[T, S]) => PartialFunction[T, S])(h: Either[(U1, U2, U3, U4, U5), (V1, V2, V3, V4, V5)] => PartialFunction[T, S]): PartialFunction[T, S] = | (r2)(h)
-  }
-
+  
   implicit def andPartialFunctionCombinatorSugarExtractor1[T, S, U1, V1](r1: (U1 => PartialFunction[T, S]) => PartialFunction[T, S]) = new {
     def & (r2: (V1 => PartialFunction[T, S]) => PartialFunction[T, S]) = (h: (U1, V1) => PartialFunction[T, S]) => {
       r1 { u1 => 

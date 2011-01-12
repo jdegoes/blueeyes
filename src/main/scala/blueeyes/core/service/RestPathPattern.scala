@@ -74,6 +74,8 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
     override def toString = self.toString + " || " + that.toString
   }
   
+  def `...` (name: Symbol): RestPathPattern = this ~ RestPathPatternParsers.RegexPathPattern(new Regex("(.*$)", name.name), name.name :: Nil)
+  
   def ~ (that: RestPathPattern): RestPathPattern = new RestPathPattern {
     val parser = self.parser ~ that.parser ^^ {
       case m1 ~ m2 => m1 ++ m2

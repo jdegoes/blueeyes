@@ -88,6 +88,12 @@ class RestPathPatternSpec extends Specification{
       ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") mustBe(false)
     }
   }
+  
+  "`...` operator" should {
+    "match trailing string" in {
+      ("/foo" `...` ('rest)).apply("/foo/bar") mustEqual(Map('rest -> "/bar"))
+    }
+  }
 
   /* ---- Regex Tests ---- */ 
   "Regular expression pattern" should {
