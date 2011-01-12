@@ -30,20 +30,20 @@ trait CoverageProject extends BasicManagedProject{
   }
 
   private def installCoverage(repository: File){
-    ExtermalProcess(sbt ::: List("update"), None, Some(repository.getAbsolutePath), log)
-    ExtermalProcess(sbt ::: List("publish-local"), None, Some(repository.getAbsolutePath), log)
+    ExternalProcess(sbt ::: List("update"), None, Some(repository.getAbsolutePath), log)
+    ExternalProcess(sbt ::: List("publish-local"), None, Some(repository.getAbsolutePath), log)
 
-    val processorsAndRepos = ExtermalProcess(sbt ::: List("*show"), None, Some(repository.getAbsolutePath), log)
+    val processorsAndRepos = ExternalProcess(sbt ::: List("*show"), None, Some(repository.getAbsolutePath), log)
     if (!processorsAndRepos.contains(processorRepo))
-      ExtermalProcess(sbt ::: List("*" + processorRepo), None, Some(repository.getAbsolutePath), log)
+      ExternalProcess(sbt ::: List("*" + processorRepo), None, Some(repository.getAbsolutePath), log)
     if (!processorsAndRepos.contains(processor))
-      ExtermalProcess(sbt ::: List("*" + processor), None, Some(repository.getAbsolutePath), log)    
+      ExternalProcess(sbt ::: List("*" + processor), None, Some(repository.getAbsolutePath), log)    
   }
 
   private def sbt = List("java", "-jar", System.getProperty("user.dir") + "/project/sbt-launch-0.7.5.RC0.jar")
 
   private def checkout(repository: File) = 
-    ExtermalProcess(List("git", "clone", "https://github.com/sroebuck/sbt-coverage.git"), None, Some(repository.getAbsolutePath), log)
+    ExternalProcess(List("git", "clone", "https://github.com/sroebuck/sbt-coverage.git"), None, Some(repository.getAbsolutePath), log)
 
   def baseUpdateAction = super.updateAction
 }

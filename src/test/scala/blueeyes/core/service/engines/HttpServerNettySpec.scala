@@ -38,17 +38,21 @@ class HttpServerNettySpec extends Specification {
         Configgy.configureFromString(configPattern.format(port, port + 1))
 
         val startFuture = sampleServer.start
+        
         startFuture.deliverTo { _ =>
           error = None
           doneSignal.countDown()
         }
         startFuture.ifCanceled{v =>
+          println("Error trying to start server on ports " + port + ", " + (port + 1))
           error = v
           port  = port + 2
           doneSignal.countDown()
         }
 
-        server       = Some(sampleServer)        
+        server = Some(sampleServer)        
+        
+        doneSignal.await()
       }while(error != None)
 
       clientFacade = new SampleClientFacade(port, port + 1)

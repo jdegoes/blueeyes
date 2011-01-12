@@ -1,11 +1,16 @@
 package blueeyes.core.service.engines
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable.{HashSet, SynchronizedSet}
+
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.buffer.{ChannelBuffer}
+import org.jboss.netty.handler.timeout.TimeoutException
+import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
+
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.data.Bijection
 import blueeyes.core.service._
@@ -13,134 +18,102 @@ import blueeyes.util.Future
 import blueeyes.util.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
-import org.jboss.netty.handler.timeout.TimeoutException
-import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
+/** This handler is not thread safe, it's assumed a new one will be created 
+ * for each client connection.
+ *
+ * TODO: Pass health monitor to the request handler to report on Netty errors.
+ */
 private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
-  private val futures = new FuturesList[HttpResponse[T]]()
+  private val pendingResponses = new HashSet[Future[HttpResponse[T]]] with SynchronizedSet[Future[HttpResponse[T]]]
+  
+  private lazy val NotFound            = HttpResponse[T](HttpStatus(HttpStatusCodes.NotFound))
+  private lazy val InternalServerError = HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError))
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
-    try {
-      val nettyRequest   = event.getMessage().asInstanceOf[NettyHttpRequest]
-      val request        = fromNettyRequest(nettyRequest, event.getRemoteAddress)
-      val requestFuture  = handleRequest(request)
-
-      futures + requestFuture
-
-      requestFuture.deliverTo { response => 
-        futures - requestFuture
-        writeResponse(event)(response)
+    def convertErrorToResponse(th: Throwable): HttpResponse[T] = th match {
+      case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
+      case _ => {
+        val reason = th.fullStackTrace
+        
+        HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
       }
+    }
+    
+    def writeResponse(e: MessageEvent, response: HttpResponse[T]) {
+      val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
+      val nettyResponse = toNettyResponse(response)
+      val keepAlive     = isKeepAlive(request)
 
-      requestFuture.ifCanceled { why =>
-        futures - requestFuture
+      if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
+
+      val future = e.getChannel().write(nettyResponse)
+
+      if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
+    }
+    
+    val request = fromNettyRequest(event.getMessage.asInstanceOf[NettyHttpRequest], event.getRemoteAddress)
+    
+    val responseFuture = {
+      // The raw future may die due to error:
+      val rawFuture = try {
+        if (requestHandler.isDefinedAt(request)) requestHandler(request)
+        else Future[HttpResponse[T]](NotFound)
+      }
+      catch {
+        case why: Throwable => 
+          // An error during invocation of the request handler, convert to
+          // proper response:
+          Future[HttpResponse[T]](convertErrorToResponse(why))
+      }
+      
+      // Convert the raw future into one that cannot die:
+      rawFuture.orElse { why =>
+        try { event.getChannel.close } catch { case e: Throwable => log.error(e, "Error closing channel") }
         
         why match {
           case Some(throwable) =>
-            if (!throwable.isInstanceOf[TimeoutException]) {
-              writeResponse(event) {
-                toResponse(throwable)
-              }
-            }
-            
+            convertErrorToResponse(throwable)
+
           case None =>
-            event.getChannel.close
+            // Future was canceled for no cause.
+            InternalServerError
         }
       }
     }
-    catch {
-      case e: Throwable => log.error(e, "Error while request handling. Request=" + event); writeResponse(event) (toResponse(e))
+
+    pendingResponses += responseFuture
+
+    responseFuture.deliverTo { response => 
+      pendingResponses -= responseFuture
+      
+      writeResponse(event, response)
     }
+  }
+
+  override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+    super.channelClosed(ctx, e)
+    
+    killPending(None)
   }
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelDisconnected(ctx, e)
-    futures.cancel
+    
+    killPending(None)
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    val error    = e.getCause
-
-    log.error(error, "ExceptionCaught")
-    e.getChannel().close
+    log.error(e.getCause, "ExceptionCaught")
+    
+    killPending(Some(e.getCause))
+    
+    e.getChannel.close    
   }
-
-  private def handleRequest(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    if (requestHandler.isDefinedAt(request)) requestHandler(request)
-    else new Future[HttpResponse[T]]().deliver(HttpResponse(HttpStatus(HttpStatusCodes.NotFound)))
-  }
-
-  private def toResponse(th: Throwable) = th match{
-    case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
-    case _ => {
-      val reason = th.fullStackTrace
-      HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
-    }
-  }
-
-  private def writeResponse(e: MessageEvent)(response: HttpResponse[T]){
-    val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
-    val nettyResponse = toNettyResponse(response)
-    val keepAlive     = isKeepAlive(request)
-
-    if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
-
-    val future = e.getChannel().write(nettyResponse)
-
-    if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
-  }
-}
-
-private[engines] class FuturesList[T]{
-  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
-         
-  private var _futures = List[Future[T]]()
-  private var cancelError: Option[TimeoutException] = None
-
-  def +(future: Future[T]){
-    writeLock {
-      cancelError.foreach(future.cancel(_))
-
-      if (!future.isCanceled){
-        _futures = future :: _futures 
-      }
-    }
-  }
-  def -(future: Future[T]){
-    writeLock {
-      _futures = _futures.filterNot(_ == future)
-    }
-  }
-
-  def cancel{
-    writeLock {
-      cancelError = Some(new TimeoutException("Connection closed."))
-
-      _futures.foreach(_.cancel(cancelError))
-
-      _futures = Nil
-    }
-  }
-
-  def futures = readLock(() => {_futures})
-
-  private def readLock[S](f: => S): S = {
-    lock.readLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.readLock.unlock()
-    }
-  }
-
-  private def writeLock[S](f: => S): S = {
-    lock.writeLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.writeLock.unlock()
-    }
+  
+  private def killPending(why: Option[Throwable]) = {
+    // Kill all pending responses to this channel:
+    pendingResponses.foreach(_.cancel(why))
+    pendingResponses.clear()
   }
 }

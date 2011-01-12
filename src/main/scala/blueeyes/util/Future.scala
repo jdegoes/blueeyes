@@ -5,7 +5,7 @@ package blueeyes.util
  * due to request or error), or delivered. The triune nature of the future makes
  * it easy to propagate errors through chains of futures -- something not possible 
  * with bi-state futures.
- * <p>
+ * 
  * A time-stealing future has certain requirements that other futures do not. In 
  * particular, a time-stealing future cannot abort delivery just because a single
  * listener throws an exception, because a thread that delivers a value to a future
@@ -26,9 +26,6 @@ class Future[T] {
   private var _isSet: Boolean = false
   private var _isCanceled: Boolean = false
   
-  private val _cancelers: ArrayBuffer[Unit => Boolean] = new ArrayBuffer
-  private def cancelers: List[Unit => Boolean] = readLock { _cancelers.toList }
-  
   private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
   private def canceled: List[Option[Throwable] => Unit] = _canceled.toList
   
@@ -36,7 +33,7 @@ class Future[T] {
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
-   * <p>
+   * 
    * If when evaluating the lazy value, an error is thrown, the error will be
    * used to cancel the future.
    */
@@ -70,7 +67,7 @@ class Future[T] {
         // list cannot possibly change except through this method.
         
         _listeners.foreach { listener =>
-          trapError {
+          trapError[Unit] {
             listener(deliverable)
           }
         }
@@ -83,7 +80,7 @@ class Future[T] {
   
   /** Attempts to cancel the future. This may succeed only if the future is
    * not already delivered, and if all cancel conditions are satisfied.
-   * <p>
+   * 
    * If a future is canceled, the result will never be delivered.
    *
    * @return true if the future is canceled, false otherwise.
@@ -97,24 +94,9 @@ class Future[T] {
   
   def cancel(o: Option[Throwable]): Boolean = internalCancel(o)
 
-  /** Installs the specified canceler on the future. Under ordinary
-   * circumstances, the future will not be canceled unless all cancelers
-   * return true. If the future is already done, this method has no effect.
-   * <p>
-   * This method does not normally need to be called. It's provided primarily
-   * for the implementation of future primitives.
-   */
-  def allowCancelOnlyIf(f: Unit => Boolean): Future[T] = {
-    writeLock {
-      if (!isDone) _cancelers.append(f)
-    }
-
-    this
-  }
-
   /** Installs a handler that will be called if and only if the future is
    * canceled.
-   * <p>
+   * 
    * This method does not normally need to be called, since there is no
    * difference between a future being canceled and a future taking an
    * arbitrarily long amount of time to complete. It's provided primarily
@@ -132,22 +114,55 @@ class Future[T] {
   
   /** Returns a Future that always succeeds -- if this future is canceled, the
    * specified default value will be delivered to the returned future.
-   * <p>
-   * <pre>
+   *
+   * If a client attempts to cancel the returned future, the cancel request will
+   * be propagated to the original future, but has no effect on the returned 
+   * future, which is always guaranteed to deliver.
+   *
+   * {{{
    * f.orElse(3).map(_ * 5)
-   * </pre>
+   * }}}
    */
-  def orElse(default: => T): Future[T] = {
-    val f = new Future[T]
+  def orElse(default: => T): Future[T] = orElse { why: Option[Throwable] => default  }
+  
+  /** Returns a Future that always succeeds -- if this future is canceled, the
+   * specified function will be used to create the value that will be delivered
+   * to the returned future. Useful when the default value depends on the nature
+   * of the error that canceled the future.
+   *
+   * {{{
+   * f.orElse(why => 3).map(_ * 5)
+   * }}}
+   */
+  def orElse(defaultFactory: Option[Throwable] => T): Future[T] = {
+    var self = this
     
-    f.allowCancelOnlyIf { _ => false }
+    lazy val f = new Future[T] {
+      def fatal(why: Option[Throwable]) = {
+        super.forceCancel(why)
+      }
+      
+      override def cancel(why: Option[Throwable]): Boolean = {
+        self.cancel(why)
+        
+        false
+      }
+      
+      override def forceCancel(why: Option[Throwable]): Future[T] = {
+        self.forceCancel(why)
+      }
+    }
     
-    this.deliverTo { result =>
+    deliverTo { result =>
       f.deliver(result)
     }
     
-    this.ifCanceled { _ =>
-      f.deliver(default)
+    ifCanceled { why =>
+      trapError(defaultFactory(why)) match {
+        case Left(why)     => f.fatal(Some(why))
+      
+        case Right(result) => f.deliver(result)
+      }
     }
     
     f
@@ -182,8 +197,8 @@ class Future[T] {
 
   /** Uses the specified function to transform the result of this future into
    * a different value, returning a future of that value.
-   * <p]
-   * urlLoader.load("image.png").map(data => return new Image(data)).deliverTo(image => imageContainer.add(image))
+   * 
+   * urlLoader.load("image.png").map(data => new Image(data)).deliverTo(image => imageContainer.add(image))
    */
   def map[S](f: T => S): Future[S] = {
     var fut: Future[S] = new Future
@@ -191,8 +206,9 @@ class Future[T] {
     deliverTo { t =>
       fut.deliver(f(t))
     }
-
-    ifCanceled(fut.forceCancel)
+    ifCanceled { why => 
+      fut.forceCancel(why)
+    }
 
     fut
   }
@@ -205,16 +221,14 @@ class Future[T] {
   /** Maps the result of this future to another future, and returns a future
    * of the result of that future. Useful when chaining together multiple
    * asynchronous operations that must be completed sequentially.
-   * <p>
-   * <pre>
-   * <code>
+   *
+   * {{{
    * urlLoader.load("config.xml").flatMap { xml =>
    *   urlLoader.load(parse(xml).mediaUrl)
    * }.deliverTo { loadedMedia =>
    *   container.add(loadedMedia)
    * }
-   * </code>
-   * </pre>
+   * }}}
    */
   def flatMap[S](f: T => Future[S]): Future[S] = {
     var fut: Future[S] = new Future
@@ -274,7 +288,7 @@ class Future[T] {
 
   /** Returns a new future that will be delivered only if the result of this
    * future is accepted by the specified filter (otherwise, the new future
-   * will be canceled).
+   * will be canceled without cause).
    */
   def filter(f: T => Boolean): Future[T] = {
     var fut: Future[T] = new Future
@@ -300,9 +314,13 @@ class Future[T] {
    * execute independently of the other.
    */
   def zip[A](f2: Future[A]): Future[(T, A)] = {
-    var zipped: Future[(T, A)] = new Future
-
     var f1 = this
+    
+    var zipped = new Future[(T, A)] {
+      override def cancel(why: Option[Throwable]): Boolean = {
+        f1.cancel || f2.cancel
+      }
+    }
 
     def deliverZip = {
       if (f1.isDelivered && f2.isDelivered) {
@@ -312,8 +330,6 @@ class Future[T] {
 
     f1.deliverTo(v => deliverZip)
     f2.deliverTo(v => deliverZip)
-
-    zipped.allowCancelOnlyIf { _ => f1.cancel || f2.cancel }
 
     f1.ifCanceled(zipped.forceCancel)
     f2.ifCanceled(zipped.forceCancel)
@@ -340,7 +356,7 @@ class Future[T] {
    */
   def toEither: Either[Throwable, T] = if (isCanceled) Left(error.get) else Right(value.get)
 
-  private def forceCancel(error: Option[Throwable]): Future[T] = {
+  protected def forceCancel(error: Option[Throwable]): Future[T] = {
     writeLock {
       if (_isCanceled) false
       else {
@@ -360,7 +376,6 @@ class Future[T] {
         }
         
         _canceled.clear()
-        _cancelers.clear()
     }
 
     this
@@ -370,16 +385,11 @@ class Future[T] {
     writeLock {
       if (isDone) Left(false)           // <-- Already done, can't be canceled
       else if (isCanceled) Left(true)   // <-- Already canceled, nothing to do
-      else {                            
-        // Ask to see if everyone's OK with canceling:
-        Right(cancelers.foldLeft(true){ (v, canceller) => v && canceller()})
-      }
+      else Right(())
     } match {
       case Left(canceled) => canceled
       
-      case Right(true) => forceCancel(error); true
-      
-      case Right(false) => false
+      case Right(()) => forceCancel(error); true
     }
   }
   
@@ -412,9 +422,9 @@ class Future[T] {
     }
   }
   
-  private def trapError[T](f: => T): Unit = {
+  private def trapError[T](f: => T): Either[Throwable, T] = {
     try {
-      f
+      Right(f)
     }
     catch { 
       case error: Throwable =>
@@ -424,6 +434,8 @@ class Future[T] {
             
           case null => 
         }
+        
+        Left(error)
     }
   }
 }

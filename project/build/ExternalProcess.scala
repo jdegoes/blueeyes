@@ -3,7 +3,7 @@ import sbt._
 import Process._
 import java.lang.{ProcessBuilder => JProcessBuilder}
 
-object ExtermalProcess{
+object ExternalProcess{
   def apply(command: List[String], input: Option[String], directory: Option[String], log: Logger) ={
 
     val outputStream = new ByteArrayOutputStream

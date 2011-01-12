@@ -8,7 +8,7 @@ object SonatypeMvn {
 
     val args = List("mvn", "-s", (projectRoot / "project" / "build" / "sonatype.mvn.xml").asFile.getAbsolutePath, command, "-Dnexus.url=https://oss.sonatype.org", "-Dnexus.username=" + credentials.getUserName(), "-Dnexus.password=" + credentials.getPasswd()) ++ mvmArgs
 
-    ExtermalProcess(args, input, None, log)
+    ExternalProcess(args, input, None, log)
   }
 }
 

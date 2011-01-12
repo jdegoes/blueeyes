@@ -85,12 +85,14 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
   "cancel Future when connection closed" in {
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]
+    val channel      = mock[Channel]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
     val future       = new Future[HttpResponse[String]]()
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getRemoteAddress()).thenReturn(remoteAddress)
+    when(event.getChannel()).thenReturn(channel)
     when(handler.isDefinedAt(request)).thenReturn(true)
     when(handler.apply(request)).thenReturn(future, future)
 

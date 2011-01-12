@@ -28,7 +28,7 @@ trait GpgPlugin extends BasicManagedProject {
       case "asc" => None
       case "md5" => None
       case "sha1" => None
-      case _ => ExtermalProcess(List(gpgCommand, "--passphrase-fd", "0", "-ab", "--yes", path.asFile.getAbsolutePath), Some(GpgProperties.password + "\n"), None, log)
+      case _ => ExternalProcess(List(gpgCommand, "--passphrase-fd", "0", "-ab", "--yes", path.asFile.getAbsolutePath), Some(GpgProperties.password + "\n"), None, log)
             None
     }
   }

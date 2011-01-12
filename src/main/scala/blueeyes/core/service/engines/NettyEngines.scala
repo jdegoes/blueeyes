@@ -30,7 +30,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       startStopLock.writeLock.lock()
 
       try {
-        val host = InetInrerfaceLookup.host(config)
+        val host = InetInterfaceLookup.host(config)
 
         try {
           startServers(List(Tuple2(port, new HttpServerPipelineFactory("http", host, port)), Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort))))
@@ -61,7 +61,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
         bootstrap.setPipelineFactory(serverArg._2)
 
-        bootstrap.bind(InetInrerfaceLookup.socketAddres(config, serverArg._1))
+        bootstrap.bind(InetInterfaceLookup.socketAddres(config, serverArg._1))
 
         servers = Tuple2(executor, bootstrap) :: servers
       }
@@ -91,37 +91,39 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
   implicit def contentBijection: Bijection[ChannelBuffer, T]
 
-  class HttpsServerPipelineFactory(protocol: String, host: String, port: Int) extends HttpServerPipelineFactory(protocol: String, host, port) {
-    private val keyStore = BlueEyesKeyStoreFactory(config)
-
-    override def getPipeline(): ChannelPipeline = {
-      val pipeline = super.getPipeline
-
-      val engine = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password).createSSLEngine();
-      engine.setUseClientMode(false);
-      pipeline.addFirst("ssl", new SslHandler(engine))
-
-      pipeline
-    }
-  }
-
   class HttpServerPipelineFactory(protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
     def getPipeline(): ChannelPipeline = {
-      val pipeline     = Channels.pipeline()
+      val pipeline = Channels.pipeline()
 
       pipeline.addLast("decoder",     new FullURIHttpRequestDecoder(protocol, host, port))
       pipeline.addLast("aggregator",  new HttpChunkAggregator(1048576));
       pipeline.addLast("encoder",     new HttpResponseEncoder())
       pipeline.addLast("deflater",    new HttpContentCompressor())
 
-      pipeline.addLast("handler", new NettyRequestHandler[T](self, log))
+      pipeline.addLast("handler",     new NettyRequestHandler[T](self, log))
+
+      pipeline
+    }
+  }
+  
+  class HttpsServerPipelineFactory(protocol: String, host: String, port: Int) extends HttpServerPipelineFactory(protocol: String, host, port) {
+    private val keyStore = BlueEyesKeyStoreFactory(config)
+
+    override def getPipeline(): ChannelPipeline = {
+      val pipeline = super.getPipeline
+
+      val engine = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password).createSSLEngine()
+      
+      engine.setUseClientMode(false);
+      
+      pipeline.addFirst("ssl", new SslHandler(engine))
 
       pipeline
     }
   }
 }
 
-private[engines] object InetInrerfaceLookup{
+private[engines] object InetInterfaceLookup {
   def socketAddres(config: ConfigMap, port: Int) = config.getString("address").map(v => new InetSocketAddress(v, port)).getOrElse(new InetSocketAddress(port))
 
   def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
