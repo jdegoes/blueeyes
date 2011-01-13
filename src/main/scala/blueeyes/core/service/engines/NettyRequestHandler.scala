@@ -69,8 +69,6 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
       
       // Convert the raw future into one that cannot die:
       rawFuture.orElse { why =>
-        try { event.getChannel.close } catch { case e: Throwable => log.error(e, "Error closing channel") }
-        
         why match {
           case Some(throwable) =>
             convertErrorToResponse(throwable)
@@ -104,11 +102,12 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    log.error(e.getCause, "ExceptionCaught")
+    log.error(e.getCause, "An exception was raised by an I/O thread or a ChannelHandler")
+    
+    super.exceptionCaught(ctx, e)
     
     killPending(Some(e.getCause))
-    
-    e.getChannel.close    
+    // e.getChannel.close    
   }
   
   private def killPending(why: Option[Throwable]) = {
