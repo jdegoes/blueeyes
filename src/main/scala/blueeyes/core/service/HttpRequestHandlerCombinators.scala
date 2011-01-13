@@ -12,12 +12,12 @@ import blueeyes.core.http.HttpHeaderImplicits._
 trait HttpRequestHandlerCombinators {
   /** The path combinator creates a handler that is defined only for suffixes 
    * of the specified path pattern.
-   * <p>
-   * <pre>
+   *
+   * {{{
    * path("/foo") {
    *   ...
    * }
-   * </pre>
+   * }}}
    */
   def path[T, S](path: RestPathPattern) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.subpath) && h.isDefinedAt(path.shift(r))
@@ -28,6 +28,22 @@ trait HttpRequestHandlerCombinators {
       val shiftedRequest = path.shift(r)
       
       h(shiftedRequest.copy(parameters = shiftedRequest.parameters ++ pathParameters))
+    }
+  }
+  
+  /** Yields the remaining path to the specified function, which should return 
+   * a request handler.
+   * {{{
+   * remainingPath { path =>
+   *   get {
+   *     ... 
+   *   }
+   * }
+   * }}}
+   */
+  def remainingPath[T, S](handler: String => HttpRequestHandler2[T, S]) = path(RestPathPattern.Root `...` ('remainingPath)) { 
+    parameter(IdentifierWithDefault('remainingPath, () => "")) {
+      handler
     }
   }
   
@@ -481,6 +497,7 @@ trait HttpRequestHandlerCombinators {
       }
     }
   }
+  
   
   /** The json combinator creates a handler that accepts and produces JSON. 
    * Requires an implicit bijection used for transcoding.
