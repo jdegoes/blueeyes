@@ -10,8 +10,8 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import TestService._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService{
-
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
+  
   path$("/bar/id/bar.html"){
     get${ response: HttpResponse[String] =>
       response mustEqual(serviceResponse)
@@ -22,7 +22,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[Stri
     get${ response: HttpResponse[String] =>
       response mustEqual(serviceResponse)
     }
-  } should "gets responce when future is set asynchronously"
+  } should "gets response when future is set asynchronously"
 }
 
 trait TestService extends BlueEyesServiceBuilderString {

@@ -54,7 +54,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
       example.in({
         val future = new SpecClient(example, what)(clientTransformer)
-        waitForResponse(future, Some(1000 * 60 * 5), {why => ()})
+        waitForResponse(future, Some(1000 * 60 * 5), { why => throw why })
       })
     }
   }
