@@ -448,7 +448,13 @@ BlueEyes comes with the most fully-featured Scala library for JSON parsing, rend
 
 ### Cache
 
-BlueEyes has several kinds of caches.
+BlueEyes has several kinds of caches:
+
+ * Concurrent cache, which can be used by any number of threads without synchronizing;
+ * Non-concurrent cache, which is not concurrent safe but can be safely used by actors;
+ * Stage, most often used to coalesce IO operations in a staging area before execution.
+
+All caches support user-defined expiration policy and eviction handlers.
 
 ### MongoDB
 
