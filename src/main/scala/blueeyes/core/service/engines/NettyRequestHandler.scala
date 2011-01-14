@@ -35,7 +35,7 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
       case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
       case _ => {
         val reason = th.fullStackTrace
-        
+        log.error(th, "Error handling request")        
         HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
       }
     }
