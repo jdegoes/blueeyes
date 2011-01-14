@@ -19,14 +19,24 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
   private val databaseName   = "mydb"
   private val collectionName = "nycollection"
 
-  override def configuration = """mongo {
-  database{
-    contacts = "%s"
+  override def configuration = """
+  services {
+    contact {
+      list {
+        v1 {
+          mongo {
+            database{
+              contacts = "%s"
+            }
+            collection{
+              contacts = "%s"
+            }
+          }    
+        }
+      }
+    }
   }
-  collection{
-    contacts = "%s"
-  }
-}""".format(databaseName, collectionName)
+  """.format(databaseName, collectionName)
 
   "BlueEyesDemoService" in {
     path$("/contacts"){
@@ -34,7 +44,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
         post$(contact.serialize){ response: HttpResponse[JValue] =>
 
           response.status  mustEqual(HttpStatus(OK))
-          response.content must beSome(JArray(Nil))
+          response.content must beNone
 
           database(select().from(collectionName)).map(_.deserialize[Contact]) mustEqual(List(contact))
         }
@@ -46,13 +56,14 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
 
     val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
     
+    database[JNothing.type](remove.from(collectionName))
     database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
 
     path$("/contacts"){
       contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
         get${ response: HttpResponse[JValue] =>
           response.status  mustEqual(HttpStatus(OK))
-          response.content must beSome(JArray(List(contact.serialize)))
+          response.content must beSome(JArray(List(contact \\ "name")))
         }
       }
     } should "return contact list"
@@ -70,7 +81,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
       contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
         post$(filter){ response: HttpResponse[JValue] =>
           response.status  mustEqual(HttpStatus(OK))
-          response.content must beSome(JArray(List(contact.serialize)))
+          response.content must beSome(JArray(List(contact \\ "name")))
         }
       }
     } should "search contact"
