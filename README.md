@@ -458,20 +458,30 @@ All caches support user-defined expiration policy and eviction handlers.
 
 BlueEyes has a full-featured Scala facade to MongoDB.
 
-First of all it is necessary to inject mongo database.
+First of all, you need to create an instance to the Mongo facade. If you wish to use Guice, you could use the following code:
 
     import blueeyes.persistence.mongo._
 
     lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
     val mongo         = injector.getInstance(classOf[Mongo])
-    val database      = mongo.database( "mydb" )
 
-To modify/get documents from mongo database it is necessary to create mongo query then execute it using mongo database instance (created in previous example).
+If you wish to use the above code, you should create a file in */etc/default/blueeyes.conf* which has the following block:
+
+    mongo {
+      servers: ["host1:port1", "host2:port2", ...]
+    }
+    
+Once you have access to Mongo, you can then create references to databases:
+
+    val database = mongo.database( "mydb" )
+
+To modify or retrieve documents from a database, you first create a query and then execute it using the database instance (created in the previous example).
 
     val query    = selectOne().from("mycollection").sortBy("foo.bar" <<)
     val document = database(query)
 
-To restrict documents scope it is possible to create filter. Possible filters are: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches).
+To restrict the scope of a query, you need to create a filter. Possible filters include: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches).
+
   * Equals filter:
       "foo" === "bar"
 
