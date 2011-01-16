@@ -1,21 +1,19 @@
 # BlueEyes
 
-BlueEyes is a lightweight web 3.0 framework for the Scala programming language. The framework is designed to allow developers to quickly and easily create high-performing web services that embrace the machinery and language of HTTP.
+BlueEyes is a lightweight web 3.0 framework for the Scala programming language. The framework lets you quickly and easily create high-performing web services that embrace the machinery and language of HTTP. The framework tries to get out of your way and let you concentrate on logic instead of boilerplate.
 
-BlueEyes has been used in production across large clusters of instances deployed in Amazon EC2, reliably handling tens of thousands of requests a second.
+BlueEyes has been used in production across large clusters of instances deployed in Amazon EC2, reliably handling tens of thousands of requests a second, in an environment with 24x7 uptime requirements (online display advertising).
 
 The framework has been designed to meet the following requirements:
 
   * Stateless design, to achieve massive scalability;
   * Purely asynchronous request handling, to achieve extremely fast per-instance performance;
-  * Highly composable, modular design that minimizes bloat and surface area;
+  * Highly composable, modular design that minimizes bloat and surface area of the API;
   * Declarative service construction;
   * Support for continuous deployment and automated testing;
   * Idiomatic Scala interfaces to highly-scalable databases such as MongoDB.
 
-BlueEyes does not have any features for server-side generation of HTML, CSS, or JavaScript. BlueEyes does not (natively) serve static files, like Apache or Jetty. And BlueEyes will *never* have any support for forms, AJAX, widgets, and other client-side components.
-
-BlueEyes is intended *only* for creating RESTful web services.
+BlueEyes does not have any features for server-side generation of HTML, CSS, or JavaScript. BlueEyes does not (natively) serve static files, like Apache or Jetty. BlueEyes is intended *only* for creating RESTful web services that are consumed by clients (such as browsers or servers).
 
 Those looking for a traditional MVC web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
 
