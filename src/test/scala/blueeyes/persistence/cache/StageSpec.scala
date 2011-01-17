@@ -5,90 +5,106 @@ import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 
 class StageSpec extends Specification{
+  "Stage += " should {
+    "coalesces entries with duplicate keys" in {
+      newStage() { stage =>
+        stage += (("foo", "baz"))
 
-  private var stage: Stage[String, String] = _
+        stage.get("foo") must eventually (beSome("bar-baz"))
+      }
+    }
+    
+    "add entry" in {
+      newStage() { stage =>
+        stage.get("foo") must eventually (beSome("bar"))
+      }
+    }
+  }
+  
+  "Stage -= " should {
+    "remove entry" in {
+      newStage() { stage =>
+        stage -= ("foo")
 
+        stage.get("foo") must eventually (beNone)
+      }
+    }
+  }
+  
+  "Stage.iterator" should {
+    "returns all entries" in {
+      newStage() { stage =>
+        stage.iterator.hasNext must eventually (beEqual(true))
+      }
+    }
+  }
+  
+  "Stage.stop" should {
+    "evict all entries" in {
+      @volatile var _evicted = false
+      
+      println("BEGIN")
+      
+      newStage(None, None, {(key: String, value: String) => println("evicted " + key + ", " + value); _evicted = true}) { stage =>
+        stage.stop
+
+        stage.size must eventually (beEqual(0))
+      }
+      
+      println("END")
+    }
+  }
+  
+  "Stage.getLater" should {
+    "return a future of the value" in {
+      newStage() { stage =>
+        val future = stage.getLater("foo")
+
+        val latch = new CountDownLatch(1)
+        future.deliverTo({f => latch.countDown()})
+
+        latch.await
+
+        future.value must beSome(Some("bar"))
+      }
+    }
+  }
+  
   "Stage" should {
-    doAfter{
-      stage.stop
+    "evict when idle time is expired" in {
+      newStage(Some(1000)) { stage =>
+        Thread.sleep(2000)
+
+        stage.get("foo")  must beNone
+      }
     }
-    "+=: coalesces entries" in{
-      stage = newStage()
+    "evict when live time is expired" in{
+      newStage(None, Some(1000)) { stage =>
+        Thread.sleep(2000)
 
-      stage += (("foo", "baz"))
-
-      stage.get("foo") must beSome("baz-bar")
+        stage.get("foo")  must beNone
+      }
     }
-    "+=: adds entry" in{
-      stage = newStage()
-
-      stage.get("foo") must beSome("bar")
-    }
-    "-=: removes entry" in{
-      stage = newStage()
-
-      stage -= ("foo")
-
-      stage.get("foo") must beNone
-    }
-    "iterator: returns all entries" in{
-      stage = newStage()
-
-      stage.iterator.next must beEqual(("foo", "bar"))
-    }
-    "stop: evicts entries" in{
+    "evict when entry is expired" in{
       var evicted = false
+      
+      newStage(None, Some(1000), {(key: String, value: String) => evicted = key == "foo" && value == "bar"}) { stage =>
+        Thread.sleep(2000)
 
-      stage = newStage(None, None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+        stage.get("foo")
 
-      stage.stop
-
-      evicted must be (true)
-    }
-    "getLater: gets value later" in{
-      stage = newStage()
-
-      val future = stage.getLater("foo")
-
-      val latch = new CountDownLatch(1)
-      future.deliverTo({f => latch.countDown()})
-
-      latch.await
-
-      future.value must beSome(Some("bar"))
-    }
-    "evicts when idle time is expired" in{
-      stage = newStage(Some(1000))
-
-      Thread.sleep(2000)
-
-      stage.get("foo")  must beNone
-    }
-    "evicts when live time is expired" in{
-      stage = newStage(None, Some(1000))
-
-      Thread.sleep(2000)
-
-      stage.get("foo")  must beNone
-    }
-    "evict is called when entry is expired" in{
-      var evicted = false
-      stage = newStage(None, Some(1000), {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
-
-      Thread.sleep(2000)
-
-      stage.get("foo")
-
-      evicted must be (true)
+        evicted must be (true)
+      }
     }
   }
 
-  private def newStage(timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None, evict: (String, String) => Unit = {(key: String, value: String) => }) = {
+  private def newStage[T](timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None, evict: (String, String) => Unit = {(key: String, value: String) => })(f: Stage[String, String] => T): T = {
     val stage = new Stage[String, String](settings(timeToIdle, timeToLive, evict), (key: String, v1: String, v2: String) => v1 + "-" + v2)
 
     stage += (("foo", "bar"))
 
-    stage
+    try f(stage)
+    finally stage.stop
   }
 
   private def settings(timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None,

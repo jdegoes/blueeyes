@@ -30,8 +30,6 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   private case object Stop extends Request
   
   private case class  Got(v: Option[V]) extends Response
-  private case class  Added(old: Option[V]) extends Response
-  private case class  Removed(v: Option[V]) extends Response
   private case class  GotAll(list: List[(K, V)]) extends Response
   private case object Stopped extends Response
   
@@ -44,23 +42,27 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
           case Get(k) =>
             reply(Got(accumulator.get(k)))
 
-          case Add(k, v1) =>
-            reply(Added(
-              accumulator.put(k,
-                accumulator.get(k) match {
-                  case None     => v1
-                  case Some(v2) => coalesce(k, v1, v2)
-                }
-              )
-            ))
+          case Add(k, v2) =>
+            accumulator.put(k,
+              accumulator.get(k) match {
+                case None     => v2
+                case Some(v1) => coalesce(k, v1, v2)
+              }
+            )
 
           case Remove(k) =>
-            reply(Removed(accumulator.remove(k)))
+            accumulator.remove(k)
 
           case Stop =>
             accumulator.foreach { entry =>
+              println("evicting " + entry)
               settings.evict(entry._1, entry._2)
+              println("done evicting " + entry)
             }
+            
+            accumulator.clear()
+            
+            println("size = " + accumulator.size)
 
             reply(Stopped)
 
@@ -74,7 +76,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
     }
   }
   
-  start
+  actor.start
   
   def get(key: K): Option[V] = actor !? Get(key) match {
     case Got(v) => v
@@ -98,17 +100,13 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
    * the entry.
    */
   def -= (key: K): This = {
-    actor !? Remove(key) match {
-      case Removed(_) => 
-    }
+    actor !! Remove(key)
     
     this
   }
   
   def += (kv: (K, V)): This = {
-    actor !? Add(kv._1, kv._2) match {
-      case Added(_) =>
-    }
+    actor !! Add(kv._1, kv._2)
     
     this
   }

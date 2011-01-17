@@ -21,25 +21,23 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
 
   override def configuration = """
   services {
-    contact {
-      list {
-        v1 {
-          mongo {
-            database{
-              contacts = "%s"
-            }
-            collection{
-              contacts = "%s"
-            }
-          }    
-        }
+    contactlist {
+      v1 {
+        mongo {
+          database{
+            contacts = "%s"
+          }
+          collection{
+            contacts = "%s"
+          }
+        }    
       }
     }
   }
   """.format(databaseName, collectionName)
 
   "BlueEyesDemoService" in {
-    path$("/contacts"){
+    path$("/contacts") {
       contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
         post$(contact.serialize){ response: HttpResponse[JValue] =>
 
@@ -53,7 +51,6 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
   }
 
   "BlueEyesDemoService" in {
-
     val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
     
     database[JNothing.type](remove.from(collectionName))
@@ -87,10 +84,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     } should "search contact"
   }
 
-
   private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)
 
   lazy val mongo    = injector.getInstance(classOf[Mongo])
   lazy val database = mongo.database(databaseName)
-
 }
