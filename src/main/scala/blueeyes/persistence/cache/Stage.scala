@@ -33,7 +33,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   private case class  GotAll(list: List[(K, V)]) extends Response
   private case object Stopped extends Response
   
-  private val actor = new Actor {
+  private lazy val actor: Actor = new Actor { self =>
     val accumulator: Map[K, V] = Cache.nonConcurrent(settings)
     
     def act = {
@@ -55,14 +55,10 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
 
           case Stop =>
             accumulator.foreach { entry =>
-              println("evicting " + entry)
               settings.evict(entry._1, entry._2)
-              println("done evicting " + entry)
             }
             
             accumulator.clear()
-            
-            println("size = " + accumulator.size)
 
             reply(Stopped)
 
@@ -100,13 +96,13 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
    * the entry.
    */
   def -= (key: K): This = {
-    actor !! Remove(key)
+    actor ! Remove(key)
     
     this
   }
   
   def += (kv: (K, V)): This = {
-    actor !! Add(kv._1, kv._2)
+    actor ! Add(kv._1, kv._2)
     
     this
   }

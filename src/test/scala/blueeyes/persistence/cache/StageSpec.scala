@@ -43,15 +43,11 @@ class StageSpec extends Specification{
     "evict all entries" in {
       @volatile var _evicted = false
       
-      println("BEGIN")
-      
-      newStage(None, None, {(key: String, value: String) => println("evicted " + key + ", " + value); _evicted = true}) { stage =>
+      newStage(None, None, {(key: String, value: String) => _evicted = true}) { stage =>
         stage.stop
 
-        stage.size must eventually (beEqual(0))
+        _evicted must eventually (beEqual(true))
       }
-      
-      println("END")
     }
   }
   
