@@ -8,7 +8,7 @@ import com.google.inject.{Provider, Inject}
 import net.lag.configgy.Config
 import blueeyes.json.{JPath}
 
-private[mongo] object RealMongoImplementation{
+object RealMongoImplementation{
 
   @com.google.inject.Singleton
   class RealMongoProvider @Inject() (config: Config) extends Provider[Mongo]{
@@ -37,7 +37,7 @@ private[mongo] object RealMongoImplementation{
     def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))
   }
 
-  class RealMongoDatabase(database: DB) extends MongoDatabase{
+  class RealMongoDatabase private[RealMongoImplementation] (database: DB) extends MongoDatabase{
     def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
 
     def requestDone = {database.requestDone}
@@ -45,7 +45,7 @@ private[mongo] object RealMongoImplementation{
     def requestStart = {database.requestStart}
   }
 
-  class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
+  class RealDatabaseCollection private[RealMongoImplementation] (collection: DBCollection) extends DatabaseCollection{
     def insert(objects: List[JObject])      = collection.insert(objects.map(jObject2MongoObject(_)))
 
     def remove(filter: Option[MongoFilter]) = collection.remove(toMongoFilter(filter))
@@ -107,7 +107,7 @@ private[mongo] object RealMongoImplementation{
   }
 
   import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
-  class RealMapReduceOutput(output: MongoMapReduceOutput) extends MapReduceOutput{
+  class RealMapReduceOutput private[RealMongoImplementation] (output: MongoMapReduceOutput) extends MapReduceOutput{
     def drop = {output.drop}
 
     def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection))

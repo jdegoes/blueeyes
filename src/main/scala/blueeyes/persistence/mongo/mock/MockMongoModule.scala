@@ -10,13 +10,13 @@ class MockMongoModule extends AbstractModule {
 }
 
 @com.google.inject.Singleton
-private[mongo] class MockMongoProvider @Inject() () extends Provider[Mongo]{
+class MockMongoProvider @Inject() () extends Provider[Mongo]{
   private val factory = new MockMongo()
   def get = factory
 }
 
 @com.google.inject.Singleton
-private[mongo] class MockMongo() extends Mongo{
+class MockMongo() extends Mongo{
   private val databases     = scala.collection.mutable.Map[String, MockMongoDatabase]()
   def database(databaseName: String) = {
     databases.get(databaseName) match{
