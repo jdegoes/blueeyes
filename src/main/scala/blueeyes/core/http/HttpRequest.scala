@@ -7,27 +7,17 @@ import java.net.URI
 //import HttpVersions._
 sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parameters: Map[Symbol, String], headers: Map[String, String], content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
 
-  def path = new URI(uri).getPath
-  
-  def host = new URI(uri).getHost
-  
-  def port = new URI(uri).getPort
-  
-  def query = new URI(uri).getQuery
-  
-  def fragment = new URI(uri).getFragment
-  
-  def authority = new URI(uri).getAuthority
-  
-  def scheme = new URI(uri).getScheme
-  
-  def schemeSpecificPart = new URI(uri).getSchemeSpecificPart
-  
-  def userInfo = new URI(uri).getUserInfo
-  
-  def isUriAbsolute = new URI(uri).isAbsolute
-  
-  def isUriOpaque = new URI(uri).isOpaque
+  def path                = nonNull(new URI(uri).getPath)
+  def host                = nonNull(new URI(uri).getHost)
+  def port                = new URI(uri).getPort
+  def query               = nonNull(new URI(uri).getQuery)
+  def fragment            = nonNull(new URI(uri).getFragment)
+  def authority           = nonNull(new URI(uri).getAuthority)
+  def scheme              = nonNull(new URI(uri).getScheme)
+  def schemeSpecificPart  = nonNull(new URI(uri).getSchemeSpecificPart)
+  def userInfo            = nonNull(new URI(uri).getUserInfo)
+  def isUriAbsolute       = new URI(uri).isAbsolute
+  def isUriOpaque         = new URI(uri).isOpaque
   
   def withSubpath(p: String) = copy(subpath = p)
   
@@ -35,6 +25,11 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parame
     val newUri = new URI(scheme, userInfo, host, port, path, query, fragment)
     
     copy(uri = newUri.toString)
+  }
+  
+  private def nonNull(s: String, default: String = ""): String = s match {
+    case null => default
+    case s: String => s
   }
 }
 

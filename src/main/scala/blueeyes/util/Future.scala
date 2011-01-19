@@ -135,7 +135,7 @@ class Future[T] {
    * }}}
    */
   def orElse(defaultFactory: Option[Throwable] => T): Future[T] = {
-    var self = this
+    val self = this
     
     lazy val f = new Future[T] {
       def fatal(why: Option[Throwable]) = {
@@ -201,7 +201,7 @@ class Future[T] {
    * urlLoader.load("image.png").map(data => new Image(data)).deliverTo(image => imageContainer.add(image))
    */
   def map[S](f: T => S): Future[S] = {
-    var fut: Future[S] = new Future
+    val fut: Future[S] = new Future
 
     deliverTo { t =>
       fut.deliver(f(t))
@@ -231,7 +231,7 @@ class Future[T] {
    * }}}
    */
   def flatMap[S](f: T => Future[S]): Future[S] = {
-    var fut: Future[S] = new Future
+    val fut: Future[S] = new Future
 
     deliverTo { t =>
       cancelFutureOnError(fut) {
@@ -249,7 +249,7 @@ class Future[T] {
   }
   
   def flatMapOption[S](f: T => Option[S]): Future[S] = {
-    var fut: Future[S] = new Future
+    val fut: Future[S] = new Future
 
     deliverTo { t =>
       cancelFutureOnError(fut) {
@@ -267,7 +267,7 @@ class Future[T] {
   }
   
   def flatMapEither[F <: Throwable, S](f: T => Either[F, S]): Future[S] = {
-    var fut: Future[S] = new Future
+    val fut: Future[S] = new Future
 
     deliverTo { t =>
       cancelFutureOnError(fut) {
@@ -291,7 +291,7 @@ class Future[T] {
    * will be canceled without cause).
    */
   def filter(f: T => Boolean): Future[T] = {
-    var fut: Future[T] = new Future
+    val fut: Future[T] = new Future
 
     deliverTo { t => 
       cancelFutureOnError(fut) {
@@ -314,17 +314,24 @@ class Future[T] {
    * execute independently of the other.
    */
   def zip[A](f2: Future[A]): Future[(T, A)] = {
-    var f1 = this
+    val f1 = this
     
-    var zipped = new Future[(T, A)] {
+    val zipped = new Future[(T, A)] {
       override def cancel(why: Option[Throwable]): Boolean = {
-        f1.cancel || f2.cancel
+        f1.cancel(why) || f2.cancel(why)
       }
     }
 
     def deliverZip = {
-      if (f1.isDelivered && f2.isDelivered) {
-        zipped.deliver((f1.value.get, f2.value.get))
+      if (f1.isDelivered && f2.isDelivered && !zipped.isDone) {
+        try {
+          zipped.deliver((f1.value.get, f2.value.get))
+        }
+        catch { 
+          // Due to unlikely race condition, it's possible we'll try to 
+          // deliver more than once.
+          case _ =>
+        }
       }
     }
 

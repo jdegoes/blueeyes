@@ -39,6 +39,37 @@ class FutureSpec extends Specification {
     }
   }
   
+  "Future.zip" should {
+    "not be done until both futures are done" in {
+      val f1 = new Future[Int]()
+      val f2 = new Future[Int]()
+      
+      val z = f1.zip(f2)
+      
+      z.isDone must beEqualTo(false)
+      
+      f1.deliver(1)
+      
+      z.isDone must beEqualTo(false)
+      
+      f2.deliver(2)
+      
+      z.isDone must beEqualTo(true)
+    }
+    
+    "deliver tuple of the result of each future" in {
+      val f1 = new Future[Int]()
+      val f2 = new Future[Int]()
+      
+      val z = f1.zip(f2)
+      
+      f1.deliver(1)
+      f2.deliver(2)
+      
+      z.value must eventually (beSome((1, 2)))
+    }
+  }
+  
   "Future.map" should {
     "propagate cancel" in {
       val f = Future.dead[String](new Exception("error"))
