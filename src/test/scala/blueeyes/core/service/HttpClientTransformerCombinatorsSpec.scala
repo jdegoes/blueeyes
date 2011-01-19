@@ -1,12 +1,12 @@
 package blueeyes.core.service
 
 import org.spex.Specification
-import blueeyes.util.Future
+import blueeyes.util.{Future, FutureImplicits}
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress
 
-class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators with HttpClientTransformerImplicits{
+class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators with HttpClientTransformerImplicits with FutureImplicits {
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "")
   private val responseFuture = Future[String]("")
   private val mockClient = new HttpClient[String]{
@@ -15,6 +15,23 @@ class HttpClientTransformerCombinatorsSpec extends Specification with HttpClient
     def apply(r: HttpRequest[String]) = {
       request = Some(r)
       Future[HttpResponse[String]](HttpResponse[String]())
+    }
+  }
+  
+  "Join operator (~)" should {
+    "return a future of a tuple" in {
+      val response = mockClient {
+        path$("/foo"){
+          get$ { response: HttpResponse[String] =>
+            1
+          } ~
+          get$ { response: HttpResponse[String] =>
+            2
+          }
+        }
+      }
+      
+      response.value must eventually (beSome((1, 2)))
     }
   }
 

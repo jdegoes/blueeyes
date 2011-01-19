@@ -455,7 +455,9 @@ object Future {
     f
   }
   
-  def apply[T](t: T): Future[T] = new Future().deliver(t: T)
+  def lift[T](t: T): Future[T] = new Future().deliver(t: T)
+  
+  def apply[T](t: T): Future[T] = lift(t)
   
   def apply[T](futures: Future[T]*): Future[List[T]] = {
     import java.util.concurrent.ConcurrentHashMap
@@ -508,6 +510,16 @@ object Future {
     }
     
     result
+  }
+  
+  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T]): Future[T] = {
+    val newF = new Future[T]
+    
+    f.respond { t =>
+      newF.deliver(t)
+    }
+    
+    newF
   }
 }
 
