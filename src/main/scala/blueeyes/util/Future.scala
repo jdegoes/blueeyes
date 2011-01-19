@@ -344,7 +344,7 @@ class Future[T] {
     zipped
   }
 
-  /** Retrieves the value of th future, as an option. If the future has nothing
+  /** Retrieves the value of the future, as an option. If the future has nothing
    * been delivered, or produced an error, this method will return None.
    */
   def value: Option[T] = _result
