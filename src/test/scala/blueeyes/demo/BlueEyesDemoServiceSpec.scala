@@ -38,7 +38,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
 
   "BlueEyesDemoService" in {
     path$("/contacts") {
-      contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
+      contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){
         post$(contact.serialize){ response: HttpResponse[JValue] =>
 
           response.status  mustEqual(HttpStatus(OK))
@@ -57,8 +57,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
 
     path$("/contacts"){
-      contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
-        get${ response: HttpResponse[JValue] =>
+      contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){
+        get$ { response: HttpResponse[JValue] =>
           response.status  mustEqual(HttpStatus(OK))
           response.content must beSome(JArray(List(contact \\ "name")))
         }
@@ -66,8 +66,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     } should "return contact list"
 
     path$("/contacts/Sherlock"){
-      contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
-        get${ response: HttpResponse[JValue] =>
+      contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){
+        get$ { response: HttpResponse[JValue] =>
           response.status  mustEqual(HttpStatus(OK))
           response.content must beSome(contact.serialize)
         }
@@ -75,8 +75,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     } should "return contact by name"
 
     path$("/contacts/search"){
-      contentType$[JValue, Array[Byte], JValue](application/MimeTypes.json){
-        post$(filter){ response: HttpResponse[JValue] =>
+      contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){
+        post$(filter) { response: HttpResponse[JValue] =>
           response.status  mustEqual(HttpStatus(OK))
           response.content must beSome(JArray(List(contact \\ "name")))
         }
