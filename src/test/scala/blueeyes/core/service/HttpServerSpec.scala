@@ -15,29 +15,44 @@ class HttpServerSpec extends Specification{
   Configgy.configureFromString("")
   server.start
 
-  "HttpServer start: executes start up function" in{
-    server.startupCalled must be (true)
+  "HttpServer.start" should {
+    "executes start up function" in{
+      server.startupCalled must be (true)
+    }
+    "set status to Starting" in{
+      server.status must be (RunningStatus.Started)
+    }
   }
-  "HttpServer start: sets status to Starting" in{
-    server.status must be (RunningStatus.Started)
-  }
-  "HttpServer: adds handlers" in{
-    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (false)
-    server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
-  }
-  "HttpServer: path start up value to handler" in{
-    server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+  
+  "HttpServer.apply" should {
+    "be defined exactly where services are defined" in {
+      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (false)
+      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
+    }
+    
+    "delegate to service request handler" in {
+      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+    }
+    
+    /*
+    // TODO: Need to decide if this should be included in spec.
+    "gracefully handle error-producing service handler" in {
+      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/error")).error must eventually(beSomething)
+    }*/
   }
 
-  "HttpServer stop: executes shut down function" in{
-    server.stop
+  "HttpServer stop" should {
+    "execute shut down function" in {
+      server.stop
 
-    server.shutdownCalled must be (true)
-  }
-  "HttpServer stop: sets status to Stopped" in{
-    server.stop
+      server.shutdownCalled must be (true)
+    }
+    
+    "set status to Stopped" in {
+      server.stop
 
-    server.status must be (RunningStatus.Stopped)
+      server.status must be (RunningStatus.Stopped)
+    }
   }  
 }
 
@@ -57,6 +72,11 @@ trait TestService extends HttpServer[String] with BlueEyesServiceBuilderString w
           produce(text/plain) {
             get {
               request: HttpRequest[String] => Future(HttpResponse[String](content=Some(value)))
+            } ~
+            path("/error") { 
+              get { request =>
+                error("He's dead, Jim.")
+              }
             }
           }
         }

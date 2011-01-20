@@ -8,6 +8,8 @@ import java.io.{FileInputStream, File, ByteArrayInputStream}
 import java.security.cert.Certificate
 import java.security.{Key, KeyStore, KeyFactory}
 
+import blueeyes.util.Future
+
 object CertificateDecoder{
   def apply(encodedPrivateKey: String, encodedCertificate: String) = {
     val keyFactory = KeyFactory.getInstance("DSA")
@@ -25,7 +27,7 @@ object CertificateEncoder{
   def apply(key: Key, certificate: Certificate) = Tuple2(Base64.encodeBase64String(key.getEncoded), Base64.encodeBase64String(certificate.getEncoded)) 
 }
 
-object KeyStoreFactory{
+object KeyStoreFactory {
   def apply(key: Key, certificate: Certificate, alias: String, password: String) = {
     val passwordArray = password.toCharArray()
     val keystore      = KeyStore.getInstance("jks")
@@ -38,21 +40,55 @@ object KeyStoreFactory{
   }
 }
 
-import scala.tools.nsc.io.Process
-object JavaKeyTool{
+object JavaKeyTool {
+  import java.lang.{Process, ProcessBuilder}
+  import java.io.{InputStream, ByteArrayOutputStream}
+  import scala.actors.Actor.actor
+  
   private val log = Logger.get
+  
   def apply(keystore: String, keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
-    val command = "keytool -keystore %s -keyalg %s -genkeypair -alias %s -dname '%s' -validity %d -keypass %s -storepass %s".format(keystore, keyalg, alias, dname, validity, password, password)
+    val command = Array("keytool", 
+                        "-keystore",  keystore,
+                        "-keyalg",    keyalg,
+                        "-genkeypair",
+                        "-alias",     alias,
+                        "-dname",     dname,
+                        "-validity",  validity.toString,
+                        "-keypass",   password,
+                        "-storepass", password)
 
-    log.info("Creating keypair by command: " + command)
+    val processBuilder = new ProcessBuilder(command: _*)
+    
+    log.info("Creating keypair by command: " + command.mkString(" "))
 
-    val process = Process(command)
+    val process = processBuilder.start()
+    
+    val stdout = pump(process.getInputStream).deliverTo(log.info(_))
+    val stderr = pump(process.getErrorStream).deliverTo(log.error(_))
+    
+    val exitCode = process.waitFor()
 
-    log.info("JavaKeyTool finished with exit code: " + process.exitValue)
-    process.stdout.foreach(log.info(_))
-    process.stderr.foreach(log.error(_))    
-
-    Tuple3(process.exitValue, process.stdout, process.stderr)
+    log.info("JavaKeyTool finished with exit code: " + exitCode)
+    
+    (exitCode, stdout, stderr)
+  }
+  
+  private def pump(is: InputStream): Future[String] = Future.async {
+    val out = new ByteArrayOutputStream()
+    
+    var looping = true
+    
+    while (looping) {
+      var b = is.read()
+      
+      if (b >= 0) {
+        out.write(b)
+      }
+      else looping = false
+    }
+    
+    out.toString("UTF-8")
   }
 }
 object CertificateGenerator{
@@ -63,9 +99,11 @@ object CertificateGenerator{
     JavaKeyTool(keyStorePath, keyalg, alias, dname, validity, password)
 
     val keyStorePathFile = new File(keyStorePath)
+    
     if (!keyStorePathFile.exists) throw new Exception("Certificate cannot be created.")
 
     val keystoreStream = new FileInputStream(keyStorePathFile)
+    
     try {
       val keystore = KeyStore.getInstance("jks")
 

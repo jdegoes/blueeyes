@@ -10,6 +10,7 @@ trait OneJar { this: DefaultProject =>
     import FileUtilities._
     import java.io.{ByteArrayInputStream, File}
     import java.util.jar.Manifest
+    import org.apache.commons.io.FileUtils
     
     val manifest = new Manifest(new ByteArrayInputStream((
       "Manifest-Version: 1.0\n" +
@@ -37,7 +38,7 @@ trait OneJar { this: DefaultProject =>
           unzip(dependency, tmpPath, log) 
         }
         else if (dependency.asFile.isDirectory) {
-          copy(List(dependency), tmpPath, true, true, log)
+          FileUtils.copyDirectory(dependency.asFile, tmpDir)
         }
         else {
           copyFile(dependency.asFile, tmpDir, log)

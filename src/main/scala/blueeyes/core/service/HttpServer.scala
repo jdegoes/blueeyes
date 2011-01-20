@@ -70,6 +70,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     handlerFutures.foreach { future =>
       future.deliverTo { handler =>
+
         handlerLock.writeLock.lock()
         
         try {
@@ -83,11 +84,9 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     // Combine all futures into a master one that will be delivered when and if
     // all futures are delivered:
-    val unitFutures: List[Future[Unit]] = handlerFutures.map { future =>
-      future.map(_ => ())
-    }
+    val unitFutures: List[Future[Unit]] = handlerFutures.map(_.toUnit)
     
-    Future(unitFutures: _*).map(_ => ()).deliverTo { _ =>
+    Future(unitFutures: _*).toUnit.deliverTo { _ =>
       log.info("Server started")
       
       _status = RunningStatus.Started
@@ -125,7 +124,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
       }
     }
     
-    Future(shutdownFutures: _*).map(_ => ()).deliverTo { _ => 
+    Future(shutdownFutures: _*).toUnit.deliverTo { _ => 
       log.info("Server stopped")
       
       _status = RunningStatus.Stopped
@@ -223,4 +222,10 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
     
     def shutdown(): Future[Unit] = state.flatMap(state => descriptor.shutdown(state))
   }
+  
+  /*
+  private case class SafeRequestHandler(underlying: PartialFunction[HttpRequest[T], Future[HttpResponse[T]]]) extends PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
+    def 
+  }
+  */
 }

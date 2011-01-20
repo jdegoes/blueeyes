@@ -112,6 +112,10 @@ class Future[T] {
     this
   }
   
+  /** Converts the future to a future of unit, which delivers no information.
+   */
+  def toUnit: Future[Unit] = this.map(_ => ())
+  
   /** Returns a Future that always succeeds -- if this future is canceled, the
    * specified default value will be delivered to the returned future.
    *
