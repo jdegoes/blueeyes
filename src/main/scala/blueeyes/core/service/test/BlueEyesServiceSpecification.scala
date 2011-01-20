@@ -36,7 +36,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
   private def waitForResponse[V](future: Future[V], timeout: Option[Long], f: Throwable => Unit) = {
     if (!future.isDelivered){
-      val latch        = new CountDownLatch(1)
+      val latch = new CountDownLatch(1)
 
       future.deliverTo(v => {latch.countDown})
       future.ifCanceled{ why =>
