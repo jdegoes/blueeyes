@@ -459,7 +459,7 @@ object JsonAST {
     case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
     case JField(n, v)  => text("\"" + quote(n) + "\":") :: render(v)
     case JObject(obj)  =>
-      val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
+      val nested = break :: fields(trimObj(obj).map(f => text("\"" + quote(f.name) + "\":") :: render(f.value)))
       text("{") :: nest(2, nested) :: break :: text("}")
   }
   
