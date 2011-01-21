@@ -24,20 +24,25 @@ import Arbitrary.arbitrary
 trait JValueGen {
   import JsonAST._
 
-  def genJValue: Gen[JValue] = frequency((5, genSimple), (1, wrap(genArray)), (1, wrap(genObject)))
+  def genJValue:  Gen[JValue]  = frequency((5, genSimple), (1, wrap(genArray)), (1, wrap(genObject)))
+  def genJInt:    Gen[JInt]    = arbitrary[Int].map(JInt(_))
+  def genJDouble: Gen[JDouble] = arbitrary[Double].map(JDouble(_))
+  def genJBool:   Gen[JBool]   = arbitrary[Boolean].map(JBool(_))
+  def genJString: Gen[JString] = arbitrary[String].map(JString(_))
   def genSimple: Gen[JValue] = oneOf(
     value(JNull), 
-    arbitrary[Int].map(JInt(_)),
-    arbitrary[Double].map(JDouble(_)),
-    arbitrary[Boolean].map(JBool(_)),
-    arbitrary[String].map(JString(_)))
+    genJInt,
+    genJDouble,
+    genJBool,
+    genJString)
+
 
   def genArray: Gen[JValue] = for (l <- genList) yield JArray(l)
   def genObject: Gen[JObject] = for (l <- genFieldList) yield JObject(l)
 
   def genList = Gen.containerOfN[List, JValue](listSize, genJValue)
   def genFieldList = Gen.containerOfN[List, JField](listSize, genField)
-  def genField = for (name <- identifier; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
+  def genField = for (name <- arbitrary[String]; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
 
   def genJValueClass: Gen[Class[_ <: JValue]] = oneOf(
     JNull.getClass.asInstanceOf[Class[JValue]], JNothing.getClass.asInstanceOf[Class[JValue]], classOf[JInt], 

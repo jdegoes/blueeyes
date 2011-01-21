@@ -456,8 +456,8 @@ object JsonAST {
     case JNothing      => error("can't render 'nothing'")
     case JString(null) => text("null")
     case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(elements)   => text("[") :: series(trimArr(elements).map(render)) :: text("]")
-    case JField(n, v)  => text("\"" + n + "\":") :: render(v)
+    case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
+    case JField(n, v)  => text("\"" + quote(n) + "\":") :: render(v)
     case JObject(obj)  =>
       val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
       text("{") :: nest(2, nested) :: break :: text("}")

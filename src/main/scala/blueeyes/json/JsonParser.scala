@@ -74,15 +74,14 @@ object JsonParser {
     try {
       astParser(new Parser(buf))
     } catch {
-      case e: ParseException => throw e
-      case e: Exception => throw new ParseException("parsing failed", e)
+      case e: ParseException => e.printStackTrace; throw e
+      case e: Exception => e.printStackTrace; throw new ParseException("parsing failed", e)
     } finally { buf.release }
   }
   
   private[json] def unquote(string: String): String = unquote(new JsonParser.Buffer(new java.io.StringReader(string)))
   
   private[json] def unquote(buf: JsonParser.Buffer): String = {
-
     def unquote0(buf: JsonParser.Buffer, base: String): String = {
       val s = new java.lang.StringBuilder(base)
       var cOpt: Option[Char] = Some('\\')
@@ -223,17 +222,6 @@ object JsonParser {
     def nextToken: Token = {
       def isDelimiter(c: Char) = c == ' ' || c == '\n' || c == ',' || c == '\r' || c == '\t' || c == '}' || c == ']'
 
-      def parseFieldName: String = {
-        buf.mark
-        var cOpt = buf.next
-        while (cOpt.isDefined) {
-          val c = cOpt.get
-          if (c == '"') return buf.substring
-          cOpt = buf.next
-        }
-        fail("expected string end")
-      }
-
       def parseString: String = {
         try {
           unquote(buf)
@@ -285,7 +273,7 @@ object JsonParser {
               blocks.poll
               return CloseObj
             case '"' =>
-              if (fieldNameMode && blocks.peek == OBJECT) return FieldStart(parseFieldName)
+              if (fieldNameMode && blocks.peek == OBJECT) return FieldStart(parseString)
               else {
                 fieldNameMode = true
                 return StringVal(parseString)
