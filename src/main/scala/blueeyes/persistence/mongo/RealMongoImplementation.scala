@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 import blueeyes.json.JsonAST._
 import com.mongodb._
 import com.google.inject.{Provider, Inject}
-import net.lag.configgy.Config
+import net.lag.configgy.{Config, ConfigMap}
 import blueeyes.json.{JPath}
 
 object RealMongoImplementation{
@@ -17,7 +17,7 @@ object RealMongoImplementation{
   }
 
   @com.google.inject.Singleton
-  class RealMongo(config: Config) extends Mongo{
+  class RealMongo(config: ConfigMap) extends Mongo{
     import MongoConfiguration._
     val ServerAndPortPattern = "(.+):(.+)".r
 
