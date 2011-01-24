@@ -18,7 +18,6 @@ private[mongo] case class MongoFilterEvaluator(values: List[JValue]){
     case x : MongoElementsMatchFilter => MongoElementsMatchFilterEvaluator(values, x)
   }
 }
-
 private[mongo] object Evaluators{
   import MongoFilterEvaluator._
 
