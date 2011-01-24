@@ -48,16 +48,18 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
   override def main(args: Array[String]): Unit = super.main(args)
 
   // Manual configuration based on "configuration" string:
-  override def rootConfig: Config = {
+  override def rootConfig: Config = _rootConfig
+  
+  private lazy val _rootConfig = {
     Configgy.configureFromString(configuration)
     Configgy.config
-  }  
+  }
   
   implicit def resultToFuture[V](result: Result[V]): Future[Unit] = Future.lift(result).toUnit
 
-  implicit def specifyExample(clientTransformer: HttpClientTransformer[T, Unit]): SpecifiedExample = new SpecifiedExample(clientTransformer)
+  implicit def specifyExample[S](clientTransformer: HttpClientTransformer[T, S]): SpecifiedExample[S] = new SpecifiedExample[S](clientTransformer)
 
-  class SpecifiedExample(clientTransformer: HttpClientTransformer[T, Unit]){
+  class SpecifiedExample[S](clientTransformer: HttpClientTransformer[T, S]){
     def should(what: String) = {
       val example = forExample
 
