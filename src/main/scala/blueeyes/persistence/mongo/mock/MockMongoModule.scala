@@ -14,18 +14,3 @@ class MockMongoProvider @Inject() () extends Provider[Mongo]{
   private val factory = new MockMongo()
   def get = factory
 }
-
-@com.google.inject.Singleton
-class MockMongo() extends Mongo{
-  private val databases     = scala.collection.mutable.Map[String, MockMongoDatabase]()
-  def database(databaseName: String) = {
-    databases.get(databaseName) match{
-      case Some(x) => x
-      case None =>{
-        val mongoDatabase  = new MockMongoDatabase()
-        databases.put(databaseName, mongoDatabase)
-        mongoDatabase
-      }
-    }
-  }
-}
