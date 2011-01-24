@@ -26,5 +26,5 @@
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_COMPILER_CONTAINER"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/xlightweb-2.13.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/xSocket-2.8.15.jar"/>
-	<classpathentry kind="output" path="target/scala_2.8.1/classes"/>
+	<classpathentry kind="output" path="build/classes"/>
 </classpath>

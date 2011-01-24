@@ -26,6 +26,21 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
   def requestTimeout = 60000
   def configuration  = ""
 
+  /**
+   * {{{
+   * val barFuture = serverClient {
+   *   path$("/foo") {
+   *     get$ { response =>
+   *       bar
+   *     }
+   *   }
+   * }
+   * }}}
+   */
+  def serverClient: HttpClient[T] = new HttpClient[T] {
+    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = self.apply(r)
+  }
+
   private def startServer = waitForResponse[Unit](start, Some(startTimeOut), why => throw why)
   private def stopServer  = waitForResponse[Unit](stop,  Some(stopTimeOut),  why => throw why)
 
