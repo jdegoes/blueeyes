@@ -35,11 +35,11 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
-    var objects = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
-                  case Nil if upsert => List(JObject(Nil))
-                  case v => v
-                }
-    var updated = UpdateFunction(value, objects)
+    var (objects, update) = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
+                              case Nil if upsert => (List(JObject(Nil)), value & filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
+                              case v => (v, value)
+                            }
+    var updated = UpdateFunction(update, objects)
 
     if (upsert) remove(objects)
 
@@ -55,6 +55,21 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
     selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject]).toStream
+  }
+}
+
+private[mock] object FilterToUpdateConvert{
+  import MongoFilterOperators._
+
+  def apply(filter: MongoFilter):  MongoUpdate = filter match{
+    case MongoFilterAll               => MongoUpdateNothing
+    case x : MongoOrFilter            => MongoUpdateNothing
+    case x : MongoElementsMatchFilter => MongoUpdateNothing
+    case x : MongoFieldFilter         => x.operator match {
+      case $eq  => x.lhs set x.rhs
+      case _    => MongoUpdateNothing
+    }
+    case x : MongoAndFilter           => x.queries.foldLeft(MongoUpdateNothing.asInstanceOf[MongoUpdate]){ (result, currentFilter) =>  result &  FilterToUpdateConvert(currentFilter)}
   }
 }
 

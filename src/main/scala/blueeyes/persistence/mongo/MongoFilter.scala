@@ -166,6 +166,10 @@ trait MongoFilterImplicits {
     }
     mongoPromitive
   }
+  implicit def jStringToMongoPrimitiveString(value: JString)  = MongoPrimitiveString(value.value)
+  implicit def jIntToMongoPrimitiveInt(value: JInt)           = MongoPrimitiveLong(value.value.longValue)
+  implicit def jDoubleToMongoPrimitiveDouble(value: JDouble)  = MongoPrimitiveDouble(value.value)
+  implicit def jBooleanToMongoPrimitiveBoolean(value: JBool)  = MongoPrimitiveBoolean(value.value)
 
   implicit def stringToMongoPrimitiveString(value: String)    = MongoPrimitiveString(value)
   implicit def longToMongoPrimitiveLong(value: Long)          = MongoPrimitiveLong(value)
@@ -173,7 +177,7 @@ trait MongoFilterImplicits {
   implicit def doubleToMongoPrimitiveDouble(value: Double)    = MongoPrimitiveDouble(value)
   implicit def booleanToMongoPrimitiveBoolean(value: Boolean) = MongoPrimitiveBoolean(value)
   implicit def jobjectToMongoPrimitiveJObject(value: JObject) = MongoPrimitiveJObject(value)
-  implicit def arryaToMongoPrimitiveArray[T <: MongoPrimitive[_]](value: List[T]) = MongoPrimitiveArray[T](value)
+  implicit def arrayToMongoPrimitiveArray[T <: MongoPrimitive[_]](value: List[T]) = MongoPrimitiveArray[T](value)
 
   /*
   Double	 1
