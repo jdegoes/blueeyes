@@ -222,6 +222,20 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
   }
+  "insert by update field when upsert is true" in{
+    val collection = newCollection
+
+    collection.update(None, "foo".inc(1) , true, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(JObject(JField("foo", JInt(1)) :: Nil) :: Nil)
+  }
+  "does insert by update field when upsert is false" in{
+    val collection = newCollection
+
+    collection.update(None, "foo".inc(1) , false, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(Nil)
+  }
   "update by update when upsert is true and index exist" in{
     val collection = newCollection
 
@@ -236,9 +250,9 @@ class MockDatabaseCollectionSpec extends Specification{
   /*
   "upsert should work" in {
     val collection = newCollection
-    upsert(collection) 
+    upsert(collection)
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
-  } 
+  }
   */
 
   "does not insert by update when upsert is false" in{

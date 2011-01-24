@@ -35,21 +35,13 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
-    var objects = if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)
+    var objects = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
+                  case Nil if upsert => List(JObject(Nil))
+                  case v => v
+                }
     var updated = UpdateFunction(value, objects)
 
-    if (upsert){
-      if (objects.isEmpty){
-        objects = value match{
-          case MongoUpdateObject(value) => value :: Nil
-          case _ => Nil
-        }
-        updated = objects
-      }
-      else{
-        remove(objects)
-      }
-    }
+    if (upsert) remove(objects)
 
     index(updated)
     remove(objects)

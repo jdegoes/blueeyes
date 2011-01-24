@@ -38,7 +38,9 @@ private[mock] object MockMongoUpdateEvaluators{
       case (JDouble(x1),  JDouble(x2)) => JDouble(x1 + x2)
       case (JDouble(x1),  JInt(x2))    => JDouble(x1 + x2.doubleValue)
       case (JInt(x1),     JDouble(x2)) => JDouble(x1.doubleValue + x2)
-      case _ => throw new MongoException("Modifier $inc allowed for numbers only")       
+      case (JNothing,     JInt(x2))    => JInt(x2)
+      case (JNothing,     JDouble(x2)) => JDouble(x2)
+      case _ => throw new MongoException("Modifier $inc allowed for numbers only")
     }
   }
   case object UnsetFieldEvaluator extends UpdateFieldEvaluator{

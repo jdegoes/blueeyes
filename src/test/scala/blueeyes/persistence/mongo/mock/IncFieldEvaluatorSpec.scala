@@ -11,6 +11,10 @@ class IncFieldEvaluatorSpec extends Specification{
     val operation = "foo" inc (MongoPrimitiveInt(3))
     IncFieldEvaluator(JInt(1), operation.filter) mustEqual(JInt(4))
   }
+  "increare JNothing" in {
+    val operation = "foo" inc (MongoPrimitiveInt(3))
+    IncFieldEvaluator(JNothing, operation.filter) mustEqual(JInt(3))
+  }
   "increase Doubles" in {
     val operation = "foo" inc (MongoPrimitiveDouble(2.2))
     IncFieldEvaluator(JDouble(1.1), operation.filter) mustEqual(JDouble(1.1 + 2.2))
