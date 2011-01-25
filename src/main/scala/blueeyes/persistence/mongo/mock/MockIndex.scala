@@ -5,7 +5,7 @@ import com.mongodb.MongoException
 import blueeyes.json.JsonAST.JObject
 import blueeyes.persistence.mongo.MongoSelection
 
-private[mock] trait MockIndex extends JObjectFieldsExtractor{
+private[mock] trait MockIndex extends JObjectFields{
   private var indexes   = Map[String, List[JPath]]()
 
   def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
@@ -28,7 +28,7 @@ private[mock] trait MockIndex extends JObjectFieldsExtractor{
 
       if (newFields.distinct.size != newFields.size) throw new MongoException("Index contraint.")
 
-      newObjects.foreach(jobject => {
+      newObjects.foreach(jObject => {
         val existing  = selectExistingFields(indexed, selection.selection)
         if ((existing filterNot (newFields contains)).size != existing.size) throw new MongoException("Index contraint.")
       })

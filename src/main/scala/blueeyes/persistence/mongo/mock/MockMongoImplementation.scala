@@ -5,7 +5,37 @@ import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
 
-private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFieldsExtractor with MockIndex{
+@com.google.inject.Singleton
+class MockMongo() extends Mongo{
+  private val databases     = scala.collection.mutable.Map[String, MockMongoDatabase]()
+  def database(databaseName: String) = {
+    databases.get(databaseName) match{
+      case Some(x) => x
+      case None =>{
+        val mongoDatabase  = new MockMongoDatabase()
+        databases.put(databaseName, mongoDatabase)
+        mongoDatabase
+      }
+    }
+  }
+}
+
+private[mongo] class MockMongoDatabase() extends MongoDatabase{
+  private val collections   = scala.collection.mutable.Map[String, MockDatabaseCollection]()
+
+  def collection(collectionName: String) = {
+    collections.get(collectionName) match{
+      case Some(x) => x
+      case None =>{
+        val collection  = new MockDatabaseCollection()
+        collections.put(collectionName, collection)
+        collection
+      }
+    }
+  }
+}
+
+private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFields with MockIndex{
   private var container = JArray(Nil)
 
   def insert(objects: List[JObject]): Unit = {
@@ -50,7 +80,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
     val objects = search(filter)
-    val sorted  = sort.map(v => objects.sorted(new JObjectXPathBasedOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
+    val sorted  = sort.map(v => objects.sorted(new JObjectOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
     val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
     val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
