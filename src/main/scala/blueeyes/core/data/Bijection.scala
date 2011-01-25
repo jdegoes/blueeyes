@@ -82,7 +82,7 @@ trait BijectionsByteArray {
       stream.toByteArray()
     }
   }
-  implicit val XMLToByteArray       = new Bijection[NodeSeq, Array[Byte]] {
+  implicit val XMLToByteArray   = new Bijection[NodeSeq, Array[Byte]] {
     def apply(s: NodeSeq)       = s.toString.getBytes
     def unapply(t: Array[Byte]) = XML.load(new ByteArrayInputStream(t))
   }
