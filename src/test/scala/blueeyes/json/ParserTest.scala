@@ -54,7 +54,7 @@ object ParserSpec extends Specification with JValueGen with ScalaCheck {
     parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
   }
 
-  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)
+  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
 
   private def parseVal(json: JValue, bufSize: Int) = {
     val existingSize = JsonParser.Segments.segmentSize
