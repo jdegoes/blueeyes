@@ -44,7 +44,12 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
-  def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = collection.ensureIndex(JObject(keys.map(key => JField(JPathExtension.toMongoField(key), JInt(1)))), name, unique)
+  def ensureIndex(name: String, keysPaths: List[JPath], unique: Boolean) = {
+    val keys    = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+    val options = JObject(JField("name", JString(name)) :: JField("background", JBool(true)) :: JField("unique", JBool(unique)) :: Nil)
+
+    collection.ensureIndex(keys, options)
+  }
 
   def dropIndex(name: String) = collection.dropIndex(name)
 
