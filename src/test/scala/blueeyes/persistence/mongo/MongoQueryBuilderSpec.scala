@@ -56,4 +56,8 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates upsertMany query" in{
     upsertMany("collection").set(jObject) mustEqual ( MongoUpdateQuery("collection", jObject, None, true, true) )
   }
+  "creates verified query" in{
+    val query = upsertMany("collection").set(jObject)
+    verified[JNothing.type](query) mustEqual ( VerifiedQuery[JNothing.type](query) )
+  }
 }

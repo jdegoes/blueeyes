@@ -28,14 +28,15 @@ class RealMongo(config: ConfigMap) extends Mongo{
 }
 
 private[mongo] class RealMongoDatabase(database: DB) extends MongoDatabase{
-  def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
-
-  def requestDone = {database.requestDone}
-
-  def requestStart = {database.requestStart}
+  protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
 }
 
 private[mongo] class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
+
+  def requestDone = {collection.getDB.requestDone}
+
+  def requestStart = {collection.getDB.requestStart}
+
   def insert(objects: List[JObject])      = collection.insert(objects.map(jObject2MongoObject(_)))
 
   def remove(filter: Option[MongoFilter]) = collection.remove(toMongoFilter(filter))
@@ -45,10 +46,9 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
   def ensureIndex(name: String, keysPaths: List[JPath], unique: Boolean) = {
-    val keys    = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
     val options = JObject(JField("name", JString(name)) :: JField("background", JBool(true)) :: JField("unique", JBool(unique)) :: Nil)
 
-    collection.ensureIndex(keys, options)
+    collection.ensureIndex(toMongoKeys(keysPaths), options)
   }
 
   def dropIndex(name: String) = collection.dropIndex(name)
@@ -57,11 +57,9 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
 
-    val keysObject   = toMongoKeys(selection)
-    val filterObject = toMongoFilter(filter)
     val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
 
-    val cursor        = collection.find(filterObject, keysObject)
+    val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))
     val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
     val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
     val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
@@ -89,16 +87,14 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
   def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
     if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
 
-  private def toMongoKeys(selection : MongoSelection)    = JObject(selection.selection.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
-  private def toMongoFilter(filter: Option[MongoFilter]) = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
+  def getLastError: Option[BasicDBObject] = {
+      val error  = collection.getDB.getLastError
+      if (error != null && error.get("err") != null) Some(error) else None
+  }
 
-//    private def checkWriteResult(result: WriteResult) = {
-//      val error  = result.getLastError
-//      if (error != null && error.get("err") != null){
-//       throw new MongoException(error)
-//      }
-//      result
-//    }
+  private def toMongoKeys(selection : MongoSelection):    JObject = toMongoKeys(selection.selection)
+  private def toMongoKeys(keysPaths: List[JPath]):        JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+  private def toMongoFilter(filter: Option[MongoFilter]): JObject = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
 }
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}

@@ -84,6 +84,12 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     })
   }
 
+  def requestStart: Unit = ()
+
+  def requestDone: Unit = ()
+
+  def getLastError: Option[com.mongodb.BasicDBObject] = None
+
   override def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
     writeLock{
       super.ensureIndex(name, keys, unique)

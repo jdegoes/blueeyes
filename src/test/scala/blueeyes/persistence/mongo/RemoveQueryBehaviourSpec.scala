@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.spex.Specification
 import MongoQueryBuilder._
-import org.mockito.Mockito.{times, when}
+import org.mockito.Mockito.times
 import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 

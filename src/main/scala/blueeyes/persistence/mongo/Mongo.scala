@@ -30,6 +30,11 @@ trait Mongo{
  *
  * database(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  * </pre
+ *
+ * To to know whether or not operation succeeded, or if it did not succeed, what error it generated it is necessary
+ * to create "verified" query:
+ *
+ * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
   def apply[T](query: MongoQuery[T]): T  = {
@@ -55,4 +60,7 @@ private[mongo] trait DatabaseCollection{
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
+  def requestStart: Unit
+  def requestDone: Unit
+  def getLastError: Option[com.mongodb.BasicDBObject]
 }

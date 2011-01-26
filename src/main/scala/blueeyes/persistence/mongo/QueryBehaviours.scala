@@ -2,9 +2,24 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
+import com.mongodb.MongoException
 
 private[mongo] object QueryBehaviours{
   trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
+
+  trait VerifiedQueryBehaviour[T]  extends QueryBehaviour[T]{
+    def apply(collection: DatabaseCollection): T = {
+
+      collection.requestStart
+      try{
+        val answer = query(collection)
+        collection.getLastError.foreach(error => throw new MongoException(error))
+        answer
+      }
+      finally collection.requestDone
+    }
+    def query: QueryBehaviour[T]
+  }
 
   trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
     def apply(collection: DatabaseCollection): JNothing.type = {

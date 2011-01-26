@@ -581,6 +581,9 @@ BlueEyes supports documents manipulations queries: querying, removing, updating 
 
     val query   = map(map, reduce).from("mycollection")
 
+To to know whether or not operation succeeded, or if it did not succeed, what error it generated it is necessary to create "verified" query:
+    val query   =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
+
 To update document field it is necessary to create Mongo Update. Possible updates: "inc" (increments field), "set" (sets field), "unset" (unset fields), "popLast" (removes the last element in an array), "popFirst" (removes the first element in an array), "push" (appends value to array field), "pull" (removes all occurrences of value from array field), "pushAll" (appends each value to array field), "pullAll" (removes all occurrences of each value from array field).
  * Mongo update
     val query   = "foo" unset
