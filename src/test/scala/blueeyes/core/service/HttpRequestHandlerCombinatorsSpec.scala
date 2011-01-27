@@ -66,4 +66,20 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     f.value must eventually(beSomething)
     f.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
   }
+
+  "support nested paths" in {
+    val f = path("/foo/") {
+      path('bar  / "entries") {
+        produce(application/json) {
+          parameter[String, JValue]('bar) { bar =>
+            get { (request: HttpRequest[String]) =>
+              Future(HttpResponse[JValue](content=Some(JString(bar))))
+            }
+          }
+        }
+      }
+    }(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries"))
+    f.value must eventually(beSomething)
+    f.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
+  }
 }
