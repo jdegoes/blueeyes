@@ -77,10 +77,10 @@ sealed trait MongoUpdate{ self =>
   import Changelist._
   import MongoUpdateObject._
 
-  private implicit def toMongoUpdate(changes: List[Change1])         = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
+  private implicit def toMongoUpdate(changes: List[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
   private implicit def toChanges(update: MongoUpdateFields)    = update.list
   private implicit def toChangeList(update: MongoUpdateFields) = Changelist(update.list)
-  private def toUpdateFieldsValues(update: MongoUpdateObject)        = MongoUpdateFields(decompose(update.value))
+  private def toUpdateFieldsValues(update: MongoUpdateObject)  = MongoUpdateFields(decompose(update.value))
 
   def  toJValue: JObject;
 

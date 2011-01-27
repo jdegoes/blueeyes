@@ -236,6 +236,13 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(JObject(JField("foo", JInt(1)) :: JField("my", JObject(JField("name", JString("Michael")) :: Nil)) :: JField("bar", JInt(1)) :: Nil) :: Nil)
   }
+  "insert filter values by update object when upsert is true" in{
+    val collection = newCollection
+
+    collection.update(Some("bar" === "foo"), MongoUpdateObject(JObject(JField("bar", JString("foo")) :: Nil)) , true, false)
+
+    collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(JObject(JField("bar", JString("foo")) :: Nil) :: Nil)
+  }
   "does insert by update field when upsert is false" in{
     val collection = newCollection
 
