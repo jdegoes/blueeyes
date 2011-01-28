@@ -10,7 +10,7 @@ trait ServerHealthMonitorServiceBase[T] extends BlueEyesServiceBuilderBase[T] wi
     request{
       path("/blueeyes/server/health") {
         get { request =>
-          HttpResponse[T](content=Some(jValueBijection(health)))
+          HttpResponse[T](content=Some(jValueBijection(toJValue)))
         }
       }
     }
@@ -25,46 +25,65 @@ trait ServerHealthMonitorServiceString extends ServerHealthMonitorServiceBase[St
   def serverHealthMonitorService = createService
 }
 
-trait ServerHealthMonitor{
-  private implicit def stringToJValue(v: String) = JString(v)
-  private implicit def longToJValue(v: Long)   = JInt(v)
-  private implicit def longToJValue(v: Int)    = JInt(v)
+trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{
+
+  private val monitor = new blueeyes.health.HealthMonitor()
+
+  exportMemory
+  exportRuntime
+  exportThreads
+  exportOperatingSystem
 
   import java.lang.management._  
-  def health = {
-    JObject(JField("runtime", runtime) :: JField("memory", memory) :: JField("threads", threads) :: JField("operatingSystem", operatingSystem) :: Nil)
-  }
 
-  private def memory = {
+  private def exportMemory = {
     val bean = ManagementFactory.getMemoryMXBean()
 
-    JObject(List(JField("heap", memoryUsage(bean.getHeapMemoryUsage())), JField("nonHeap", memoryUsage(bean.getNonHeapMemoryUsage()))))
+    exportMemoryUsage("memory.heap", bean.getHeapMemoryUsage())
+    exportMemoryUsage("memory.nonHeap", bean.getNonHeapMemoryUsage())
   }
 
-  private def memoryUsage(bean: MemoryUsage) = {
-    JObject(List(JField("init", bean.getInit()), JField("used", bean.getUsed()), JField("committed", bean.getCommitted()), JField("max", bean.getMax())))
+  private def exportMemoryUsage(path: String, bean: MemoryUsage) = {
+    monitor.export(path + ".init",      bean.getInit)
+    monitor.export(path + ".used",      bean.getUsed)
+    monitor.export(path + ".committed", bean.getCommitted)
+    monitor.export(path + ".max",       bean.getMax)
   }
 
-  private def runtime = {
+  private def exportRuntime = {
     val bean = ManagementFactory.getRuntimeMXBean()
 
-    JObject(List(JField("vmName", bean.getVmName()), JField("vmVendor", bean.getVmVendor()), JField("vmVersion", bean.getVmVersion()),
-           JField("specName", bean.getSpecName()), JField("specVendor", bean.getSpecVendor()), JField("specVersion", bean.getSpecVersion()),
-           JField("classPath", bean.getClassPath()), JField("libraryPath", bean.getLibraryPath()), JField("specVersion", bean.getSpecVersion()),
-           JField("uptime", bean.getUptime()), JField("startTime", bean.getStartTime()), JField("currentTime", System.currentTimeMillis)
-    ))
+    monitor.export("runtime.vmName",      bean.getVmName)
+    monitor.export("runtime.vmVendor",    bean.getVmVendor)
+    monitor.export("runtime.vmVersion",   bean.getVmVersion)
+    monitor.export("runtime.specName",    bean.getSpecName)
+    monitor.export("runtime.specVendor",  bean.getSpecVendor)
+    monitor.export("runtime.specVersion", bean.getSpecVersion)
+    monitor.export("runtime.classPath",   bean.getClassPath)
+    monitor.export("runtime.libraryPath", bean.getLibraryPath)
+    monitor.export("runtime.uptime",      bean.getUptime)
+    monitor.export("runtime.startTime",   bean.getStartTime)
+    monitor.export("runtime.currentTime", System.currentTimeMillis)
   }
 
-  private def threads = {
+  private def exportThreads = {
     val bean = ManagementFactory.getThreadMXBean()
 
-    JObject(List(JField("count", bean.getThreadCount()), JField("peakCount", bean.getPeakThreadCount()), JField("totalStartedCount", bean.getTotalStartedThreadCount()),
-           JField("daemonCount", bean.getDaemonThreadCount())))
+    monitor.export("threads.count",             bean.getThreadCount)
+    monitor.export("threads.peakCount",         bean.getPeakThreadCount)
+    monitor.export("threads.totalStartedCount", bean.getTotalStartedThreadCount)
+    monitor.export("threads.daemonCount",       bean.getDaemonThreadCount)
   }
 
-  private def operatingSystem = {
+  private def exportOperatingSystem = {
     val bean = ManagementFactory.getOperatingSystemMXBean()
 
-    JObject(List(JField("name", bean.getName()), JField("arch", bean.getArch()), JField("version", bean.getVersion())))
+    monitor.export("operatingSystem.name",                bean.getName)
+    monitor.export("operatingSystem.arch",                bean.getArch)
+    monitor.export("operatingSystem.version",             bean.getVersion)
+    monitor.export("operatingSystem.availableProcessors", bean.getAvailableProcessors)
+    monitor.export("operatingSystem.systemLoadAverage",   bean.getSystemLoadAverage)
   }
+
+  def toJValue = monitor.toJValue
 }

@@ -8,8 +8,7 @@ import blueeyes.util.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
-import blueeyes.health.HealthMonitor
-import blueeyes.json.JPath
+import blueeyes.util.RichThrowableImplicits._
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -34,6 +33,10 @@ trait HttpReflectiveServiceList[T] { self =>
  * and started, and has a main function so it can be mixed into objects.
  */
 trait HttpServer[T] extends HttpRequestHandler[T] { self =>
+
+  private lazy val NotFound            = HttpResponse[T](HttpStatus(HttpStatusCodes.NotFound))
+  private lazy val InternalServerError = HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError))
+
   /** The root configuration. This is simply Configgy's root configuration 
    * object, so this should not be used until Configgy has been configured.
    */
@@ -43,9 +46,42 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
    */
   def services: List[HttpService[T]]
   
-  def isDefinedAt(r: HttpRequest[T]): Boolean = _handler.isDefinedAt(r)
+  def isDefinedAt(r: HttpRequest[T]): Boolean = true
   
-  def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = _handler.apply(r)
+  def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
+    def convertErrorToResponse(th: Throwable): HttpResponse[T] = th match {
+      case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
+      case _ => {
+        val reason = th.fullStackTrace
+        log.error(th, "Error handling request")
+        HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
+      }
+    }
+    
+    // The raw future may die due to error:
+    val rawFuture = try {
+      if (_handler.isDefinedAt(r)) _handler(r)
+      else Future[HttpResponse[T]](NotFound)
+    }
+    catch {
+      case why: Throwable =>
+        // An error during invocation of the request handler, convert to
+        // proper response:
+        Future[HttpResponse[T]](convertErrorToResponse(why))
+    }
+
+    // Convert the raw future into one that cannot die:
+    rawFuture.orElse { why =>
+      why match {
+        case Some(throwable) =>
+          convertErrorToResponse(throwable)
+
+        case None =>
+          // Future was canceled for no cause.
+          InternalServerError
+      }
+    }
+  }
   
   /** Starts the server.
    */

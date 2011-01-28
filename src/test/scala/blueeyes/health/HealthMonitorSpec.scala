@@ -7,7 +7,7 @@ import blueeyes.json.JPath
 import blueeyes.util.Future
 import blueeyes.json.JsonAST._
 
-class HealthMonitorSpec extends Specification{
+class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
 
   private val precision = 5.0
 
@@ -72,11 +72,14 @@ class HealthMonitorSpec extends Specification{
 
   "composes into JValue" in{
 
+    def export: Int = 2
+
     val monitor = new HealthMonitor()
     monitor.increment("requestCount")(2)
     monitor.increment("requestCount")(3)
+    monitor.export("request.export", export)
 
-    val monitorJson = JObject(List(JField("requestCount",JInt(5))))
+    val monitorJson = JObject(List(JField("requestCount", JInt(5)), JField("request", JObject(List(JField("export", JInt(2)))))))
 
     monitor.toJValue mustEqual(monitorJson)
   }

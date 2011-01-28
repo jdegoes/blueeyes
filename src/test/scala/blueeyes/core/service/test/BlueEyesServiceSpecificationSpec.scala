@@ -13,14 +13,18 @@ import TestService._
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
   
   path$("/bar/id/bar.html"){
-    get${ response: HttpResponse[String] =>
-      response mustEqual(serviceResponse)
+    contentType$[String, String, Unit](text/html){
+      get${ response: HttpResponse[String] =>
+        response mustEqual(serviceResponse)
+      }
     }
   } should "calls test function"
 
   path$("/asynch/future"){
-    get${ response: HttpResponse[String] =>
-      response mustEqual(serviceResponse)
+    contentType$[String, String, Unit](text/html){
+      get${ response: HttpResponse[String] =>
+        response mustEqual(serviceResponse)
+      }
     }
   } should "gets response when future is set asynchronously"
 }
