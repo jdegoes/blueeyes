@@ -12,7 +12,7 @@ import blueeyes.json.JsonParser.{parse => j}
 object Benchmark extends ServerStart{
 
   private val threadsCount = 1
-  private val contactsSize = 100
+  private val contactsSize = 50
 
   def main(args: Array[String]){
     startServer

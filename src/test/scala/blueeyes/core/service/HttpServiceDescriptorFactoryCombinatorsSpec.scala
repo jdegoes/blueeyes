@@ -76,6 +76,11 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilderString with HttpService
                     client(request)
                   }.flatten
                 }
+              } ~
+              remainingPath{ path =>
+                get{
+                  request: HttpRequest[String] => HttpResponse[String]()    
+                }
               }
             }
           }

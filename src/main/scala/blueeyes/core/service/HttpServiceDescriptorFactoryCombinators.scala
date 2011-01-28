@@ -31,8 +31,8 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestHandler(underlying.request(state), monitor)})
-      
-      descriptor ~ path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
+
+      descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
         get {
           request: HttpRequest[T] => {
             val version = context.serviceVersion
@@ -152,10 +152,14 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         healthMonitor.timeFuture(timePath)(response)
         healthMonitor.trapFuture(errorPath)(response)
 
+        response.deliverTo{v =>
+          healthMonitor.count("requests.statusCodes." + v.status.code.value)  
+        }
+
         response
       }
 
-      monitor(healthMonitor.trap(errorPath){underlying.apply(request)})      
+      monitor(healthMonitor.trap(errorPath){underlying.apply(request)})
     }
   }
 }
