@@ -36,7 +36,13 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parame
 object HttpRequest{
   def apply[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
     val subpath = new URI(uri).getPath
+    
+    val query = new URI(uri).getQuery match {
+      case null => ""
+      case string if (string.startsWith("?")) => string.substring(1)
+      case other => other
+    }
 
-    HttpRequest[T](method, uri, parameters, headers, content, remoteHost, version, subpath)
+    HttpRequest[T](method, uri, parameters ++ blueeyes.util.QueryParser.parseQuery(query), headers, content, remoteHost, version, subpath)
   }
 }

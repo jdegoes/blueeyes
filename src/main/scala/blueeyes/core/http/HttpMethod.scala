@@ -47,4 +47,6 @@ object HttpMethods {
   case class CUSTOM(method: String) extends HttpMethod {
     override def toString = method
   }
+  
+  val PredefinedHttpMethods = GET :: PUT :: POST :: DELETE :: PATCH :: OPTIONS :: HEAD :: CONNECT :: TRACE :: Nil
 }

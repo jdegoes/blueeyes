@@ -159,6 +159,54 @@ trait HttpRequestHandlerCombinators {
   def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { commit { h } } }
   def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { commit { h } } }
 
+  /** Creates a handler that accepts ranged GET requests. A ranged GET request
+   * uses the Range header with the following syntax: [unit]=[lower-bound]-[upper-bound].
+   * For example, bytes=0-123, indices=0-23.
+   * {{{
+   * getRange { (ranges, unit) =>
+   *   (unit, ranges) match {
+   *     case ("indices", (lowerBound, upperBound) :: Nil) => 
+   *       // Retrieve all elements from lowerBound to upperBound
+   *   }
+   * }
+   * }}}
+   */
+  def getRange[T, S](h: (List[(Int, Int)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = get {
+    new HttpRequestHandler2[T, S] {
+      private def extractRange(headers: Map[String, String]): (List[(Int, Int)], String) = {
+        val rangeStr = headers.find(_._1.toLowerCase == "range").get._2
+
+        rangeStr.split("=").toList match {
+          case unit :: specifiers :: Nil => 
+            (specifiers.split(",").toList.map { range =>
+              range.split("-").toList.map(_.trim.toInt) match {
+                case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
+
+                case _ => error("missing upper and/or lower bound for range")
+              }
+            }, unit.trim.toLowerCase)
+
+          case _ => error("missing range specifier")
+        }
+      }
+
+      def isDefinedAt(r: HttpRequest[T]): Boolean = {
+        if (r.headers.exists(_._1.toLowerCase == "range")) {
+          val range = extractRange(r.headers)
+
+          h(range._1, range._2).isDefinedAt(r)
+        }
+        else false
+      }
+
+      def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+        val range = extractRange(r.headers)
+
+        h(range._1, range._2).apply(r)
+      }
+    }
+  }
+
   /**
    * Extracts data from the request. The extractor combinators can be used to 
    * factor out extraction logic that's duplicated across a range of handlers.
@@ -191,89 +239,6 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
-  /**
-   * <pre>
-   * extract2(r => (r.parameters('username), r.parameters('password))) { (username, password) =>
-   *   ...
-   * }
-   * </pre>
-   */
-  def extract2[T, S, E1, E2](extractor: HttpRequest[T] => (E1, E2)) = (h: (E1, E2) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = {
-      try {
-        val extracted = extractor(r)
-        
-        h(extracted._1, extracted._2).isDefinedAt(r)
-      }
-      catch {
-        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
-      }
-    }
-    
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val extracted = extractor(r)
-      
-      h(extracted._1, extracted._2).apply(r)
-    }
-  }
-  
-  def extract3[T, S, E1, E2, E3](extractor: HttpRequest[T] => (E1, E2, E3)) = (h: (E1, E2, E3) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = {
-      try {
-        val extracted = extractor(r)
-        
-        h(extracted._1, extracted._2, extracted._3).isDefinedAt(r)
-      }
-      catch {
-        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
-      }
-    }
-    
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val extracted = extractor(r)
-      
-      h(extracted._1, extracted._2, extracted._3).apply(r)
-    }
-  }
-  
-  def extract4[T, S, E1, E2, E3, E4](extractor: HttpRequest[T] => (E1, E2, E3, E4)) = (h: (E1, E2, E3, E4) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = {
-      try {
-        val extracted = extractor(r)
-        
-        h(extracted._1, extracted._2, extracted._3, extracted._4).isDefinedAt(r)
-      }
-      catch {
-        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
-      }
-    }
-    
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val extracted = extractor(r)
-      
-      h(extracted._1, extracted._2, extracted._3, extracted._4).apply(r)
-    }
-  }
-  
-  def extract5[T, S, E1, E2, E3, E4, E5](extractor: HttpRequest[T] => (E1, E2, E3, E4, E5)) = (h: (E1, E2, E3, E4, E5) => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = {
-      try {
-        val extracted = extractor(r)
-        
-        h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).isDefinedAt(r)
-      }
-      catch {
-        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
-      }
-    }
-    
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val extracted = extractor(r)
-      
-      h(extracted._1, extracted._2, extracted._3, extracted._4, extracted._5).apply(r)
-    }
-  }
-  
   /** A special-case extractor for parameters.
    * <pre>
    * parameter('token) { token =>
@@ -283,34 +248,32 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]) = (h: String => HttpRequestHandler2[T, S]) => extract[T, S, String] { request =>
-    request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
-  } { h }
+  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]) = (h: String => HttpRequestHandler2[T, S]) =>  new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      try {
+        val value = extract(r)
 
-  /** A special-case extractor for parameters.
-   * <pre>
-   * parameters2('username, 'password) { (username, password) =>
-   *   get {
-   *     ...
-   *   }
-   * }
-   * </pre>
-   */  
-  def parameters2[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
-    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default))
-  } { h }
-  
-  def parameters3[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
-    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default))
-  } { h }
-  
-  def parameters4[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
-    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default))
-  } { h }
+        h(value).isDefinedAt(addParameter(r, (s1AndDefault.identifier -> value)))
+      }
+      catch {
+        case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
+      }
+    }
 
-  def parameters5[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
-    (request.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default), request.parameters.get(s2AndDefault.identifier).getOrElse(s2AndDefault.default), request.parameters.get(s3AndDefault.identifier).getOrElse(s3AndDefault.default), request.parameters.get(s4AndDefault.identifier).getOrElse(s4AndDefault.default), request.parameters.get(s5AndDefault.identifier).getOrElse(s5AndDefault.default))
-  } { h }
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
+      val value = extract(r)
+
+      h(value).apply(addParameter(r, (s1AndDefault.identifier -> value)))
+    }
+     
+    private def extract(r: HttpRequest[T]): String = {
+      r.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
+    }
+     
+    private def addParameter(r: HttpRequest[T], newParam: (Symbol, String)): HttpRequest[T] = {
+      r.copy(parameters = r.parameters + newParam)
+    }
+  }
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
@@ -343,47 +306,6 @@ trait HttpRequestHandlerCombinators {
     extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
   } { h }
 
-  /** A special-case extractor for cookies.
-   * <pre>
-   * cookies2('username, 'password) { (username, password) =>
-   *   get {
-   *     ...
-   *   }
-   * }
-   * </pre>
-   */
-  def cookies2[T, S](s1: Symbol, s2: Symbol) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
-    (extractCookie(request, s1), extractCookie(request, s2))
-  } { h }
-
-  def cookies2[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String) => HttpRequestHandler2[T, S]) => extract2[T, S, String, String] { request =>
-    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)))
-  } { h }
-
-  def cookies3[T, S](s1: Symbol, s2: Symbol, s3: Symbol) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
-    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3))
-  } { h }
-
-  def cookies3[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String) => HttpRequestHandler2[T, S]) => extract3[T, S, String, String, String] { request =>
-    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)))
-  } { h }
-
-  def cookies4[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
-    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4))
-  } { h }
-
-  def cookies4[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String) => HttpRequestHandler2[T, S]) => extract4[T, S, String, String, String, String] { request =>
-    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s4AndDefault.default)))
-  } { h }
-
-  def cookies5[T, S](s1: Symbol, s2: Symbol, s3: Symbol, s4: Symbol, s5: Symbol) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
-    (extractCookie(request, s1), extractCookie(request, s2), extractCookie(request, s3), extractCookie(request, s4), extractCookie(request, s5))
-  } { h }
-
-  def cookies5[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], s2AndDefault: IdentifierWithDefault[Symbol, String], s3AndDefault: IdentifierWithDefault[Symbol, String], s4AndDefault: IdentifierWithDefault[Symbol, String], s5AndDefault: IdentifierWithDefault[Symbol, String]) = (h: (String, String, String, String, String) => HttpRequestHandler2[T, S]) => extract5[T, S, String, String, String, String, String] { request =>
-    (extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default)), extractCookie(request, s2AndDefault.identifier, Some(s2AndDefault.default)), extractCookie(request, s3AndDefault.identifier, Some(s3AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)), extractCookie(request, s4AndDefault.identifier, Some(s5AndDefault.default)))
-  } { h }
-
   private def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
     val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
 
@@ -399,58 +321,6 @@ trait HttpRequestHandlerCombinators {
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
       
       extractField(content, s1AndDefault)
-    } (h)
-  }
-  
-  //def field[S, F1 <: JValue](s1: Symbol)(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => field(IdentifierWithDefault(s1, fieldError(s1, mc1) _))(mc1)(h)
-
-  def fields2[S, F1 <: JValue, F2 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2])(implicit mc1: Manifest[F1], mc2: Manifest[F2]) = (h: (F1, F2) => HttpRequestHandler2[JValue, S]) => {
-    extract2 { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
-      
-      (
-        extractField(content, s1AndDefault)(mc1),
-        extractField(content, s2AndDefault)(mc2)
-      )
-    } (h)
-  }
-  
-  def fields3[S, F1 <: JValue, F2 <: JValue, F3 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3]) = (h: (F1, F2, F3) => HttpRequestHandler2[JValue, S]) => {
-    extract3 { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
-      
-      (
-        extractField(content, s1AndDefault)(mc1),
-        extractField(content, s2AndDefault)(mc2),
-        extractField(content, s3AndDefault)(mc3)
-      )
-    } (h)
-  }
-  
-  def fields4[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4]) = (h: (F1, F2, F3, F4) => HttpRequestHandler2[JValue, S]) => {
-    extract4 { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
-      
-      (
-        extractField(content, s1AndDefault)(mc1),
-        extractField(content, s2AndDefault)(mc2),
-        extractField(content, s3AndDefault)(mc3),
-        extractField(content, s4AndDefault)(mc4)
-      )
-    } (h)
-  }
- 
-  def fields5[S, F1 <: JValue, F2 <: JValue, F3 <: JValue, F4 <: JValue, F5 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1], s2AndDefault: IdentifierWithDefault[Symbol, F2], s3AndDefault: IdentifierWithDefault[Symbol, F3], s4AndDefault: IdentifierWithDefault[Symbol, F4], s5AndDefault: IdentifierWithDefault[Symbol, F5])(implicit mc1: Manifest[F1], mc2: Manifest[F2], mc3: Manifest[F3], mc4: Manifest[F4], mc5: Manifest[F5]) = (h: (F1, F2, F3, F4, F5) => HttpRequestHandler2[JValue, S]) => {
-    extract5 { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
-      
-      (
-        extractField(content, s1AndDefault)(mc1),
-        extractField(content, s2AndDefault)(mc2),
-        extractField(content, s3AndDefault)(mc3),
-        extractField(content, s4AndDefault)(mc4),
-        extractField(content, s5AndDefault)(mc5)
-      )
     } (h)
   }
   
@@ -498,6 +368,88 @@ trait HttpRequestHandlerCombinators {
     }
   }
   
+  /** The jsonp combinator creates a handler that accepts and produces JSON. 
+   * The handler also transparently works with JSONP, if the client specifies
+   * a "callback" parameter in the query string. Clients may encode both
+   * HTTP method and content using the query string parameters "method" and
+   * "content", respectively.
+   */
+  def jsonp[T](h: HttpRequestHandler[JValue])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
+    implicit val b2 = b1.inverse
+    
+    def isDefinedAt(r: HttpRequest[T]): Boolean = {
+      r.content.map(b1.isDefinedAt _).getOrElse(true) && {
+        val r2 = convert(r)
+      
+        h.isDefinedAt(r2)
+      }
+    }
+    
+    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
+      val r2 = convert(r)
+      
+      h(r2).map { response =>
+        val callback = r.parameters.get('callback)
+        
+        convert(response, callback)
+      }
+    }
+    
+    private def convert(r: HttpRequest[T]): HttpRequest[JValue] = {
+      import blueeyes.json.JsonParser.parse
+      import blueeyes.json.xschema.DefaultSerialization._
+      
+      r.parameters.get('callback) match {
+        case Some(callback) if (r.method == HttpMethods.GET) =>
+          if (!r.content.isEmpty) throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")
+          
+          val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
+
+          val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
+          val content = r.parameters.get('content).map(parse _)
+          val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
+          
+          r.copy(method = method, content = content, headers = r.headers ++ headers)
+          
+        case Some(callback) => 
+          throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")
+          
+        case None =>
+          r.copy(content = r.content.map(b1.apply))
+      }
+    }
+    
+    private def convert(r: HttpResponse[JValue], callback: Option[String]): HttpResponse[T] = {
+      import blueeyes.json.xschema.DefaultSerialization._
+      import blueeyes.json.Printer._
+      
+      callback match {
+        case Some(callback) =>
+          val meta = compact(render(JObject(
+            JField("headers", r.headers.serialize) ::
+            JField("status", 
+              JObject(
+                JField("code",    r.status.code.value.serialize) ::
+                JField("reason",  r.status.reason) ::
+                Nil
+              )
+            ) :: 
+            Nil
+          )))
+          
+          r.copy(content = r.content.map { content =>
+            bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
+          }.orElse {
+            Some(
+              bstr.inverse.apply(callback + "(undefined," + meta + ");")
+            )
+          })
+        
+        case None =>
+          r.copy(content = r.content.map(b2.apply))
+      }
+    }
+  }
   
   /** The json combinator creates a handler that accepts and produces JSON. 
    * Requires an implicit bijection used for transcoding.
