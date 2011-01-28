@@ -5,7 +5,7 @@ import blueeyes.health.HealthMonitor
 import net.lag.logging.Logger
 import net.lag.configgy.Configgy
 import blueeyes.core.http.{HttpRequest, HttpResponse}
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.util.{Future, FutureImplicits}
 
@@ -34,7 +34,12 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       
       descriptor ~ path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
         get {
-          request: HttpRequest[T] => HttpResponse[T](content=Some(jValueBijection(monitor.toJValue)))
+          request: HttpRequest[T] => {
+            val version = context.serviceVersion
+            val who     = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
+            val health  = monitor.toJValue
+            HttpResponse[T](content=Some(jValueBijection(health.merge(who))))
+          }
         }
       }
     }

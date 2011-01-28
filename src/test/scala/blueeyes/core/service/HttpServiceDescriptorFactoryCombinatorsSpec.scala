@@ -5,7 +5,7 @@ import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
-import blueeyes.json.JsonAST.{JInt, JNothing}
+import blueeyes.json.JsonAST.{JInt, JNothing, JString}
 import blueeyes.util.Future
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[String] with HeatlhMonitorService{
@@ -44,6 +44,9 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
       content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
+      
+      content \ "service" \ "name"    mustEqual(JString("email"))
+      content \ "service" \ "version" mustEqual(JString("1.2.3"))
     }
   } should "adds health monitor statistics"
   
@@ -58,7 +61,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 trait HeatlhMonitorService extends BlueEyesServiceBuilderString with HttpServiceDescriptorFactoryCombinators{
   implicit def httpClient: HttpClient[String]
   
-  val emailService = service ("email", "1.01") {
+  val emailService = service ("email", "1.2.3") {
     logging { log =>
       healthMonitor { monitor =>
         serviceLocator { locator: ServiceLocator[String] =>

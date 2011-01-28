@@ -51,6 +51,11 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
   def details = (count, max, min, mean, standardDeviation)
 
   /**
+   * Returns the sum time recorded.
+   */
+  def total = safeNS(sum_.get)
+
+  /**
    * Returns the greatest amount of time recorded.
    */
   def max = safeNS(max_.get)

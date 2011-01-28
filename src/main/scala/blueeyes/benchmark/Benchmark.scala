@@ -11,25 +11,36 @@ import blueeyes.json.JsonParser.{parse => j}
 
 object Benchmark extends ServerStart{
 
-  private val threadsCount = 4
-  private val contactsSize = 200
+  private val threadsCount = 1
+  private val contactsSize = 100
 
   def main(args: Array[String]){
     startServer
 
-    println("Execution Time: " + benchmark(ContactStream(threadsCount, contactsSize)))
+//    benchmark(1, report _)
+    benchmark(5, report _)
 
     stopServer
 
     System.exit(0)
   }
 
-  private def benchmark(streams: List[Stream[Contact]]) = {
+  private def report(timer: Timer){
+    println("*****************************")
+    println("Total: " + timer.total.convert(TimeUnit.SECONDS).value)
+    println("Count: " + timer.count)
+    println("Mean: "  + timer.mean.convert(TimeUnit.MILLISECONDS).value)
+    println("Per Second: " + (timer.count / timer.total.convert(TimeUnit.SECONDS).value))
+  }
+
+  private def benchmark[T](connectionCount: Int, f: Timer => T): T= f(benchmark(ContactStream(connectionCount, contactsSize)))
+
+  private def benchmark(streams: List[Stream[Contact]]): Timer = {
     val timer = new Timer()
 
     runBenchmarkTasks(streams, timer)
 
-    timer.mean.convert(TimeUnit.MILLISECONDS).value    
+    timer
   }
 
   private def runBenchmarkTasks(streams: List[Stream[Contact]], timer: Timer){
@@ -48,29 +59,29 @@ object Benchmark extends ServerStart{
 class BenchmarkTask(val port: Int, val contactsStream: Stream[Contact], val timer: Timer) extends Runnable with BlueEyesDemoFacade with HttpClientXLightWebEnginesArrayByte{
   val taskCounDown  = new CountDownLatch(1)
   def run = {
-    timer.time{
       process({c: Contact => create(c)})
       process({c: Contact => list})
       process({c: Contact => contact(c.name)})
       process({c: Contact => search(j("""{ "name" : "%s" }""".format(c.name)))})
       process({c: Contact => remove(c.name)})
-    }
 
     taskCounDown.countDown
   }
 
   private def process[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
     contactsStream.foreach(contact => {
-      val countDown      = new CountDownLatch(1)
-      val future    = apply[T](f(contact))
-      future.deliverTo(response =>{
-        countDown.countDown
-      })
-      future.ifCanceled{v =>
-        countDown.countDown
-        v.foreach(_.printStackTrace)
+      val countDown = new CountDownLatch(1)
+      timer.time{
+        val future    = apply[T](f(contact))
+        future.deliverTo(response =>{
+          countDown.countDown
+        })
+        future.ifCanceled{v =>
+          countDown.countDown
+          v.foreach(_.printStackTrace)
+        }
+        countDown.await
       }
-      countDown.await
     })
   }
 }
