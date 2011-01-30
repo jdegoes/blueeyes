@@ -5,8 +5,8 @@ import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
-import blueeyes.core.http.{HttpMethods, HttpResponse, HttpRequest}
 import blueeyes.util.Future
+import blueeyes.core.http._
 
 class HttpServerSpec extends Specification{
 
@@ -25,8 +25,8 @@ class HttpServerSpec extends Specification{
   }
   
   "HttpServer.apply" should {
-    "be defined exactly where services are defined" in {
-      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (false)
+    "be always defined" in {
+      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (true)
       server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
     }
     
@@ -34,11 +34,16 @@ class HttpServerSpec extends Specification{
       server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
-    /*
-    // TODO: Need to decide if this should be included in spec.
+    "produce NotFount response when service is not defined for request" in {
+      server.apply(HttpRequest[String](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)))
+    }
+
     "gracefully handle error-producing service handler" in {
-      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/error")).error must eventually(beSomething)
-    }*/
+      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+    }
+    "gracefully handle dead-future-producing service handler" in {
+      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+    }
   }
 
   "HttpServer stop" should {
@@ -77,6 +82,11 @@ trait TestService extends HttpServer[String] with BlueEyesServiceBuilderString w
               get { request =>
                 error("He's dead, Jim.")
               }
+            } ~
+            path("/dead") {
+              get { request =>
+                Future.dead[HttpResponse[String]](new RuntimeException())
+              }
             }
           }
         }
@@ -87,3 +97,25 @@ trait TestService extends HttpServer[String] with BlueEyesServiceBuilderString w
     }
   }
 }
+
+
+//  "write response when Future is cancelled" in {
+//
+//    val event  = mock[MessageEvent]
+//    val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
+//    val request      = fromNettyRequest(nettyRequest, remoteAddress)
+//    val future       = new Future[HttpResponse[String]]()
+//
+//    when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
+//    when(event.getRemoteAddress()).thenReturn(remoteAddress)
+//    when(handler.isDefinedAt(request)).thenReturn(true)
+//    when(handler.apply(request)).thenReturn(future, future)
+//    when(event.getChannel()).thenReturn(channel, channel)
+//    when(channel.write(Matchers.argThat(new RequestMatcher(toNettyResponse(HttpResponse[String](HttpStatus(HttpStatusCodes.InternalServerError, InternalServerError.defaultMessage))))))).thenReturn(channelFuture, channelFuture)
+//
+//    nettyHandler.messageReceived(context, event)
+//
+//    future.cancel(HttpException(InternalServerError, InternalServerError.defaultMessage))
+//
+//    Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
+//  }

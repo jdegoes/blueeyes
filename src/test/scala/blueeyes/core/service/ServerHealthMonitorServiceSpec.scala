@@ -12,6 +12,7 @@ class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification[Array[
       get$ { response: HttpResponse[JValue] =>
         response.status  mustEqual(HttpStatus(OK))
         val content = response.content.get
+
         content \ "runtime" must notEq(JNothing)
         content \ "memory" must notEq(JNothing)
         content \ "threads" must notEq(JNothing)

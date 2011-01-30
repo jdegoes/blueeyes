@@ -11,10 +11,11 @@ import blueeyes.json.JsonAST.{JValue, JField, JObject}
 
 class HealthMonitor{
 
-  private val _countsStats: ConcurrentMap[JPath, Counter]   = new ConcurrentHashMap[JPath, Counter]
-  private val _timersStats: ConcurrentMap[JPath, Timer]     = new ConcurrentHashMap[JPath, Timer]
-  private val _errorsStats: ConcurrentMap[JPath, ErrorStat] = new ConcurrentHashMap[JPath, ErrorStat]
-  private val _sampleStats: ConcurrentMap[JPath, Sample]    = new ConcurrentHashMap[JPath, Sample]
+  private val _countsStats:   ConcurrentMap[JPath, Counter]   = new ConcurrentHashMap[JPath, Counter]
+  private val _timersStats:   ConcurrentMap[JPath, Timer]     = new ConcurrentHashMap[JPath, Timer]
+  private val _errorsStats:   ConcurrentMap[JPath, ErrorStat] = new ConcurrentHashMap[JPath, ErrorStat]
+  private val _sampleStats:   ConcurrentMap[JPath, Sample]    = new ConcurrentHashMap[JPath, Sample]
+  private val _exportedStats: ConcurrentMap[JPath, ExportedStatistic[_]] = new ConcurrentHashMap[JPath, ExportedStatistic[_]]
 
   def increment(path: JPath)(c: Long): Unit = counterStat(path) += c
 
@@ -25,6 +26,9 @@ class HealthMonitor{
   def timeFuture[T](path: JPath)(f: Future[T]): Future[T] = timerStat(path).time(f)
 
   def sample(path: JPath)(d: Double): Unit = sampleStat(path) += d
+
+  def export[T](path: JPath, value: => T)(implicit converter: T => JValue) =
+    createIfAbsent(path, _exportedStats, {new ExportedStatistic[T](value)})
 
   def error[T <: Throwable](path: JPath)(t: T): T = {
     errorStat(path) += t
@@ -52,16 +56,18 @@ class HealthMonitor{
     }
   }
 
-  def countStats  = _countsStats.toMap
+  def countStats    = _countsStats.toMap
 
-  def timerStats  = _timersStats.toMap
+  def exportedStats = _exportedStats.toMap
 
-  def sampleStats = _sampleStats.toMap
+  def timerStats    = _timersStats.toMap
 
-  def errorStats  = _errorsStats.toMap
+  def sampleStats   = _sampleStats.toMap
+
+  def errorStats    = _errorsStats.toMap
 
   def toJValue: JValue = {
-    val statistics = List[Map[JPath, Statistic[_, _]]](timerStats, errorStats, sampleStats, countStats)
+    val statistics = List[Map[JPath, Statistic[_, _]]](timerStats, errorStats, sampleStats, countStats, exportedStats)
     statistics.foldLeft(JObject(Nil)) {(result, element) => result.merge(composeStatistics(element)).asInstanceOf[JObject]}
   }
 
@@ -87,12 +93,3 @@ class HealthMonitor{
 
   private def errorStat(path: JPath):   ErrorStat = createIfAbsent(path, _errorsStats, {new ErrorStat()})
 }
-
-//trait HealthMonitorsImplicits{
-//  implicit def serializableHealthMonitorsSugar(monitors: List[HealthMonitorImpl]) = new {
-//    def toJValue = {
-//      val services = monitors.foldLeft(JObject(Nil)){(result, element) => result.merge(element.toJValue).asInstanceOf[JObject]}
-//      JObject(JField("services", services) :: Nil)
-//    }
-//  }
-//}
