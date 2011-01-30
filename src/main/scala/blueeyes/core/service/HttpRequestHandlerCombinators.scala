@@ -423,7 +423,7 @@ trait HttpRequestHandlerCombinators {
       import blueeyes.json.xschema.DefaultSerialization._
       import blueeyes.json.Printer._
       
-      callback match {
+      (callback match {
         case Some(callback) =>
           val meta = compact(render(JObject(
             JField("headers", r.headers.serialize) ::
@@ -447,7 +447,7 @@ trait HttpRequestHandlerCombinators {
         
         case None =>
           r.copy(content = r.content.map(b2.apply))
-      }
+      }).copy(headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
     }
   }
   
