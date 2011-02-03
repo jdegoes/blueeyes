@@ -23,68 +23,70 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
 trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators {
   def mongo: Mongo
 
-  val contactListService = service("contactlist", "1.0.0") { context =>
-    startup {
-      val config = BlueEyesDemoConfig(context.config, mongo)
+  val contactListService = service("contactlist", "1.0.0") {
+    healthMonitor { monitor => context =>
+      startup {
+        val config = BlueEyesDemoConfig(context.config, mongo)
 
-      config.database[JNothing.type](ensureUniqueIndex("contacts.name").on(config.collection, "name"))
+        config.database[JNothing.type](ensureUniqueIndex("contacts.name").on(config.collection, "name"))
 
-      config
-    } -> 
-    request { demoConfig: BlueEyesDemoConfig =>
-      import demoConfig._
-      
-      path("/contacts"){
-        produce(application/json) {
-          get { request: HttpRequest[Array[Byte]] => 
-            val contacts = JArray(database(select(".name").from(collection)).flatMap(row => (row \\ "name").value).toList)
-            
-            HttpResponse[JValue](content=Some(contacts))
-          }
-        } ~
-        jvalue {
-          post {
-            refineContentType[JValue, JObject] {
-              requireContent((j: JObject) => !((j \ "name" -->? classOf[JString]).isEmpty)) { request => 
-                val name = (request.content.get \ "name" --> classOf[JString]).value
-                
-                database[JNothing.type](upsert(collection).set(request.content.get).where("name" === name))
-                
+        config
+      } ->
+      request { demoConfig: BlueEyesDemoConfig =>
+        import demoConfig._
+
+        path("/contacts"){
+          produce(application/json) {
+            get { request: HttpRequest[Array[Byte]] =>
+              val contacts = JArray(database(select(".name").from(collection)).flatMap(row => (row \\ "name").value).toList)
+
+              HttpResponse[JValue](content=Some(contacts))
+            }
+          } ~
+          jvalue {
+            post {
+              refineContentType[JValue, JObject] {
+                requireContent((j: JObject) => !((j \ "name" -->? classOf[JString]).isEmpty)) { request =>
+                  val name = (request.content.get \ "name" --> classOf[JString]).value
+
+                  database[JNothing.type](upsert(collection).set(request.content.get).where("name" === name))
+
+                  HttpResponse[JValue]()
+                }
+              }
+            }
+          } ~
+          path("/'name") {
+            produce(application/json) {
+              get { request: HttpRequest[Array[Byte]] =>
+                val contact = database(selectOne().from(collection).where("name" === request.parameters('name)))
+                val status  = if (!contact.isEmpty) OK else NotFound
+
+                HttpResponse[JValue](content=contact, status=status)
+              } ~
+              delete { request: HttpRequest[Array[Byte]] =>
+                database[JNothing.type](remove.from(collection).where("name" === request.parameters('name)))
+
                 HttpResponse[JValue]()
               }
             }
-          }
-        } ~
-        path("/'name") {
-          produce(application/json) {
-            get { request: HttpRequest[Array[Byte]] => 
-              val contact = database(selectOne().from(collection).where("name" === request.parameters('name)))
-              val status  = if (!contact.isEmpty) OK else NotFound
-              
-              HttpResponse[JValue](content=contact, status=status)
-            } ~
-            delete { request: HttpRequest[Array[Byte]] => 
-              database[JNothing.type](remove.from(collection).where("name" === request.parameters('name)))
-              
-              HttpResponse[JValue]()
-            }
-          }
-        } ~
-        path("/search") {
-          jvalue {
-            post {
-              refineContentType[JValue, JObject] { request =>
-                val contacts = JArray(searchContacts(request.content, demoConfig))
-                
-                HttpResponse[JValue](content=Some(contacts))
+          } ~
+          path("/search") {
+            jvalue {
+              post {
+                refineContentType[JValue, JObject] { request =>
+                  val contacts = JArray(searchContacts(request.content, demoConfig))
+
+                  HttpResponse[JValue](content=Some(contacts))
+                }
               }
             }
           }
         }
+      } ->
+      shutdown { demoConfig: BlueEyesDemoConfig =>
+        // Nothing to do
       }
-    } ->
-    shutdown { demoConfig: BlueEyesDemoConfig =>
-      // Nothing to do
     }
   }
 
