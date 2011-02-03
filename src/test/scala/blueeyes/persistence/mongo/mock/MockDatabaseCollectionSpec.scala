@@ -6,7 +6,7 @@ import blueeyes.persistence.mongo.MongoFilterOperators._
 import com.mongodb.MongoException
 import blueeyes.persistence.mongo._
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, JPath}
+import blueeyes.json.{JsonParser, JPath, Printer}
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -16,6 +16,7 @@ class MockDatabaseCollectionSpec extends Specification{
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
 
   private val jobjectsWithArray = parse("""{ "foo" : [{"shape" : "square", "color" : "purple", "thick" : false}, {"shape" : "circle", "color" : "red", "thick" : true}] } """) :: parse("""{ "foo" : [{"shape" : "square", "color" : "red", "thick" : true}, {"shape" : "circle", "color" : "purple", "thick" : false}] }""") :: Nil
+  private val unsetTest = parse("""{ "channelId" : "foo", "feeds" { "bar" : {"field" : "one" }, "baz" : {"field" : "one" }  } }""")
 
   private val sort     = MongoSort("address.street", MongoSortOrderDescending)
 
@@ -221,6 +222,18 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.update(None, MongoUpdateObject(jObject2), true, false)
 
     collection.select(MongoSelection(Nil), None, None, None, None) mustEqual(jObject2 :: Nil)
+  }
+  "update using uset" in{
+
+    val collection = newCollection
+
+    collection.insert(unsetTest :: Nil)
+
+    collection.update(Some("channelId" === "foo"), JPath(".feeds.bar") unset, false, false)
+
+    val feeds = collection.select(MongoSelection(Nil), None, None, None, None).head \\ "feeds"
+
+    feeds.asInstanceOf[JObject].fields.length mustEqual (1)
   }
   "insert by update field when upsert is true" in{
     val collection = newCollection

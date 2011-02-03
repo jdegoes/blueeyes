@@ -130,6 +130,15 @@ object JsonParser {
     error("expected string end")
   }
 
+  // FIXME fail fast to prevent infinite loop, see
+  // http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
+  val BrokenDouble = BigDecimal("2.2250738585072012e-308")
+  private[json] def parseDouble(s: String) = {
+    val d = BigDecimal(s)
+    if (d == BrokenDouble) error("Error parsing 2.2250738585072012e-308")
+    else d.doubleValue
+  }
+
   private val astParser = (p: Parser) => {
     val vals = new ValStack(p)
     var token: Token = null
@@ -254,7 +263,8 @@ object JsonParser {
           }
         }
         val value = s.toString
-        if (doubleVal) DoubleVal(value.toDouble) else IntVal(BigInt(value))
+        if (doubleVal) DoubleVal(parseDouble(value))
+        else IntVal(BigInt(value))
       }
 
       def readString(charCount: Int) = {
