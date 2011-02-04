@@ -1,5 +1,8 @@
 package blueeyes.util
 
+import java.net.URLDecoder._
+import java.net.URLEncoder._
+
 /**
  * This object only deals with the query portion of the URI.  A URI can be decomposed into
  * constituant components using the java.lang.URI class.
@@ -17,12 +20,21 @@ object QueryParser {
       case Nil => Nil
     }
   }).map { nameValue =>
-    import java.net.URLDecoder._
     (Symbol(decode(nameValue._1, encoding)), decode(nameValue._2, encoding))
   }: _*)
 
-  def unparseQuery(query: Map[Symbol, String]): String = query.map { nameValue =>
-    import java.net.URLEncoder._
-    (encode(nameValue._1.name, encoding) :: encode(nameValue._2, encoding) :: Nil).filter(n => 
-      !n.isEmpty).mkString("=")}.mkString("&")
+  def unparseQuery(query: Map[Symbol, String], shouldEncode: Boolean = true): String =  {
+    def transformFn(nameValue: Tuple2[Symbol, String]) = {
+      if(shouldEncode) 
+        (encode(nameValue._1.name, encoding) :: encode(nameValue._2, encoding) :: Nil)
+      else
+        (nameValue._1.name :: nameValue._2 :: Nil)
+    }
+
+    query.map { nameValue =>
+      transformFn(nameValue).filter { n => 
+        !n.isEmpty
+      }.mkString("=")
+    }.mkString("&")
+  }
 }

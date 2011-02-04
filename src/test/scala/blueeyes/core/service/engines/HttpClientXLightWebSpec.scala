@@ -245,6 +245,16 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace(content))
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
+
+    "Support POST requests with encoded URL should be preserved" in {
+      val content = "Hello, world"
+      val f = path$(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238") {
+        post$(StringToByteArray(content)) { r => r }
+      }(httpClientArrayByte)
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+      f.value.get.content.map(ByteArrayToString(_)).get.contains("plckForumId=Cat:Wedding BoardsForum:238") must beTrue
+    }
   }
 }
 

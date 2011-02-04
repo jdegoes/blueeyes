@@ -1,18 +1,18 @@
 package blueeyes.core.service.engines
 
-import javax.net.ssl.SSLContext
-import java.io.IOException
 import blueeyes.util.Future
-import org.xlightweb.client.{HttpClient => XLHttpClient}
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
-                      OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
 import blueeyes.core.http.HttpFailure
+import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import javax.net.ssl.SSLContext
 import net.lag.logging.Logger
+import org.xlightweb.client.{HttpClient => XLHttpClient}
+import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
+                      OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import scala.collection.JavaConversions._
 
 
@@ -87,13 +87,13 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     import java.net.URI
 
     // Merge request.parameters and original query params (in uri)
-    val origURI = URI.create(request.uri)
-    val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")))
+    val origURI = new URI(request.uri)
+    val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")), false)
     // URI expects nulls for undefined params, hence the conditional for the uri param
     val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath,
                       if(newQueryParams.length == 0) null else newQueryParams,
                       origURI.getFragment).toString
-
+    
     val newHeaders         = request.headers + requestContentLength(request)
     val xlRequest          = createXLRequest(request, uri)
 
