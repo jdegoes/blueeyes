@@ -77,7 +77,10 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   
   lazy val benchmark = benchmarkTask
 
-  def benchmarkTask = task { args => runTask(Some("blueeyes.benchmark.Benchmark"), runClasspath, Array("600")) dependsOn(compile, copyResources) describedAs("Run benchmark test") }
+  def benchmarkTask = task { args =>
+    val duration = if (args.isEmpty) "600" else args(0)
+    runTask(Some("blueeyes.benchmark.Benchmark"), runClasspath, Array(duration)) dependsOn(compile, copyResources) describedAs("Run benchmark test") 
+  }
 
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
