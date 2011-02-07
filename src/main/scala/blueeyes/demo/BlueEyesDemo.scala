@@ -13,6 +13,7 @@ import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
+import blueeyes.json.{JPathField, CompositeJPath, JPath}
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
   private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)
@@ -28,7 +29,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
       startup {
         val config = BlueEyesDemoConfig(context.config, mongo)
 
-        config.database[JNothing.type](ensureUniqueIndex("contacts.name").on(config.collection, "name"))
+//        config.database[JNothing.type](ensureUniqueIndex("contacts.name").on(config.collection, "name"))
 
         config
       } ->
@@ -45,14 +46,10 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
           } ~
           jvalue {
             post {
-              refineContentType[JValue, JObject] {
-                requireContent((j: JObject) => !((j \ "name" -->? classOf[JString]).isEmpty)) { request =>
-                  val name = (request.content.get \ "name" --> classOf[JString]).value
+              refineContentType[JValue, JObject] { request =>
+                database[JNothing.type](insert(request.content.get).into(collection))
 
-                  database[JNothing.type](upsert(collection).set(request.content.get).where("name" === name))
-
-                  HttpResponse[JValue]()
-                }
+                HttpResponse[JValue]()
               }
             }
           } ~
