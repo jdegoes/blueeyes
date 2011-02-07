@@ -23,6 +23,8 @@ class HealthMonitor{
 
   def time[T](path: JPath)(f: => T): T      = timerStat(path).time(f)
 
+  def trackTime[T](path: JPath)(ns: Long)   = timerStat(path).+=(ns)
+
   def timeFuture[T](path: JPath)(f: Future[T]): Future[T] = timerStat(path).time(f)
 
   def sample(path: JPath)(d: Double): Unit = sampleStat(path) += d

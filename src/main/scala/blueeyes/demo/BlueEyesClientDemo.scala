@@ -63,6 +63,19 @@ trait BlueEyesDemoFacade extends BlueEyesClientTransformerBuilder{
       }
     }
   }
+  def health()  = protocol$("http"){
+    host$("localhost"){
+      port$(port){
+        path$("/blueeyes/services/contactlist/v1/health"){
+          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
+            get$[JValue, Option[JValue]]{response: HttpResponse[JValue] =>
+              response.content
+            }
+          }
+        }
+      }
+    }
+  }
 
   def list =  protocol$("http"){
     host$("localhost"){

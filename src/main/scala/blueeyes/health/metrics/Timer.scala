@@ -98,7 +98,7 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
     this
   }
 
-  def toJValue: JValue = JObject(JField("minimumTime", JDouble(min.value)) :: JField("maximumTime", JDouble(max.value)) :: JField("averageTime", JDouble(mean.value)) :: JField("standardDeviation", JDouble(standardDeviation.value)) :: Nil)
+  def toJValue: JValue = JObject(JField("perSecond", JDouble((count / total.convert(TimeUnit.SECONDS).value))) :: JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).value)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).value)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).value)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).value)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank

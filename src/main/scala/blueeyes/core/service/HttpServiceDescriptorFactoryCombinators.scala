@@ -1,6 +1,5 @@
 package blueeyes.core.service
 
-import blueeyes.json.JPathImplicits
 import blueeyes.health.HealthMonitor
 import net.lag.logging.Logger
 import net.lag.configgy.Configgy
@@ -8,6 +7,7 @@ import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.util.{Future, FutureImplicits}
+import blueeyes.json.{JPathField, CompositeJPath, JPathImplicits}
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits{
   private[this] object TransformerCombinators extends HttpClientTransformerCombinators
@@ -140,20 +140,22 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
     def apply(request: HttpRequest[T]) = {
 
-      val methodName = request.method.value
-      val countPath  = ".requests.%s.count".format(methodName)
-      val timePath   = ".requests.%s.timing".format(methodName)
-      val errorPath  = ".requests.%s.errors".format(methodName)
+      val methodName  = request.method.value
+      val requestPath = List(JPathField("requests"), JPathField(methodName))
+      val countPath   = CompositeJPath(requestPath ::: List(JPathField("count")))
+      val timePath    = CompositeJPath(requestPath ::: List(JPathField("timing")))
+      val errorPath   = CompositeJPath(requestPath ::: List(JPathField("errors")))
+      val startTime  = System.nanoTime
 
       def monitor(response: Future[HttpResponse[T]]) = {
         val methodName = request.method.value
 
         healthMonitor.count(countPath)
-        healthMonitor.timeFuture(timePath)(response)
         healthMonitor.trapFuture(errorPath)(response)
 
         response.deliverTo{v =>
-          healthMonitor.count("requests.statusCodes." + v.status.code.value)  
+          healthMonitor.trackTime(timePath)(System.nanoTime - startTime)                      
+          healthMonitor.count(CompositeJPath(List(JPathField("requests"), JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
         }
 
         response
