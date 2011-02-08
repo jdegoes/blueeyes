@@ -5,15 +5,23 @@ import scala.util.matching.Regex
 
 object RegularExpressionAST {
   case class RegularExpression(atoms: RegexAtom*)
-  
-  sealed trait RegexAtom
-  
-  abstract class SingleChar extends RegexAtom { def char: Char } 
+
+  case class RegexAtom(element: RegexAtomElement, quantifier: Option[Quantifier])
+  sealed trait RegexAtomElement
+
+  sealed trait Quantifier
+  case class GreedyQuantifier(lowerBound: Int, upperBound: Option[Int]) extends Quantifier
+  case class ReluctantQuantifier(quantifier: GreedyQuantifier) extends Quantifier
+  case class PossessiveQuantifier(quantifier: GreedyQuantifier) extends Quantifier
+
+  abstract class SingleChar extends RegexAtomElement { def char: Char } 
   abstract class FixedSingleChar(val char: Char) extends SingleChar
   case object AndChar extends FixedSingleChar('&')
   case object HyphenChar extends FixedSingleChar('-')
   case object ColonChar extends FixedSingleChar(':')
-  case object SquareBracketEndChar extends FixedSingleChar(':')
+  case object SquareBracketStartChar extends FixedSingleChar('[')
+  case object SquareBracketEndChar extends FixedSingleChar(']')
+  case object CurlyBracketStartChar extends FixedSingleChar('}')
   case object CurlyBracketEndChar extends FixedSingleChar('}')
   case object EqualsChar extends FixedSingleChar('=')
   case object LessThanChar extends FixedSingleChar('<')
@@ -26,14 +34,12 @@ object RegularExpressionAST {
   case class OctalNumber(char: Char) extends SingleChar
   case class OtherChar(char: Char) extends SingleChar
   
-  sealed trait BoundaryMatch extends RegexAtom
+  sealed trait BoundaryMatch extends RegexAtomElement
   case object Caret extends BoundaryMatch
   case object Dollar extends BoundaryMatch
   case class BoundaryMatchEscape(escape: Char) extends BoundaryMatch
-  
-  
-  
-  sealed trait ShorthandCharacterClass extends RegexAtom
+
+  sealed trait ShorthandCharacterClass extends RegexAtomElement
   case object DigitClass    extends ShorthandCharacterClass
   case object NotDigitClass extends ShorthandCharacterClass
   case object SpaceClass    extends ShorthandCharacterClass
@@ -41,7 +47,7 @@ object RegularExpressionAST {
   case object WordClass     extends ShorthandCharacterClass
   case object NotWordClass  extends ShorthandCharacterClass
   
-  sealed trait PosixCharacterClass extends RegexAtom
+  sealed trait PosixCharacterClass extends RegexAtomElement
   case object PosixLower extends PosixCharacterClass
   case object PosixUpper extends PosixCharacterClass
   case object PosixASCII extends PosixCharacterClass
@@ -56,27 +62,29 @@ object RegularExpressionAST {
   case object PosixXDigit extends PosixCharacterClass
   case object PosixSpace extends PosixCharacterClass
   
-  case class EscapeSequence() extends RegexAtom
-  case class CharacterClass() extends RegexAtom
-  case class FlagGroup() extends RegexAtom
-  case class Quotation() extends RegexAtom
-  case class NamedCaptureGroup() extends RegexAtom
-  case class NonCapturingGroup() extends RegexAtom
-  case class AtomicGroup() extends RegexAtom
-  case class LookAround() extends RegexAtom
-  case class Group() extends RegexAtom
-  case class BackReference(reference: Int) extends RegexAtom
-  case class DotChar() extends RegexAtom
-  case class OrChar() extends RegexAtom
+  case class EscapeSequence() extends RegexAtomElement
+  case class CharacterClass() extends RegexAtomElement
+  case class FlagGroup(flags1: List[Char], flags2: Option[List[Char]]) extends RegexAtomElement
+  case class Quotation() extends RegexAtomElement
+  case class NamedCaptureGroup(name: String, group: RegexAtom*) extends RegexAtomElement
+  case class NonCapturingGroup(flags: Option[(List[Char], Option[List[Char]])], group: RegexAtom*) extends RegexAtomElement
+  case class AtomicGroup(group: RegexAtom*) extends RegexAtomElement
+  case class LookAround(isLookbehind: Boolean, isNegative: Boolean, regex: RegexAtom*) extends RegexAtomElement
+  case class Group(group: RegexAtom*) extends RegexAtomElement
+  case class BackReference(reference: Int) extends RegexAtomElement
+  case class DotChar() extends RegexAtomElement
+  case class OrChar() extends RegexAtomElement
   
 }
 
 trait RegularExpressionGrammar extends RegexParsers {
+  import RegularExpressionAST._
+
   private[this] implicit def string2Regex(s: String): Regex = new Regex(s)
   
   def regularExpression = startOfFile ~ (regexAtom*) ~ endOfFile
 
-  def regexAtom: Parser[Any] = (
+  def regexAtom: Parser[RegexAtom] = (
     singleChar |
     boundaryMatch | 
     shorthandCharacterClass |
@@ -93,11 +101,11 @@ trait RegularExpressionGrammar extends RegexParsers {
     backReference |
     dotChar |
     orChar
-  ) ~ (quantifier?)
+  ) ~ (quantifier?) ^^ {case element ~ quant => RegexAtom(element, quant)}
 
-  def backReference = escapeChar ~ (digitChar+)
+  def backReference: Parser[RegexAtomElement] = escapeChar ~> (decimal) ^^ {value => BackReference(value)}
 
-  def singleChar = (andChar | 
+  def singleChar: Parser[RegexAtomElement] = (andChar | 
     hyphenChar |
     colonChar |
     squareBracketEndChar |
@@ -114,21 +122,21 @@ trait RegularExpressionGrammar extends RegexParsers {
     otherChar
   )
 
-  def atomicGroup = roundBracketStartChar ~ questionMarkChar ~ greaterThanChar ~ (regexAtom*) ~ roundBracketEndChar
+  def atomicGroup: Parser[AtomicGroup] = roundBracketStartChar ~> questionMarkChar ~> greaterThanChar ~> (regexAtom*) <~ roundBracketEndChar ^^ {value => AtomicGroup(value: _*)} 
 
-  def flagGroup = roundBracketStartChar ~ questionMarkChar ~ flags ~ roundBracketEndChar
+  def flagGroup: Parser[FlagGroup] = roundBracketStartChar ~> questionMarkChar ~> flags <~ roundBracketEndChar ^^ (value => FlagGroup(value._1, value._2))
 
-  def flags = (otherChar*) ~ (hyphenChar ~ (otherChar*))?
+  def flags = (otherChar*) ~ ((hyphenChar ~> (otherChar*))?) ^^ {case flags1 ~ flags2 => Tuple2(flags1.map(_.char), flags2.map(_.map(_.char)))}
 
-  def lookAround = roundBracketStartChar ~ questionMarkChar ~ (lessThanChar?) ~ (equalsChar | exclamationMarkChar) ~ (regexAtom*) ~ roundBracketEndChar
+  def lookAround: Parser[LookAround] = roundBracketStartChar ~> questionMarkChar ~> (lessThanChar?) ~ (equalsChar | exclamationMarkChar) ~ (regexAtom*) <~ roundBracketEndChar ^^ {case lookbehind ~ negative ~ value => LookAround(lookbehind.map(v => true).getOrElse(false), negative == ExclamationMarkChar, value: _*)}
   
-  def group = roundBracketStartChar ~ (regexAtom*) ~ roundBracketEndChar
+  def group: Parser[Group] = roundBracketStartChar ~> (regexAtom*) <~ roundBracketEndChar ^^ {value => Group(value: _*)}
   
-  def namedCaptureGroup: Parser[Any] = roundBracketStartChar ~ questionMarkChar ~ lessThanChar ~ (regex("[a-zA-z0-9]")+) ~ greaterThanChar ~ (regexAtom*) ~ roundBracketEndChar
+  def namedCaptureGroup: Parser[NamedCaptureGroup] = roundBracketStartChar ~> questionMarkChar ~> (lessThanChar ~> (regex("[a-zA-z0-9]")+) <~ greaterThanChar) ~ (regexAtom*) <~ roundBracketEndChar  ^^ {case name ~ value => NamedCaptureGroup(name.mkString(""), value: _*)}
 
-  def nonCapturingGroup: Parser[Any] = roundBracketStartChar ~ questionMarkChar ~ (flags?) ~ colonChar ~ (regexAtom*) ~ roundBracketEndChar
+  def nonCapturingGroup: Parser[NonCapturingGroup] = roundBracketStartChar ~> questionMarkChar ~> (flags?) ~ (colonChar ~> (regexAtom*)) <~ roundBracketEndChar ^^ {case flags ~ value => NonCapturingGroup(flags, value: _*)}
 
-  def characterClass = squareBracketStartChar ~ (caretChar?) ~ (squareBracketEndChar ~ (characterClassAtom*) | (characterClassAtom+)) ~ squareBracketEndChar
+  def characterClass: Parser[CharacterClass] = squareBracketStartChar ~ (caretChar?) ~ (squareBracketEndChar ~ (characterClassAtom*) | (characterClassAtom+)) ~ squareBracketEndChar ^^^ CharacterClass()
 
   def characterClassAtom = characterClassRange |
     escapeSequence |
@@ -187,20 +195,20 @@ trait RegularExpressionGrammar extends RegexParsers {
     digitChar |
     otherChar
 
-  def quantifier = reluctantQuantifier | possessiveQuantifier | greedyQuantifier
+  def quantifier: Parser[Quantifier] = reluctantQuantifier | possessiveQuantifier | greedyQuantifier
 
-  def greedyQuantifier = questionMarkChar | starChar | plusChar | 
-    (curlyBracketStartChar ~ (decimal | (decimal ~ commaChar) | (decimal ~ commaChar ~ decimal)) ~ curlyBracketEndChar)
+  def greedyQuantifier: Parser[GreedyQuantifier]  = questionMarkChar ^^^ GreedyQuantifier(0, Some(1))  | starChar ^^^ GreedyQuantifier(0, None) | plusChar ^^^ GreedyQuantifier(1, None) |
+    (curlyBracketStartChar ~> (decimal ^^ {value => GreedyQuantifier(value, Some(value))} | (decimal <~ commaChar) ^^ {value => GreedyQuantifier(value, None)} | (decimal ~ commaChar ~ decimal) ^^ {case lower ~ comma ~ upper => GreedyQuantifier(lower, Some(upper))}) <~ curlyBracketEndChar)
 
-  def reluctantQuantifier = greedyQuantifier ~ questionMarkChar
+  def reluctantQuantifier: Parser[ReluctantQuantifier] = greedyQuantifier <~ questionMarkChar ^^ (value => ReluctantQuantifier(value))
 
-  def possessiveQuantifier = greedyQuantifier ~ plusChar
+  def possessiveQuantifier: Parser[PossessiveQuantifier] = greedyQuantifier <~ plusChar ^^ (value => PossessiveQuantifier(value))
 
-  def decimal = digitChar+
+  def decimal: Parser[Int] = (digitChar+) ^^ (digitChars => digitChars.map(_.char).mkString("").toInt)
 
-  def boundaryMatch = caretChar | dollarChar | boundaryMatchEscape
+  def boundaryMatch: Parser[RegexAtomElement] = caretChar ^^^ Caret | dollarChar ^^^ Dollar | boundaryMatchEscape
 
-  def quotation = quotationStart ~ ((quotationStart | 
+  def quotation: Parser[RegexAtomElement] = quotationStart ~ ((quotationStart | 
     posixCharacterClass |
     shorthandCharacterClass |
     boundaryMatch |
@@ -232,77 +240,85 @@ trait RegularExpressionGrammar extends RegexParsers {
     dotChar |
     digitChar |
     otherChar
-  )*) ~ quotationEnd
+  )*) ~ quotationEnd ^^^ Quotation()
 
   def quotationStart = "\\q"
 
   def quotationEnd = "\\e"
 
-  def posixCharacterClass = "\\p{" ~ ("lower" |
-    "upper" |
-    "aSCII" |
-    "alpha" |
-    "digitChar" |
-    "alnum" |
-    "punct" |
-    "graph" |
-    "print" |
-    "blank" |
-    "cntrl" |
-    "xDigit" |
-    "space"
-  ) ~ "}"
+  def posixCharacterClass = "\\p{" ~> ("lower" ^^^ PosixLower |
+    "upper" ^^^ PosixUpper |
+    "aSCII" ^^^ PosixASCII |
+    "alpha" ^^^ PosixAlpha |
+    "digitChar" ^^^ PosixDigitChar |
+    "alnum" ^^^ PosixAlnum |
+    "punct" ^^^ PosixPunct |
+    "graph" ^^^ PosixGraph |
+    "print" ^^^ PosixPrint |
+    "blank" ^^^ PosixBlank |
+    "cntrl" ^^^ PosixCntrl |
+    "xDigit" ^^^ PosixXDigit |
+    "space" ^^^ PosixSpace
+  ) <~ "}"
 
-  def shorthandCharacterClass = escapeChar ~ regex("[dDsSwW]")
-
-  def boundaryMatchEscape = escapeChar ~ regex("[bBAzZG]")
-
-  def octalNumber = escapeChar ~ "0" ~ (
-    ((regex("[0-7]")?) ~ regex("[0-7]")) |
-    (regex("[0-3]") ~ regex("[0-7]") ~ regex("[0-7]"))
+  def shorthandCharacterClass: Parser[RegexAtomElement] = escapeChar ~> ("d" ^^^ DigitClass |
+    "D" ^^^ NotDigitClass |
+    "s" ^^^ SpaceClass |
+    "S" ^^^ NotSpaceClass |
+    "w" ^^^ WordClass |
+    "W" ^^^ NotWordClass
   )
 
-  def smallHexNumber = escapeChar ~ "x" ~ regex("[0-9a-fA-f]{2}")
+  def boundaryMatchEscape: Parser[RegexAtomElement] = escapeChar ~> regex("[bBAzZG]") ^^ {char => BoundaryMatchEscape(char.charAt(0))}
 
-  def unicodeChar = escapeChar ~ "u" ~ regex("[0-9a-fA-f]{4}")
+  def octalNumber: Parser[RegexAtomElement] = escapeChar ~ "0" ~> (
+    ((regex("[0-7]")?) ~ regex("[0-7]") ^^ {case v1~v2 => parseOctal(v1.getOrElse("") + v2)}) |
+    (regex("[0-3]") ~ regex("[0-7]") ~ regex("[0-7]") ^^ {case v1~v2~v3 => parseOctal(v1 + v2 + v3)})
+  )
 
-  def escapeSequence = escapeChar ~ regex("[tnrfae&&[^a-zA-z0-9]]")
+  private def parseOctal(v: String) = OctalNumber(Integer.parseInt(v, 8).toChar)
+
+  def smallHexNumber: Parser[RegexAtomElement] = escapeChar ~> "x" ~> regex("[0-9a-fA-f]{2}") ^^ {v => SmallHexNumber(Integer.parseInt(v, 16).toChar)}
+
+  def unicodeChar: Parser[RegexAtomElement] = escapeChar ~> "u" ~> regex("[0-9a-fA-f]{4}") ^^ {v => UnicodeChar(Integer.parseInt(v, 16).toChar)}
+
+  def escapeSequence: Parser[RegexAtomElement] = escapeChar ~ regex("[tnrfae&&[^a-zA-z0-9]]") ^^^ EscapeSequence()
 
   def escapeChar: Parser[String] = "\\"
 
-  def andChar: Parser[String] = "&"
+  def andChar: Parser[RegexAtomElement] = "&" ^^^ AndChar
 
-  def orChar: Parser[String] = "|"
+  def orChar: Parser[RegexAtomElement] = "|" ^^^ OrChar()
 
-  def hyphenChar: Parser[String] = "-"
+  def hyphenChar: Parser[RegexAtomElement] = "-" ^^^ HyphenChar
 
   def caretChar: Parser[String] = "^"
 
-  def colonChar: Parser[String] = ":"
+  def colonChar: Parser[RegexAtomElement] = ":" ^^^ ColonChar
 
   def dollarChar: Parser[String] = "$"
 
-  def squareBracketStartChar: Parser[String] = "["
+  def squareBracketStartChar: Parser[RegexAtomElement] = "[" ^^^ SquareBracketStartChar
 
-  def squareBracketEndChar: Parser[String] = "]"
+  def squareBracketEndChar: Parser[RegexAtomElement] = "]" ^^^ SquareBracketEndChar
 
   def roundBracketStartChar: Parser[String] = "("
 
   def roundBracketEndChar: Parser[String] = ")"
 
-  def curlyBracketStartChar: Parser[String] = "{"
+  def curlyBracketStartChar: Parser[RegexAtomElement] = "{" ^^^ CurlyBracketStartChar
 
-  def curlyBracketEndChar: Parser[String] = "}"
+  def curlyBracketEndChar: Parser[RegexAtomElement] = "}" ^^^ CurlyBracketEndChar
 
-  def equalsChar: Parser[String] = "="
+  def equalsChar: Parser[RegexAtomElement] = "=" ^^^ EqualsChar
 
-  def lessThanChar: Parser[String] = "<"
+  def lessThanChar: Parser[RegexAtomElement] = "<" ^^^ LessThanChar
 
-  def greaterThanChar: Parser[String] = ">"
+  def greaterThanChar: Parser[RegexAtomElement] = ">" ^^^ GreaterThanChar
 
-  def exclamationMarkChar: Parser[String] = "!"
+  def exclamationMarkChar: Parser[RegexAtomElement] = "!" ^^^ ExclamationMarkChar
 
-  def commaChar: Parser[String] = ","
+  def commaChar: Parser[RegexAtomElement] = "," ^^^ CommaChar
 
   def plusChar: Parser[String] = "+"
 
@@ -310,13 +326,13 @@ trait RegularExpressionGrammar extends RegexParsers {
 
   def questionMarkChar: Parser[String] = "?"
 
-  def dotChar: Parser[String] = "."
+  def dotChar: Parser[RegexAtomElement] = "." ^^^ DotChar()
 
-  def digitChar = regex("[0-9]")
+  def digitChar = regex("[0-9]") ^^ (v => DigitChar(v.charAt(0)))
 
-  def otherChar = not(escapeChar | andChar | orChar | hyphenChar | caretChar | colonChar | dollarChar | squareBracketStartChar | 
+  def otherChar: Parser[OtherChar] = (not(escapeChar | andChar | orChar | hyphenChar | caretChar | colonChar | dollarChar | squareBracketStartChar |
     squareBracketEndChar | roundBracketStartChar | curlyBracketEndChar | equalsChar | lessThanChar | greaterThanChar | exclamationMarkChar |
-    commaChar | plusChar | starChar | questionMarkChar | dotChar | digitChar)
+    commaChar | plusChar | starChar | questionMarkChar | dotChar | digitChar) ~> regex(".")) ^^ (v => OtherChar(v.charAt(0)))
   
   def startOfFile = regex("^")
   
