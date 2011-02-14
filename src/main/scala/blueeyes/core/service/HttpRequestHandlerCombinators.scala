@@ -51,7 +51,7 @@ trait HttpRequestHandlerCombinators {
    * specified HTTP method.
    */
   def method[T, S](method: HttpMethod) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
-    def isDefinedAt(r: HttpRequest[T]): Boolean = r.method == method
+    def isDefinedAt(r: HttpRequest[T]): Boolean = r.method == method && h.isDefinedAt(r)
     
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
       case `method` => h(r)
@@ -120,12 +120,12 @@ trait HttpRequestHandlerCombinators {
    */
   implicit def commit[T, S](h: HttpRequest[T] => Future[HttpResponse[S]]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       h.apply(r)
     }
   }
-  
+
   /** Attemps to peek to see if a particular handler will handle a request. 
    * Used to convert a fast-failing handler into a skipping one.
    * <pre>
@@ -171,10 +171,10 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def getRange[T, S](h: (List[(Int, Int)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = get {
+  def getRange[T, S](h: (List[(Int, Int)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = method(HttpMethods.GET) {
     new HttpRequestHandler2[T, S] {
       private def extractRange(headers: Map[String, String]): (List[(Int, Int)], String) = {
-        val rangeStr = headers.find(_._1.toLowerCase == "range").get._2
+        val rangeStr = headers.find(_._1.toLowerCase == "range").map(_._2).getOrElse("")
 
         rangeStr.split("=").toList match {
           case unit :: specifiers :: Nil => 
