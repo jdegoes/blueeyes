@@ -499,7 +499,7 @@ object Future {
         if (newCount == 0) {
           var list: List[T] = Nil
           
-          for (i <- 0 to futures.length) {
+          for (i <- 0 until futures.length) {
             list = resultsMap.get(i) :: list
           }
           
