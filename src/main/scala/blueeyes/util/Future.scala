@@ -476,38 +476,42 @@ object Future {
     val resultsMap = new ConcurrentHashMap[java.lang.Integer, T]
     
     val result = new Future[List[T]]
-    
-    val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
-    
-    (0 to futures.length).zip(futures).foreach { pair =>
-      val index  = pair._1
-      val future = pair._2
-      
-      future.deliverTo { result =>
-        resultsMap.put(index, result)
+
+    if (!futures.isEmpty){
+
+      val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
+
+      (0 to futures.length).zip(futures).foreach { pair =>
+        val index  = pair._1
+        val future = pair._2
+
+        future.deliverTo { result =>
+          resultsMap.put(index, result)
+        }
       }
-    }
-    
-    futures.foreach { future =>
-      future.ifCanceled { e =>
-        result.cancel(e)
-      }
-      
-      future.deliverTo { _ => 
-        val newCount = remaining.decrementAndGet
-      
-        if (newCount == 0) {
-          var list: List[T] = Nil
-          
-          for (i <- 0 until futures.length) {
-            list = resultsMap.get(i) :: list
+
+      futures.foreach { future =>
+        future.ifCanceled { e =>
+          result.cancel(e)
+        }
+
+        future.deliverTo { _ =>
+          val newCount = remaining.decrementAndGet
+
+          if (newCount == 0) {
+            var list: List[T] = Nil
+
+            for (i <- 0 until futures.length) {
+              list = resultsMap.get(i) :: list
+            }
+
+            result.deliver(list)
           }
-          
-          result.deliver(list)
         }
       }
     }
-    
+    else result.deliver(Nil)
+
     result
   }
   
