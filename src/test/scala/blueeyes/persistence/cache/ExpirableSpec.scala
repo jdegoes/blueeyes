@@ -2,15 +2,19 @@ package blueeyes.persistence.cache
 
 import org.spex.Specification
 import java.util.concurrent.TimeUnit.{NANOSECONDS, MILLISECONDS}
-import java.lang.System.{currentTimeMillis}
+import java.lang.System.{nanoTime}
 
 class ExpirableSpec extends Specification{
   private val expirable = Expirable("foo", "bar", ExpirationPolicy(None, None, NANOSECONDS))
 
   "Expirable: records access time" in{
-    expirable.value
 
-    expirable.accessTime(MILLISECONDS) must beCloseTo (currentTimeMillis(), 100)
+    val lower = nanoTime()
+    expirable.value
+    val upper = nanoTime()
+
+    expirable.accessTime(NANOSECONDS) must be_>= (lower)
+    expirable.accessTime(NANOSECONDS) must be_<= (upper)
   }
 
   "Expirable: can convert access time" in{
