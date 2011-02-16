@@ -24,7 +24,7 @@ Repository: http://oss.sonatype.org/content/repositories/releases
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.1.70</version>
+      <version>0.1.71</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -33,7 +33,7 @@ Repository: http://oss.sonatype.org/content/repositories/releases
 
     val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
     
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.70" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.71" % "compile"
 
 ## Origins
 

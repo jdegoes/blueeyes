@@ -4,6 +4,7 @@ import org.scalatest.matchers.MustMatchers
 import org.scalatest.Spec
 import blueeyes.health.time.Duration
 import blueeyes.util.Future
+import java.util.concurrent.CountDownLatch
 
 class TimerTest extends Spec with MustMatchers {
   val precision = 5.0 // milliseconds
@@ -23,8 +24,12 @@ class TimerTest extends Spec with MustMatchers {
     it("records the duration of the event specified by future") {
       val timer  = new Timer
       val future = new Future[Unit]()
-      timer.time(Future.async[Unit]{Thread.sleep(10); ()} )
-      Thread.sleep(20)
+
+      timer.time(future)
+
+      Thread.sleep(10)
+      future.deliver(())
+
       timer.mean.ms.value must not be(0.0)
     }
 
