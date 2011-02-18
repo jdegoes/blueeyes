@@ -8,6 +8,9 @@ import blueeyes.core.http.HttpVersions._
 
 trait HttpResponseHelpers {
   /** Shorthand function to create a future of an HttpResponse from the given parameters.
+   * {{{
+   * respond(content = Some(<html></html>))
+   * }}}
    */
   def respond[T](status: HttpStatus = HttpStatus(OK), headers: Map[String, String] = Map(), content: Option[T] = None): Future[HttpResponse[T]] = {
     Future(HttpResponse[T](status, headers, content))
@@ -17,6 +20,12 @@ trait HttpResponseHelpers {
    * headers. If the future is delivered, the OK status code will be returned,
    * but if the future is canceled, an InternalServerError status code will
    * be returned.
+   * {{{
+   * respond(
+   *    <html>
+   *    </html>
+   * )
+   * }}}
    */
   def respondLater[T](content: Future[T], headers: Map[String, String] = Map()): Future[HttpResponse[T]] = {
     val f = new Future[HttpResponse[T]]

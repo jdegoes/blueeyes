@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>src/main/scala/blueeyes/core/service/RestPathPattern.scala</string>
+	<string>src/main/scala/blueeyes/io/iteratee/Enumeratee.scala</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,76 +21,6 @@
 	<integer>405</integer>
 	<key>metaData</key>
 	<dict>
-		<key>README.md</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>21</integer>
-				<key>line</key>
-				<integer>403</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>369</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/core/http/HttpRequest.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>48</integer>
-				<key>line</key>
-				<integer>11</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/core/service/HttpClient.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>4</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/core/service/HttpClientTransformerImplicits.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>1</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/core/service/RestPathPattern.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>65</integer>
-				<key>line</key>
-				<integer>125</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>120</integer>
-		</dict>
 		<key>src/main/scala/blueeyes/core/service/engines/NettyEngines.scala</key>
 		<dict>
 			<key>caret</key>
@@ -105,48 +35,6 @@
 			<key>firstVisibleLine</key>
 			<integer>102</integer>
 		</dict>
-		<key>src/main/scala/blueeyes/core/service/test/BlueEyesServiceSpecification.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>34</integer>
-				<key>line</key>
-				<integer>32</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>21</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/demo/BlueEyesDemo.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>28</integer>
-				<key>line</key>
-				<integer>41</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>45</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/health/HealthMonitor.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>0</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
 		<key>src/main/scala/blueeyes/health/time/Duration.scala</key>
 		<dict>
 			<key>caret</key>
@@ -160,6 +48,90 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/Enumeratee.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>5</integer>
+				<key>line</key>
+				<integer>21</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>1</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/Enumerator.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>7</integer>
+				<key>line</key>
+				<integer>25</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/Input.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>37</integer>
+				<key>line</key>
+				<integer>44</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/Iteratee.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>79</integer>
+				<key>line</key>
+				<integer>135</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>85</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/IterateeError.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>13</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>src/main/scala/blueeyes/io/iteratee/VectorLike.scala</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>76</integer>
+				<key>line</key>
+				<integer>50</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>11</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/json/Extraction.scala</key>
 		<dict>
@@ -275,20 +247,6 @@
 			<key>firstVisibleLine</key>
 			<integer>114</integer>
 		</dict>
-		<key>src/main/scala/blueeyes/persistence/mongo/RealMongo.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>0</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>0</integer>
-		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/RealMongoImplementation.scala</key>
 		<dict>
 			<key>caret</key>
@@ -302,20 +260,6 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>34</integer>
-		</dict>
-		<key>src/main/scala/blueeyes/persistence/mongo/mock/MockMongoDatabase.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>80</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>77</integer>
 		</dict>
 		<key>src/main/scala/blueeyes/persistence/mongo/package.scala</key>
 		<dict>
@@ -331,54 +275,12 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
-		<key>src/main/scala/blueeyes/util/Future.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>32</integer>
-				<key>line</key>
-				<integer>24</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>13</integer>
-		</dict>
-		<key>src/test/scala/blueeyes/core/service/HttpClientTransformerCombinatorsSpec.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>37</integer>
-				<key>line</key>
-				<integer>21</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>9</integer>
-		</dict>
-		<key>src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>43</integer>
-				<key>line</key>
-				<integer>39</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>9</integer>
-		</dict>
 		<key>src/test/scala/blueeyes/core/service/engines/NettyRequestHandlerSpec.scala</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>73</integer>
+				<integer>0</integer>
 				<key>line</key>
 				<integer>24</integer>
 			</dict>
@@ -387,54 +289,19 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
-		<key>src/test/scala/blueeyes/core/service/test/BlueEyesServiceSpecificationSpec.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>27</integer>
-				<key>line</key>
-				<integer>33</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>8</integer>
-		</dict>
-		<key>src/test/scala/blueeyes/util/FutureSpec.scala</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>46</integer>
-				<key>line</key>
-				<integer>68</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>29</integer>
-		</dict>
 	</dict>
 	<key>openDocuments</key>
 	<array>
-		<string>src/main/scala/blueeyes/util/Future.scala</string>
-		<string>src/main/scala/blueeyes/core/service/RestPathPattern.scala</string>
-		<string>src/main/scala/blueeyes/health/HealthMonitor.scala</string>
-		<string>src/main/scala/blueeyes/core/http/HttpRequest.scala</string>
-		<string>src/main/scala/blueeyes/core/service/HttpClient.scala</string>
-		<string>README.md</string>
-		<string>src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala</string>
-		<string>src/test/scala/blueeyes/core/service/HttpClientTransformerCombinatorsSpec.scala</string>
-		<string>src/test/scala/blueeyes/core/service/test/BlueEyesServiceSpecificationSpec.scala</string>
-		<string>src/main/scala/blueeyes/core/service/test/BlueEyesServiceSpecification.scala</string>
-		<string>src/main/scala/blueeyes/core/service/HttpClientTransformerImplicits.scala</string>
-		<string>src/test/scala/blueeyes/util/FutureSpec.scala</string>
-		<string>src/main/scala/blueeyes/demo/BlueEyesDemo.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/Iteratee.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/Enumerator.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/Enumeratee.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/Input.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/VectorLike.scala</string>
+		<string>src/main/scala/blueeyes/io/iteratee/IterateeError.scala</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{1062, 304}, {1392, 979}}</string>
+	<string>{{362, 86}, {1392, 979}}</string>
 </dict>
 </plist>
