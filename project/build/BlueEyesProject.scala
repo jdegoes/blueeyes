@@ -67,7 +67,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val async          = "com.ning"                     % "async-http-client"   % "1.3.3"         % "compile"
   val mongo          = "org.mongodb"                  % "mongo-java-driver"   % "2.4"           % "compile"
   val jodatime       = "joda-time"                    % "joda-time"           % "1.6.2"         % "compile"
-  val configgy       = "net.lag"                      % "configgy"            % "2.0.0"         % "compile"
+  val configgy       = "net.lag"                      % "configgy"            % "2.0.0"         % "compile" intransitive()
   val guice          = "com.google.inject"            % "guice"               % "2.0"           % "compile"
   val rhino          = "rhino"                        % "js"                  % "1.7R2"         % "compile"
   val xlightweb      = "org.xlightweb"                % "xlightweb"           % "2.13.2"        % "compile"
