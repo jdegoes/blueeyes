@@ -98,7 +98,7 @@ object JPath {
 
   def Identity = apply()
 
-  def apply(n: JPathNode*): JPath = CompositeJPath(n.toList.flatMap(_.nodes))
+  def apply(n: JPathNode*): JPath = CompositeJPath(n.toList)
   
   def apply(l: List[JPathNode]): JPath = apply(l: _*)
   
