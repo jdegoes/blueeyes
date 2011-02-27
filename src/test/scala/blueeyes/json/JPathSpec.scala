@@ -14,11 +14,10 @@
  * limitations under the License.
  */
  
-package blueeyes {
-package json {
+package blueeyes.json
 
-import _root_.org.specs.Specification
-import _root_.org.specs.runner.{Runner, JUnit}
+import org.specs.Specification
+import org.specs.runner.{Runner, JUnit}
 
 import JsonAST._
 
@@ -27,50 +26,45 @@ import scala.util.matching.Regex
 class JPathSpecTest extends Runner(JPathSpec) with JUnit
 
 object JPathSpec extends Specification {
-  "Parses nested field access" in {
-    JPath(".foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
+  "Parser" should {
+    "parse nested field access" in {
+      JPath(".foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
+    }
+  
+    "parse nested field access with arrays" in {
+      JPath(".foo.bar[2].baz[9][1]").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: JPathIndex(2) :: JPathField("baz") :: JPathIndex(9) :: JPathIndex(1) :: Nil)
+    }
+  
+    "forgivingly parse initial field name without leading dot" in {
+      JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
+    }
   }
   
-  "Parses nested field access with arrays" in {
-    JPath(".foo.bar[2].baz[9][1]").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: JPathIndex(2) :: JPathField("baz") :: JPathIndex(9) :: JPathIndex(1) :: Nil)
+  "Extractor" should {
+    "extract a second level node" in {
+      val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
+
+      JPath("address.city").extract(j) mustEqual(JString("B") :: Nil)
+    }
   }
   
-  "Forgivingly parses initial field name without leading dot" in {
-    JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
-  }
-  
-  "Accurately detects the wildcard operator" in {
-    JPath("foo.*").nodes mustEqual (JPathField("foo") :: JPathRegex("(.*)".r) :: Nil)
-  }
-  
-  "Detects a basic regular expression in between two fields" in {
-    JPath("foo./bar/.baz").nodes mustEqual(JPathField("foo") :: JPathRegex("(bar)".r) :: JPathField("baz") :: Nil)
-  }
-  
-  "Detects a basic leading regular expression" in {
-    JPath("./ba[rz]/").nodes mustEqual(JPathRegex("(ba[rz])".r) :: Nil)
-  }
-  
-  "Can extract a first-level regular expression" in {
-    val j = JObject(JField("baz", JNull) :: JField("bar", JNull) :: JField("foo", JNull) :: Nil)
+  "Parent" should {
+    "return parent" in {
+      JPath(".foo.bar").parent mustEqual Some(JPath(".foo"))
+    }
     
-    JPath("./ba[rz]/").extract(j) mustEqual(JNull :: JNull :: Nil)
+    "return None when there is no parent" in {
+      JPath(".foo").parent mustEqual None
+    }
   }
-  "Can extract a second level node" in {
-    val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
-
-    JPath("address.city").extract(j) mustEqual(JString("B") :: Nil)
-  }
-
-  "Expand will accurately convert regular expressions for an object with depth = 1" in {
-    val j = JObject(JField("baz", JNull) :: JField("bar", JNull) :: JField("foo", JNull) :: Nil)
+  
+  "Ancestors" should {
+    "return two ancestors" in {
+      JPath(".foo.bar.baz").ancestors mustEqual List(JPath(".foo.bar"), JPath(".foo"))
+    }
     
-    JPath("./ba[rz]/").expand(j) mustEqual (
-      JPath(JPathField("baz")) :: 
-      JPath(JPathField("bar")) :: Nil
-    )
+    "return empty list" in {
+      JPath(".foo").ancestors mustEqual Nil
+    }
   }
-}
-
-}
 }

@@ -243,7 +243,7 @@ object JsonAST {
      * </pre>
      */
     def replace(target: JPath, replacer: JValue => JValue): JValue = {
-      def replace0(target: JPathConcrete, j: JValue): JValue = target.nodes match {
+      def replace0(target: JPath, j: JValue): JValue = target.nodes match {
         case Nil => replacer(j)
         
         case head :: tail => head match {

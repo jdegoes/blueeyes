@@ -7,7 +7,7 @@ import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.util.{Future, FutureImplicits}
-import blueeyes.json.{JPathField, CompositeJPath, JPathImplicits}
+import blueeyes.json.{JPathField, JPath, JPathImplicits}
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits{
   private[this] object TransformerCombinators extends HttpClientTransformerCombinators
@@ -142,9 +142,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       val methodName  = request.method.value
       val requestPath = List(JPathField("requests"), JPathField(methodName))
-      val countPath   = CompositeJPath(requestPath ::: List(JPathField("count")))
-      val timePath    = CompositeJPath(requestPath ::: List(JPathField("timing")))
-      val errorPath   = CompositeJPath(requestPath ::: List(JPathField("errors")))
+      val countPath   = JPath(requestPath ::: List(JPathField("count")))
+      val timePath    = JPath(requestPath ::: List(JPathField("timing")))
+      val errorPath   = JPath(requestPath ::: List(JPathField("errors")))
       val startTime  = System.nanoTime
 
       def monitor(response: Future[HttpResponse[T]]) = {
@@ -155,7 +155,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
         response.deliverTo{v =>
           healthMonitor.trackTime(timePath)(System.nanoTime - startTime)                      
-          healthMonitor.count(CompositeJPath(List(JPathField("requests"), JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
+          healthMonitor.count(JPath(List(JPathField("requests"), JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
         }
 
         response

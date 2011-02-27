@@ -13,7 +13,7 @@ import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
-import blueeyes.json.{JPathField, CompositeJPath, JPath}
+import blueeyes.json.{JPathField, JPath}
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
   private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)

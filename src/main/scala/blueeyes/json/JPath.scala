@@ -7,7 +7,21 @@ import JsonAST._
 sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
   def nodes: List[JPathNode]
   
-  def \ (that: JPath): JPath = CompositeJPath(self.nodes ++ that.nodes)
+  def parent: Option[JPath] = if (nodes.length <= 1) None else Some(JPath(nodes.take(nodes.length - 1): _*))
+  
+  def ancestors: List[JPath] = {
+    def ancestors0(path: JPath, acc: List[JPath]): List[JPath] = {
+      path.parent match {
+        case None => acc
+    
+        case Some(parent) => ancestors0(parent, parent :: acc)
+      }
+    }
+    
+    ancestors0(this, Nil).reverse
+  }
+  
+  def \ (that: JPath): JPath = JPath(self.nodes ++ that.nodes)
   
   def \ (that: String): JPath = this \ JPath(that)
   
@@ -18,42 +32,43 @@ sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
   def apply(jvalue: JValue): List[JValue] = extract(jvalue)
   
   def extract(jvalue: JValue): List[JValue] = {
-    def extract0(path: List[JPathNode], d: JValue): List[JValue] = path match {
-      case Nil => d :: Nil
+    def extract0(path: List[JPathNode], d: JValue): JValue = path match {
+      case Nil => d
       
       case head :: tail => head match {
         case JPathField(name)  => extract0(tail, d \ name)
         case JPathIndex(index) => extract0(tail, jvalue(index))
-        case JPathRegex(regex) => jvalue.children.flatMap { child => 
-          child match {
-            case JField(regex(name), value) => extract0(tail, value)
-            
-            case _ => Nil
-          }
-        }
       }
     }
-  
-    extract0(nodes, jvalue)
+    
+    expand(jvalue).map { jpath =>
+      extract0(jpath.nodes, jvalue)
+    }
   }
   
-  def expand(jvalue: JValue): List[JPathConcrete] = {
-    def expand0(current: List[JPathNodeConcrete], right: List[JPathNode], d: JValue): List[JPathConcrete] = right match {
-      case Nil => JPath(current: _*) :: Nil
+  def expand(jvalue: JValue): List[JPath] = {
+    def isRegex(s: String) = s.startsWith("(") && s.endsWith(")")
+    
+    def expand0(current: List[JPathNode], right: List[JPathNode], d: JValue): List[JPath] = right match {
+      case Nil => JPath(current) :: Nil
       
       case head :: tail => head match {
-        case x @ JPathField(name)  => expand0(current :+ x, tail, jvalue \ name)
         case x @ JPathIndex(index) => expand0(current :+ x, tail, jvalue(index))
-        case JPathRegex(regex) => jvalue.children.flatMap { child => 
-          child match {
-            case JField(regex(name), value) => 
-              val expandedNode = JPathField(name)
+        case x @ JPathField(name) if (isRegex(name)) => {
+          val regex = name.r
+          
+          jvalue.children.flatMap { child => 
+            child match {
+              case JField(regex(name), value) => 
+                val expandedNode = JPathField(name)
               
-              expand0(current :+ expandedNode, tail, value)
+                expand0(current :+ expandedNode, tail, value)
             
-            case _ => Nil
+              case _ => Nil
+            }
           }
         }
+        case x @ JPathField(name) => expand0(current :+ x, tail, jvalue \ name)
       }
     }
   
@@ -64,136 +79,49 @@ sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
 
   override def toString = path
 }
-sealed trait JPathConcrete extends JPath {
-  override def nodes: List[JPathNodeConcrete]
-}
-object JPathConcrete {
-  def apply(n: JPathNodeConcrete*): JPathConcrete = CompositeJPathConcrete(n.toList)
-}
+
 sealed trait JPathNode extends JPath { self =>
   def nodes = this :: Nil
 }
-sealed trait JPathNodeConcrete extends JPathNode
-sealed case class JPathField(name: String) extends JPathNodeConcrete {
+sealed case class JPathField(name: String) extends JPathNode {
   override def toString = "." + name
 }
-sealed case class JPathIndex(index: Int) extends JPathNodeConcrete {
+sealed case class JPathIndex(index: Int) extends JPathNode {
   override def toString = "[" + index + "]"
 }
-sealed case class JPathRegex(regex: Regex) extends JPathNode {
-  override def toString = "/" + regex.pattern.toString + "/"
-  
-  override def hashCode = toString.hashCode
-  
-  override def equals(that: Any): Boolean = that match {
-    case x: JPathRegex => this.toString == that.toString
-    
-    case _ => false
-  }
-}
-
-sealed case class CompositeJPath(nodes: List[JPathNode]) extends JPath
-sealed case class CompositeJPathConcrete(nodes: List[JPathNodeConcrete]) extends JPathConcrete
 
 object JPath {
-  private val IndexPattern = """^\[(\d+)\]$""".r
-  private val WildPattern  = """\.([*])$""".r
-  private val RegexPattern = """^/(.+)/([ixm]*)$""".r
-  private val FieldPattern = """^\.(.+)$""".r
-
-  private val NodePatterns = """\.|(?=\[\d+\])""".r
+  private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath
   
+  private val PathPattern  = """\.|(?=\[\d+\])""".r
+  private val IndexPattern = """^\[(\d+)\]$""".r
+
   def Identity = apply()
 
-  def apply(n: JPathNode*): JPath = CompositeJPath(n.toList)
+  def apply(n: JPathNode*): JPath = CompositeJPath(n.toList.flatMap(_.nodes))
   
-  def apply(n: JPathNodeConcrete*): JPathConcrete = CompositeJPathConcrete(n.toList)
+  def apply(l: List[JPathNode]): JPath = apply(l: _*)
   
-  def unapply(path: String): Option[Iterable[JPathNode]] = Some(apply(path).nodes)
-
-  private[this] sealed trait Index
-  private[this] case class Start(index: Int) extends Index
-  private[this] case class End(index: Int) extends Index
+  def unapplySeq(path: String): Option[List[JPathNode]] = Some(apply(path).nodes)
 
   def apply(path: String): JPath = {
-    def parse0(segments: List[String]): List[JPathNode] = segments match {
-      case Nil => Nil
+    def parse0(segments: List[String], acc: List[JPathNode]): List[JPathNode] = segments match {
+      case Nil => acc
       
       case head :: tail =>
-        (head match {
-          case IndexPattern(index) => JPathIndex(index.toInt)
+        if (head.trim.length == 0) parse0(tail, acc)
+        else parse0(tail,
+          (head match {
+            case IndexPattern(index) => JPathIndex(index.toInt)
           
-          case WildPattern(star) => JPathRegex("(.*)".r)
-          
-          case RegexPattern(regex, flags)  => 
-            val prefix = Map("i" -> "(?i)", "x" -> "(?x)", "m" -> "(?m)").foldLeft("") { (str, rep) => (if (flags.contains(rep._1)) rep._2 else "") + str }
-            
-            JPathRegex(new Regex(prefix + "(" + regex + ")"))
-            
-          case FieldPattern(name) => JPathField(name)
-        }) :: parse0(tail)
+            case name => JPathField(name)
+          }) :: acc
+        )
     }
     
     val properPath = if (path.startsWith(".")) path else "." + path
   
-    apply(parse0(parseToSegments(properPath)): _*)
-  }
-  
-  private def parseToSegments(path: String): List[String] = {
-    def boundariesFor1(regex: Regex): List[(Int, Int)] = regex.findAllIn(path).matchData.map(m => (m.start, m.end)).toList
-    
-    def boundariesFor2(start: Regex, end: Regex): List[(Int, Int)] = {
-      def findIndices(regex: Regex): List[Int] = regex.findAllIn(path).matchData.map(m => m.start).toList
-      
-      def findPairs(list: List[Index]): List[(Start, End)] = list match {
-        case Start(idx1) :: Start(idx2) :: rest => findPairs(Start(idx1) :: rest)
-
-        case Start(idx1) :: End(idx2) :: End(idx3) :: rest => findPairs(Start(idx1) :: End(idx3) :: rest)
-
-        case Start(idx1) :: End(idx2) :: rest => (Start(idx1), End(idx2)) :: findPairs(rest)
-
-        case End(idx1) :: rest => findPairs(rest)
-
-        case Start(idx1) :: Nil => Nil
-
-        case Nil => Nil
-      }
-
-      val indices = findIndices(start).map(Start(_)) ++ findIndices(end).map(End(_))
-
-      findPairs(indices).map(tuple => (tuple._1.index, tuple._2.index))
-    }
-
-    def excludeRegions(regions: List[(Int, Int)], exclusions: List[(Int, Int)]): List[(Int, Int)] = {
-      def regionOverlapsWith(list: List[(Int, Int)])(region: (Int, Int)): Boolean = {
-        val (start, end) = region
-        
-        list match {
-          case Nil => false
-
-          case x :: xs => (start >= x._1 && start <  x._2) ||
-                          (end   >  x._1 && end   <= x._2) || regionOverlapsWith(xs)(region)
-        }
-      }
-
-      regions match {
-        case x :: xs if (regionOverlapsWith(exclusions)(x)) => excludeRegions(xs, exclusions)
-
-        case x :: xs => x :: excludeRegions(xs, exclusions)
-
-        case Nil => Nil
-      }
-    }
-    
-    def extract(regions: List[(Int, Int)]): List[(Int, Int, String)] = regions.map { region => (region._1, region._2, path.substring(region._1, region._2)) }
-    
-    val regexBoundaries = boundariesFor2("""(?<=^|\.|\])(/)""".r, """(?<=/[ixm]{0,3})($|\.|\[)""".r)
-    
-    val regexSegments = extract(regexBoundaries)
-    val fieldSegments = extract(excludeRegions(boundariesFor1("""\.[^.\[/]+""".r), regexBoundaries))
-    val arraySegments = extract(excludeRegions(boundariesFor1("""\[\d+\]""".r),    regexBoundaries))
-    
-    (regexSegments ++ fieldSegments ++ arraySegments).sortWith { (seg1, seg2) => seg1._1 < seg2._1 }.map(_._3)
+    apply(parse0(PathPattern.split(properPath).toList, Nil).reverse: _*)
   }
 }
 
