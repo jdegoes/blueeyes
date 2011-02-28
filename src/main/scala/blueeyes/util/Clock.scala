@@ -11,6 +11,7 @@ trait ClockSystem {
     def now(): DateTime = new DateTime(DateTimeZone.UTC)
   }
 }
+object ClockSystem extends ClockSystem
 
 trait ClockMock {
   implicit def clockMock = new Clock {
@@ -23,3 +24,4 @@ trait ClockMock {
     def update(millis: Long): DateTime = new DateTime(millis, DateTimeZone.UTC)
   }
 }
+object ClockMock extends ClockMock
