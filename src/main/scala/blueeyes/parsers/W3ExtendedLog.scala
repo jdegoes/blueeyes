@@ -70,21 +70,40 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   override def skipWhitespace = true
   
-  private[this] val dateTimeParser1 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM")
-  private[this] val dateTimeParser2 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS")
-  private[this] val dateTimeParser3 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS.S")
-  
-  private[this] def toPF[A, B](f: A => B): PartialFunction[A, B] = new PartialFunction[A, B] {
-    def isDefinedAt(a: A): Boolean = try { f(a); true } catch { case _ => false }
-    
-    def apply(a: A): B = f(a)
+  private[this] val DateTimeFormats = Map[Regex, DateTimeFormatter](
+    "\\d{8}".r                                                    -> DateTimeFormat.forPattern("yyyyMMdd"),
+    "\\d{1,2}-\\d{1,2}-\\d{4}".r                                  -> DateTimeFormat.forPattern("dd-MM-yyyy"),
+    "\\d{4}-\\d{1,2}-\\d{1,2}".r                                  -> DateTimeFormat.forPattern("yyyy-MM-dd"),
+    "\\d{1,2}/\\d{1,2}/\\d{4}".r                                  -> DateTimeFormat.forPattern("MM/dd/yyyy"),
+    "\\d{4}/\\d{1,2}/\\d{1,2}".r                                  -> DateTimeFormat.forPattern("yyyy/MM/dd"),
+    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}".r                           -> DateTimeFormat.forPattern("dd MMM yyyy"),
+    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}".r                          -> DateTimeFormat.forPattern("dd MMMM yyyy"),
+    "\\d{12}".r                                                   -> DateTimeFormat.forPattern("yyyyMMddHHmm"),
+    "\\d{8}\\s\\d{4}".r                                           -> DateTimeFormat.forPattern("yyyyMMdd HHmm"),
+    "\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("dd-MM-yyyy HH:mm"),
+    "\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm"),
+    "\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("MM/dd/yyyy HH:mm"),
+    "\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("yyyy/MM/dd HH:mm"),
+    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r         -> DateTimeFormat.forPattern("dd MMM yyyy HH:mm"),
+    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r        -> DateTimeFormat.forPattern("dd MMMM yyyy HH:mm"),
+    "\\d{14}".r                                                   -> DateTimeFormat.forPattern("yyyyMMddHHmmss"),
+    "\\d{8}\\s\\d{6}".r                                           -> DateTimeFormat.forPattern("yyyyMMdd HHmmss"),
+    "\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss"),
+    "\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"),
+    "\\d{2}-[a-zA-Z]{3}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r        -> DateTimeFormat.forPattern("dd-MMM-yyyy HH:mm:ss"),
+    "\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss"),
+    "\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss"),
+    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r  -> DateTimeFormat.forPattern("dd MMM yyyy HH:mm:ss"),
+    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r -> DateTimeFormat.forPattern("dd MMMM yyyy HH:mm:ss")
+  )
+
+  lazy val dateTimeParser = DateTimeFormats.foldLeft[Parser[DateTime]](failure("No match")) { (parsers, tuple) =>
+    val (pattern, formatter) = tuple
+
+    parsers | (pattern ^^ { (string: String) =>
+      formatter.parseDateTime(string)
+    })
   }
-  
-  private[this] val parseDateTime1 = toPF((s: String) => dateTimeParser1.parseDateTime(s))
-  private[this] val parseDateTime2 = toPF((s: String) => dateTimeParser2.parseDateTime(s))
-  private[this] val parseDateTime3 = toPF((s: String) => dateTimeParser3.parseDateTime(s))
-  
-  val parseDateTime = parseDateTime3.orElse(parseDateTime2).orElse(parseDateTime1)
   
   lazy val newline = """(?:(\r)?\n)|$""".r
   
@@ -92,7 +111,7 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   lazy val identifier: Parser[String] = """([a-zA-Z0-9\-_]+)""".r
     
-  lazy val directive = "#" ~> (versionDirective | fieldsDirective | softwareDirective | endDateDirective) <~ newline
+  lazy val directive = "#" ~> (versionDirective | fieldsDirective | softwareDirective | dateDirective | startDateDirective | endDateDirective) <~ newline
   
   lazy val versionDirective = "Version" ~> ":" ~> ((wholeNumber <~ ".") ~ wholeNumber) ^^ {
     case major ~ minor => VersionDirective(major.toInt, minor.toInt)
@@ -102,16 +121,16 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   lazy val softwareDirective = "Software" ~> ":" ~> anythingButNewline ^^ (s => SoftwareDirective(s))
   
-  lazy val startDateDirective = "Start-Date" ~> ":" ~> anythingButNewline ^^ (s =>
-    StartDateDirective(parseDateTime(s))
+  lazy val startDateDirective = "Start-Date" ~> ":" ~> dateTimeParser ^^ (dt =>
+    StartDateDirective(dt)
   )
   
-  lazy val endDateDirective = "End-Date" ~> ":" ~> anythingButNewline ^^ (s =>
-    EndDateDirective(parseDateTime(s))
+  lazy val endDateDirective = "End-Date" ~> ":" ~> dateTimeParser ^^ (dt =>
+    EndDateDirective(dt)
   )
   
-  lazy val dateDirective = "Date" ~> ":" ~> anythingButNewline ^^ (s =>
-    DateDirective(parseDateTime(s))
+  lazy val dateDirective = "Date" ~> ":" ~> dateTimeParser ^^ (dt =>
+    DateDirective(dt)
   )
   
   lazy val remarkDirective = "Remark" ~> ":" ~> anythingButNewline ^^ (s => RemarkDirective(s))
@@ -169,4 +188,16 @@ object W3ExtendedLog {
   import W3ExtendedLogAST._
   import W3ExtendedLogGrammar._
 
+  /*
+  import blueeyes.parsers.W3ExtendedLogGrammar._
+  import blueeyes.parsers.W3ExtendedLogGrammar._
+
+  import scala.util.parsing.input.CharSequenceReader
+  import scala.util.parsing.input.CharSequenceReader
+
+  implicit def stringToCharSequenceReader(s: String) = new CharSequenceReader(s)
+  directive("#Version: 1.0")
+  directive("#Date: 12-Jan-1996 00:00:00")
+  directive("#Fields: time cs-method cs-uri")
+  */
 }
