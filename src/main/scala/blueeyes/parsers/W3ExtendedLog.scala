@@ -70,21 +70,21 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   override def skipWhitespace = true
   
-  val dateTimeParser1 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM")
-  val dateTimeParser2 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS")
-  val dateTimeParser3 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS.S")
+  private[this] val dateTimeParser1 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM")
+  private[this] val dateTimeParser2 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS")
+  private[this] val dateTimeParser3 = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SS.S")
   
-  def toPF[A, B](f: A => B): PartialFunction[A, B] = new PartialFunction[A, B] {
+  private[this] def toPF[A, B](f: A => B): PartialFunction[A, B] = new PartialFunction[A, B] {
     def isDefinedAt(a: A): Boolean = try { f(a); true } catch { case _ => false }
     
     def apply(a: A): B = f(a)
   }
   
-  val parseDateTime1 = toPF((s: String) => dateTimeParser1.parseDateTime(s))
-  val parseDateTime2 = toPF((s: String) => dateTimeParser2.parseDateTime(s))
-  val parseDateTime3 = toPF((s: String) => dateTimeParser3.parseDateTime(s))
+  private[this] val parseDateTime1 = toPF((s: String) => dateTimeParser1.parseDateTime(s))
+  private[this] val parseDateTime2 = toPF((s: String) => dateTimeParser2.parseDateTime(s))
+  private[this] val parseDateTime3 = toPF((s: String) => dateTimeParser3.parseDateTime(s))
   
-  val parseDateTime = parseDateTime1.orElse(parseDateTime2).orElse(parseDateTime3)
+  val parseDateTime = parseDateTime3.orElse(parseDateTime2).orElse(parseDateTime1)
   
   lazy val newline = """(?:(\r)?\n)|$""".r
   
@@ -116,12 +116,12 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   lazy val remarkDirective = "Remark" ~> ":" ~> anythingButNewline ^^ (s => RemarkDirective(s))
   
-  lazy val fieldIdentifier = customIdentifier | simpleIdentifier | headerIdentifier
+  lazy val fieldIdentifier = customIdentifier | prefixedIdentifier | simpleIdentifier | headerIdentifier
   
   lazy val simpleIdentifier: Parser[PredefinedIdentifierNoPrefix] = {
     ("date"       ^^^ DateIdentifier)       |
-    ("time"       ^^^ TimeIdentifier)       |
     ("time-taken" ^^^ TimeTakenIdentifier)  |
+    ("time"       ^^^ TimeIdentifier)       |
     ("bytes"      ^^^ BytesIdentifier)      |
     ("cached"     ^^^ CachedIdentifier)
   }
@@ -150,12 +150,12 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   }
   
   lazy val prefix: Parser[Prefix] = {
-    ("c"  ^^^ ClientPrefix)         |
-    ("s"  ^^^ ServerPrefix)         |
     ("cs" ^^^ ClientToServerPrefix) |
     ("sc" ^^^ ServerToClientPrefix) |
     ("sr" ^^^ ServerToRemoteServer) |
     ("rs" ^^^ RemoteServerToServer) |
+    ("c"  ^^^ ClientPrefix)         |
+    ("s"  ^^^ ServerPrefix)         |
     ("x"  ^^^ AppSpecificPrefix)
   }
   
@@ -163,5 +163,10 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   
 }
+object W3ExtendedLogGrammar extends W3ExtendedLogGrammar
 
+object W3ExtendedLog {
+  import W3ExtendedLogAST._
+  import W3ExtendedLogGrammar._
 
+}
