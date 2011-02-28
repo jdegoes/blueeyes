@@ -7,6 +7,7 @@ import org.joda.time.format.DateTimeFormatter
 
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.util.Future
+import blueeyes.util.Clock
 
 /** A request logger is a function from (request/future of response) to future 
  * of log line. Request loggers do not have side effects.
@@ -44,7 +45,7 @@ object HttpRequestLogger {
   
   /** Creates a logger from a W3 Extended Log fields directive.
    */
-  def apply[T, S](fieldsDirective: FieldsDirective): HttpRequestLogger[T, S] = {
+  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock): HttpRequestLogger[T, S] = {
     def apply0(identifiers: List[FieldIdentifier]): HttpRequestLogger[T, S] = identifiers match {
       case Nil =>
         lift((rq, rs) => Future.lift(""))
@@ -53,10 +54,10 @@ object HttpRequestLogger {
         (lift { (request: HttpRequest[T], response: Future[HttpResponse[S]]) => 
           head match {
             case DateIdentifier =>
-              Future.lift(DateFormatter.print(System.currentTimeMillis))
+              Future.lift(DateFormatter.print(clock.now()))
           
             case TimeIdentifier =>
-              Future.lift(TimeFormatter.print(System.currentTimeMillis))
+              Future.lift(TimeFormatter.print(clock.now()))
           
             case TimeTakenIdentifier =>
               // TODO
