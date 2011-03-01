@@ -16,8 +16,11 @@
  
 package blueeyes.json
 
-import org.specs.Specification
+import org.specs.{Specification, ScalaCheck}
 import org.specs.runner.{Runner, JUnit}
+import org.scalacheck.{Gen, Arbitrary, Prop}
+import Prop.forAll
+import Arbitrary.arbitrary
 
 import JsonAST._
 
@@ -25,14 +28,31 @@ import scala.util.matching.Regex
 
 class JPathSpecTest extends Runner(JPathSpec) with JUnit
 
-object JPathSpec extends Specification {
+object JPathSpec extends Specification with ScalaCheck {
+  implicit val argJPath: Arbitrary[JPath] = Arbitrary {
+    import Gen._
+
+    val genIndex = for {
+      index <- choose(0, 10)
+    } yield JPathIndex(index)
+
+    val genField = for {
+      name <- identifier
+    } yield JPathField(name)
+
+    val genIndexOrField = Gen.oneOf(genIndex, genField)
+
+    for {
+      length      <- choose(0, 10)
+      listOfNodes <- listOfN(length, genIndexOrField)
+    } yield JPath(listOfNodes)
+  }
+
   "Parser" should {
-    "parse nested field access" in {
-      JPath(".foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
-    }
-  
-    "parse nested field access with arrays" in {
-      JPath(".foo.bar[2].baz[9][1]").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: JPathIndex(2) :: JPathField("baz") :: JPathIndex(9) :: JPathIndex(1) :: Nil)
+    "parse all valid JPath strings" in {
+      forAll { (jpath: JPath) =>
+        JPath(jpath.toString) mustEqual jpath
+      } must pass
     }
   
     "forgivingly parse initial field name without leading dot" in {
