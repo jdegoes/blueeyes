@@ -185,6 +185,14 @@ class Future[T] {
   /** Determines if the future is canceled.
    */
   def isCanceled: Boolean = _isCanceled
+  
+  /** Splits a future of a tuple into a tuple of futures.
+   */
+  def split[U, V](implicit witness: T => (U, V)): (Future[U], Future[V]) = {
+    val actual = map(witness)
+    
+    (actual.map(_._1), actual.map(_._2))
+  }
 
   /** Delivers the result of the future to the specified handler as soon as it
    * is delivered.
@@ -540,5 +548,9 @@ object Future {
 
 trait FutureImplicits {
   implicit def any2Future[T, S >: T](any: T): Future[S] = Future(any: S)
+  
+  implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = new {
+    def join: Future[(U, V)] = tuple._1.zip(tuple._2)
+  }
 }
 object FutureImplicits extends FutureImplicits
