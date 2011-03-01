@@ -194,6 +194,10 @@ class Future[T] {
     (actual.map(_._1), actual.map(_._2))
   }
 
+  /** Alias for zip.
+   */
+  def join[S](f: Future[S]): Future[(T, S)] = zip(f)
+
   /** Delivers the result of the future to the specified handler as soon as it
    * is delivered.
    */
@@ -228,7 +232,7 @@ class Future[T] {
   /** Simply returns the passed in future. Used when the result of a previous 
    * future is not needed.
    */
-  def then[S](f: Future[S]): Future[S] = f
+  def then[S](f: Future[S]): Future[S] = flatMap(_ => f)
 
   /** Maps the result of this future to another future, and returns a future
    * of the result of that future. Useful when chaining together multiple

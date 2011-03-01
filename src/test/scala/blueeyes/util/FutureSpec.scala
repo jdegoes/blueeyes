@@ -12,6 +12,25 @@ class FutureSpec extends Specification {
       f.error must eventually (beSomething)
     }
   }
+
+  "Future.split" should {
+    "split apart future of tuple" in {
+      val f = Future.lift(("foo", 123))
+
+      val (string, integer) = f.split
+
+      string.value  must eventually (beEqualTo(Some("foo")))
+      integer.value must eventually (beEqualTo(Some(123)))
+    }
+  }
+
+  "Future implicit join" should {
+    "glue together tuple of futures into single future of tuple" in {
+      val (string, integer) = Future.lift(("foo", 123)).split
+
+      (string, integer).join.value must eventually (beEqualTo(Some(("foo", 123))))
+    }
+  }
   
   "Future.deliver" should {
     "automatically canceled when delivering a lazy value that throws an error" in {
