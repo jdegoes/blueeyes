@@ -102,13 +102,13 @@ object HttpHeaders {
       Some(CookiesPattern(keyValue._2)) else None
   }
 
-  class `Content-Length`(val length: HttpNumber) extends HttpHeader {
+  class `Content-Length`(val length: Long) extends HttpHeader {
     def value = length.toString
   }
   object `Content-Length` {
-    def apply(length: HttpNumber): `Content-Length` = new `Content-Length`(length)
+    def apply(length: Long): `Content-Length` = new `Content-Length`(length)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length")
-      HttpNumbers.parseHttpNumbers(keyValue._2) else None
+      Some(keyValue._2.toLong) else None
   }
 
   class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeader {
@@ -297,13 +297,13 @@ object HttpHeaders {
 
   /*********** Responses ************/
 
-  class Age(val age: HttpNumber) extends HttpHeader {
+  class Age(val age: Double) extends HttpHeader {
     def value = age.toString
   }
   object Age {
-    def apply(age: HttpNumber) = new Age(age)
+    def apply(age: Double) = new Age(age)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age")
-      HttpNumbers.parseHttpNumbers(keyValue._2) else None
+      Some(keyValue._2.toDouble) else None
   }
 
   class Allow(val methods: HttpMethod*) extends HttpHeader {

@@ -7,14 +7,14 @@ trait Clock {
 }
 
 trait ClockSystem {
-  implicit def clockSystem = new Clock {
+  implicit val clockSystem = new Clock {
     def now(): DateTime = new DateTime(DateTimeZone.UTC)
   }
 }
 object ClockSystem extends ClockSystem
 
 trait ClockMock {
-  implicit def clockMock = new Clock {
+  implicit val clockMock = new Clock {
     private var _now: DateTime = new DateTime(0, DateTimeZone.UTC)
     
     def now() = _now

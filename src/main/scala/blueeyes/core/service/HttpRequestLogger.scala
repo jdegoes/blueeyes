@@ -5,7 +5,7 @@ import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 
-import blueeyes.core.http.{HttpRequest, HttpResponse}
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
 import blueeyes.util.Future
 import blueeyes.util.Clock
 
@@ -43,7 +43,9 @@ object HttpRequestLogger {
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[String] = f(request, response)
   }
   
-  /** Creates a logger from a W3 Extended Log fields directive.
+  /** Creates a logger from a W3 Extended Log fields directive. e.g.:
+   *
+   * #Fields: time cs-method cs-uri
    */
   def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock): HttpRequestLogger[T, S] = {
     def apply0(identifiers: List[FieldIdentifier]): HttpRequestLogger[T, S] = identifiers match {
@@ -60,16 +62,33 @@ object HttpRequestLogger {
               Future.lift(TimeFormatter.print(clock.now()))
           
             case TimeTakenIdentifier =>
-              // TODO
-              Future.lift("")
+              val start = clock.now().getMillis
+              
+              response.map { _ =>
+                val end = clock.now().getMillis
+                
+                val deltaSeconds = (end - start) / 1000.0
+                
+                deltaSeconds.toString
+              }
           
             case BytesIdentifier =>
-              // TODO
-              Future.lift("")
+              import HttpHeaders._
+              
+              response.map { response =>
+                val contentLength = (for (`Content-Length`(length) <- response.headers) yield length).headOption.getOrElse(0L)
+                
+                contentLength.toString
+              }
           
             case CachedIdentifier =>
-              // TODO
-              Future.lift("")
+              import HttpHeaders._
+              
+              response.map { response =>
+                val cached = (for (Age(age) <- response.headers) yield age).headOption.getOrElse(0.0) > 0
+                
+                if (cached) "1" else "0"
+              }
           
             case IpIdentifier(prefix) =>
               // TODO
