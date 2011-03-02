@@ -1,4 +1,4 @@
-package blueeyes.util
+package blueeyes.parsers
 
 import org.scalacheck._
 import Gen._
@@ -41,7 +41,7 @@ object RegexpGen{
     for{
       withHyphen <- genBool
       size       <- choose(1, 3)
-      flags1      <- flag
+      flags1     <- flag
       flags2     <- flag
     } yield ( flags1.mkString("") + (if (withHyphen) "-" + flags2.mkString("") else ""))
   }
