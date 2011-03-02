@@ -5,6 +5,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.data.Bijection
 import blueeyes.core.service.HttpClient
+import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
 import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -42,32 +43,44 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
   }
 
   def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    val result = new Future[HttpResponse[T]]() 
+    val result = new Future[HttpResponse[T]]()
     executeRequest(request, result)
     result
   }
 
   private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
-    val httpClientInstance = httpClient(() => { 
+    val httpClientInstance = httpClient(() => {
       if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
     })
     httpClientInstance.setAutoHandleCookies(false)
 
-    httpClientInstance.send(createXLRequest(request), new IHttpResponseHandler() { 
+    httpClientInstance.send(createXLRequest(request), new IHttpResponseHandler() {
       def onResponse(response: IHttpResponse) {
-        val data = try {
-          contentBijection(response.getBody)
-        } catch {
-          case e: Throwable => {
-          	Logger.get.error(e, "Failed to transcode response body")
-          	None
+        if(response.getStatus >= 400) {
+          val statusCode: HttpStatusCode = response.getStatus
+          val reason: String = Option(response.getReason).getOrElse("Unknown error")
+
+          statusCode match {
+            case failureCode: HttpFailure => resultFuture.cancel(HttpException(failureCode, reason))
+            case _ => resultFuture.cancel(HttpException(HttpStatusCodes.BadRequest, reason))
           }
+        } else {
+
+          val data = try {
+            contentBijection(response.getBody)
+          } catch {
+            case e: Throwable => {
+              Logger.get.error(e, "Failed to transcode response body")
+              None
+            }
+          }
+
+          val headers = response.getHeaderNameSet.toList.asInstanceOf[List[String]].foldLeft(Map[String, String]()) { (acc: Map[String, String], name: String) =>
+            acc + (name -> response.getHeader(name))
+          }
+
+          resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
         }
-        
-        val headers = response.getHeaderNameSet.toList.asInstanceOf[List[String]].foldLeft(Map[String, String]()) { (acc: Map[String, String], name: String) =>
-          acc + (name -> response.getHeader(name))
-        }
-        resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
       }
 
       def onException(e: IOException) {
@@ -93,7 +106,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
     val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath,
                       if(newQueryParams.length == 0) null else newQueryParams,
                       origURI.getFragment).toString
-    
+
     val newHeaders         = request.headers + requestContentLength(request)
     val xlRequest          = createXLRequest(request, uri)
 
@@ -170,4 +183,3 @@ object XLightWebRequestBijections{
     def unapply(content: Option[String])  = error("Not imlemented")
   }
 }
-

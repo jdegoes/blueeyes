@@ -68,6 +68,15 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
       f.error must eventually(retries, new Duration(duration))(beNone)
     }
     
+    "Support GET to invalid URI/404 should cancel Future" in {
+      val f = path$[String, HttpResponse[String]](uri + "bogus") {
+        get$[String, HttpResponse[String]] { r => r }
+      }(httpClient)
+      f.isCanceled must eventually(retries, new Duration(duration))(beTrue)
+      f.error.isInstanceOf[Option[HttpException]] must  beTrue
+      f.error.get.asInstanceOf[HttpException].failure must be(NotFound)
+    }
+    
     "Support GET requests with status OK" in {
       val f = path$[String, HttpResponse[String]](uri) {
         get$[String, HttpResponse[String]] { r => r }
