@@ -8,6 +8,7 @@ import org.joda.time.format.DateTimeFormatter
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
 import blueeyes.util.Future
 import blueeyes.util.Clock
+import java.net.InetAddress
 
 /** A request logger is a function from (request/future of response) to future 
  * of log line. Request loggers do not have side effects.
@@ -38,7 +39,7 @@ object HttpRequestLogger {
   
   // <time>  = 2<digit> ":" 2<digit> [":" 2<digit> ["." *<digit>] HH-MM-SS
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")
-  
+
   private def lift[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[String]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[String] = f(request, response)
   }
@@ -90,42 +91,65 @@ object HttpRequestLogger {
                 if (cached) "1" else "0"
               }
           
-            case IpIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case DnsNameIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case StatusIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case CommentIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case MethodIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case UriIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case UriStemIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-          
-            case UriQueryIdentifier(prefix) =>
-              // TODO
-              Future.lift("")
-         
-            case HeaderIdentifier(prefix, header) =>
-              // TODO
-              Future.lift("")
-          
+            case IpIdentifier(prefix) => prefix match {
+              case ClientPrefix => Future.lift(request.remoteHost.map(_.getHostAddress).getOrElse(""))
+              case ServerPrefix =>
+                val address = try {
+                  InetAddress.getLocalHost().getHostAddress()
+                }     HttpServerNettySpec.scala
+                catch {
+                 case error: Throwable => "127.0.0.1"
+                }
+                Future.lift(address)
+              case _   => Future.lift("")
+            }
+            case DnsNameIdentifier(prefix) => prefix match {
+              case ClientPrefix => Future.lift(request.remoteHost.map(_.getHostName).getOrElse(""))
+              case ServerPrefix =>
+                val hostName = try {
+                  InetAddress.getLocalHost().getHostName()
+                }
+                catch {
+                 case error: Throwable => "localhost"
+                }
+                Future.lift(hostName)
+              case _   => Future.lift("")
+            }
+            case StatusIdentifier(prefix) => prefix match {
+              case ServerToClientPrefix => response.map { response =>
+                response.status.code.name
+              }
+              case _   => Future.lift("")
+            }
+            case CommentIdentifier(prefix) => prefix match {
+              case ServerToClientPrefix => response.map { response =>
+                response.status.reason
+              }
+              case _   => Future.lift("")
+            }
+            case MethodIdentifier(prefix) => prefix match {
+              case ClientToServerPrefix => Future.lift(request.method.value)
+              case _   => Future.lift("")
+            }
+            case UriIdentifier(prefix) => prefix match {
+              case ClientToServerPrefix => Future.lift(request.uri)
+              case _   => Future.lift("")
+            }
+            case UriStemIdentifier(prefix) => prefix match {
+              case ClientToServerPrefix => Future.lift(request.subpath)
+              case _   => Future.lift("")
+            }
+            case UriQueryIdentifier(prefix) => prefix match {
+              case ClientToServerPrefix => Future.lift(request.query)
+              case _   => Future.lift("")
+            }
+            case HeaderIdentifier(prefix, header) => prefix match {
+              case ClientToServerPrefix => Future.lift(request.headers.get(header).getOrElse(""))
+              case ServerToClientPrefix => response.map { response =>
+                response.headers.get(header).getOrElse("")
+              }
+              case _   => Future.lift("")
+            }
             case CustomIdentifier(value) =>
               Future.lift("")
           }

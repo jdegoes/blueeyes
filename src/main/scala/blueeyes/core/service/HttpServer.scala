@@ -191,6 +191,11 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
    */
   lazy val sslPort: Int = config.getInt("sslPort", 8889)
 
+  /** Retrieves if the ssl should be running, which defaults to
+   * true.
+   */
+  lazy val sslEnable: Boolean = config.getBool("sslEnable", true)
+
   /** The status of the server.
    */
   def status: RunningStatus = _status

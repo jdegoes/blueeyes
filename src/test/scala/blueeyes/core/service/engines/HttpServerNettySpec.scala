@@ -13,7 +13,6 @@ import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 
-
 class HttpServerNettySpec extends Specification {
 
   private val configPattern = """server{

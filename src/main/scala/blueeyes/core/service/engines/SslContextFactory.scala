@@ -3,9 +3,6 @@ package blueeyes.core.service.engines
 import java.security.KeyStore
 import javax.net.ssl.{TrustManager, KeyManagerFactory, SSLContext};
 
-
-
-
 object SslContextFactory {
   def apply(keyStore: KeyStore, password: String, trustManagers: Option[Array[TrustManager]] = None) = {
     val keyManagerFactory = KeyManagerFactory.getInstance("SunX509");

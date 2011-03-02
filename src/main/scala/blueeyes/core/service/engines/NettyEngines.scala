@@ -33,10 +33,12 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
         val host = InetInterfaceLookup.host(config)
 
         try {
-          startServers(List(Tuple2(port, new HttpServerPipelineFactory("http", host, port)), Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort))))
+          val servers = Tuple2(port, new HttpServerPipelineFactory("http", host, port)) :: (if (sslEnable) Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort)) :: Nil else Nil)
 
-          log.info("Http Netty engine is started using port: " + self.port)
-          log.info("Https Netty engine is started using port: " + self.sslPort)
+          startServers(servers)
+
+          servers.foreach(server => log.info("%s netty engine is started using port: %d".format(server._2.protocol, server._1)))
+
           Right(())
         }
         catch {
@@ -91,7 +93,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
   implicit def contentBijection: Bijection[ChannelBuffer, T]
 
-  class HttpServerPipelineFactory(protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
+  class HttpServerPipelineFactory(val protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
     def getPipeline(): ChannelPipeline = {
       val pipeline = Channels.pipeline()
 
