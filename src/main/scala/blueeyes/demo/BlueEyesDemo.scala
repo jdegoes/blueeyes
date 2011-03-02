@@ -1,5 +1,6 @@
 package blueeyes.demo
 
+import blueeyes.util.Future
 import blueeyes.config.ConfiggyModule
 import blueeyes.persistence.mongo.mock.MockMongoModule
 import com.google.inject.Guice
@@ -39,9 +40,9 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         path("/contacts"){
           produce(application/json) {
             get { request: HttpRequest[Array[Byte]] =>
-              val contacts = JArray(database(select(".name").from(collection)).flatMap(row => (row \\ "name").value).toList)
+              val contacts = database(select(".name").from(collection)).map(records => JArray(records.flatMap(row => (row \\ "name").value).toList))
 
-              HttpResponse[JValue](content=Some(contacts))
+              contacts.map(v => HttpResponse[JValue](content=Some(v)))
             }
           } ~
           jvalue {
@@ -57,9 +58,8 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             produce(application/json) {
               get { request: HttpRequest[Array[Byte]] =>
                 val contact = database(selectOne().from(collection).where("name" === request.parameters('name)))
-                val status  = if (!contact.isEmpty) OK else NotFound
 
-                HttpResponse[JValue](content=contact, status=status)
+                contact.map(v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound))
               } ~
               delete { request: HttpRequest[Array[Byte]] =>
                 database[JNothing.type](remove.from(collection).where("name" === request.parameters('name)))
@@ -72,9 +72,9 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             jvalue {
               post {
                 refineContentType[JValue, JObject] { request =>
-                  val contacts = JArray(searchContacts(request.content, demoConfig))
+                  val contacts = searchContacts(request.content, demoConfig)
 
-                  HttpResponse[JValue](content=Some(contacts))
+                  contacts.map(v => HttpResponse[JValue](content=Some(JArray(v))))
                 }
               }
             }
@@ -87,13 +87,11 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
     }
   }
 
-  private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): List[JString] = {
+  private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): Future[List[JString]] = {
     createFilter(filterJObject).map { filter =>
-      for {
-        nameJObject <- config.database(select().from(config.collection).where(filter)).toList
-        name        <- nameJObject \ "name" -->? classOf[JString]
-      } yield name
-    }.getOrElse(Nil)
+      val nameJObject = config.database(select().from(config.collection).where(filter)).map(_.toList)
+      nameJObject.map(_.map(_ \ "name" -->? classOf[JString]).filter(_ != None).map(_.get))
+    }.getOrElse(Future.lift(Nil))
   }
 
   private def createFilter(filterJObject: Option[JObject]) = filterJObject.map {

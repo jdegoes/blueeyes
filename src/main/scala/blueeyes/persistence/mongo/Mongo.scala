@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.util.Future
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 
@@ -37,7 +38,7 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
-  def apply[T](query: MongoQuery[T]): T  = {
+  def apply[T](query: MongoQuery[T]): Future[T]  = {
     val databaseCollection = query.collection match{
       case MongoCollectionReference(name)         => collection(name)
       case MongoCollectionHolder(realCollection)  => realCollection

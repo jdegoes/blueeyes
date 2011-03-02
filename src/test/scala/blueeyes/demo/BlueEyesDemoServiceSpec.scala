@@ -1,5 +1,6 @@
 package blueeyes.demo
 
+import java.util.concurrent.CountDownLatch
 import blueeyes.core.service.test.BlueEyesServiceSpecification
 import blueeyes.persistence.mongo.Mongo
 import blueeyes.config.ConfiggyModule
@@ -44,7 +45,15 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
           response.status  mustEqual(HttpStatus(OK))
           response.content must beNone
 
-          database(select().from(collectionName)).map(_.deserialize[Contact]) mustEqual(List(contact))
+          val countDown = new CountDownLatch(1)
+
+          val created = database(select().from(collectionName))
+          created.deliverTo{v =>
+            countDown.countDown()
+          }
+          countDown.await()
+
+          created.value.get.toList.map(_.deserialize[Contact]) mustEqual(List(contact))
         }
       }
     } should "create contact"
@@ -53,8 +62,12 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
   "BlueEyesDemoService" in {
     val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
     
-    database[JNothing.type](remove.from(collectionName))
-    database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
+    val removed  = database[JNothing.type](remove.from(collectionName))
+    val inserted = database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
+
+    val countDown = new CountDownLatch(1)
+    removed.zip[JNothing.type](inserted).deliverTo{v => countDown.countDown()}
+    countDown.await()    
 
     path$("/contacts"){
       contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){

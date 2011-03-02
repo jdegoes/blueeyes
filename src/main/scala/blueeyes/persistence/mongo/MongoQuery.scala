@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.util.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
 import QueryBehaviours._
@@ -90,10 +91,6 @@ case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCol
   def where (newFilter: MongoFilter)    = copy(filter = Some(newFilter))
   def into(newOutputCollection: String) = copy(outputCollection = Some(newOutputCollection))
 }
-case class VerifiedQuery[T](query: MongoQuery[T]) extends MongoQuery[T] with VerifiedQueryBehaviour[T]{
-  def collection: MongoCollection = query.collection
-}
-
 
 trait MapReduceOutput{
   def outpotCollection: MongoCollection
@@ -144,7 +141,6 @@ trait MongoQueryBuilder{
   def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, true, true)})
   def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint[MongoMapReduceQuery](((collection: MongoCollection) => {MongoMapReduceQuery(map, reduce, collection, None, None)}))
   def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(List(selection: _*)), collection, initial, reduce)})
-  def verified[T](query: MongoQuery[T]): MongoQuery[T]           = VerifiedQuery[T](query)      
 }
 
 object MongoQueryBuilder extends MongoQueryBuilder
