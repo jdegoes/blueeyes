@@ -1,14 +1,12 @@
-package blueeyes.util
+package blueeyes.parsers
 
 import org.spex.Specification
 import org.specs.ScalaCheck
 import org.scalacheck._
-import org.scalacheck.Prop.forAll
 import org.scalacheck.Prop.forAllNoShrink
-import scala.util.parsing.input.CharSequenceReader
 import scala.util.parsing.combinator._
 import scala.util.parsing.input._
-import blueeyes.util.RegularExpressionAST.RegexAtom
+import RegularExpressionAST.RegexAtom
 import RegexpGen._
 
 class RegularExpressionGrammarSpec extends Specification with ScalaCheck{

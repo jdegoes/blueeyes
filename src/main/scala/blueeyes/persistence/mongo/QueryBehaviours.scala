@@ -1,28 +1,46 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.util.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import com.mongodb.MongoException
 
 private[mongo] object QueryBehaviours{
-  trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
+  trait QueryBehaviour[T] extends Function[DatabaseCollection, Future[T]]
 
-  trait VerifiedQueryBehaviour[T]  extends QueryBehaviour[T]{
-    def apply(collection: DatabaseCollection): T = {
+  trait AsynchQueryBehaviour[T] extends QueryBehaviour[T]{
+    def apply(collection: DatabaseCollection): Future[T] = {
 
-      collection.requestStart
-      try{
-        val answer = query(collection)
-        collection.getLastError.foreach(error => throw new MongoException(error))
-        answer
+      val future = new Future[T]
+
+      import scala.actors.Actor.actor
+      actor{
+        collection.requestStart
+        val result: Either[Throwable, T] = try {
+          val answer    = query(collection)
+          val lastError = collection.getLastError
+
+          lastError.map(why => Left(new MongoException(why))).getOrElse(Right(answer))
+        }
+        catch {
+         case error: Throwable => Left(error)
+        }
+        finally {
+          collection.requestDone
+        }
+
+        result match {
+          case Left(why)     => future.cancel(why)
+          case Right(answer) => future.deliver(answer)
+        }
       }
-      finally collection.requestDone
+      future
     }
-    def query: QueryBehaviour[T]
+    def query(collection: DatabaseCollection): T
   }
 
-  trait EnsureIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection): JNothing.type = {
+  trait EnsureIndexQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection): JNothing.type = {
       collection.ensureIndex(name, keys, unique)
       JNothing
     }
@@ -31,29 +49,29 @@ private[mongo] object QueryBehaviours{
     def unique: Boolean
   }
 
-  trait DropIndexQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection): JNothing.type = {
+  trait DropIndexQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection): JNothing.type = {
       collection.dropIndex(name)
       JNothing
     }
     def name: String
   }
-  trait DropIndexesQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection): JNothing.type = {
+  trait DropIndexesQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection): JNothing.type = {
       collection.dropIndexes
       JNothing
     }
   }
 
-  trait InsertQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection): JNothing.type = {
+  trait InsertQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection): JNothing.type = {
       collection.insert(objects)
       JNothing
     }
     def objects: List[JObject]
   }
-  trait MapReduceQueryBehaviour extends QueryBehaviour[MapReduceOutput]{
-    def apply(collection: DatabaseCollection): MapReduceOutput = {
+  trait MapReduceQueryBehaviour extends AsynchQueryBehaviour[MapReduceOutput]{
+    def query(collection: DatabaseCollection): MapReduceOutput = {
       collection.mapReduce(map, reduce, outputCollection, filter)
     }
     def map: String
@@ -63,22 +81,22 @@ private[mongo] object QueryBehaviours{
     def outputCollection: Option[String]
   }
 
-  trait RemoveQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection) = {
+  trait RemoveQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection) = {
       collection.remove(filter)
       JNothing
     }
 
     def filter: Option[MongoFilter]
   }
-  trait CountQueryBehaviour extends QueryBehaviour[JInt]{
-    def apply(collection: DatabaseCollection): JInt = JInt(collection.count(filter))
+  trait CountQueryBehaviour extends AsynchQueryBehaviour[JInt]{
+    def query(collection: DatabaseCollection): JInt = JInt(collection.count(filter))
 
     def filter: Option[MongoFilter]
   }
 
-  trait SelectQueryBehaviour extends QueryBehaviour[Stream[JObject]]{
-    def apply(collection: DatabaseCollection) = {
+  trait SelectQueryBehaviour extends AsynchQueryBehaviour[Stream[JObject]]{
+    def query(collection: DatabaseCollection) = {
       val i = 0
       collection.select(selection, filter, sort, skip, limit)
     }
@@ -89,22 +107,22 @@ private[mongo] object QueryBehaviours{
     def skip      : Option[Int]
     def limit     : Option[Int]
   }
-  trait GroupQueryBehaviour extends QueryBehaviour[JArray]{
-    def apply(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
+  trait GroupQueryBehaviour extends AsynchQueryBehaviour[JArray]{
+    def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
 
     def selection : MongoSelection
     def reduce    : String
     def initial   : JObject
     def filter    : Option[MongoFilter]
   }
-  trait DistinctQueryBehaviour extends QueryBehaviour[List[JValue]]{
-    def apply(collection: DatabaseCollection) = collection.distinct(selection, filter)
+  trait DistinctQueryBehaviour extends AsynchQueryBehaviour[List[JValue]]{
+    def query(collection: DatabaseCollection) = collection.distinct(selection, filter)
 
     def selection : JPath
     def filter    : Option[MongoFilter]
   }
 
-  trait SelectOneQueryBehaviour extends QueryBehaviour[Option[JObject]]{ self =>
+  trait SelectOneQueryBehaviour extends AsynchQueryBehaviour[Option[JObject]]{ self =>
     private val selectQuery = new SelectQueryBehaviour(){
       def limit     = Some(1)
       def skip      = None
@@ -112,7 +130,7 @@ private[mongo] object QueryBehaviours{
       def filter    = self.filter
       def selection = self.selection
     }
-    def apply(collection: DatabaseCollection): Option[JObject] = selectQuery(collection).headOption
+    def query(collection: DatabaseCollection): Option[JObject] = selectQuery.query(collection).headOption
 
     def selection : MongoSelection
     def filter    : Option[MongoFilter]
@@ -120,8 +138,8 @@ private[mongo] object QueryBehaviours{
   }
 
 
-  trait UpdateQueryBehaviour extends QueryBehaviour[JNothing.type]{
-    def apply(collection: DatabaseCollection) = {
+  trait UpdateQueryBehaviour extends AsynchQueryBehaviour[JNothing.type]{
+    def query(collection: DatabaseCollection) = {
       value match {
         case MongoUpdateNothing =>
         case _ => collection.update(filter, value, upsert, multi)

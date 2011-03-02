@@ -10,7 +10,12 @@ class ClockTest extends Spec with MustMatchers with BeforeAndAfterEach {
 
   describe("the clock") {
     it("returns the current time in nanoseconds (with millisecond precision)") {
-      Clock.nanoTime must be(System.nanoTime plusOrMinus 1e6.toLong)
+      val before = System.nanoTime
+      val time   = Clock.nanoTime
+      val after  = System.nanoTime
+      
+      (time >= before) must be(true)
+      (time <= after) must be(true)
     }
   }
 
