@@ -36,7 +36,11 @@ class W3ExtendedLogGrammarSpec extends Specification with ScalaCheck{
     passTest(fieldsDirective)
   }
 
-  private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(W3ExtendedLog(n)) == n) must pass
+  "W3ExtendedLogGrammar: parses directives" in {
+    passTest(directives, "\n")
+  }
 
-  def >> (directives : List[Directive]) = directives.map(_.toString).mkString("")
+  private def passTest(gen: Gen[String], delim: String = "") = forAllNoShrink(gen)(n => >>(W3ExtendedLog(n), delim) == n) must pass
+
+  def >> (directives : List[Directive], delim: String) = directives.map(_.toString).mkString(delim)
 }

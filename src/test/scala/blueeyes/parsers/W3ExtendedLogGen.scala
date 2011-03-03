@@ -4,15 +4,14 @@ import org.scalacheck._
 import Gen._
 
 object W3ExtendedLogGen{
+
+  def directives          = listOfN(7, oneOf(versionDirective, softwareDirective, fieldsDirective, startDateDirective, endDateDirective, dateDirective, remarkDirective)) map {v => v.mkString("\n")}
+
   def versionDirective    = listOfN(2, numChar) map {v => "#Version: " + v.mkString(".")}
 
   def softwareDirective   = identifier map {v => "#Software: " + v}
 
   def fieldsDirective     = listOfN(20, fieldDirective) map{v => "#Fields: " + v.mkString(" ")}
-
-  def fieldDirective      = oneOf(simpleIdentifier, prefixedIdentifier, headerIdentifier, customIdentifier)
-
-  def simpleIdentifier    = oneOf("date", "time-taken", "time", "bytes", "cached")
 
   def startDateDirective  = dateTime map {v => "#Start-Date: " + v }
 
@@ -21,6 +20,10 @@ object W3ExtendedLogGen{
   def dateDirective       = dateTime map {v => "#Date: " + v }
 
   def remarkDirective     = identifier map {v => "#Remark: " + v}
+
+  def simpleIdentifier    = oneOf("date", "time-taken", "time", "bytes", "cached")
+
+  def fieldDirective      = oneOf(simpleIdentifier, prefixedIdentifier, headerIdentifier, customIdentifier)
 
   def headerIdentifier    = {
     for {

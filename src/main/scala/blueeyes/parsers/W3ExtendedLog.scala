@@ -144,42 +144,40 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   override def skipWhitespace = true
   
-  private[this] val DateTimeFormats = Map[Regex, DateTimeFormatter](
-    "\\d{8}".r                                                    -> DateTimeFormat.forPattern("yyyyMMdd"),
-    "\\d{1,2}-\\d{1,2}-\\d{4}".r                                  -> DateTimeFormat.forPattern("dd-MM-yyyy"),
-    "\\d{4}-\\d{1,2}-\\d{1,2}".r                                  -> DateTimeFormat.forPattern("yyyy-MM-dd"),
-    "\\d{1,2}/\\d{1,2}/\\d{4}".r                                  -> DateTimeFormat.forPattern("MM/dd/yyyy"),
-    "\\d{4}/\\d{1,2}/\\d{1,2}".r                                  -> DateTimeFormat.forPattern("yyyy/MM/dd"),
-    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}".r                           -> DateTimeFormat.forPattern("dd MMM yyyy"),
-    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}".r                          -> DateTimeFormat.forPattern("dd MMMM yyyy"),
-    "\\d{12}".r                                                   -> DateTimeFormat.forPattern("yyyyMMddHHmm"),
-    "\\d{8}\\s\\d{4}".r                                           -> DateTimeFormat.forPattern("yyyyMMdd HHmm"),
-    "\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("dd-MM-yyyy HH:mm"),
-    "\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm"),
-    "\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("MM/dd/yyyy HH:mm"),
-    "\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}".r                -> DateTimeFormat.forPattern("yyyy/MM/dd HH:mm"),
-    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r         -> DateTimeFormat.forPattern("dd MMM yyyy HH:mm"),
-    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r        -> DateTimeFormat.forPattern("dd MMMM yyyy HH:mm"),
-    "\\d{14}".r                                                   -> DateTimeFormat.forPattern("yyyyMMddHHmmss"),
-    "\\d{8}\\s\\d{6}".r                                           -> DateTimeFormat.forPattern("yyyyMMdd HHmmss"),
-    "\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss"),
-    "\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"),
-    "\\d{2}-[a-zA-Z]{3}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r        -> DateTimeFormat.forPattern("dd-MMM-yyyy HH:mm:ss"),
-    "\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss"),
-    "\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         -> DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss"),
-    "\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r  -> DateTimeFormat.forPattern("dd MMM yyyy HH:mm:ss"),
-    "\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r -> DateTimeFormat.forPattern("dd MMMM yyyy HH:mm:ss")
+  private[this] val DateTimeFormats = List[(Regex, DateTimeFormatter)](
+    ("\\d{8}\\s\\d{6}".r                                           , DateTimeFormat.forPattern("yyyyMMdd HHmmss")),
+    ("\\d{14}".r                                                   , DateTimeFormat.forPattern("yyyyMMddHHmmss")),
+    ("\\d{8}\\s\\d{4}".r                                           , DateTimeFormat.forPattern("yyyyMMdd HHmm")),
+    ("\\d{12}".r                                                   , DateTimeFormat.forPattern("yyyyMMddHHmm")),
+    ("\\d{8}".r                                                    , DateTimeFormat.forPattern("yyyyMMdd")),
+    ("\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         , DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss")),
+    ("\\d{1,2}-\\d{1,2}-\\d{4}\\s\\d{1,2}:\\d{2}".r                , DateTimeFormat.forPattern("dd-MM-yyyy HH:mm")),
+    ("\\d{1,2}-\\d{1,2}-\\d{4}".r                                  , DateTimeFormat.forPattern("dd-MM-yyyy")),
+    ("\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         , DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")),
+    ("\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{2}".r                , DateTimeFormat.forPattern("yyyy-MM-dd HH:mm")),
+    ("\\d{4}-\\d{1,2}-\\d{1,2}".r                                  , DateTimeFormat.forPattern("yyyy-MM-dd")),
+    ("\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r         , DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss")),
+    ("\\d{1,2}/\\d{1,2}/\\d{4}\\s\\d{1,2}:\\d{2}".r                , DateTimeFormat.forPattern("MM/dd/yyyy HH:mm")),
+    ("\\d{1,2}/\\d{1,2}/\\d{4}".r                                  , DateTimeFormat.forPattern("MM/dd/yyyy")),
+    ("\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}:\\d{2}".r         , DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss")),
+    ("\\d{4}/\\d{1,2}/\\d{1,2}\\s\\d{1,2}:\\d{2}".r                , DateTimeFormat.forPattern("yyyy/MM/dd HH:mm")),
+    ("\\d{4}/\\d{1,2}/\\d{1,2}".r                                  , DateTimeFormat.forPattern("yyyy/MM/dd")),
+    ("\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r  , DateTimeFormat.forPattern("dd MMM yyyy HH:mm:ss")),
+    ("\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r         , DateTimeFormat.forPattern("dd MMM yyyy HH:mm")),
+    ("\\d{1,2}\\s[a-zA-Z]{3}\\s\\d{4}".r                           , DateTimeFormat.forPattern("dd MMM yyyy")),
+    ("\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r , DateTimeFormat.forPattern("dd MMMM yyyy HH:mm:ss")),
+    ("\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}\\s\\d{1,2}:\\d{2}".r        , DateTimeFormat.forPattern("dd MMMM yyyy HH:mm")),
+    ("\\d{1,2}\\s[a-zA-Z]{4,}\\s\\d{4}".r                          , DateTimeFormat.forPattern("dd MMMM yyyy")),
+    ("\\d{2}-[a-zA-Z]{3}-\\d{4}\\s\\d{1,2}:\\d{2}:\\d{2}".r        , DateTimeFormat.forPattern("dd-MMM-yyyy HH:mm:ss"))
   )
 
   lazy val dateTimeParser = DateTimeFormats.foldLeft[Parser[DateTime]](failure("No match")) { (parsers, tuple) =>
     val (pattern, formatter) = tuple
-    parsers | (pattern <~ endOfFile ^^ { (string: String) =>
+    parsers | (pattern ^^ { (string: String) =>
       formatter.parseDateTime(string)
     })
   }
 
-  lazy val endOfFile = "$".r
-  
   lazy val newline = """(?:(\r)?\n)|$""".r
   
   lazy val anythingButNewline: Parser[String] = """(\S[^\r\n]*)""".r
