@@ -17,10 +17,13 @@ class RealMongo(config: ConfigMap) extends Mongo{
         case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
         case _ => new ServerAddress(server, ServerAddress.defaultPort())
       }
-    })
-    if (servers.isEmpty) error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
-    val mongo = new com.mongodb.Mongo(servers)
-    mongo.slaveOk()
+    }).toList
+    val mongo = servers match {
+      case x :: Nil => new com.mongodb.Mongo(x)
+      case x :: xs  => new com.mongodb.Mongo(servers)
+      case Nil => error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
+    }
+    if (config.getBool("slaveOk", true)) { mongo.slaveOk() }
     mongo
   }
 
