@@ -59,12 +59,12 @@ class HttpServerNettySpec extends Specification {
     }
 
     "return html by correct URI by https" in{
-      val response =  client.execSynch(clientFacade.httpsRequest)
+      val response =  client.execSynch(clientFacade.httpsRequest).value.get
       response.content.get mustEqual (Context.context)
     }
 
     "return html by correct URI" in{
-      val response =  client.execSynch(clientFacade.httpRequest)
+      val response =  client.execSynch(clientFacade.httpRequest).value.get
 
       response.status       mustEqual (HttpStatus(OK))
       response.content.get  mustEqual (Context.context)
@@ -73,20 +73,24 @@ class HttpServerNettySpec extends Specification {
     "return not found error by wrong URI" in{
       val response = client.execSynch(clientFacade.wrongHttpRequest)
 
-      response.status mustEqual (HttpStatus(NotFound))
+      response.isCanceled must be (true)
+      response.error.get.asInstanceOf[HttpException].failure mustEqual (NotFound)
     }
     "return Internall error when handling request crushes" in{
       val response = client.execSynch(clientFacade.errorHttpRequest)
 
-      response.status mustEqual (HttpStatus(InternalServerError))
+      response.isCanceled must be (true)
+      response.error.get.asInstanceOf[HttpException].failure mustEqual (InternalServerError)
     }
     "return Http error when handling request throws HttpException" in{
-    val response = client.execSynch(clientFacade.httpErrorHttpRequest)
-      response.status mustEqual (HttpStatus(BadRequest))
+      val response = client.execSynch(clientFacade.httpErrorHttpRequest)
+
+      response.isCanceled must be (true)
+      response.error.get.asInstanceOf[HttpException].failure mustEqual (BadRequest)
     }
 
     "return html by correct URI with parameters" in{
-      val response = client.execSynch(clientFacade.httpRequestWithParams)
+      val response = client.execSynch(clientFacade.httpRequestWithParams).value.get
 
       response.status       mustEqual (HttpStatus(OK))
       response.content.get  mustEqual (Context.context)
@@ -109,15 +113,19 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesStri
     SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
   }
 
-  def execSynch[R](f: HttpClient[String] => Future[R]): R = {
+  def execSynch[R](f: HttpClient[String] => Future[R]): Future[R] = {
     val future = f(this)
 
-    val counDown = new CountDownLatch(1)
-    future.deliverTo(response =>{
-      counDown.countDown
-    })
-    counDown.await
-    future.value.get
+    val countDownLatch = new CountDownLatch(1)
+    future deliverTo {response =>
+      countDownLatch.countDown
+    }
+    future ifCanceled {f =>
+      countDownLatch.countDown
+    }
+    countDownLatch.await
+
+    future
   }
 }
 
