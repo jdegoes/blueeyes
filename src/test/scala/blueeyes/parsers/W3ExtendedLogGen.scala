@@ -31,9 +31,9 @@ object W3ExtendedLogGen{
       header  <- identifier
     } yield (prefix + "(" + header + ")")
   }
-  def customIdentifier    = identifier map {v => "x" + v}
+  def customIdentifier    = identifier map {v => "x-" + v}
 
-  def prefix              = oneOf("c", "s", "r", "cs", "sc", "sr", "rs", "x")
+  def prefix              = oneOf("c", "s", "r", "cs", "sc", "sr", "rs")
 
   def prefixedIdentifier  = {
     for {

@@ -41,7 +41,7 @@ object W3ExtendedLogAST {
   case class CustomIdentifier(value: String) extends FieldIdentifier {
     def prefix = AppSpecificPrefix
 
-    override def toString = prefix.toString + value
+    override def toString = prefix.toString + "-" + value
   }
   
   sealed trait Prefix{
@@ -233,7 +233,7 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   }
   
   lazy val customIdentifier: Parser[CustomIdentifier] = {
-    "x" ~> identifier ^^ (s => CustomIdentifier(s))
+    "x" ~> "-" ~> identifier ^^ (s => CustomIdentifier(s))
   }
   
   lazy val prefix: Parser[Prefix] = {
@@ -243,8 +243,7 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
     ("rs" ^^^ RemoteServerToServer) |
     ("c"  ^^^ ClientPrefix)         |
     ("s"  ^^^ ServerPrefix)         |
-    ("r"  ^^^ RemotePrefix)         |
-    ("x"  ^^^ AppSpecificPrefix)
+    ("r"  ^^^ RemotePrefix)
   }
   
   //lazy val fields = 
