@@ -96,7 +96,7 @@ object HttpRequestLogger {
               case ServerPrefix =>
                 val address = try {
                   InetAddress.getLocalHost().getHostAddress()
-                }     HttpServerNettySpec.scala
+                }
                 catch {
                  case error: Throwable => "127.0.0.1"
                 }
