@@ -9,49 +9,123 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 
 object W3ExtendedLogAST {
-  case class VersionDirective  (major: Int, minor: Int)  
-  case class FieldsDirective   (identifiers: List[FieldIdentifier])  
-  case class SoftwareDirective (value: String)  
-  case class StartDateDirective(date: DateTime)
-  case class EndDateDirective  (date: DateTime)
-  case class DateDirective     (date: DateTime)
-  case class RemarkDirective   (text: String)
+  private val DTFormat = DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss")
+
+  sealed trait Directive
+  case class VersionDirective  (major: Int, minor: Int) extends Directive{
+    override def toString = "#Version: " + major + "." + minor
+  }
+  case class FieldsDirective   (identifiers: List[FieldIdentifier]) extends Directive{
+    override def toString = "#Fields: " + identifiers.mkString(" ")
+  }
+  case class SoftwareDirective (value: String)  extends Directive{
+    override def toString = "#Software: " + value
+  }
+  case class StartDateDirective(date: DateTime) extends Directive{
+    override def toString = "#Start-Date: " + DTFormat.print(date)
+  }
+  case class EndDateDirective  (date: DateTime) extends Directive{
+    override def toString = "#End-Date: " + DTFormat.print(date)
+  }
+  case class DateDirective     (date: DateTime) extends Directive{
+    override def toString = "#Date: " + DTFormat.print(date)
+  }
+  case class RemarkDirective   (text: String)   extends Directive{
+    override def toString = "#Remark: " + text
+  }
   
   sealed trait FieldIdentifier
   sealed trait PredefinedIdentifier extends FieldIdentifier 
-  case class HeaderIdentifier(prefix: Prefix, header: String)   extends FieldIdentifier
+  case class HeaderIdentifier(prefix: Prefix, header: String)   extends FieldIdentifier{
+    override def toString = prefix.toString + "(" + header + ")"
+  }
   case class CustomIdentifier(value: String) extends FieldIdentifier {
     def prefix = AppSpecificPrefix
+
+    override def toString = prefix.toString + value
   }
   
-  sealed trait Prefix
-  case object ClientPrefix          extends Prefix
-  case object ServerPrefix          extends Prefix
-  case object RemotePrefix          extends Prefix
-  case object ClientToServerPrefix  extends Prefix
-  case object ServerToClientPrefix  extends Prefix
-  case object ServerToRemoteServer  extends Prefix
-  case object RemoteServerToServer  extends Prefix
-  case object AppSpecificPrefix     extends Prefix
+  sealed trait Prefix{
+    def prefix: String
+
+    override def toString = prefix
+  }
+  case object ClientPrefix          extends Prefix{
+    def prefix = "c"
+  }
+  case object ServerPrefix          extends Prefix{
+    def prefix = "s"
+  }
+  case object RemotePrefix          extends Prefix{
+    def prefix = "r"
+  }
+  case object ClientToServerPrefix  extends Prefix{
+    def prefix = "cs"
+  }
+  case object ServerToClientPrefix  extends Prefix{
+    def prefix = "sc"
+  }
+  case object ServerToRemoteServer  extends Prefix{
+    def prefix = "sr"
+  }
+  case object RemoteServerToServer  extends Prefix{
+    def prefix = "rs"
+  }
+  case object AppSpecificPrefix     extends Prefix{
+    def prefix = "x"
+  }
     
-  sealed trait PredefinedIdentifierNoPrefix extends PredefinedIdentifier
-  case object DateIdentifier      extends PredefinedIdentifierNoPrefix
-  case object TimeIdentifier      extends PredefinedIdentifierNoPrefix
-  case object TimeTakenIdentifier extends PredefinedIdentifierNoPrefix
-  case object BytesIdentifier     extends PredefinedIdentifierNoPrefix
-  case object CachedIdentifier    extends PredefinedIdentifierNoPrefix
+  sealed trait PredefinedIdentifierNoPrefix extends PredefinedIdentifier{
+    def identifier: String
+
+    override def toString = identifier
+  }
+  case object DateIdentifier      extends PredefinedIdentifierNoPrefix{
+    def identifier = "date"
+  }
+  case object TimeIdentifier      extends PredefinedIdentifierNoPrefix{
+    def identifier = "time"
+  }
+  case object TimeTakenIdentifier extends PredefinedIdentifierNoPrefix{
+    def identifier = "time-taken"
+  }
+  case object BytesIdentifier     extends PredefinedIdentifierNoPrefix{
+    def identifier = "bytes"
+  }
+  case object CachedIdentifier    extends PredefinedIdentifierNoPrefix{
+    def identifier = "cached"
+  }
   
   sealed trait PredefinedIdentifierPrefix extends PredefinedIdentifier {
     def prefix: Prefix
+    def identifier: String
+
+    override def toString = prefix.toString + "-" + identifier
   }
-  case class IpIdentifier       (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class DnsNameIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class StatusIdentifier   (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class CommentIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class MethodIdentifier   (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class UriIdentifier      (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class UriStemIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix
-  case class UriQueryIdentifier (prefix: Prefix) extends PredefinedIdentifierPrefix
+  case class IpIdentifier       (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "ip"
+  }
+  case class DnsNameIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "dns"
+  }
+  case class StatusIdentifier   (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "status"
+  }
+  case class CommentIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "comment"
+  }
+  case class MethodIdentifier   (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "method"
+  }
+  case class UriIdentifier      (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "uri"
+  }
+  case class UriStemIdentifier  (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "uri-stem"
+  }
+  case class UriQueryIdentifier (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "uri-query"
+  }
   
   case class LogEntry(fields: List[Field])
   
@@ -99,11 +173,12 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
 
   lazy val dateTimeParser = DateTimeFormats.foldLeft[Parser[DateTime]](failure("No match")) { (parsers, tuple) =>
     val (pattern, formatter) = tuple
-
-    parsers | (pattern ^^ { (string: String) =>
+    parsers | (pattern <~ endOfFile ^^ { (string: String) =>
       formatter.parseDateTime(string)
     })
   }
+
+  lazy val endOfFile = "$".r
   
   lazy val newline = """(?:(\r)?\n)|$""".r
   
@@ -111,7 +186,9 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   lazy val identifier: Parser[String] = """([a-zA-Z0-9\-_]+)""".r
     
-  lazy val directive = "#" ~> (versionDirective | fieldsDirective | softwareDirective | dateDirective | startDateDirective | endDateDirective) <~ newline
+  lazy val directive = "#" ~> (versionDirective | fieldsDirective | softwareDirective | dateDirective | startDateDirective | endDateDirective | remarkDirective) <~ (newline?)
+
+  lazy val directives = directive*
   
   lazy val versionDirective = "Version" ~> ":" ~> ((wholeNumber <~ ".") ~ wholeNumber) ^^ {
     case major ~ minor => VersionDirective(major.toInt, minor.toInt)
@@ -121,21 +198,15 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
   
   lazy val softwareDirective = "Software" ~> ":" ~> anythingButNewline ^^ (s => SoftwareDirective(s))
   
-  lazy val startDateDirective = "Start-Date" ~> ":" ~> dateTimeParser ^^ (dt =>
-    StartDateDirective(dt)
-  )
+  lazy val startDateDirective = "Start-Date" ~> ":" ~> dateTimeParser ^^ (dt => StartDateDirective(dt))
   
-  lazy val endDateDirective = "End-Date" ~> ":" ~> dateTimeParser ^^ (dt =>
-    EndDateDirective(dt)
-  )
+  lazy val endDateDirective = "End-Date" ~> ":" ~> dateTimeParser ^^ (dt => EndDateDirective(dt))
   
-  lazy val dateDirective = "Date" ~> ":" ~> dateTimeParser ^^ (dt =>
-    DateDirective(dt)
-  )
+  lazy val dateDirective = "Date" ~> ":" ~> dateTimeParser ^^ (dt => DateDirective(dt))
   
   lazy val remarkDirective = "Remark" ~> ":" ~> anythingButNewline ^^ (s => RemarkDirective(s))
   
-  lazy val fieldIdentifier = customIdentifier | prefixedIdentifier | simpleIdentifier | headerIdentifier
+  lazy val fieldIdentifier = simpleIdentifier | prefixedIdentifier | headerIdentifier | customIdentifier
   
   lazy val simpleIdentifier: Parser[PredefinedIdentifierNoPrefix] = {
     ("date"       ^^^ DateIdentifier)       |
@@ -152,12 +223,12 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
       ("status"     ^^^ StatusIdentifier(prefix))  |
       ("comment"    ^^^ CommentIdentifier(prefix)) |
       ("method"     ^^^ MethodIdentifier(prefix))  |
-      ("uri"        ^^^ UriIdentifier(prefix))     |
       ("uri-stem"   ^^^ UriStemIdentifier(prefix)) |
-      ("uri-query"  ^^^ UriQueryIdentifier(prefix))
+      ("uri-query"  ^^^ UriQueryIdentifier(prefix)) |
+      ("uri"        ^^^ UriIdentifier(prefix))
     }
   }
-  
+
   lazy val headerIdentifier: Parser[HeaderIdentifier] = {
     (prefix <~ "(") ~ (identifier <~ ")") ^^ {
       case prefix ~ header => HeaderIdentifier(prefix, header)
@@ -175,6 +246,7 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
     ("rs" ^^^ RemoteServerToServer) |
     ("c"  ^^^ ClientPrefix)         |
     ("s"  ^^^ ServerPrefix)         |
+    ("r"  ^^^ RemotePrefix)         |
     ("x"  ^^^ AppSpecificPrefix)
   }
   
@@ -184,7 +256,24 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
 }
 object W3ExtendedLogGrammar extends W3ExtendedLogGrammar
 
-object W3ExtendedLog {
+object W3ExtendedLog extends W3ExtendedLogGrammar with RegexParsers{
+  import W3ExtendedLogAST._
+  import scala.util.parsing.input.CharSequenceReader
+
+  def apply(s: String): List[Directive] = directives.apply(new CharSequenceReader(s)) match {
+    case Success(result, _) => {
+      result
+    }
+
+    case Failure(msg, _)    => parseFailure(msg, s)
+
+    case Error(msg, _)      => parseError(msg, s)
+  }
+
+  private def parseFailure(msg: String, s: String) = error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+
+  private def parseError(msg: String, s: String)   = error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+
   import W3ExtendedLogAST._
   import W3ExtendedLogGrammar._
 

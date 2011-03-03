@@ -451,10 +451,7 @@ object RegularExpressionPatten extends PartialFunction[String, List[RegexAtom]] 
     case Error(msg, _)      => parseError(msg, s)
   }
 
-  private def parseFailure(msg: String, s: String) = {
-    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
-  }
-  private def parseError(msg: String, s: String) = {
-    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
-  }  
+  private def parseFailure(msg: String, s: String) = error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+
+  private def parseError(msg: String, s: String)   = error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
 }
