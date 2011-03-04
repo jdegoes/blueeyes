@@ -116,13 +116,11 @@ object HttpRequestLogger {
               case _   => Future.lift("")
             }
             case StatusIdentifier(prefix) => prefix match {
-              case ServerToClientPrefix => response.map { response => response.status.code.name }
+              case ServerToClientPrefix => response map { response => response.status.code.name }
               case _   => Future.lift("")
             }
             case CommentIdentifier(prefix) => prefix match {
-              case ServerToClientPrefix => response.map { response =>
-                response.status.reason
-              }
+              case ServerToClientPrefix => response map { response => response.status.reason }
               case _   => Future.lift("")
             }
             case MethodIdentifier(prefix) => prefix match {
@@ -145,7 +143,7 @@ object HttpRequestLogger {
               def find(key: String, headers: Map[String, String]) = headers find {keyValue => keyValue._1.toLowerCase == key.toLowerCase} map {keyValue => keyValue._2} getOrElse ("")
               prefix match {
                 case ClientToServerPrefix => Future.lift(find(header, request.headers))
-                case ServerToClientPrefix => response.map { response => find(header, response.headers) }
+                case ServerToClientPrefix => response map { response => find(header, response.headers) }
                 case _   => Future.lift("")
               }
             case CustomIdentifier(value) =>
