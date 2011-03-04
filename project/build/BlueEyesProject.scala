@@ -74,6 +74,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val commonscodec   = "commons-codec"                % "commons-codec"       % "1.4"           % "compile"
   val clhm_lru       = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
   val apacheColl     = "commons-collections"          % "commons-collections" % "3.2.1"         % "compile"
+  val scalazCore     = "org.scalaz"                   %% "scalaz-core"        % "6.0-SNAPSHOT"
   
   lazy val benchmark = benchmarkTask
 

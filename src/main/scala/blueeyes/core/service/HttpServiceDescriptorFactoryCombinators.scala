@@ -57,7 +57,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    */
   def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val logger = Logger.configure(context.config.configMap("log"), false, false)
+      val logger = Logger.configure(context.config.configMap("log"), false, true)
 
       f(logger)(context)
     }
