@@ -12,6 +12,8 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
+import blueeyes.util.Future
+
 //import Extractors._
 
 class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] with BlueEyesDemoService{
@@ -60,14 +62,16 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
   }
 
   "BlueEyesDemoService" in {
+    def awaitResult[T](future: Future[T]) = {
+      val countDown = new CountDownLatch(1)
+      future deliverTo {v => countDown.countDown()}
+      countDown.await()
+    }
+
     val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
     
-    val removed  = database[JNothing.type](remove.from(collectionName))
-    val inserted = database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
-
-    val countDown = new CountDownLatch(1)
-    removed.zip[JNothing.type](inserted).deliverTo{v => countDown.countDown()}
-    countDown.await()    
+    val removed  = awaitResult[JNothing.type](database[JNothing.type](remove.from(collectionName)))
+    val inserted = awaitResult[JNothing.type](database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName)))
 
     path$("/contacts"){
       contentType$[JValue, Array[Byte], Unit](application/MimeTypes.json){

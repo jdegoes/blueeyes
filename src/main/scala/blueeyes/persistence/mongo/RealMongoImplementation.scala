@@ -67,7 +67,16 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
     val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
     val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
 
-    stream(limitedCursor.iterator)
+    iterator(limitedCursor.iterator)
+  }
+
+  private def iterator(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): scala.collection.IterableView[JObject, Iterator[JObject]] = {
+    val jObjectIterator = new Iterator[JObject]{
+      def next()  = mongoObject2JObject(dbObjectsIterator.next)
+      def hasNext = dbObjectsIterator.hasNext
+    }
+
+    new IterableViewImpl[JObject](jObjectIterator)
   }
 
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
@@ -87,9 +96,6 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
     mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value)
   }
 
-  def stream(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): Stream[JObject] =
-    if (dbObjectsIterator.hasNext) Stream.cons(mongoObject2JObject(dbObjectsIterator.next), stream(dbObjectsIterator)) else Stream.empty
-
   def getLastError: Option[BasicDBObject] = {
       val error  = collection.getDB.getLastError
       if (error != null && error.get("err") != null) Some(error) else None
@@ -106,4 +112,11 @@ private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput) extends M
 
   def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection))
 }
+
+class IterableViewImpl[+A](underluyingIterator: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{
+  def iterator: scala.collection.Iterator[A] = underluyingIterator
+
+  protected def underlying = underluyingIterator
+}
+
 

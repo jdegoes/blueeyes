@@ -40,7 +40,9 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         path("/contacts"){
           produce(application/json) {
             get { request: HttpRequest[Array[Byte]] =>
-              val contacts = database(select(".name").from(collection)).map(records => JArray(records.flatMap(row => (row \\ "name").value).toList))
+              val contacts = database(select(".name").from(collection)) map {records =>
+                JArray(records.flatMap(row => (row \\ "name").value).toList)
+              }
 
               contacts.map(v => HttpResponse[JValue](content=Some(v)))
             }

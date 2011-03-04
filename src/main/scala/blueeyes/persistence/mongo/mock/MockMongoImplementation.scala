@@ -80,7 +80,9 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
-      selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject]).toStream
+      val jObjectIterator = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject]).iterator
+
+      new IterableViewImpl[JObject](jObjectIterator)
     })
   }
 
@@ -135,7 +137,10 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
       process(filter, f)
     }
   }
-  private def process[T](filter: Option[MongoFilter], f: (List[JObject]) => T): T = f(search(filter))
+  private def process[T](filter: Option[MongoFilter], f: (List[JObject]) => T): T = {
+    val dd = f(search(filter))
+    dd
+  }
   
   private def search(filter: Option[MongoFilter]) = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
 

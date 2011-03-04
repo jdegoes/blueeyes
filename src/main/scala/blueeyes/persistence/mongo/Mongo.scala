@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.IterableView
 import blueeyes.util.Future
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
@@ -51,7 +52,7 @@ trait MongoDatabase{
 
 private[mongo] trait DatabaseCollection{
   def insert(objects: List[JObject])
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): Stream[JObject]
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): IterableView[JObject, Iterator[JObject]]
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])

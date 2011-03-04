@@ -17,7 +17,7 @@ class SelectOneQueryBehaviourSpec extends Specification {
 
   "Call collection method" in{
     when(collection.getLastError).thenReturn(None)
-    when(collection.select(keys, None, None, None, Some(1))).thenReturn(List(jObject1).toStream)
+    when(collection.select(keys, None, None, None, Some(1))).thenReturn(new IterableViewImpl[JObject](List(jObject1).iterator))
 
     val query  = selectOne("foo", "bar").from("collection")
     val result = query(collection)

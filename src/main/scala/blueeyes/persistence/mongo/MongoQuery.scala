@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.IterableView
 import blueeyes.util.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
@@ -61,7 +62,7 @@ case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollectio
   def where (newFilter: MongoFilter): MongoGroupQuery = copy(filter = Some(newFilter))
 }
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[Stream[JObject]] with SelectQueryBehaviour{
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[IterableView[JObject, Iterator[JObject]]] with SelectQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectQuery = copy(sort = Some(newSort))
   def skip  (newSkip: Int)          : MongoSelectQuery = copy(skip = Some(newSkip))

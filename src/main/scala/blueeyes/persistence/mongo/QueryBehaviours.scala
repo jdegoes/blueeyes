@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.IterableView
 import blueeyes.util.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
@@ -95,7 +96,7 @@ private[mongo] object QueryBehaviours{
     def filter: Option[MongoFilter]
   }
 
-  trait SelectQueryBehaviour extends AsynchQueryBehaviour[Stream[JObject]]{
+  trait SelectQueryBehaviour extends AsynchQueryBehaviour[IterableView[JObject, Iterator[JObject]]]{
     def query(collection: DatabaseCollection) = {
       val i = 0
       collection.select(selection, filter, sort, skip, limit)
