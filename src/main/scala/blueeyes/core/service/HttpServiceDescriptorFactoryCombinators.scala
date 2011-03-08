@@ -83,7 +83,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       val underlying = f(context)
 
       def fieldsDirective: FieldsDirective = {
-        context.config.getString("log.requestLog") map { configValue =>
+        context.config.getString("requestLog.fields") map { configValue =>
           W3ExtendedLog("#Fields: " + configValue) match {
             case (e: FieldsDirective) :: Nil => e
             case _ => error("Log directives are not specified.")
@@ -91,7 +91,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         } getOrElse (error("Log directives are not specified."))
       }
 
-      val policy = context.config.getString("log.roll", "never").toLowerCase match {
+      val policy = context.config.getString("requestLog.roll", "never").toLowerCase match {
         case "never"      => Never
         case "hourly"     => Hourly
         case "daily"      => Daily
@@ -105,12 +105,12 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         case x            => error("Unknown logfile rolling policy: " + x)
       }
 
-      val fileName = context.config.getString("log.file") match{
+      val fileName = context.config.getString("requestLog.file") match{
         case Some(x) => x
         case None => error("Logfile is not specified.")
       }
 
-      val writeDelaySeconds = context.config.getInt("log.writeDelaySeconds", 1)
+      val writeDelaySeconds = context.config.getInt("requestLog.writeDelaySeconds", 1)
 
       val log = W3ExtendedLogger.get(fileName, policy, fieldsDirective, writeDelaySeconds)
 
