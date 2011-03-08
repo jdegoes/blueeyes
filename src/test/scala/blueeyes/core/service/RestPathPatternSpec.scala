@@ -8,7 +8,7 @@ import blueeyes.core.http.{HttpRequest, HttpMethods}
 
 class RestPathPatternSpec extends Specification{
   import RestPathPatternImplicits._
-  
+
   "path matching and symbol extraction" should {
     "match correct literal path containing a single path element" in {
       testPath("/foo",
@@ -50,11 +50,11 @@ class RestPathPatternSpec extends Specification{
       )
     }
   }
-  
+
   "slash operator" should {
     "combine symbols and literals using slash operator" in {
       val pattern: RestPathPattern = "/foo" / 'bar / 'biz / "blah"
-    
+
       pattern("/foo/a/b/blah") mustEqual(Map('bar -> "a", 'biz -> "b"))
     }
     "work starting from root" in {
@@ -72,6 +72,10 @@ class RestPathPatternSpec extends Specification{
     "create single parameter in lengthy literal path" in {
       (RestPathPattern.Root / "foo" / "bar" / 'param).apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
     }
+    "should optionally accept slash when option variant is used" in {
+      (("foo": RestPathPattern) /?).apply("foo/") mustEqual(Map())
+      (("foo": RestPathPattern) /?).apply("foo") mustEqual(Map())
+    }
   }
 
   "end symbol" should {
@@ -88,14 +92,14 @@ class RestPathPatternSpec extends Specification{
       ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") mustBe(false)
     }
   }
-  
+
   "`...` operator" should {
     "match trailing string" in {
       ("/foo" `...` ('rest)).apply("/foo/bar") mustEqual(Map('rest -> "/bar"))
     }
   }
 
-  /* ---- Regex Tests ---- */ 
+  /* ---- Regex Tests ---- */
   "Regular expression pattern" should {
     "match for a simple pattern" in {
       (RestPathPattern.Root/ "foo" / "bar" / new Regex("""(steamboats)""", "id") ~ List('id)).isDefinedAt("/foo/bar/steamboats") mustEqual(true)
@@ -119,11 +123,11 @@ class RestPathPatternSpec extends Specification{
       ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path)).isDefinedAt("/foo/bar/example.html") mustBe (true)
     }
     "recover the parameter with positive look ahead" in {
-      val pattern: RestPathPattern = "/darth" / new Regex("""([a-z]+)(\.gif)""", "path") ~ List('path) 
+      val pattern: RestPathPattern = "/darth" / new Regex("""([a-z]+)(\.gif)""", "path") ~ List('path)
       pattern.apply("/darth/joshuar.gif").mustEqual(Map[Symbol, String]('path -> "joshuar"))
     }
   }
-  
+
   "Symbol pattern" should {
     "match on a symbol with a suffix (ex: 'name.gif)" in {
       ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
@@ -140,30 +144,30 @@ class RestPathPatternSpec extends Specification{
   "implicits" should {
     "create parameters automatically for complex path specified as string" in {
       val pattern: RestPathPattern = "/foo/bar/'param"
-    
+
       pattern.apply("/foo/bar/value") mustEqual(Map[Symbol, String]('param -> "value"))
     }
   }
-  
+
   "shift" should {
     "shift subpath leftward by matched pattern" in {
       val pattern: RestPathPattern = "/foo/'param"
-    
+
       pattern.shift(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz")) mustEqual(HttpRequest(method = HttpMethods.GET, uri = "/foo/bar/baz").withSubpath("/baz"))
     }
   }
-  
+
   private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
     val pattern = RestPathPattern(path)
-    
+
     isDefinedAt.foreach { pair =>
       val path = pair._1
       val map  = pair._2
-      
+
       pattern.isDefinedAt(path) mustEqual(true)
       pattern.apply(path) mustEqual(map)
     }
-    
+
     isNotDefinedAt.foreach { path =>
       pattern.isDefinedAt(path) mustEqual(false)
     }
