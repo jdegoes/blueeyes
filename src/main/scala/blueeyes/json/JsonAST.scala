@@ -57,7 +57,7 @@ object JsonAST {
         case xs => JArray(xs.map(extractValue))
       }
     }
-    
+
     /**
      * Returns the element as a JValue of the specified class.
      * <p>
@@ -66,7 +66,7 @@ object JsonAST {
      * </pre>
      */
     def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(error("Expected class " + clazz + ", but found: " + this.getClass))
-    
+
     /**
      * Returns the element as an option of a JValue of the specified class.
       * <p>
@@ -76,7 +76,7 @@ object JsonAST {
      */
     def -->? [A <: JValue](clazz: Class[A]): Option[A] = {
       def extractTyped(value: JValue) = if (value.getClass == clazz) Some(value.asInstanceOf[A]) else None
-      
+
       this match {
         case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
         case _ => extractTyped(this)
@@ -136,7 +136,7 @@ object JsonAST {
       case x if x.getClass == clazz => true
       case _ => false
     }
-    
+
     /** Gets the specified value located at the terminal of the specified path.
      * <p>
      * Example:<pre>
@@ -144,8 +144,8 @@ object JsonAST {
      * </pre>
      */
     def apply(path: JPath): List[JValue] = path.extract(this)
-    
-    def get(path: JPath): List[JValue] = apply(path)    
+
+    def get(path: JPath): List[JValue] = apply(path)
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
@@ -176,7 +176,7 @@ object JsonAST {
       case JField(n, v) => List(v)
       case _ => Nil
     }
-    
+
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
      * for each element. The initial value is <code>z</code>.
      */
@@ -204,9 +204,9 @@ object JsonAST {
       def rec(v: JValue): JValue = v match {
         case JObject(l) => f(JObject(l.flatMap(f => rec(f) match {
           case JNothing => Nil
-          
+
           case x: JField => x :: Nil
-          
+
           case x => JField(f.name, x) :: Nil
         })))
         case JArray(l) => f(JArray(l.flatMap(e => rec(e) match {
@@ -233,50 +233,50 @@ object JsonAST {
       if (f.isDefinedAt(x)) f(x) else x
     }
 
-    /** Replaces the matched path values with the result of calling the 
+    /** Replaces the matched path values with the result of calling the
      * replacer function on the matches. If the path has no values, the
      * method has no effect -- i.e. it is not an error to specify paths
      * which do not exist.
      * <p>
      * Example:<pre>
-     * jvalue.replace("./ba[rz]/", value => JObject("indent", value))
+     * jvalue.replace(".baz", value => JObject("indent", value))
      * </pre>
      */
     def replace(target: JPath, replacer: JValue => JValue): JValue = {
       def replace0(target: JPath, j: JValue): JValue = target.nodes match {
         case Nil => replacer(j)
-        
+
         case head :: tail => head match {
           case JPathField(name1) => j match {
             case JObject(fields) => JObject(fields.map {
               case JField(name2, value) if (name1 == name2) => JField(name1, replace0(JPath(tail: _*), value))
-              
+
               case field => field
             })
-            
+
             case jvalue => jvalue
           }
-          
+
           case JPathIndex(index) => j match {
             case JArray(elements) =>
               val split = elements.splitAt(index)
-            
+
               val prefix = split._1
               val middle = replace0(JPath(tail: _*), split._2.head)
               val suffix = split._2.drop(1)
-              
+
               JArray(prefix ++ (middle :: suffix))
-              
+
             case jvalue => jvalue
           }
         }
       }
-      
+
       target.expand(this).foldLeft(this) { (jvalue, expansion) =>
         replace0(expansion, jvalue)
       }
     }
-    
+
     /** A shorthand for the other replacement in the case that the replacement
      * does not depend on the value being replaced.
      */
@@ -379,7 +379,7 @@ object JsonAST {
      * JObject(JField("name", JString("joe")) :: Nil).extract[Foo] == Person("joe")
      * </pre>
      */
-    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): A = 
+    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): A =
       Extraction.extract(this)(formats, mf)
 
     /** Extract a case class from a JSON.
@@ -389,7 +389,7 @@ object JsonAST {
      * JObject(JField("name", JString("joe")) :: Nil).extractOpt[Foo] == Some(Person("joe"))
      * </pre>
      */
-    def extractOpt[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): Option[A] = 
+    def extractOpt[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): Option[A] =
       Extraction.extractOpt(this)(formats, mf)
   }
 
@@ -425,7 +425,7 @@ object JsonAST {
   case class JObject(fields: List[JField]) extends JValue {
     type Values = Map[String, Any]
     def values = Map() ++ fields.map(_.values : (String, Any))
-    
+
     override def equals(that: Any): Boolean = that match {
       case o: JObject => Set(fields.toArray: _*) == Set(o.fields.toArray: _*)
       case _ => false
@@ -435,7 +435,7 @@ object JsonAST {
     type Values = List[Any]
     def values = elements.map(_.values)
     override def apply(i: Int): JValue = elements(i)
-    
+
     override def equals(that: Any): Boolean = that match {
       case a: JArray => Set(elements.toArray: _*) == Set(a.elements.toArray: _*)
       case _ => false
@@ -462,28 +462,28 @@ object JsonAST {
       val nested = break :: fields(trimObj(obj).map(render _))
       text("{") :: nest(2, nested) :: break :: text("}")
   }
-  
-  /** Renders as Scala code, which can be copy/pasted into a lift-json scala 
+
+  /** Renders as Scala code, which can be copy/pasted into a lift-json scala
    * application.
    */
-  def renderScala(value: JValue): Document = {  
+  def renderScala(value: JValue): Document = {
     val Quote = "\""
-    
+
     def scalaQuote(s: String) = Quote + List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\").foldLeft(s) { (str, pair) =>
       str.replaceAll(pair._1, pair._2)
     } + Quote
-    
+
     def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
-    
+
     value match {
       case null => text("null")
-      
+
       case JNothing => text("JNothing")
       case JNull => text("JNull")
-      
+
       case _ => text(value.productPrefix + "(") :: (value match {
         case JNull | JNothing => error("impossible")
-      
+
         case JBool(value)  => text(value.toString)
         case JDouble(n)    => text(n.toString)
         case JInt(n)       => text(n.toString)
@@ -493,7 +493,7 @@ object JsonAST {
         case JField(n, v)  => text(scalaQuote(n) + ",") :: renderScala(v)
         case JObject(obj)  =>
           val nested = break :: fold(intersperse(intersperse(obj.map(renderScala) ::: List(text("Nil")), text("::")), break))
-        
+
           nest(2, nested)
       }) :: text(")")
     }
@@ -635,7 +635,7 @@ trait Printer {
       nodes = nodes.pop
       cur match {
         case DocText(s)      => out.write(s)
-        case DocCons(d1, d2) => 
+        case DocCons(d1, d2) =>
           if (!visited.containsKey(cur)) {
             visited.put(cur, ())
             nodes = nodes.push(cur)
