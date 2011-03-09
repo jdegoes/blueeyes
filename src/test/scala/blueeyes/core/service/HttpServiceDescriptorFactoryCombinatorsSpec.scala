@@ -42,7 +42,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 
   doAfterSpec {
-    findLogFile foreach { file => file.delete }
+    findLogFile foreach { _.delete }
   }
 
   private def findLogFile = {
