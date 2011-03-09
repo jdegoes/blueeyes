@@ -1,13 +1,40 @@
 package blueeyes.util
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue}
+import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue}
 
 trait Strategy {
   def submit[A, B](f: A => B, work: (A, Future[B])): Unit
 }
 
+trait StrategySequential {
+  implicit val strategy = new Strategy {
+    def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
+      val (request, response) = work
 
-trait StrategyThreaded {
+      try {
+        response.deliver(f(request))
+      }
+      catch {
+        case e => response.cancel(e)
+      }
+    }
+  }
+}
+
+trait StrategyThreaded1 {
+  private val sequential = new StrategySequential { }
+  private val executor = Executors.newSingleThreadExecutor
+
+  implicit val strategy = new Strategy {
+    def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
+      executor.execute(new Runnable {
+        def run = sequential.strategy.submit(f, work)
+      })
+    }
+  }
+}
+
+trait StrategyThreadedN {
   implicit val strategy = new Strategy {
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
 
