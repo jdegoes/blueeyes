@@ -541,7 +541,8 @@ object Future {
     val newF = new Future[T]
 
     f.respond { t =>
-      newF.deliver(t)
+      println("received t: " + t)
+      //newF.deliver(t)
     }
 
     newF
