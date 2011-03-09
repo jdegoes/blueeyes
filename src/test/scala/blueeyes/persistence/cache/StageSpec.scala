@@ -71,7 +71,7 @@ class StageSpec extends Specification{
       newStage() { stage =>
         stage += (("foo", "bar"))
         val future = stage.getLater("foo")
-        future.value must eventually (beSome(Some("bar")))
+        future.value must eventually (beSome(Some("bar-bar")))
       }
     }
   }
