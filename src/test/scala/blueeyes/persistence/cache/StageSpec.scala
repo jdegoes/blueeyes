@@ -13,14 +13,14 @@ class StageSpec extends Specification{
         stage.get("foo") must eventually (beSome("bar-baz"))
       }
     }
-    
+
     "add entry" in {
       newStage() { stage =>
         stage.get("foo") must eventually (beSome("bar"))
       }
     }
   }
-  
+
   "Stage -= " should {
     "remove entry" in {
       newStage() { stage =>
@@ -30,7 +30,7 @@ class StageSpec extends Specification{
       }
     }
   }
-  
+
   "Stage.iterator" should {
     "returns all entries" in {
       newStage() { stage =>
@@ -38,11 +38,11 @@ class StageSpec extends Specification{
       }
     }
   }
-  
+
   "Stage.stop" should {
     "evict all entries" in {
       @volatile var _evicted = false
-      
+
       newStage(None, None, {(key: String, value: String) => _evicted = true}) { stage =>
         stage.stop
 
@@ -56,28 +56,19 @@ class StageSpec extends Specification{
       newStage() { stage =>
         val future = stage.getLater("foo")
 
-        val latch = new CountDownLatch(1)
-        future.deliverTo({f => latch.countDown()})
-
-        latch.await
-
-        future.value must beSome(Some("bar"))
+        future.value must eventually (beSome(Some("bar")))
       }
     }
-  }
 
-  "Failing Stage.getLater" should {
-    "return a future of the value" in {
+    "pass regression 1" in {
       newStage() { stage =>
         stage += (("foo", "bar"))
         val future = stage.getLater("foo")
         future.value must eventually (beSome(Some("bar-bar")))
       }
     }
-  }
 
-  "Another Failing Stage.getLater" should {
-    "return a future of the value" in {
+    "pass regression 2" in {
       newStage() { stage =>
         stage += (("fiz", "biz"))
         val future = stage.getLater("fiz")
@@ -85,7 +76,7 @@ class StageSpec extends Specification{
       }
     }
   }
-  
+
   "Stage" should {
     "evict when idle time is expired" in {
       newStage(Some(1000)) { stage =>
@@ -103,7 +94,7 @@ class StageSpec extends Specification{
     }
     "evict when entry is expired" in{
       var evicted = false
-      
+
       newStage(None, Some(1000), {(key: String, value: String) => evicted = key == "foo" && value == "bar"}) { stage =>
         Thread.sleep(2000)
 

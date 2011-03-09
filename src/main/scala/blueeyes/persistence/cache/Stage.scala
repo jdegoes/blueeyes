@@ -34,7 +34,7 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
   private case object Stopped extends Response
 
   private val actor: Actor = new Actor { self =>
-    val accumulator: Map[K, V] = Cache.nonConcurrent(settings)
+    val accumulator: Map[K, V] = Cache.concurrent(settings)
 
     def act = {
       loop {
