@@ -8,12 +8,15 @@ import blueeyes.util.RichThrowableImplicits
 import java.util.{GregorianCalendar, Calendar, Date}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 
-sealed abstract class Policy
-case object Never extends Policy
-case object Hourly extends Policy
-case object Daily extends Policy
-case class Weekly(dayOfWeek: Int) extends Policy
+object RollPolicies{
+  sealed abstract class Policy
+  case object Never extends Policy
+  case object Hourly extends Policy
+  case object Daily extends Policy
+  case class Weekly(dayOfWeek: Int) extends Policy
+}
 
+import RollPolicies._
 object W3ExtendedLogger{
   private val loggersCache = new scala.collection.mutable.HashMap[String, W3ExtendedLogger]
 

@@ -3,6 +3,7 @@ package blueeyes.util.logging
 import org.specs.Specification
 import blueeyes.parsers.W3ExtendedLogAST._
 import java.io.{ByteArrayOutputStream, FileInputStream, File}
+import RollPolicies._
 
 class W3ExtendedLoggerSpec extends Specification{
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
@@ -23,9 +24,10 @@ class W3ExtendedLoggerSpec extends Specification{
       w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + "w3.log", Never, directives, 1)
 
       val content = getContents(new File(w3Logger.fileName.get))
-      content.indexOf("#Version: 1.0") must notEq (-1)
-      content.indexOf("#Date: ") must notEq (-1)
-      content.indexOf(directives.toString) must notEq (-1)
+
+      content.indexOf("#Version: 1.0")      must notEq (-1)
+      content.indexOf("#Date: ")            must notEq (-1)
+      content.indexOf(directives.toString)  must notEq (-1)
     }
 
     "write log entries" in {
@@ -39,6 +41,7 @@ class W3ExtendedLoggerSpec extends Specification{
       w3Logger("baz")
 
       val content = getContents(new File(w3Logger.fileName.get))
+
       content.indexOf("foo") must notEq (-1)
       content.indexOf("bar") must notEq (-1)
     }
