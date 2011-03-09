@@ -50,7 +50,7 @@ class StageSpec extends Specification{
       }
     }
   }
-  
+
   "Stage.getLater" should {
     "return a future of the value" in {
       newStage() { stage =>
@@ -62,6 +62,26 @@ class StageSpec extends Specification{
         latch.await
 
         future.value must beSome(Some("bar"))
+      }
+    }
+  }
+
+  "Failing Stage.getLater" should {
+    "return a future of the value" in {
+      newStage() { stage =>
+        stage += (("foo", "bar"))
+        val future = stage.getLater("foo")
+        future.value must eventually (beSome(Some("bar-bar")))
+      }
+    }
+  }
+
+  "Another Failing Stage.getLater" should {
+    "return a future of the value" in {
+      newStage() { stage =>
+        stage += (("fiz", "biz"))
+        val future = stage.getLater("fiz")
+        future.value must eventually (beSome(Some("biz")))
       }
     }
   }
