@@ -8,12 +8,15 @@ import blueeyes.util.RichThrowableImplicits
 import java.util.{GregorianCalendar, Calendar, Date}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 
-sealed abstract class Policy
-case object Never extends Policy
-case object Hourly extends Policy
-case object Daily extends Policy
-case class Weekly(dayOfWeek: Int) extends Policy
+object RollPolicies{
+  sealed abstract class Policy
+  case object Never extends Policy
+  case object Hourly extends Policy
+  case object Daily extends Policy
+  case class Weekly(dayOfWeek: Int) extends Policy
+}
 
+import RollPolicies._
 object W3ExtendedLogger{
   private val loggersCache = new scala.collection.mutable.HashMap[String, W3ExtendedLogger]
 
@@ -35,6 +38,7 @@ class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: Fi
   private val logStage    = new Stage[String, String](CacheSettings[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write, 1), coalesce)
 
   def apply(logEntry: String){
+    logStage.stop
     logStage += (("log", logEntry))
   }
 
@@ -49,6 +53,7 @@ class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: Fi
 
 class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective) extends RichThrowableImplicits with NameFormat with Roll{
 
+  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private var _fileName: Option[String]  = None
   private var _stream: Option[Writer]    = None
   private var _openTime: Long            = System.currentTimeMillis
@@ -68,18 +73,31 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
     } catch { case _ => () }
   }
 
-  def publish(record: String) = synchronized {
+  def publish(record: String) = {
+    rollIfNecessary
+    writeRecord(record)
+  }
+
+  private def writeRecord(record: String){
     _stream foreach { streamValue =>
       try {
-        if (System.currentTimeMillis > _nextRollTime) {
-            roll
-        }
         streamValue.write(record + "\n")
         streamValue.flush
       } catch {
-        case e =>
-          System.err.println(e.fullStackTrace)
+        case e => System.err.println(e.fullStackTrace)
       }
+    }
+  }
+
+  private def rollIfNecessary = {
+    lock.writeLock.lock()
+    try {
+      if (System.currentTimeMillis > _nextRollTime) {
+          roll
+      }
+    }
+    finally {
+      lock.writeLock.unlock()
     }
   }
 

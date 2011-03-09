@@ -7,6 +7,7 @@ import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
 import blueeyes.json.JsonAST.{JInt, JNothing, JString}
 import blueeyes.util.Future
+import java.io.File
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[String] with HeatlhMonitorService{
   override def configuration = """
@@ -16,8 +17,19 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
           serviceRootUrl = "/foo/v1"
         }
       }
+      email {
+        v1 {
+          requestLog {
+            fields = "cs-method cs-uri"
+            roll = "never"
+            file = "%s"
+          }
+        }
+      }
     }
-  """
+  """.format(System.getProperty("java.io.tmpdir") + "w3log.log")
+
+  println(System.getProperty("java.io.tmpdir"))
   
   implicit val httpClient: HttpClient[String] = new HttpClient[String] {
     def apply(r: HttpRequest[String]): Future[HttpResponse[String]] = {
@@ -28,7 +40,15 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       })))
     }
   }
-  
+
+  doAfterSpec {
+    findLogFile foreach { _.delete }
+  }
+
+  private def findLogFile = {
+    new File(System.getProperty("java.io.tmpdir")).listFiles filter{ file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
+  }
+
   path$("/foo"){
     get${ response: HttpResponse[String] =>
       response.status  mustEqual(HttpStatus(OK))
@@ -56,30 +76,36 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       response.content must eventually (beEqualTo(Some("it works!")))
     }
   } should "add service locator"
+
+  "RequestLogging: Creates logRequest" in{
+    findLogFile mustNot be (None)
+  }
 }
 
 trait HeatlhMonitorService extends BlueEyesServiceBuilderString with HttpServiceDescriptorFactoryCombinators{
   implicit def httpClient: HttpClient[String]
   
   val emailService = service ("email", "1.2.3") {
-    logging { log =>
-      healthMonitor { monitor =>
-        serviceLocator { locator: ServiceLocator[String] =>
-          context => {
-            request {
-              path("/foo") {
-                get  { request: HttpRequest[String] => Future(HttpResponse[String]()) }
-              } ~
-              path("/proxy") {
-                get { request: HttpRequest[String] =>
-                  locator("foo", "1.02.32") { client =>
-                    client(request)
-                  }.flatten
-                }
-              } ~
-              remainingPath{ path =>
-                get{
-                  request: HttpRequest[String] => HttpResponse[String]()    
+    requestLogging{
+      logging { log =>
+        healthMonitor { monitor =>
+          serviceLocator { locator: ServiceLocator[String] =>
+            context => {
+              request {
+                path("/foo") {
+                  get  { request: HttpRequest[String] => Future(HttpResponse[String]()) }
+                } ~
+                path("/proxy") {
+                  get { request: HttpRequest[String] =>
+                    locator("foo", "1.02.32") { client =>
+                      client(request)
+                    }.flatten
+                  }
+                } ~
+                remainingPath{ path =>
+                  get{
+                    request: HttpRequest[String] => HttpResponse[String]()
+                  }
                 }
               }
             }

@@ -78,7 +78,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }}}
    */
   def requestLogging[T, S](f: => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
-
+    import RollPolicies._
     (context: HttpServiceContext) => {
       val underlying = f(context)
 
@@ -116,6 +116,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, log, underlying.request(state))},
                       shutdown = (state: S) => {
+                        println("CLOSE")
                         log.close
                         underlying.shutdown(state)
                       })
