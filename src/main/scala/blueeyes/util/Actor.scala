@@ -15,7 +15,7 @@ trait StrategyThreaded {
   }
 }
 
-trait Actor[A, B] extends PartialFunction[A, Future[B]]
+sealed trait Actor[A, B] extends PartialFunction[A, Future[B]]
 
 object Actor {
   val DefaultErrorHandler: Throwable => Unit = (err: Throwable) => throw err
