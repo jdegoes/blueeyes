@@ -35,7 +35,17 @@ trait StrategyThreaded1 {
 }
 
 trait StrategyThreadedN {
+  import java.util.concurrent.ExecutorService
+
+  def executorService: ExecutorService
+
   implicit val strategy = new Strategy {
+    import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
+
+    val assignedQueues    = new ConcurrentHashMap[_ => _, BlockingQueue[(_, Future[_])]]
+    val unassignedQueues  = new LinkedBlockingQueue[(_ => _, BlockingQueue[(_, Future[_])])]
+    val transferLock      = new RWLock()
+
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
 
     }
