@@ -55,7 +55,6 @@ trait StrategyThreadedN {
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]]
 
 object Actor {
-  val DefaultErrorHandler: Throwable => Unit = (err: Throwable) => throw err
   /**
    *
    * {{{
@@ -71,7 +70,7 @@ object Actor {
     apply[A, B](factory(createdState))
   }
 
-  def apply[A, B](f: PartialFunction[A, B])(implicit strategy: Strategy): Actor[A, B] = apply(f, DefaultErrorHandler)
+  def apply[A, B](f: PartialFunction[A, B])(implicit strategy: Strategy): Actor[A, B] = apply(f)
 
   def apply[A, B](f: PartialFunction[A, B], onError: Throwable => Unit)(implicit strategy: Strategy): Actor[A, B] = new Actor[A, B] { self =>
     def isDefinedAt(request: A): Boolean = {
