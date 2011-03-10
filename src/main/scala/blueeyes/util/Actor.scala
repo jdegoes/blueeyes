@@ -52,7 +52,25 @@ trait StrategyThreadedN {
   }
 }
 
-sealed trait Actor[A, B] extends PartialFunction[A, Future[B]]
+sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
+  def map[BB](f: B => BB): Actor[A, BB] = new Actor[A, BB] {
+    def isDefinedAt(a: A): Boolean = self.isDefinedAt(a)
+
+    def apply(a: A): Future[BB] = self.apply(a).map(f)
+  }
+
+  /** Actor composition.
+   *
+   * {{{
+   * val aToC = aToB >>> bToC
+   * }}}
+   */
+  def >>> [BB](that: Actor[B, BB]): Actor[A, BB] = new Actor[A, BB] {
+    def isDefinedAt(a: A): Boolean = self.isDefinedAt(a)
+
+    def apply(a: A): Future[BB] = self.apply(a).flatMap(that)
+  }
+}
 
 object Actor {
   /**
