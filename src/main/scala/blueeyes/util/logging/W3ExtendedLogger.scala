@@ -90,14 +90,21 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
   }
 
   private def rollIfNecessary = {
-    lock.writeLock.lock()
-    try {
-      if (System.currentTimeMillis > _nextRollTime) {
-          roll
+
+    lock.readLock.lock()
+    val shouldBeRolled = System.currentTimeMillis > _nextRollTime
+    lock.readLock.unlock()
+
+    if (shouldBeRolled){
+      lock.writeLock.lock()
+      try {
+        if (System.currentTimeMillis > _nextRollTime) {
+            roll
+        }
       }
-    }
-    finally {
-      lock.writeLock.unlock()
+      finally {
+        lock.writeLock.unlock()
+      }
     }
   }
 
