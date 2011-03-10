@@ -44,17 +44,17 @@ trait StrategyThreadedN {
   implicit val strategy = new Strategy {
     import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
 
-    val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
-    val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
-    val createLock        = new RWLock()
+    private val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
+    private val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
+    private val createLock              = new RWLock()
+
+    private val sequential = new StrategySequential { }
 
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
       addToQueue(f, work)
 
       execute
     }
-
-    private[StrategyThreadedN] def execute = executorService.execute(new StrategyWorker())
 
     private def addToQueue[A, B](f: A => B, work: (A, Future[B])){
       writeLock {
@@ -70,10 +70,9 @@ trait StrategyThreadedN {
       }
     }
 
-    class StrategyWorker extends Runnable{
+    private[StrategyThreadedN] def execute = executorService.execute(new StrategyWorker())
 
-      private val sequential = new StrategySequential { }
-
+    class StrategyWorker extends Runnable {
       def run = {
         fetchNextQueue match {
           case Some(entry) => {
