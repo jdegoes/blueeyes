@@ -44,8 +44,8 @@ trait StrategyThreadedN {
   implicit val strategy = new Strategy {
     import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
 
-    private val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
-    private val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
+    val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
+    val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
     private val createLock              = new RWLock()
 
     private val sequential = new StrategySequential { }
