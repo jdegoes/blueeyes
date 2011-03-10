@@ -1,6 +1,6 @@
 package blueeyes.util
 
-import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue}
+import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 trait Strategy {
   def submit[A, B](f: A => B, work: (A, Future[B])): Unit
@@ -39,15 +39,82 @@ trait StrategyThreadedN {
 
   def executorService: ExecutorService
 
+  case class Entry[A, B](f: A => B, works: BlockingQueue[(A, Future[B])])
+
   implicit val strategy = new Strategy {
     import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
 
-    val assignedQueues    = new ConcurrentHashMap[_ => _, BlockingQueue[(_, Future[_])]]
-    val unassignedQueues  = new LinkedBlockingQueue[(_ => _, BlockingQueue[(_, Future[_])])]
-    val transferLock      = new RWLock()
+    val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
+    val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
+    val createLock        = new RWLock()
 
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
+      addToQueue(f, work)
 
+      execute
+    }
+
+    private[StrategyThreadedN] def execute = executorService.execute(new StrategyWorker())
+
+    private def addToQueue[A, B](f: A => B, work: (A, Future[B])){
+      writeLock {
+        val (entry, isNew) = queues.get(f) match{
+          case Some(e) => (e.asInstanceOf[Entry[A, B]], false)
+          case None    => (new Entry(f, new LinkedBlockingQueue[(A, Future[B])]()), true)
+        }
+        entry.works.offer(work)
+        if (isNew){
+          unassignedQueues.offer(entry)
+          queues.put(f, entry)
+        }
+      }
+    }
+
+    class StrategyWorker extends Runnable{
+
+      private val sequential = new StrategySequential { }
+
+      def run = {
+        fetchNextQueue match {
+          case Some(entry) => {
+            submitWorks(entry)
+            putQueueBack(entry)
+          }
+          case _ =>
+        }
+      }
+
+      private def submitWorks[A, B](entry: Entry[A, B]){
+        while (entry.works.peek != null){
+          sequential.strategy.submit(entry.f, entry.works.poll())
+        }
+      }
+
+      private def putQueueBack[A, B](entry: Entry[A, B]){
+        writeLock{
+          if (entry.works.peek != null) {
+            unassignedQueues.offer(entry)
+            execute
+
+          }
+          else queues.remove(entry.f)
+        }
+      }
+
+      private def fetchNextQueue = {
+        val entry = unassignedQueues.poll( 10, TimeUnit.SECONDS )
+        if (entry != null) Some(entry) else None
+      }
+    }
+
+    private def writeLock[S](f: => S): S = {
+      createLock.writeLock.lock()
+      try {
+        f
+      }
+      finally {
+        createLock.writeLock.unlock()
+      }
     }
   }
 }
