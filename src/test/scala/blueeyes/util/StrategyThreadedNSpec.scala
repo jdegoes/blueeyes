@@ -9,7 +9,7 @@ class StrategyThreadedNSpec extends Specification{
   private val random = new Random()
 
   private val strategy = new StrategyThreadedN{
-    val executorService = Executors.newFixedThreadPool(2)
+    val executorService = Executors.newFixedThreadPool(5)
   }
 
   "StrategyThreadedN: handle one request" in{
@@ -39,36 +39,21 @@ class StrategyThreadedNSpec extends Specification{
   }
 
   "StrategyThreadedN: handle musltiple requests from multiple threads for multiple functions" in{
-
-    val fun  = f _
-    val fun1 = f _
-    val fun2 = f _
-    val fun3 = f _
-    val fun4 = f _
-
-    val entries = List.range(0, 200).map { i =>
-      i % 5 match {
-        case 0 => fun
-        case 1 => fun1
-        case 2 => fun2
-        case 3 => fun3
-        case 4 => fun4
-      }
-    } map { (_, new Future[Int]()) }
-
-    val futures = entries.map(_._2)
-
     val executor = Executors.newFixedThreadPool(40)
+
+    val functions  = Array.fill(10){f _}
+    val entries    = List.range(0, 300) map { i => functions(i % functions.size) } map { (_, new Future[Int]()) }
+    val futures    = entries.map(_._2)
 
     entries foreach { f =>
       executor execute(new Runnable{
         def run = {
-          Thread.sleep(random.nextInt(100))
+          Thread.sleep(random.nextInt(150))
 
           strategy.strategy.submit(f._1, (1, f._2))
 
-          strategy.strategy.queues.size must beLessThan (6)
-          strategy.strategy.unassignedQueues.size must beLessThan (6)
+          strategy.strategy.queues.size must beLessThan (functions.size + 1)
+          strategy.strategy.unassignedQueues.size must beLessThan (functions.size + 1)
         }
       })
     }

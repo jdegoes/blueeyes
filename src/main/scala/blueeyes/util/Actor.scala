@@ -95,7 +95,6 @@ trait StrategyThreadedN {
           if (entry.works.peek != null) {
             unassignedQueues.offer(entry)
             execute
-
           }
           else queues.remove(entry.f)
         }
