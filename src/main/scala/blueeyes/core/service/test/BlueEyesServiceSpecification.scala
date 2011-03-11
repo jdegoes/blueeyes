@@ -66,26 +66,43 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
   class SpecifiedExample[S](clientTransformer: HttpClientTransformer[T, S]){
 
-    def should(eventually: Eventually) = runExample(eventually.retries, eventually.sleep)("should " + eventually.what)
+    def should(eventually: Eventually): Unit = runExample(eventually.retries, eventually.sleep)("should " + eventually.what)
 
-    def should(what: String) = should(Eventually(40, 1000.milliseconds, what))
+    def should(what: String): Unit = should(Eventually(40, 1000.milliseconds, what))
 
     private def runExample(retries: Int, sleep: Duration)(what: String){
       val example = forExample
 
       example.in({
 
-        def retry(future: Future[S], retries: Int, sleep: Duration): Unit = {
-          waitForResponse(future, Some(sleep.inMillis), { why => throw why })
+        def run(){
+          def waitForResponseWithRetry(future: Future[S], retries: Int): Unit = {
+            waitForResponse(future, Some(sleep.inMillis), { why => throw why })
 
-          if (!future.isDelivered && retries > 1){
-            retry(future, retries - 1, sleep)
+            if (!future.isDelivered && retries > 1){
+              waitForResponseWithRetry(future, retries - 1)
+            }
+          }
+
+          val future = new SpecClient(example, what)(clientTransformer)
+          waitForResponseWithRetry(future, retries)
+        }
+
+        def retryRun(retriesRun: Int){
+          try {
+            run()
+          }
+          catch {
+            case e => {
+              if (retriesRun > 0) {
+                Thread.sleep(sleep.inMillis)
+                retryRun(retriesRun - 1)
+              } else throw e
+            }
           }
         }
 
-        val future = new SpecClient(example, what)(clientTransformer)
-
-        retry(future, retries, sleep)
+        retryRun(retries)
       })
     }
   }

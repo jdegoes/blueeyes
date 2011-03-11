@@ -12,7 +12,7 @@ import TestService._
 import org.specs.util.TimeConversions._
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
-  
+
   path$("/bar/id/bar.html"){
     contentType$[String, String, Unit](text/html){
       get${ response: HttpResponse[String] =>
@@ -28,9 +28,18 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[Stri
       }
     }
   } should eventually (40, 1000.milliseconds)("gets response when future is set asynchronously")
+
+  path$("/asynch/eventually"){
+    contentType$[String, String, Unit](text/html){
+      get${ response: HttpResponse[String] =>
+        response mustEqual(serviceResponse)
+      }
+    }
+  } should eventually (10, 1000.milliseconds)("retry requests")
 }
 
 trait TestService extends BlueEyesServiceBuilderString {
+  private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {
       contentType(text/html) {
@@ -43,6 +52,16 @@ trait TestService extends BlueEyesServiceBuilderString {
           get { request: HttpRequest[String] =>
             async {
               serviceResponse
+            }
+          }
+        }~
+        path("/asynch/eventually") {
+          get { request: HttpRequest[String] =>
+            if (eventuallyCondition) {
+              serviceResponse
+            } else {
+              eventuallyCondition = true
+              HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound))
             }
           }
         }
