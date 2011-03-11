@@ -59,7 +59,11 @@ trait StrategyThreadedN {
     var exit = false
 
     while (!exit) {
-      assignments.putIfAbsent(actorFn, new StrategyWorker(f))
+      val newWorker = new StrategyWorker(f)
+
+      if (assignments.putIfAbsent(actorFn, newWorker) == newWorker) {
+        executor.execute(newWorker)
+      }
 
       try {
         assignments.get(actorFn).offer(work)
@@ -72,6 +76,7 @@ trait StrategyThreadedN {
     }
 
     ...
+
     When StrategyWorker is DONE:
 
     assignments.remove(actorFn, this)
