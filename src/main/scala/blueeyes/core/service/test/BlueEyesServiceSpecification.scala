@@ -68,7 +68,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
     def should(eventually: Eventually) = runExample(eventually.retries, eventually.sleep)("should " + eventually.what)
 
-    def should(what: String) = runExample(0, 0.milliseconds)("should " + what)
+    def should(what: String) = should(Eventually(40, 1000.milliseconds, what))
 
     private def runExample(retries: Int, sleep: Duration)(what: String){
       val example = forExample

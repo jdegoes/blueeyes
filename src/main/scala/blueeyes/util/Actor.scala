@@ -153,9 +153,7 @@ object Actor {
     apply[A, B](factory(createdState))
   }
 
-  def apply[A, B](f: PartialFunction[A, B])(implicit strategy: Strategy): Actor[A, B] = apply(f)
-
-  def apply[A, B](f: PartialFunction[A, B], onError: Throwable => Unit)(implicit strategy: Strategy): Actor[A, B] = new Actor[A, B] { self =>
+  def apply[A, B](f: PartialFunction[A, B], onError: Throwable => Unit = error => ())(implicit strategy: Strategy): Actor[A, B] = new Actor[A, B] { self =>
     def isDefinedAt(request: A): Boolean = {
       try f.isDefinedAt(request)
       catch {
