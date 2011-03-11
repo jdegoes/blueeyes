@@ -28,20 +28,20 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
 
   "Functor identity" in {
-    val identityProp = (json: JValue) => json == (json map identity)
+    val identityProp = (json: JValue) => json == (json mapUp identity)
     forAll(identityProp) must pass
   }
 
   "Functor composition" in {
-    val compositionProp = (json: JValue, fa: JValue => JValue, fb: JValue => JValue) => 
-      json.map(fb).map(fa) == json.map(fa compose fb) 
+    val compositionProp = (json: JValue, fa: JValue => JValue, fb: JValue => JValue) =>
+      json.mapUp(fb).mapUp(fa) == json.mapUp(fa compose fb)
 
     forAll(compositionProp) must pass
   }
 
   "Monoid identity" in {
     val identityProp = (json: JValue) => (json ++ JNothing == json) && (JNothing ++ json == json)
-    forAll(identityProp) must pass    
+    forAll(identityProp) must pass
   }
 
   "Monoid associativity" in {
@@ -60,8 +60,8 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
   }
 
   "Diff identity" in {
-    val identityProp = (json: JValue) => 
-      (json diff JNothing) == Diff(JNothing, JNothing, json) && 
+    val identityProp = (json: JValue) =>
+      (json diff JNothing) == Diff(JNothing, JNothing, json) &&
       (JNothing diff json) == Diff(JNothing, json, JNothing)
 
     forAll(identityProp) must pass
@@ -83,7 +83,7 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
   "Diff result is same when fields are reordered" in {
     val reorderProp = (x: JObject) => (x diff reorderFields(x)) == Diff(JNothing, JNothing, JNothing)
     forAll(reorderProp) must pass
-  } 
+  }
 
   "Remove all" in {
     val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
@@ -99,14 +99,14 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
     val removeProp = (json: JValue, x: Class[_ <: JValue]) => {
       val removed = json remove typePredicate(x)
       val Diff(c, a, d) = json diff removed
-      
+
       removed.flatten.forall(_.getClass != x)
     }
     implicit val arbJValueClass1 = arbJValueClass
     forAll(removeProp) must pass
   }
 
-  private def reorderFields(json: JValue) = json map {
+  private def reorderFields(json: JValue) = json mapUp {
     case JObject(xs) => JObject(xs.reverse)
     case x => x
   }

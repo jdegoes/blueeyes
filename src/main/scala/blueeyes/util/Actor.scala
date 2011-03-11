@@ -44,6 +44,40 @@ trait StrategyThreadedN {
   implicit val strategy = new Strategy {
     import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
 
+    /*
+
+    John's recommendations:
+
+    type ActorFn = Function[_, _]
+
+    val assignments: ConcurrentMap[ActorFn, StrategyWorker]
+
+    ...
+    In SUBMIT:
+
+
+    var exit = false
+
+    while (!exit) {
+      assignments.putIfAbsent(actorFn, new StrategyWorker(f))
+
+      try {
+        assignments.get(actorFn).offer(work)
+
+        exit = true
+      }
+      catch {
+        case e: NullPointerException =>
+      }
+    }
+
+    ...
+    When StrategyWorker is DONE:
+
+    assignments.remove(actorFn, this)
+
+    */
+
     val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
     val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
     private val createLock              = new RWLock()

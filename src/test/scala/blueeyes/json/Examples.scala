@@ -44,7 +44,7 @@ object Examples extends Specification {
   "Transformation example" in {
     val uppercased = parse(person).transform { case JField(n, v) => JField(n.toUpperCase, v) }
     val rendered = compact(render(uppercased))
-    rendered mustEqual 
+    rendered mustEqual
       """{"PERSON":{"NAME":"Joe","AGE":35,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33}}}}"""
   }
 
@@ -123,16 +123,41 @@ object Examples extends Specification {
 
   "Example which collects all integers and forms a new JSON" in {
     val json = parse(person)
-    val ints = json.fold(JNothing: JValue) { (a, v) => v match {
+    val ints = json.foldDown(JNothing: JValue) { (a, v) => v match {
       case x: JInt => a ++ x
       case _ => a
     }}
     compact(render(ints)) mustEqual """[35,33]"""
   }
-  
+
+  "Example which folds up to form a flattened list" in {
+    val json = parse(person)
+
+    def form(list: JPath*): List[(JPath, JValue)] = list.toList.map { path =>
+      (path, json(path).head)
+    }
+
+    val folded = (json.foldUpWithPath[List[(JPath, JValue)]](Nil) { (list, path, json) =>
+      (path, json) :: list
+    }).reverse.collect { case (p, j) if (!j.isInstanceOf[JField]) => (p, j) }
+
+    val formed = form(
+      JPath("person.name"),
+      JPath("person.age"),
+      JPath("person.spouse.person.name"),
+      JPath("person.spouse.person.age"),
+      JPath("person.spouse.person"),
+      JPath("person.spouse"),
+      JPath("person"),
+      JPath.Identity
+    )
+
+    folded mustEqual formed
+  }
+
   "Renders JSON as Scala code" in {
     val json = parse(lotto)
-    
+
     Printer.compact(renderScala(json)) mustEqual """JObject(JField("lotto",JObject(JField("lotto-id",JInt(5))::JField("winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil))::JField("winners",JArray(JObject(JField("winner-id",JInt(23))::JField("numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil))::Nil)::JObject(JField("winner-id",JInt(54))::JField("numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil))::Nil)::Nil))::Nil))::Nil)"""
   }
 
@@ -153,7 +178,7 @@ object Examples extends Specification {
 """
 
   val person = """
-{ 
+{
   "person": {
     "name": "Joe",
     "age": 35,
@@ -167,19 +192,19 @@ object Examples extends Specification {
 }
 """
 
-  val personDSL = 
+  val personDSL =
     ("person" ->
       ("name" -> "Joe") ~
       ("age" -> 35) ~
-      ("spouse" -> 
-        ("person" -> 
+      ("spouse" ->
+        ("person" ->
           ("name" -> "Marilyn") ~
           ("age" -> 33)
         )
       )
     )
 
-  val objArray = 
+  val objArray =
 """
 { "name": "joe",
   "address": {

@@ -180,46 +180,137 @@ object JsonAST {
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
      * for each element. The initial value is <code>z</code>.
      */
-    def fold[A](z: A)(f: (A, JValue) => A): A = {
-      def rec(acc: A, v: JValue) = {
-        val newAcc = f(acc, v)
+    def foldDown[A](z: A)(f: (A, JValue) => A): A = foldDownWithPath(z) { (acc, p, v) => f(acc, v) }
+
+    /** Return a combined value by folding over JSON by applying a function `f`
+     * for each element, passing along the path to the elements. The initial
+     * value is `z`.
+     */
+    def foldDownWithPath[A](z: A)(f: (A, JPath, JValue) => A): A = {
+      def rec(acc: A, p: JPath, v: JValue): A = {
+        val newAcc = f(acc, p, v)
         v match {
-          case JObject(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
-          case JArray(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
-          case JField(_, value) => value.fold(newAcc)(f)
+          case JObject(l)   => l.foldLeft(newAcc) { (a, f) => rec(a, p, f) }
+          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { (a, t) => val (e, idx) = t; rec(a, p(idx), e) }
+          case JField(n, v) => rec(newAcc, p \ n, v)
           case _ => newAcc
         }
       }
-      rec(z, this)
+
+      rec(z, JPath.Identity, this)
+    }
+
+    /** Return a combined value by folding over JSON by applying a function <code>f</code>
+     * for each element. The initial value is <code>z</code>.
+     */
+    def foldUp[A](z: A)(f: (A, JValue) => A): A = foldUpWithPath(z) { (acc, p, v) => f(acc, v) }
+
+    /** Return a combined value by folding over JSON by applying a function `f`
+     * for each element, passing along the path to the elements. The initial
+     * value is `z`.
+     */
+    def foldUpWithPath[A](z: A)(f: (A, JPath, JValue) => A): A = {
+      def rec(acc: A, p: JPath, v: JValue): A = {
+        f(v match {
+          case JObject(l)   => l.foldLeft(acc) { (a, f) => rec(a, p, f) }
+          case JArray(l)    => l.zipWithIndex.foldLeft(acc) { (a, t) => val (e, idx) = t; rec(a, p(idx), e) }
+          case JField(n, v) => rec(acc, p \ n, v)
+          case _ => acc
+        }, p, v)
+      }
+
+      rec(z, JPath.Identity, this)
     }
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
-     * to each element in JSON.
+     * to each element, moving from the bottom-up.
      * <p>
      * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) map { case JInt(x) => JInt(x+1); case x => x }
+     * JArray(JInt(1) :: JInt(2) :: Nil) mapUp { case JInt(x) => JInt(x+1); case x => x }
      * </pre>
      */
-    def map(f: JValue => JValue): JValue = {
-      def rec(v: JValue): JValue = v match {
-        case JObject(l) => f(JObject(l.flatMap(f => rec(f) match {
+    def mapUp(f: JValue => JValue): JValue = mapUpWithPath((p, j) => f(j))
+
+    /** Return a new JValue resulting from applying the given function <code>f</code>
+     * to each element and its path, moving from the bottom-up.
+     * <p>
+     * Example:<pre>
+     * JArray(JInt(1) :: JInt(2) :: Nil) mapUpWithPath { (path, jvalue) => jvalue }
+     * </pre>
+     */
+    def mapUpWithPath(f: (JPath, JValue) => JValue): JValue = {
+      def rec(p: JPath, v: JValue): JValue = v match {
+        case JObject(l) => f(p, JObject(l.flatMap(f => rec(p, f) match {
           case JNothing => Nil
 
           case x: JField => x :: Nil
 
           case x => JField(f.name, x) :: Nil
         })))
-        case JArray(l) => f(JArray(l.flatMap(e => rec(e) match {
+        case JArray(l) => f(p, JArray(l.zipWithIndex.flatMap(t => rec(p(t._2), t._1) match {
           case JNothing => Nil
           case x => x :: Nil
         })))
-        case JField(name, value) => rec(value) match {
+        case JField(name, value) => rec(p \ name, value) match {
           case JNothing => JNothing
-          case x => f(JField(name, x))
+          case x => f(p, JField(name, x))
         }
-        case x => f(x)
+        case x => f(p, x)
       }
-      rec(this)
+      rec(JPath.Identity, this)
+    }
+
+    /** Return a new JValue resulting from applying the given function <code>f</code>
+     * to each element, moving from the top-down.
+     * <p>
+     * Example:<pre>
+     * JArray(JInt(1) :: JInt(2) :: Nil) mapDown { case JInt(x) => JInt(x+1); case x => x }
+     * </pre>
+     */
+    def mapDown(f: JValue => JValue): JValue = mapDownWithPath((p, j) => f(j))
+
+    /** Return a new JValue resulting from applying the given function <code>f</code>
+     * to each element and its path, moving from the top-down.
+     * <p>
+     * Example:<pre>
+     * JArray(JInt(1) :: JInt(2) :: Nil) mapDownWithPath { (path, jvalue) => jvalue }
+     * </pre>
+     */
+    def mapDownWithPath(f: (JPath, JValue) => JValue): JValue = {
+      def rec(p: JPath, v: JValue): JValue = {
+        f(p, v) match {
+          case JObject(l) =>
+            JObject(l.flatMap { f =>
+              rec(p, f) match {
+                case JNothing => Nil
+
+                case x: JField => x :: Nil
+
+                case x => JField(f.name, x) :: Nil
+              }
+            })
+
+          case JArray(l) =>
+            JArray(l.zipWithIndex.flatMap { t =>
+              val (e, idx) = t
+
+              rec(p(idx), e) match {
+                case JNothing => Nil
+                case x => x :: Nil
+              }
+            })
+
+          case JField(name, value) =>
+            rec(p \ name, value) match {
+              case JNothing => JNothing
+              case x => JField(name, x)
+            }
+
+          case x => x
+        }
+      }
+
+      rec(JPath.Identity, this)
     }
 
     /** Return a new JValue resulting from applying the given partial function <code>f</code>
@@ -229,7 +320,7 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil) transform { case JInt(x) => JInt(x+1) }
      * </pre>
      */
-    def transform(f: PartialFunction[JValue, JValue]): JValue = map { x =>
+    def transform(f: PartialFunction[JValue, JValue]): JValue = mapUp { x =>
       if (f.isDefinedAt(x)) f(x) else x
     }
 
@@ -308,10 +399,10 @@ object JsonAST {
      * </pre>
      */
     def filter(p: JValue => Boolean): List[JValue] =
-      fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
+      foldDown(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
 
     def flatten: List[JValue] =
-      fold(List[JValue]())((acc, e) => e :: acc).reverse
+      foldDown(List[JValue]())((acc, e) => e :: acc).reverse
 
     /** Flattens the JValue down to a list of path to simple JValue primitive.
      * <p>
@@ -367,7 +458,7 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: JNull :: Nil) remove { _ == JNull }
      * </pre>
      */
-    def remove(p: JValue => Boolean): JValue = this map {
+    def remove(p: JValue => Boolean): JValue = this mapUp {
       case x if p(x) => JNothing
       case x => x
     }
