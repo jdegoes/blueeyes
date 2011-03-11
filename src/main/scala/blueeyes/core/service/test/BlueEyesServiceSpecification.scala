@@ -9,6 +9,8 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 import blueeyes.core.service.HttpClientTransformerImplicits
+import org.specs.util.Duration
+import org.specs.util.TimeConversions._
 
 class BlueEyesServiceSpecification[T] extends Specification with HttpClientTransformerCombinators with HttpServer[T] with HttpReflectiveServiceList[T] with HttpClientTransformerImplicits { self: HttpServer[T] =>
   shareVariables()
@@ -23,7 +25,6 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
-  def requestTimeout = 60000
   def configuration  = ""
 
   /**
@@ -54,21 +55,42 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
     Configgy.configureFromString(configuration)
     Configgy.config
   }
-  
+
+  def eventually(what: String): Eventually = eventually(40, 1000.milliseconds)(what)
+
+  def eventually(retries: Int, sleep: Duration)(what: String): Eventually = Eventually(retries, sleep, "eventually " + what)
+
   implicit def resultToFuture[V](result: Result[V]): Future[Unit] = Future.lift(result).toUnit
 
   implicit def specifyExample[S](clientTransformer: HttpClientTransformer[T, S]): SpecifiedExample[S] = new SpecifiedExample[S](clientTransformer)
 
   class SpecifiedExample[S](clientTransformer: HttpClientTransformer[T, S]){
-    def should(what: String) = {
+
+    def should(eventually: Eventually) = runExample(eventually.retries, eventually.sleep)("should " + eventually.what)
+
+    def should(what: String) = runExample(0, 0.milliseconds)("should " + what)
+
+    private def runExample(retries: Int, sleep: Duration)(what: String){
       val example = forExample
 
       example.in({
+
+        def retry(future: Future[S], retries: Int, sleep: Duration): Unit = {
+          waitForResponse(future, Some(sleep.inMillis), { why => throw why })
+
+          if (!future.isDelivered && retries > 1){
+            retry(future, retries - 1, sleep)
+          }
+        }
+
         val future = new SpecClient(example, what)(clientTransformer)
-        waitForResponse(future, Some(1000 * 60 * 5), { why => throw why })
+
+        retry(future, retries, sleep)
       })
     }
   }
+
+  case class Eventually(retries: Int, sleep: Duration, what: String)
 
   private class SpecClient(example: Example, what: String) extends HttpClient[T]{
     def apply(request: HttpRequest[T]) = {
@@ -81,14 +103,10 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
         }
       }
       
-      example.exampleDescription = ExampleDescription(("HTTP %s %s should " + what).format(request.method.value, request.uri))
+      example.exampleDescription = ExampleDescription(("HTTP %s %s " + what).format(request.method.value, request.uri))
 
       try {
-        val responseFromServer = self.apply(request)
-        
-        waitForResponse(responseFromServer, Some(requestTimeout), why => ())
-        
-        responseFromServer
+        self.apply(request)
       }
       catch {
         case t: Throwable => Future[HttpResponse[T]](convertErrorToResponse(t))

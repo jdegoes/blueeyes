@@ -9,6 +9,7 @@ import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import TestService._
+import org.specs.util.TimeConversions._
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
   
@@ -26,7 +27,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[Stri
         response mustEqual(serviceResponse)
       }
     }
-  } should "gets response when future is set asynchronously"
+  } should eventually (40, 1000.milliseconds)("gets response when future is set asynchronously")
 }
 
 trait TestService extends BlueEyesServiceBuilderString {
@@ -54,7 +55,7 @@ trait TestService extends BlueEyesServiceBuilderString {
 
     import scala.actors.Actor.actor
     actor {
-      Thread.sleep(1000)
+      Thread.sleep(10000)
       result.deliver(f)
     }
 
