@@ -2,12 +2,12 @@ package blueeyes.util
 
 import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
-trait Strategy {
+trait ActorExecutionStrategy {
   def submit[A, B](f: A => B, work: (A, Future[B])): Unit
 }
 
-trait StrategySequential {
-  implicit val strategy = new Strategy {
+trait ActorExecutionStrategySequential {
+  implicit val actorExecutionStrategy = new ActorExecutionStrategy {
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
       val (request, response) = work
 
@@ -21,27 +21,27 @@ trait StrategySequential {
   }
 }
 
-trait StrategyThreaded1 {
-  private val sequential = new StrategySequential { }
+trait ActorExecutionStrategySingleThreaded {
+  private val sequential = new ActorExecutionStrategySequential { }
   private val executor = Executors.newSingleThreadExecutor
 
-  implicit val strategy = new Strategy {
+  implicit val actorExecutionStrategy = new ActorExecutionStrategy {
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
       executor.execute(new Runnable {
-        def run = sequential.strategy.submit(f, work)
+        def run = sequential.actorExecutionStrategy.submit(f, work)
       })
     }
   }
 }
 
-trait StrategyThreadedN {
+trait ActorExecutionStrategyMultiThreaded {
   import java.util.concurrent.ExecutorService
 
   def executorService: ExecutorService
 
   case class Entry[A, B](f: A => B, works: BlockingQueue[(A, Future[B])])
 
-  implicit val strategy = new Strategy {
+  implicit val actorExecutionStrategy = new ActorExecutionStrategy {
     import java.util.concurrent.locks.{ReentrantReadWriteLock => RWLock}
 
     /*
@@ -87,7 +87,7 @@ trait StrategyThreadedN {
     val unassignedQueues  = new LinkedBlockingQueue[Entry[_, _]]()
     private val createLock              = new RWLock()
 
-    private val sequential = new StrategySequential { }
+    private val sequential = new ActorExecutionStrategySequential { }
 
     def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
       addToQueue(f, work)
@@ -109,7 +109,7 @@ trait StrategyThreadedN {
       }
     }
 
-    private[StrategyThreadedN] def execute = executorService.execute(new StrategyWorker())
+    private[ActorExecutionStrategyMultiThreaded] def execute = executorService.execute(new StrategyWorker())
 
     class StrategyWorker extends Runnable {
       def run = {
@@ -124,7 +124,7 @@ trait StrategyThreadedN {
 
       private def submitWorks[A, B](entry: Entry[A, B]){
         while (entry.works.peek != null){
-          sequential.strategy.submit(entry.f, entry.works.poll())
+          sequential.actorExecutionStrategy.submit(entry.f, entry.works.poll())
         }
       }
 
@@ -156,11 +156,27 @@ trait StrategyThreadedN {
   }
 }
 
+trait ActorExecutionStrategyFixedPool extends ActorExecutionStrategyMultiThreaded {
+  def actorExecutionStrategyThreadPoolSize: Int
+
+  lazy val executorService = Executors.newFixedThreadPool(actorExecutionStrategyThreadPoolSize)
+}
+
+object ActorExecutionStrategy extends ActorExecutionStrategyFixedPool {
+  val actorExecutionStrategyThreadPoolSize = Runtime.getRuntime.availableProcessors
+}
+
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
   def map[BB](f: B => BB): Actor[A, BB] = new Actor[A, BB] {
     def isDefinedAt(a: A): Boolean = self.isDefinedAt(a)
 
     def apply(a: A): Future[BB] = self.apply(a).map(f)
+  }
+
+  def flatMap[BB](f: B => Future[BB]) = new Actor[A, BB] {
+    def isDefinedAt(a: A): Boolean = self.isDefinedAt(a)
+
+    def apply(a: A): Future[BB] = self.apply(a).flatMap(f)
   }
 
   /** Actor composition.
@@ -174,35 +190,46 @@ sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
 
     def apply(a: A): Future[BB] = self.apply(a).flatMap(that)
   }
+
+  /** Flattens an actor from A => Future[B] to an actor from A => B.
+   */
+  def flatten[BB](implicit witness: B => Future[BB]): Actor[A, BB] = flatMap(witness)
+}
+
+sealed case class ActorFactory[A, B, S](factory: S => PartialFunction[A, B])
+  (implicit ActorExecutionStrategy: ActorExecutionStrategy) extends (S => Actor[A, B]) {
+  def apply(state: S): Actor[A, B] = Actor.apply(state)(factory)
+
+  def bind(state: S): () => Actor[A, B] = () => apply(state)
 }
 
 object Actor {
   /**
    *
    * {{{
-   * val actor = Actor(MyActorState(x, y, z)) { state =>
-   *   case MyMessage1(x, y, z) => x + y * z
-   *   case MyMessage2(x)       => x
+   * val actor = Actor(database) { database =>
+   *   case MyMessage1(x, y, z) => database.lookup(x, y, z)
+   *   case MyMessage2(x)       => database.save(x)
    * }
    * }}}
    */
-  def apply[A, B, S](state: => S)(implicit strategy: Strategy) = (factory: S => PartialFunction[A, B]) => {
+  def apply[A, B, S](state: => S)(factory: S => PartialFunction[A, B])(implicit ActorExecutionStrategy: ActorExecutionStrategy): Actor[A, B] = {
     val createdState = state
 
     apply[A, B](factory(createdState))
   }
 
-  def apply[A, B](f: PartialFunction[A, B], onError: Throwable => Unit = error => ())(implicit strategy: Strategy): Actor[A, B] = new Actor[A, B] { self =>
+  def constant[A, B](b: B): Actor[A, B] = new Actor[A, B] {
+    def isDefinedAt(a: A): Boolean = true
+
+    def apply(a: A): Future[B] = Future.lift(b)
+  }
+
+  def apply[A, B](f: PartialFunction[A, B])(implicit ActorExecutionStrategy: ActorExecutionStrategy): Actor[A, B] = new Actor[A, B] { self =>
     def isDefinedAt(request: A): Boolean = {
       try f.isDefinedAt(request)
       catch {
-        case e1 =>
-          try onError(e1)
-          catch {
-            case e2 => e2.printStackTrace
-          }
-
-          false
+        case e => e.printStackTrace; false
       }
     }
 
@@ -213,7 +240,7 @@ object Actor {
         response.cancel(new Exception("This actor does not handle the message " + request))
       }
       else {
-        strategy.submit(f, (request, response))
+        ActorExecutionStrategy.submit(f, (request, response))
       }
 
       response
