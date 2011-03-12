@@ -81,6 +81,17 @@ trait ActorExecutionStrategyMultiThreaded {
 
     assignments.remove(actorFn, this)
 
+    NOTE!!!!!!!
+
+      Time that StrategyWorker waits for message has huge impact on performance:
+
+      1. If time is too low, worker will miss messages, resulting in more
+         workers being created than necessary
+
+      2. If time is too high, then worker will waste time, resulting in fewer
+         actor operations being completed and possibly resulting in work starvation
+
+      Probably, it's better to err on the side of (1), using a very low timeout.
     */
 
     val queues            = new scala.collection.mutable.HashMap[_ => _, Entry[_, _] ]()
