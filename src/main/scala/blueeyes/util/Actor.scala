@@ -66,6 +66,13 @@ trait ActorExecutionStrategyMultiThreaded {
       }
 
       try {
+        // Subtle race condition here -- it's possible we get
+        // a reference to the queue IMMEDIATELY before it's
+        // removed by a strategy worker that thinks it's done.
+
+        // Unresolved question: What's the best way to do this
+        // without undue synchronization??????
+
         assignments.get(actorFn).offer(work)
 
         exit = true
@@ -76,10 +83,46 @@ trait ActorExecutionStrategyMultiThreaded {
     }
 
     ...
+    StrategyWorker has ReadWriteLock called "doneLock"
+      case class StrategyWorker(actorFn: ActorFn) {
+        val queue: BlockingQueue[(_, Future[_])]
+
+        var done = false
+
+        def offer(work: (_, Future[_])) = {
+          doneLock.readLock {
+            if (!done) queue.offer(work)
+            else throw new NullPointerException()
+          }
+        }
+
+        def run() = {
+          while (!done) {
+            // TODO: This time constant is super important!!!!!
+
+            val head = queue.poll(1, TimeUnit.MILLISECONDS)
+
+            if (head != null) {
+              sequential.actorExecutionStrategy.submit(actorFn, head)
+            }
+            else {
+              // We are done -- We think!!!
+              doneLock.writeLock {
+                // Double check to make sure something hasn't been added in
+                // between last check and now:
+                if (queue.size == 0) {
+                  done = true
+                }
+              }
+            }
+          }
+        }
+      }
+
 
     When StrategyWorker is DONE:
 
-    assignments.remove(actorFn, this)
+      assignments.remove(actorFn, this)
 
     NOTE!!!!!!!
 
