@@ -112,7 +112,7 @@ class StageSpec extends Specification{
   }
 
   private def newStage[T](timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None, evict: (String, String) => Unit = {(key: String, value: String) => })(f: Stage[String, String] => T): T = {
-    val stage = new Stage[String, String](settings(timeToIdle, timeToLive, evict), (key: String, v1: String, v2: String) => v1 + "-" + v2)
+    val stage = Stage[String, String](settings(timeToIdle, timeToLive, evict), (key: String, v1: String, v2: String) => v1 + "-" + v2)
 
     stage += (("foo", "bar"))
 

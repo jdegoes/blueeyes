@@ -17,7 +17,11 @@ import blueeyes.concurrent.Future
  * Stopping a stage evicts all entries from the stage. As part of shutdown, in
  * order to avoid data loss, every stage should be stopped.
  */
-class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) extends Map[K, V] {
+trait Stage[K, V] extends Map[K, V] {
+  def settings: CacheSettings[K, V]
+
+  def coalesce: (K, V, V) => V
+
   private type This = this.type
 
   private sealed trait Request
@@ -110,5 +114,13 @@ class Stage[K, V](settings: CacheSettings[K, V], coalesce: (K, V, V) => V) exten
    */
   def stop = actor !? Stop match {
     case Stopped =>
+  }
+}
+
+object Stage {
+  def apply[K, V](settings_ : CacheSettings[K, V], coalesce_ : (K, V, V) => V) = new Stage[K, V] {
+    def settings = settings_
+
+    def coalesce = coalesce_
   }
 }

@@ -114,6 +114,8 @@ object ActorExecutionStrategy extends ActorExecutionStrategyFixedPool {
 }
 
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
+  def ! (message: A): Future[B] = self.apply(message)
+
   def orElse[A1 <: A, B1 >: B](that: Actor[A1, B1]): Actor[A1, B1] = new Actor[A1, B1] {
     def isDefinedAt(a: A1): Boolean = self.isDefinedAt(a) || that.isDefinedAt(a)
 

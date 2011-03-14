@@ -35,7 +35,7 @@ object W3ExtendedLogger{
 class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
 
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
-  private val logStage    = new Stage[String, String](CacheSettings[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write, 1), coalesce)
+  private val logStage    = Stage[String, String](CacheSettings[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write, 1), coalesce)
 
   def apply(logEntry: String){
     logStage.stop
