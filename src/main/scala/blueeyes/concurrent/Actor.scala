@@ -49,20 +49,13 @@ trait ActorExecutionStrategyMultiThreaded {
     var exit = false
 
     while (!exit) {
-      val newWorker = new StrategyWorker(actorFn)
+      val newWorker = new StrategyWorker(actorFn, assignments)
 
       if (assignments.putIfAbsent(actorFn, newWorker) == null) {
         executorService.execute(newWorker)
       }
 
       try {
-        // Subtle race condition here -- it's possible we get
-        // a reference to the queue IMMEDIATELY before it's
-        // removed by a strategy worker that thinks it's done.
-
-        // Unresolved question: What's the best way to do this
-        // without undue synchronization??????
-
         assignments.get(actorFn).asInstanceOf[StrategyWorker[A, B]].offer(work)
 
         exit = true
@@ -75,7 +68,7 @@ trait ActorExecutionStrategyMultiThreaded {
   }
 }
 
-private[concurrent] case class StrategyWorker[A, B](actorFn: A => B) extends Runnable{
+private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments: ConcurrentMap[_ => _, StrategyWorker[_, _]]) extends Runnable{
   private val sequential = new ActorExecutionStrategySequential { }
 
   val doneLock = new ReadWriteLock{}
@@ -98,12 +91,10 @@ private[concurrent] case class StrategyWorker[A, B](actorFn: A => B) extends Run
         sequential.actorExecutionStrategy.submit(actorFn, head)
       }
       else {
-        // We are done -- We think!!!
         doneLock.writeLock {
-          // Double check to make sure something hasn't been added in
-          // between last check and now:
           if (queue.size == 0) {
             done = true
+            assignments.remove(actorFn, this)
           }
         }
       }
