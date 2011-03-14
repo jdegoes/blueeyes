@@ -42,8 +42,7 @@ trait PublishingProject extends DefaultProject{
       FileUtilities.readString(readMeFile, log) match {
         case Left(e)              => Some(e)
         case Right(readMeContent) => {
-          val previousVersion = BasicVersion(value.major, value.minor, Some(value.micro.getOrElse(0) - 1), value.extra)
-          FileUtilities.write(readMeFile, readMeContent.replaceAll(previousVersion.toString, value.toString), log)
+          FileUtilities.write(readMeFile, readMeContent.replaceAll("<version>\\d+\\.\\d+\\.\\d+</version>", "<version>" + value.toString + "</version>"), log)
 
           log.info("README.md was updated.")
 
