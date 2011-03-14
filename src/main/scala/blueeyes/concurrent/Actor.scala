@@ -153,10 +153,10 @@ sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
 }
 
 sealed case class ActorFactory[A, B, S](factory: S => PartialFunction[A, B])
-  (implicit ActorExecutionStrategy: ActorExecutionStrategy) extends (S => Actor[A, B]) {
-  def apply(state: S): Actor[A, B] = Actor.apply(state)(factory)
+  (implicit actorExecutionStrategy: ActorExecutionStrategy) { self =>
+  def apply(state: => S): Actor[A, B] = Actor.apply(state)(factory)
 
-  def bind(state: S): () => Actor[A, B] = () => apply(state)
+  def bind(state: => S): () => Actor[A, B] = () => self.apply(state)
 }
 
 object Actor {
