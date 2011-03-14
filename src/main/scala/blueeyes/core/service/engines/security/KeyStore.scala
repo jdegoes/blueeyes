@@ -8,7 +8,7 @@ import java.io.{FileInputStream, File, ByteArrayInputStream}
 import java.security.cert.Certificate
 import java.security.{Key, KeyStore, KeyFactory}
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 
 object CertificateDecoder{
   def apply(encodedPrivateKey: String, encodedCertificate: String) = {

@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import com.mongodb.MongoException

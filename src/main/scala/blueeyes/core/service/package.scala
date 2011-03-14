@@ -1,6 +1,6 @@
 package blueeyes.core
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
 package object service{

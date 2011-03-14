@@ -6,7 +6,7 @@ import blueeyes.health.time.{Duration, Clock}
 import collection.generic.Growable
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 
 /**

@@ -4,7 +4,7 @@ import blueeyes.core.service._
 import org.jboss.netty.util.CharsetUtil
 import blueeyes.core.data.Bijection
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.{Executors, Executor}

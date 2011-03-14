@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._

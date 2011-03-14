@@ -1,8 +1,8 @@
 package blueeyes.core.service
 
 import org.spex.Specification
-import blueeyes.util.Future
-import blueeyes.util.FutureImplicits._
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.FutureImplicits._
 import org.mockito.Mockito.{times}
 import org.mockito.Mockito
 

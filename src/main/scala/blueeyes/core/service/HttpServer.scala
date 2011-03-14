@@ -4,7 +4,7 @@ import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 
 import blueeyes.core.http._
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger

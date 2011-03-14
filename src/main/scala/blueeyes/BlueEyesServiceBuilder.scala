@@ -3,7 +3,7 @@ package blueeyes
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.service._
-import blueeyes.util.{Future, FutureImplicits}
+import blueeyes.concurrent.{Future, FutureImplicits}
 
 /** Convenience trait for building services with many common mixins. 
  * <pre>

@@ -3,7 +3,7 @@ package blueeyes.core.service.engines
 import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilderString
 import java.util.concurrent.CountDownLatch

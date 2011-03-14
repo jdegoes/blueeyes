@@ -3,7 +3,7 @@ package blueeyes.health.metrics
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.Spec
 import blueeyes.health.time.Duration
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import java.util.concurrent.CountDownLatch
 
 class TimerTest extends Spec with MustMatchers {

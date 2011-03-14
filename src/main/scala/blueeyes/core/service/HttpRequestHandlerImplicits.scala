@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
 import blueeyes.core.http.{HttpRequest, HttpResponse}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.util.PartialFunctionCombinators
 import blueeyes.core.data._
 

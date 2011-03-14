@@ -7,6 +7,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
+import blueeyes.concurrent.ReadWriteLock
 
 @com.google.inject.Singleton
 class MockMongo() extends Mongo{
@@ -30,9 +31,8 @@ private[mongo] class MockMongoDatabase() extends MongoDatabase{
   }
 }
 
-private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFields with MockIndex{
+private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock{
   private var container = JArray(Nil)
-  private val lock      = new java.util.concurrent.locks.ReentrantReadWriteLock
 
   def insert(objects: List[JObject]): Unit = {
     writeLock{
@@ -111,26 +111,6 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
   }
 
   def indexed = all
-
-  private def readLock[S](f: => S): S = {
-    lock.readLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.readLock.unlock()
-    }
-  }
-
-  private def writeLock[S](f: => S): S = {
-    lock.writeLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.writeLock.unlock()
-    }
-  }
 
   private def safeProcess[T](filter: Option[MongoFilter], f: (List[JObject]) => T): T = {
     readLock{

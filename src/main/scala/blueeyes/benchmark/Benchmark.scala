@@ -3,7 +3,7 @@ package blueeyes.benchmark
 import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
 import blueeyes.core.service.HttpClient
 import blueeyes.demo.{BlueEyesDemo, Contact, BlueEyesDemoFacade}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import net.lag.configgy.Configgy
 import blueeyes.health.metrics.Timer
 import java.util.concurrent.{TimeUnit, CountDownLatch}

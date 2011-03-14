@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
 import org.spex.Specification
-import blueeyes.util.{Future, FutureImplicits}
+import blueeyes.concurrent.{Future, FutureImplicits}
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress

@@ -3,7 +3,7 @@ package blueeyes.persistence.cache
 import scala.collection.mutable.Map
 import scala.actors.Actor
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 
 /** A stage is a particular kind of cache that is used for staging IO updates.
  * Many kinds of IO updates can be combined (e.g. instead of writing a single

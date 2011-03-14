@@ -12,7 +12,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 
 //import Extractors._
 

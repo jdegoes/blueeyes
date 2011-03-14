@@ -1,6 +1,6 @@
 package blueeyes.demo
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.config.ConfiggyModule
 import blueeyes.persistence.mongo.mock.MockMongoModule
 import com.google.inject.Guice

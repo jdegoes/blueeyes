@@ -1,5 +1,6 @@
 package blueeyes.util
 
+import blueeyes.concurrent.Future
 import org.joda.time.{DateTime, DateTimeZone, Period}
 
 trait Clock {

@@ -6,7 +6,7 @@ import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
 import blueeyes.json.JsonAST.{JInt, JNothing, JString}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import java.io.File
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[String] with HeatlhMonitorService{

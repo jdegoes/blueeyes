@@ -2,7 +2,7 @@ package blueeyes.core.service
 
 import scala.xml.NodeSeq
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.core.http._

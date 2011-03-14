@@ -9,6 +9,7 @@ import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 import net.lag.configgy.{ConfigMap, Configgy}
 import blueeyes.parsers.W3ExtendedLog
+import blueeyes.concurrent._
 import blueeyes.util._
 import blueeyes.util.logging._
 import java.util.Calendar

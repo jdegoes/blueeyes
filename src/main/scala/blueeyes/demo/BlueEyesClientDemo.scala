@@ -7,7 +7,7 @@ import blueeyes.core.http.HttpResponse
 import blueeyes.BlueEyesClientTransformerBuilder
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}

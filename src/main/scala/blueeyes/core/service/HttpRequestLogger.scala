@@ -6,7 +6,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.util.Clock
 import java.net.InetAddress
 

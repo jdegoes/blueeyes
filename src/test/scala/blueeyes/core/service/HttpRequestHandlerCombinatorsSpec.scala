@@ -8,8 +8,8 @@ import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.data.BijectionsString._
 import blueeyes.json.JsonAST._
-import blueeyes.util.Future
-import blueeyes.util.FutureImplicits
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.FutureImplicits
 
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}

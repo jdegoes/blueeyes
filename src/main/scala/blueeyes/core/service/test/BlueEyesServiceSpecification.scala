@@ -1,7 +1,7 @@
 package blueeyes.core.service.test
 
 import org.specs.Specification
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import org.specs.specification.{Result, Example, ExampleDescription}
 import blueeyes.core.service._
@@ -68,7 +68,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
 
     def should(eventually: Eventually): Unit = runExample(eventually.retries, eventually.sleep)("should " + eventually.what)
 
-    def should(what: String): Unit = should(Eventually(40, 1000.milliseconds, what))
+    def should(what: String): Unit = should(Eventually(1, 60000.milliseconds, what))
 
     private def runExample(retries: Int, sleep: Duration)(what: String){
       val example = forExample

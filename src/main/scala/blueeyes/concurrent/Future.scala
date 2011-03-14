@@ -1,4 +1,4 @@
-package blueeyes.util
+package blueeyes.concurrent
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
  * this future has three possible states: undecided (not done), canceled (aborted
@@ -14,10 +14,8 @@ package blueeyes.util
  * the exceptions will not terminate calling code. All such "swallowed" exceptions
  * are reported to the thread's default exception handler.
  */
-class Future[T] {
+class Future[T] extends ReadWriteLock{
   import scala.collection.mutable.ArrayBuffer
-
-  private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
   private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
   private def listeners: List[T => Unit] = readLock { _listeners.toList }
@@ -413,26 +411,6 @@ class Future[T] {
       case Left(canceled) => canceled
 
       case Right(()) => forceCancel(error); true
-    }
-  }
-
-  private def readLock[S](f: => S): S = {
-    lock.readLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.readLock.unlock()
-    }
-  }
-
-  private def writeLock[S](f: => S): S = {
-    lock.writeLock.lock()
-    try {
-      f
-    }
-    finally {
-      lock.writeLock.unlock()
     }
   }
 

@@ -12,8 +12,8 @@ import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
 import blueeyes.core.data.Bijection
 import blueeyes.core.service._
-import blueeyes.util.Future
-import blueeyes.util.Future._
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
 

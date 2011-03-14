@@ -1,4 +1,4 @@
-package blueeyes.util
+package blueeyes.concurrent
 
 import org.spex.Specification
 

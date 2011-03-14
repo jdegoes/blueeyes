@@ -8,7 +8,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.util.CharsetUtil
 import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._

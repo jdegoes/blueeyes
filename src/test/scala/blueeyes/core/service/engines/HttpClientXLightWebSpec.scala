@@ -7,8 +7,8 @@ import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.service.HttpClientTransformerCombinators
-import blueeyes.util.Future
-import blueeyes.util.FutureImplicits
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.FutureImplicits
 import java.util.concurrent.CountDownLatch
 import net.lag.configgy.Configgy
 import org.specs.Specification

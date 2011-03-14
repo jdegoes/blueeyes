@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.data.Bijection
 import java.net.InetAddress

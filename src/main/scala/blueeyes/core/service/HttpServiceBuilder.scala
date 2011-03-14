@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
 import blueeyes.core.http._
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import scala.reflect.Manifest
 
 /**

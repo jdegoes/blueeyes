@@ -5,7 +5,7 @@ import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
 class HttpServerSpec extends Specification{

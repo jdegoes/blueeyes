@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
 trait HttpClient[T] extends HttpRequestHandler[T] {

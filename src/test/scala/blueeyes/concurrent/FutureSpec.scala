@@ -1,8 +1,8 @@
-package blueeyes.util
+package blueeyes.concurrent
 
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.util.FutureImplicits._
+import blueeyes.concurrent.FutureImplicits._
 
 class FutureSpec extends Specification {
   "Future" should {

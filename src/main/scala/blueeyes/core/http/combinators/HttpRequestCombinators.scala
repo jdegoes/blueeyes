@@ -2,7 +2,7 @@ package blueeyes.core.http.combinators
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 
 /**
  *

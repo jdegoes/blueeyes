@@ -5,7 +5,7 @@ import org.specs.Specification
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpMethods._
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 
 class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators {

@@ -3,7 +3,8 @@ package blueeyes.core.service
 import org.specs.Specification
 import blueeyes.parsers.W3ExtendedLogAST._
 import blueeyes.core.http._
-import blueeyes.util.{Future, ClockMock}
+import blueeyes.concurrent.Future
+import blueeyes.util.ClockMock
 import org.joda.time.format.DateTimeFormat
 import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._

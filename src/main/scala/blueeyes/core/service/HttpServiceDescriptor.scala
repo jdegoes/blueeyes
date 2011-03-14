@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 
 case class HttpServiceDescriptor[T, S](startup: () => Future[S], request: S => HttpRequestHandler[T], shutdown: S => Future[Unit]) { self =>
   def ~ [R](that: HttpServiceDescriptor[T, R]): HttpServiceDescriptor[T, (S, R)] = {

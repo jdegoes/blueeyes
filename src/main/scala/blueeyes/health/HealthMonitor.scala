@@ -1,7 +1,7 @@
 package blueeyes.health
 
 import blueeyes.json.JPath
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import metrics._
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap

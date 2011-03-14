@@ -1,6 +1,6 @@
 package blueeyes.core.service.engines
 
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.data.Bijection

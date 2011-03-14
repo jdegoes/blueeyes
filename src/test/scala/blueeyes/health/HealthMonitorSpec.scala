@@ -4,7 +4,7 @@ import metrics.Counter
 import org.specs.Specification
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
-import blueeyes.util.Future
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 
 class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
