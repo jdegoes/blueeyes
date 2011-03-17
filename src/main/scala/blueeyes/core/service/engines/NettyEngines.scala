@@ -17,6 +17,7 @@ import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpChunkAggre
 import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
+import net.lag.logging.Logger
 
 trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
@@ -102,7 +103,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline.addLast("encoder",     new HttpResponseEncoder())
       pipeline.addLast("deflater",    new HttpContentCompressor())
 
-      pipeline.addLast("handler",     new NettyRequestHandler[T](self, log))
+      pipeline.addLast("handler",     new NettyRequestHandler[T](self, Logger.configure(config.configMap("nettyrequesthandler.log"), false, true)))
 
       pipeline
     }
