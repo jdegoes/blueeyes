@@ -103,18 +103,9 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline.addLast("encoder",     new HttpResponseEncoder())
       pipeline.addLast("deflater",    new HttpContentCompressor())
 
-      pipeline.addLast("handler",     new NettyRequestHandler[T](self, Logger.configure(handlerLogConfig, false, true)))
+      pipeline.addLast("handler",     new NettyRequestHandler[T](self, Logger.get))
 
       pipeline
-    }
-
-    private def handlerLogConfig = {
-      config.getConfigMap("nettyrequesthandler.log").getOrElse {
-        val map = config.configMap("nettyrequesthandler.log")
-        map.setString("level", "error")
-        map.setBool("console", true)
-        map
-      }
     }
   }
   
