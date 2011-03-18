@@ -17,7 +17,14 @@ class RestPathPatternSpec extends Specification{
       testPath("(foo(?<bar>baz))", List(("foobaz", Map('bar -> "baz"))), List("barfoo"))
     }
     "match regexp element without named group" in{
-      testPath("([a-z]+)", List(("foo", Map())), List("1970"))
+      testPath("(foo)", List(("foo", Map())), List("1970"))
+      testPath("(?:foo)", List(("foo", Map())), List("1970"))
+    }
+    "match regexp element multiple named group" in{
+      testPath("((?<bar>[a-z]+)-(?<foo>[1-9]+))", List(("foo-123", Map('bar -> "foo", 'foo -> "123"))), List("1970"))
+    }
+    "match regexp element nested in NamedCaptureGroup" in{
+      testPath("(foo(?<bar>baz(?<foo>[1-9]+)))", List(("foobaz123", Map('bar -> "baz123", 'foo -> "123"))), List("1970"))
     }
   }
 

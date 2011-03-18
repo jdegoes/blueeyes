@@ -5,6 +5,7 @@ import scala.util.parsing.input._
 import scala.util.matching.Regex
 
 import blueeyes.core.http._
+import blueeyes.parsers.RegularExpressionAST._
 import blueeyes.parsers.{RegularExpressionPatten, RegularExpressionGrammar}
 
 private[service] object PathUtils {
@@ -136,8 +137,7 @@ object RestPathPattern extends RegexParsers {
 
   def apply(string: String): RestPathPattern = RestPathPatternParsers.parse(string)
 }
-object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar{
-  import blueeyes.parsers.RegularExpressionAST._
+object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar with RegexUtil{
   override def skipWhitespace = false
 
   def validUrlFrag:     Parser[String] = """[a-zA-Z0-9\-_.+!*'()]+""".r
@@ -153,25 +153,8 @@ object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar
   def pathElement: Parser[RestPathPattern] = (symbol ^^ (s => SymbolPathPattern(s))) | (("""\(.+\)""".r ) ^^ (regex => regexPathPattern(regex))) | (literal ^^ (s => LiteralPathPattern(s))) | (pathSeparator ^^ (s => LiteralPathPattern(s)))
 
   private def regexPathPattern(regex: String) = {
-
-    val pureRegex  = if (isNamedCaptureGroup(regex) ) regex else regex.substring(1, regex.length - 1)
-    val regexAtoms = RegularExpressionPatten(pureRegex)
-    val names      = regexAtoms filter (_.element.isInstanceOf[NamedCaptureGroup] ) map (_.element.asInstanceOf[NamedCaptureGroup].name)
-
-    val newRegexp = regexAtoms map { atom =>
-      val element = atom.element match {
-        case  e: NamedCaptureGroup => Group(e.group: _*)
-        case _ => atom.element
-      }
-      RegexAtom(element, atom.quantifier)
-    }
-
-    RegexPathPattern(new Regex(newRegexp.map(_.toString).mkString(""), names: _*), names)
-  }
-
-  private def isNamedCaptureGroup(regex: String) = namedCaptureGroup.apply(new CharSequenceReader(regex)) match {
-    case Success(result, _) => true
-    case _ => false
+    val (newRegexp, allNames, names) = extractNamedCaptureGroup(RegularExpressionPatten(regex))
+    RegexPathPattern(new Regex(newRegexp.map(_.toString).mkString(""), allNames: _*), names)
   }
 
   def restPathPatternParser: Parser[List[RestPathPattern]] = startOfString ~> (pathElement*) <~ endOfString
@@ -257,3 +240,30 @@ trait RestPathPatternImplicits {
   }
 }
 object RestPathPatternImplicits extends RestPathPatternImplicits
+
+private[service] trait RegexUtil{
+  def extractNamedCaptureGroup(regexAtoms: List[RegexAtom]): (List[RegexAtom], List[String], List[String]) = {
+    val atomsAndNames = regexAtoms map (extractNamedCaptureGroup(_))
+    (atomsAndNames.map (_._1), atomsAndNames.map (_._2) flatten , atomsAndNames.map (_._3) flatten )
+  }
+
+  private def extractNamedCaptureGroup(regexAtom: RegexAtom): (RegexAtom, List[String], List[String]) = {
+    val (newElement: RegexAtomElement, allNewNames: List[String], newNames: List[String]) = regexAtom.element match{
+      case  e: NamedCaptureGroup =>
+         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        val newAllNames: List[String] = e.name :: groupNames
+        (Group(groupElements: _*), newAllNames, newAllNames)
+      case  e: Group =>
+        val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        (Group(groupElements: _*), e.toString :: allNames, groupNames)
+      case e: NonCapturingGroup =>
+        val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        (NonCapturingGroup(e.flags, groupElements: _*), allNames, groupNames)
+      case e: AtomicGroup =>
+        val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        (AtomicGroup(groupElements: _*), allNames, groupNames)
+      case _ => (regexAtom.element, Nil, Nil)
+    }
+    (RegexAtom(newElement, regexAtom.quantifier), allNewNames, newNames)
+  }
+}
