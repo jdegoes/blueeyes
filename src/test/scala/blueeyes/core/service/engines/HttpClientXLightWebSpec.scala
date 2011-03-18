@@ -18,7 +18,7 @@ class HttpClientXLightWebSpec extends Specification with HttpClientTransformerCo
   import HttpHeaderImplicits._
 
   val duration = 250
-  val retries = 10
+  val retries = 30
   
   private val httpClient = new HttpClientXLightWebEnginesString { }
   private val httpClientArrayByte = new HttpClientXLightWebEnginesArrayByte { }

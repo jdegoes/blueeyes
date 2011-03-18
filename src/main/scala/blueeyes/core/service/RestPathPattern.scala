@@ -5,6 +5,7 @@ import scala.util.parsing.input._
 import scala.util.matching.Regex
 
 import blueeyes.core.http._
+import blueeyes.parsers.{RegularExpressionPatten, RegularExpressionGrammar}
 
 private[service] object PathUtils {
   def sanitizePath(s: String) = ("/" + s + "/").replaceAll("/+", "/")
@@ -135,7 +136,8 @@ object RestPathPattern extends RegexParsers {
 
   def apply(string: String): RestPathPattern = RestPathPatternParsers.parse(string)
 }
-object RestPathPatternParsers extends RegexParsers {
+object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar{
+  import blueeyes.parsers.RegularExpressionAST._
   override def skipWhitespace = false
 
   def validUrlFrag:     Parser[String] = """[a-zA-Z0-9\-_.+!*'()]+""".r
@@ -148,7 +150,29 @@ object RestPathPatternParsers extends RegexParsers {
   def symbol:  Parser[Symbol] = ("'" ~> validSymbolName) ^^ (s => Symbol(s))
   def literal: Parser[String] = validUrlFrag
 
-  def pathElement: Parser[RestPathPattern] = (symbol ^^ (s => SymbolPathPattern(s))) | (literal ^^ (s => LiteralPathPattern(s))) | (pathSeparator ^^ (s => LiteralPathPattern(s)))
+  def pathElement: Parser[RestPathPattern] = (symbol ^^ (s => SymbolPathPattern(s))) | (("""\(.+\)""".r ) ^^ (regex => regexPathPattern(regex))) | (literal ^^ (s => LiteralPathPattern(s))) | (pathSeparator ^^ (s => LiteralPathPattern(s)))
+
+  private def regexPathPattern(regex: String) = {
+
+    val pureRegex  = if (isNamedCaptureGroup(regex) ) regex else regex.substring(1, regex.length - 1)
+    val regexAtoms = RegularExpressionPatten(pureRegex)
+    val names      = regexAtoms filter (_.element.isInstanceOf[NamedCaptureGroup] ) map (_.element.asInstanceOf[NamedCaptureGroup].name)
+
+    val newRegexp = regexAtoms map { atom =>
+      val element = atom.element match {
+        case  e: NamedCaptureGroup => Group(e.group: _*)
+        case _ => atom.element
+      }
+      RegexAtom(element, atom.quantifier)
+    }
+
+    RegexPathPattern(new Regex(newRegexp.map(_.toString).mkString(""), names: _*), names)
+  }
+
+  private def isNamedCaptureGroup(regex: String) = namedCaptureGroup.apply(new CharSequenceReader(regex)) match {
+    case Success(result, _) => true
+    case _ => false
+  }
 
   def restPathPatternParser: Parser[List[RestPathPattern]] = startOfString ~> (pathElement*) <~ endOfString
 

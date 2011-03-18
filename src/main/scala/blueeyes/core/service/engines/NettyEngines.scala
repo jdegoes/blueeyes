@@ -31,8 +31,6 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       startStopLock.writeLock.lock()
 
       try {
-        val host = InetInterfaceLookup.host(config)
-
         try {
           val servers = Tuple2(port, new HttpServerPipelineFactory("http", host, port)) :: (if (sslEnable) Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort)) :: Nil else Nil)
 
