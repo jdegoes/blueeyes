@@ -7,7 +7,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
-import net.lag.configgy.{ConfigMap, Configgy}
+import net.lag.configgy.{Config, ConfigMap, Configgy}
 import blueeyes.parsers.W3ExtendedLog
 import blueeyes.concurrent._
 import blueeyes.util._
@@ -63,7 +63,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    */
   def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val logger = Logger.configure(context.config.configMap("log"), false, true)
+      val logger = LoggingHelper.initializeLogging(context.config, context.serviceName + ".v" + context.serviceVersion.majorVersion)
 
       f(logger)(context)
     }

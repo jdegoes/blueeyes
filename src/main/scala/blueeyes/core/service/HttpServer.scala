@@ -9,6 +9,7 @@ import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
+import blueeyes.util.logging.LoggingHelper
 import java.net.InetAddress
 
 /** A trait that grabs services reflectively from the fields of the class it is
@@ -180,8 +181,8 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
    */
-  lazy val log: Logger = Logger.configure(config.configMap("log"), false, true)
-  
+  lazy val log: Logger = LoggingHelper.initializeLogging(config, "blueeyes.server")
+
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
    */
