@@ -27,7 +27,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
         }
       }
     }
-  """.format(System.getProperty("java.io.tmpdir") + "w3log.log")
+  """.format(System.getProperty("java.io.tmpdir") + File.separator + "w3log.log")
 
   println(System.getProperty("java.io.tmpdir"))
   
