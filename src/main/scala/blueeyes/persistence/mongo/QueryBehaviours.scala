@@ -1,21 +1,18 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import com.mongodb.MongoException
+import blueeyes.concurrent._
 
 private[mongo] object QueryBehaviours{
   trait QueryBehaviour[T] extends Function[DatabaseCollection, Future[T]]
 
   trait AsynchQueryBehaviour[T] extends QueryBehaviour[T]{
-    def apply(collection: DatabaseCollection): Future[T] = {
-
-      val future = new Future[T]
-
-      import scala.actors.Actor.actor
-      actor{
+    private implicit val strategy = ActorExecutionStrategy
+    private val mongoActor = Actor[DatabaseCollection, T]{
+      case collection: DatabaseCollection => {
         collection.requestStart
         val result: Either[Throwable, T] = try {
           val answer    = query(collection)
@@ -31,12 +28,14 @@ private[mongo] object QueryBehaviours{
         }
 
         result match {
-          case Left(why)     => future.cancel(why)
-          case Right(answer) => future.deliver(answer)
+          case Left(why)     => throw why
+          case Right(answer) => answer
         }
       }
-      future
     }
+
+    def apply(collection: DatabaseCollection): Future[T] = mongoActor(collection)
+
     def query(collection: DatabaseCollection): T
   }
 

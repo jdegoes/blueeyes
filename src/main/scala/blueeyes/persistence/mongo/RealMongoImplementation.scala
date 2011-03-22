@@ -12,6 +12,10 @@ class RealMongo(config: ConfigMap) extends Mongo{
   val ServerAndPortPattern = "(.+):(.+)".r
 
   private lazy val mongo = {
+    val options = new MongoOptions()
+    options.connectionsPerHost = 1000
+    options.threadsAllowedToBlockForConnectionMultiplier = 1000
+
     val servers = config.getList("servers").map(server =>{
       server match{
         case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
@@ -19,8 +23,8 @@ class RealMongo(config: ConfigMap) extends Mongo{
       }
     }).toList
     val mongo = servers match {
-      case x :: Nil => new com.mongodb.Mongo(x)
-      case x :: xs  => new com.mongodb.Mongo(servers)
+      case x :: Nil => new com.mongodb.Mongo(x, options)
+      case x :: xs  => new com.mongodb.Mongo(servers, options)
       case Nil => error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
     }
     if (config.getBool("slaveOk", true)) { mongo.slaveOk() }
