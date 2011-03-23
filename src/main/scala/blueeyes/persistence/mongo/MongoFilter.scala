@@ -8,9 +8,9 @@ import blueeyes.util.ProductPrefixUnmangler
 object MongoFilterOperators {
   sealed trait MongoFilterOperator extends Product with ProductPrefixUnmangler {
     def symbol: String = unmangledName
-  
+
     def unary_! : MongoFilterOperator
-    
+
     override def toString = symbol
   }
   sealed trait MongoFilterOperatorBound extends MongoFilterOperator
@@ -18,15 +18,15 @@ object MongoFilterOperators {
   case object $gte  extends MongoFilterOperatorBound  { def unary_! = $lt; }
   case object $lt   extends MongoFilterOperatorBound  { def unary_! = $gte; }
   case object $lte  extends MongoFilterOperatorBound  { def unary_! = $gt; }
-  
+
   sealed trait MongoFilterOperatorEquality extends MongoFilterOperator
   case object $eq extends MongoFilterOperatorEquality { def unary_! = $ne; } // This is a virtual operator, it's not real!!!!
   case object $ne extends MongoFilterOperatorEquality { def unary_! = $eq; }
-  
+
   sealed trait MongoFilterOperatorContainment extends MongoFilterOperator
   case object $in   extends MongoFilterOperatorContainment { def unary_! = $nin; }
   case object $nin  extends MongoFilterOperatorContainment { def unary_! = $in; }
-  
+
   case object $mod        extends MongoFilterOperator { def unary_! : MongoFilterOperator = error("The $mod operator does not have a negation"); }
   case object $all        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $all operator does not have a negation"); }
   case object $size       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = error("The $size operator does not have a negation"); }
@@ -40,15 +40,15 @@ import MongoFilterOperators._
 
 sealed trait MongoFilter { self =>
   def filter: JValue
-  
+
   def unary_! : MongoFilter
-  
+
   def & (that: MongoFilter)  = &&(that)
-  
+
   def && (that: MongoFilter) = MongoAndFilter(self :: that :: Nil)
 
   def | (that: MongoFilter)  = ||(that)
-  
+
   def || (that: MongoFilter) = (self, that) match{
     case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
     case (_, y: MongoOrFilter) => MongoOrFilter(self :: y.queries)
@@ -61,7 +61,7 @@ sealed trait MongoFilter { self =>
 
 case object MongoFilterAll extends MongoFilter {
   def filter: JValue = JObject(Nil)
-  
+
   def unary_! : MongoFilter = this
 }
 
@@ -83,7 +83,7 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
 
 sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter {
   def filter: JValue = JObject(JField($or.symbol, JArray(queries.map(_.filter))) :: Nil)
-  
+
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
 }
 
@@ -91,7 +91,7 @@ sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter
   def filter: JValue = {
     queries.foldLeft(JObject(Nil).asInstanceOf[JValue]) { (obj, e) => obj.merge(e.filter) }
   }
-  
+
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))
 
   def elemMatch(path: JPath) = MongoElementsMatchFilter(path, self)
@@ -141,14 +141,15 @@ case object MongoPrimitiveNull extends MongoPrimitive[Any] {
 sealed class MongoPrimitiveWitness[T](val typeNumber: Int)
 
 trait MongoFilterImplicits {
-  import MongoFilterOperators._ 
-  
+  import MongoFilterOperators._
+
   implicit def mongoOperatorToSymbolString(op: MongoFilterOperator): String = op.symbol
-  
+
   implicit def stringToMongoFilterBuilder(string: String): MongoFilterBuilder = MongoFilterBuilder(JPath(string))
-  
+
   implicit def jpathToMongoFilterBuilder(jpath: JPath): MongoFilterBuilder = MongoFilterBuilder(jpath)
 
+  // TODO: Delete this!!!
   implicit def jvalueToMongoPrimitive(value: JValue): Option[MongoPrimitive[_]] = {
     val mongoPromitive: Option[MongoPrimitive[_]] = value match {
       case x: JString => Some(MongoPrimitiveString(x.value))
@@ -160,23 +161,32 @@ trait MongoFilterImplicits {
         var values: List[MongoPrimitive[_]] = x.elements.map(jvalueToMongoPrimitive(_)).filter(_ != None).map(_.get)
         Some(MongoPrimitiveArray(values))
       }
-      case JNothing   => None
-      case JNull      => None
-      case _          => error("Unknown type for value: " + value)
+      case JNull | JNothing => Some(MongoPrimitiveNull)
+
+      case _  => error("Cannot convert JField to Mongo primitive")
     }
     mongoPromitive
   }
-  implicit def jStringToMongoPrimitiveString(value: JString)  = MongoPrimitiveString(value.value)
-  implicit def jIntToMongoPrimitiveInt(value: JInt)           = MongoPrimitiveLong(value.value.longValue)
-  implicit def jDoubleToMongoPrimitiveDouble(value: JDouble)  = MongoPrimitiveDouble(value.value)
-  implicit def jBooleanToMongoPrimitiveBoolean(value: JBool)  = MongoPrimitiveBoolean(value.value)
+  implicit def jvalueToMongoPrimitive2(value: JValue): MongoPrimitive[_] = value match {
+    case x: JString => MongoPrimitiveString(x.value)
+    case x: JInt    => MongoPrimitiveLong(x.value.longValue)
+    case x: JDouble => MongoPrimitiveDouble(x.value)
+    case x: JBool   => MongoPrimitiveBoolean(x.value)
+    case x: JObject => MongoPrimitiveJObject(x)
+    case x: JArray  => {
+      var values: List[MongoPrimitive[_]] = x.elements.map(jvalueToMongoPrimitive(_)).filter(_ != None).map(_.get)
+      MongoPrimitiveArray(values)
+    }
+    case JNull | JNothing => MongoPrimitiveNull
+
+    case _ => error("Cannot convert JField to Mongo primitive")
+  }
 
   implicit def stringToMongoPrimitiveString(value: String)    = MongoPrimitiveString(value)
   implicit def longToMongoPrimitiveLong(value: Long)          = MongoPrimitiveLong(value)
   implicit def intToMongoPrimitiveInt(value: Int)             = MongoPrimitiveInt(value)
   implicit def doubleToMongoPrimitiveDouble(value: Double)    = MongoPrimitiveDouble(value)
   implicit def booleanToMongoPrimitiveBoolean(value: Boolean) = MongoPrimitiveBoolean(value)
-  implicit def jobjectToMongoPrimitiveJObject(value: JObject) = MongoPrimitiveJObject(value)
   implicit def arrayToMongoPrimitiveArray[T <: MongoPrimitive[_]](value: List[T]) = MongoPrimitiveArray[T](value)
 
   /*

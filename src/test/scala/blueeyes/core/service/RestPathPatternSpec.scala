@@ -151,15 +151,8 @@ class RestPathPatternSpec extends Specification{
   }
 
   "Symbol pattern" should {
-    "match on a symbol with a suffix (ex: 'name.gif)" in {
-      ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
-    }
-    "recover the parameter when using a path with a suffix" in {
-      val pattern: RestPathPattern = "/foo/bar/'name.gif"
-      pattern.apply("/foo/bar/foocubus.gif").mustEqual(Map[Symbol, String]('name -> "foocubus"))
-    }
-    "not match on a symbol with different suffix (ex: 'name.html)" in {
-      ("/foo/bar/'name.gif" $).isDefinedAt("/foo/bar/example.html") mustBe (false)
+    "match string with period" in {
+      ("/foo/bar/'name" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
     }
   }
 

@@ -50,7 +50,7 @@ class StageSpec extends Specification{
       }
     }
   }
-
+/*
   "Stage.getLater" should {
     "return a future of the value" in {
       newStage() { stage =>
@@ -81,7 +81,7 @@ class StageSpec extends Specification{
         //true mustBe true
       }
     }
-  }
+  }*/
 
   "Stage" should {
     "evict when idle time is expired" in {
