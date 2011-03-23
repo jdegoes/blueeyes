@@ -33,7 +33,7 @@ Repository: http://oss.sonatype.org/content/repositories/releases
 
     val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
     
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.78" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.1.90" % "compile"
 
 ## Origins
 

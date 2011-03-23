@@ -42,7 +42,10 @@ trait PublishingProject extends DefaultProject{
       FileUtilities.readString(readMeFile, log) match {
         case Left(e)              => Some(e)
         case Right(readMeContent) => {
-          FileUtilities.write(readMeFile, readMeContent.replaceAll("<version>\\d+\\.\\d+\\.\\d+</version>", "<version>" + value.toString + "</version>"), log)
+          val replacements = List("<version>%s</version>", "\"com.github.blueeyes\" %% \"blueeyes\" %% \"%s\" %% \"compile\"")
+
+          val newContent   = replacements.foldLeft(readMeContent){(content, replacement) => content.replaceAll(replacement.format("\\d+\\.\\d+\\.\\d+"), replacement.format(value.toString))}
+          FileUtilities.write(readMeFile, newContent, log)
 
           log.info("README.md was updated.")
 
