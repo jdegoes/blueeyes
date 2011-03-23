@@ -40,6 +40,7 @@ class NettyRequestHandlerSpec extends Specification with MockitoSugar with Netty
     when(handler.isDefinedAt(request)).thenReturn(true)
     when(handler.apply(request)).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
+    when(event.getChannel().isConnected).thenReturn(true)
     when(channel.write(Matchers.argThat(new RequestMatcher(toNettyResponse(response))))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
