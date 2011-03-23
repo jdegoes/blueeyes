@@ -84,44 +84,48 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     (context: HttpServiceContext) => {
       val underlying = f(context)
 
-      def fieldsDirective: FieldsDirective = {
-        context.config.getString("requestLog.fields") map { configValue =>
-          W3ExtendedLog("#Fields: " + configValue) match {
-            case (e: FieldsDirective) :: Nil => e
-            case _ => error("Log directives are not specified.")
-          }
-        } getOrElse (error("Log directives are not specified."))
+      val enabled = context.config.getBool("enabled", true)
+
+      if (enabled){
+        def fieldsDirective: FieldsDirective = {
+          context.config.getString("requestLog.fields") map { configValue =>
+            W3ExtendedLog("#Fields: " + configValue) match {
+              case (e: FieldsDirective) :: Nil => e
+              case _ => error("Log directives are not specified.")
+            }
+          } getOrElse (error("Log directives are not specified."))
+        }
+
+        val policy = context.config.getString("requestLog.roll", "never").toLowerCase match {
+          case "never"      => Never
+          case "hourly"     => Hourly
+          case "daily"      => Daily
+          case "sunday"     => Weekly(Calendar.SUNDAY)
+          case "monday"     => Weekly(Calendar.MONDAY)
+          case "tuesday"    => Weekly(Calendar.TUESDAY)
+          case "wednesday"  => Weekly(Calendar.WEDNESDAY)
+          case "thursday"   => Weekly(Calendar.THURSDAY)
+          case "friday"     => Weekly(Calendar.FRIDAY)
+          case "saturday"   => Weekly(Calendar.SATURDAY)
+          case x            => error("Unknown logfile rolling policy: " + x)
+        }
+
+        val fileName = context.config.getString("requestLog.file") match{
+          case Some(x) => x
+          case None => error("Logfile is not specified.")
+        }
+
+        val writeDelaySeconds = context.config.getInt("requestLog.writeDelaySeconds", 1)
+
+        val log = W3ExtendedLogger.get(fileName, policy, fieldsDirective, writeDelaySeconds)
+
+        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, log, underlying.request(state))},
+                        shutdown = (state: S) => {
+                          log.close
+                          underlying.shutdown(state)
+                        })
       }
-
-      val policy = context.config.getString("requestLog.roll", "never").toLowerCase match {
-        case "never"      => Never
-        case "hourly"     => Hourly
-        case "daily"      => Daily
-        case "sunday"     => Weekly(Calendar.SUNDAY)
-        case "monday"     => Weekly(Calendar.MONDAY)
-        case "tuesday"    => Weekly(Calendar.TUESDAY)
-        case "wednesday"  => Weekly(Calendar.WEDNESDAY)
-        case "thursday"   => Weekly(Calendar.THURSDAY)
-        case "friday"     => Weekly(Calendar.FRIDAY)
-        case "saturday"   => Weekly(Calendar.SATURDAY)
-        case x            => error("Unknown logfile rolling policy: " + x)
-      }
-
-      val fileName = context.config.getString("requestLog.file") match{
-        case Some(x) => x
-        case None => error("Logfile is not specified.")
-      }
-
-      val writeDelaySeconds = context.config.getInt("requestLog.writeDelaySeconds", 1)
-
-      val log = W3ExtendedLogger.get(fileName, policy, fieldsDirective, writeDelaySeconds)
-
-      underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, log, underlying.request(state))},
-                      shutdown = (state: S) => {
-                        println("CLOSE")
-                        log.close
-                        underlying.shutdown(state)
-                      })
+      else underlying
     }
   }
 
