@@ -59,7 +59,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       try {
         val executor = Executors.newCachedThreadPool()
         val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-
+        bootstrap.setParentHandler(new SetBacklogHandler())
         bootstrap.setPipelineFactory(serverArg._2)
 
         bootstrap.bind(InetInterfaceLookup.socketAddres(config, serverArg._1))
@@ -104,6 +104,13 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline.addLast("handler",     new NettyRequestHandler[T](self, Logger.get))
 
       pipeline
+    }
+  }
+
+  class SetBacklogHandler extends SimpleChannelUpstreamHandler{
+    override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+      e.getChannel.getConfig.setOption("backlog", 10000)
+      super.channelOpen(ctx, e)
     }
   }
   
