@@ -9,6 +9,25 @@ import blueeyes.core.http.{HttpRequest, HttpMethods}
 class RestPathPatternSpec extends Specification{
   import RestPathPatternImplicits._
 
+  "path matching and regex extraction" should {
+    "match regexp element with first named group" in{
+      testPath("(?<bar>[a-z]+)", List(("foo", Map('bar -> "foo"))), List("1970"))
+    }
+    "match regexp element with not first named group" in{
+      testPath("(foo(?<bar>baz))", List(("foobaz", Map('bar -> "baz"))), List("barfoo"))
+    }
+    "match regexp element without named group" in{
+      testPath("(foo)", List(("foo", Map())), List("1970"))
+      testPath("(?:foo)", List(("foo", Map())), List("1970"))
+    }
+    "match regexp element multiple named group" in{
+      testPath("((?<bar>[a-z]+)-(?<foo>[1-9]+))", List(("foo-123", Map('bar -> "foo", 'foo -> "123"))), List("1970"))
+    }
+    "match regexp element nested in NamedCaptureGroup" in{
+      testPath("(foo(?<bar>baz(?<foo>[1-9]+)))", List(("foobaz123", Map('bar -> "baz123", 'foo -> "123"))), List("1970"))
+    }
+  }
+
   "path matching and symbol extraction" should {
     "match correct literal path containing a single path element" in {
       testPath("/foo",
@@ -115,6 +134,9 @@ class RestPathPatternSpec extends Specification{
     }
     "not match for a more complex pattern" in {
       (RestPathPattern.Root/ "foo" / "bar" / new Regex("""([a-z]+_[0-9])""", "id") ~ List('id)).isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
+    }
+   "match a complex pattern with regexp with named capturing group" in {
+      (RestPathPattern.Root/ "foo" / "bar" / """(?<id>[a-z]+_[0-9])""").isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
     }
     "match for the other syntax and positive look ahead" in {
       ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path) $).isDefinedAt("/foo/bar/example.html") mustBe (true)

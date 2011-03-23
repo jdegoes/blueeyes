@@ -109,8 +109,8 @@ trait ActorExecutionStrategyFixedPool extends ActorExecutionStrategyMultiThreade
   lazy val executorService = Executors.newFixedThreadPool(actorExecutionStrategyThreadPoolSize)
 }
 
-object ActorExecutionStrategy extends ActorExecutionStrategyFixedPool {
-  val actorExecutionStrategyThreadPoolSize = Runtime.getRuntime.availableProcessors
+object ActorExecutionStrategy extends ActorExecutionStrategyMultiThreaded {
+  lazy val executorService = Executors.newCachedThreadPool()
 }
 
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>

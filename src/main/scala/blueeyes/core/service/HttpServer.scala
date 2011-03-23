@@ -9,6 +9,8 @@ import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
+import blueeyes.util.logging.LoggingHelper
+import java.net.InetAddress
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -179,8 +181,8 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
    */
-  lazy val log: Logger = Logger.configure(config.configMap("log"), false, true)
-  
+  lazy val log: Logger = LoggingHelper.initializeLogging(config, "blueeyes.server")
+
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
    */
@@ -190,6 +192,10 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
    * 8889.
    */
   lazy val sslPort: Int = config.getInt("sslPort", 8889)
+
+  /** Retrieves the host the server should be running at.
+   */
+  lazy val host = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
 
   /** Retrieves if the ssl should be running, which defaults to
    * true.
@@ -231,7 +237,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
       }
     }
   }
-  
+
   private var _status: RunningStatus = RunningStatus.Stopped
   
   private val handlerLock = new java.util.concurrent.locks.ReentrantReadWriteLock
@@ -245,7 +251,7 @@ trait HttpServer[T] extends HttpRequestHandler[T] { self =>
   private lazy val descriptors: List[BoundStateDescriptor[T, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
 
-    val context = HttpServiceContext(config, service.name, service.version)
+    val context = HttpServiceContext(config, service.name, service.version, host, port, sslPort)
 
     BoundStateDescriptor(context, service)
   }

@@ -7,14 +7,14 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
-import net.lag.configgy.{ConfigMap, Configgy}
+import net.lag.configgy.{Config, ConfigMap, Configgy}
 import blueeyes.parsers.W3ExtendedLog
 import blueeyes.concurrent._
 import blueeyes.util._
 import blueeyes.util.logging._
 import java.util.Calendar
 
-trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits{
+trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
   private[this] object TransformerCombinators extends HttpClientTransformerCombinators
   import TransformerCombinators.{path$}
 
@@ -42,8 +42,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
           request: HttpRequest[T] => {
             val version = context.serviceVersion
             val who     = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
+            val server  = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
             val health  = monitor.toJValue
-            HttpResponse[T](content=Some(jValueBijection(health.merge(who))))
+            HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server))))
           }
         }
       }
@@ -62,7 +63,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    */
   def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val logger = Logger.configure(context.config.configMap("log"), false, true)
+      val logger = LoggingHelper.initializeLogging(context.config, context.serviceName + ".v" + context.serviceVersion.majorVersion)
 
       f(logger)(context)
     }

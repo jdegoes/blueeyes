@@ -24,7 +24,7 @@ import net.lag.logging.Logger
  */
 private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
   private val pendingResponses = new HashSet[Future[HttpResponse[T]]] with SynchronizedSet[Future[HttpResponse[T]]]
-  
+
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     def writeResponse(e: MessageEvent, response: HttpResponse[T]) {
       val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
@@ -33,9 +33,11 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
       if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
 
-      val future = e.getChannel().write(nettyResponse)
+      if (e.getChannel().isConnected){
+        val future = e.getChannel().write(nettyResponse)
 
-      if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
+        if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
+      }
     }
     
     val request        = fromNettyRequest(event.getMessage.asInstanceOf[NettyHttpRequest], event.getRemoteAddress)
@@ -52,7 +54,7 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
 
   override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelClosed(ctx, e)
-    
+
     killPending(None)
   }
 
@@ -63,7 +65,7 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    log.error(e.getCause, "An exception was raised by an I/O thread or a ChannelHandler")
+    log.warning(e.getCause, "An exception was raised by an I/O thread or a ChannelHandler")
     
     super.exceptionCaught(ctx, e)
     

@@ -17,6 +17,9 @@ class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification[Array[
         content \ "memory" must notEq(JNothing)
         content \ "threads" must notEq(JNothing)
         content \ "operatingSystem" must notEq(JNothing)
+        content \ "server" \ "hostName" must notEq(JNothing)
+        content \ "server" \ "port" must notEq(JNothing)
+        content \ "server" \ "sslPort" must notEq(JNothing)
       }
     }
   } should "get server health"

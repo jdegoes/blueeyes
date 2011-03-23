@@ -17,12 +17,12 @@ class W3ExtendedLoggerSpec extends Specification{
       new File(w3Logger.fileName.get).delete
     }
     "creates log file" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + "w3.log", Never, directives, 1)
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
 
       new File(w3Logger.fileName.get).exists must be (true)
     }
     "init log file" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + "w3.log", Never, directives, 1)
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
 
       val content = getContents(new File(w3Logger.fileName.get))
 
@@ -32,7 +32,7 @@ class W3ExtendedLoggerSpec extends Specification{
     }
 
     "write log entries" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + "w3.log", Never, directives, 1)
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
 
       w3Logger("foo")
       w3Logger("bar")

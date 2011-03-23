@@ -10,7 +10,7 @@ trait ServerHealthMonitorServiceBase[T] extends BlueEyesServiceBuilderBase[T] wi
     request{
       path("/blueeyes/server/health") {
         get { request =>
-          HttpResponse[T](content=Some(jValueBijection(toJValue)))
+          HttpResponse[T](content=Some(jValueBijection(toJValue(context))))
         }
       }
     }
@@ -85,5 +85,8 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
     monitor.export("operatingSystem.systemLoadAverage",   bean.getSystemLoadAverage)
   }
 
-  def toJValue = monitor.toJValue
+  def toJValue(context: HttpServiceContext) = {
+    val server     = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
+    server.merge(monitor.toJValue)
+  }
 }
