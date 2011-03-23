@@ -378,6 +378,7 @@ Request Logging allows services to log requests/responses in W3C Extended Log fo
 A service's request logger is configured through a *requestLog* block inside the root config for the service.
 
 The following values can be configured for request logging:
+
    "enabled           = true | false" ( default = true )
    "fields            = see W3C Extended Log format"
    "roll              = "never" | "hourly" | "daily" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" " ( default = "never")
