@@ -59,7 +59,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       try {
         val executor = Executors.newCachedThreadPool()
         val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-        bootstrap.setParentHandler(new SetBacklogHandler())
+        bootstrap.setParentHandler(new SetBacklogHandler(config.getInt("backlog", 10000)))
         bootstrap.setPipelineFactory(serverArg._2)
 
         bootstrap.bind(InetInterfaceLookup.socketAddres(config, serverArg._1))
@@ -107,13 +107,6 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
     }
   }
 
-  class SetBacklogHandler extends SimpleChannelUpstreamHandler{
-    override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
-      e.getChannel.getConfig.setOption("backlog", 10000)
-      super.channelOpen(ctx, e)
-    }
-  }
-  
   class HttpsServerPipelineFactory(protocol: String, host: String, port: Int) extends HttpServerPipelineFactory(protocol: String, host, port) {
     private val keyStore = BlueEyesKeyStoreFactory(config)
 
@@ -128,6 +121,13 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
 
       pipeline
     }
+  }
+}
+
+private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler{
+  override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+    e.getChannel.getConfig.setOption("backlog", backlog)
+    super.channelOpen(ctx, e)
   }
 }
 
