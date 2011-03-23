@@ -354,6 +354,49 @@ BlueEyes provides a combinator that provides services with a logger that can be 
 
 A service's logger is configured through a *log* block inside the root config for the service.
 
+#### Request Logging
+Request Logging allows services to log requests/responses in W3C Extended Log format (http://www.w3.org/TR/WD-logfile.html).
+
+   trait RequestLogDemo extends BlueEyesServiceBuilder {
+       val requestLogDemoService = service("requestlogdemo", "1.32") {
+        requestLogging{
+          context =>
+            startup {
+            request { state =>
+              path("/foo") {
+                contentType(application/json) {
+                  get { request =>
+                    log.info("request at /foo")
+                    ...
+                  }
+                }
+              }
+            }
+        }
+     }
+
+A service's request logger is configured through a *requestLog* block inside the root config for the service.
+
+The following values can be configured for request logging:
+   "enabled           = true | false" ( default = true )
+   "fields            = see W3C Extended Log format"
+   "roll              = "never" | "hourly" | "daily" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" " ( default = "never")
+   "file              = path to log file"
+   "writeDelaySeconds = delay between flush to file" ( default = 1 )
+
+    services {
+      requestlogdemo {
+        v1 {
+          requestLog {
+            fields            = "cs-method cs-uri"
+            roll              = "never"
+            file              = "./logs"
+            writeDelaySeconds = 5
+          }
+        }
+      }
+    }
+
 #### Health Monitor
 
 Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
