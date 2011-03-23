@@ -24,7 +24,7 @@ Repository: http://oss.sonatype.org/content/repositories/releases
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.1.89</version>
+      <version>0.1.90</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
