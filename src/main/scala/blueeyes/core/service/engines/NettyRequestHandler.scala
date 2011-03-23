@@ -67,8 +67,6 @@ private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandle
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
     log.warning(e.getCause, "An exception was raised by an I/O thread or a ChannelHandler")
     
-    super.exceptionCaught(ctx, e)
-    
     killPending(Some(e.getCause))
     // e.getChannel.close    
   }
