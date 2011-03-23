@@ -366,7 +366,6 @@ Request Logging allows services to log requests/responses in W3C Extended Log fo
               path("/foo") {
                 contentType(application/json) {
                   get { request =>
-                    log.info("request at /foo")
                     ...
                   }
                 }
