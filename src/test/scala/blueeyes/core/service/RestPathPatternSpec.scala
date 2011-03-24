@@ -64,7 +64,7 @@ class RestPathPatternSpec extends Specification{
     }
     "create parameters for regression case" in {
       testPath("/get/'foo",
-        List(("/get/foo-value", Map('foo -> "foo-value"))),
+        List(("/get/foo-value", Map('foo -> "foo-value")), ("/get/name%20name2", Map('foo -> "name%20name2")), ("/get/name name2", Map('foo -> "name name2"))),
         List("/foo/bar")
       )
     }
