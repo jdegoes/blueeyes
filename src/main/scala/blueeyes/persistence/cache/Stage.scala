@@ -37,8 +37,8 @@ trait Stage[K, V] extends Map[K, V] {
   private case class  GotAll(list: List[(K, V)]) extends Response
   private case object Stopped extends Response
 
-  private val actor: Actor = new Actor { self =>
-    val accumulator: Map[K, V] = Cache.concurrent(settings)
+  private lazy val actor: Actor = new Actor { self =>
+    lazy val accumulator: Map[K, V] = Cache.concurrent(settings)
 
     def act = {
       loop {
