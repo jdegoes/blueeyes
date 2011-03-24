@@ -24,6 +24,8 @@ class MongoStage(database: MongoDatabase, collection: MongoCollection, mongoStag
       }
     }
   )
+
+  start
 }
 
 object MongoStage {

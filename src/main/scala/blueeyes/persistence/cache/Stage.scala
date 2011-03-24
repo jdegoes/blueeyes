@@ -76,8 +76,6 @@ trait Stage[K, V] extends Map[K, V] {
     }
   }
 
-  actor.start
-
   def get(key: K): Option[V] = actor !? Get(key) match {
     case Got(v) => v
   }
@@ -122,5 +120,7 @@ object Stage {
     def settings = settings_
 
     def coalesce = coalesce_
+
+    start
   }
 }
