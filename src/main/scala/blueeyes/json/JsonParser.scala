@@ -74,8 +74,8 @@ object JsonParser {
     try {
       astParser(new Parser(buf))
     } catch {
-      case e: ParseException => e.printStackTrace; throw e
-      case e: Exception => e.printStackTrace; throw new ParseException("parsing failed", e)
+      case e: ParseException => throw e
+      case e: Exception => throw new ParseException("parsing failed", e)
     } finally { buf.release }
   }
   
