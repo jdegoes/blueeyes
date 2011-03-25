@@ -13,88 +13,94 @@ class RegularExpressionGrammarSpec extends Specification with ScalaCheck{
 
   implicit def stringToInput(s: String) = new CharSequenceReader(s)
 
-  "RegularExpressionGrammar: parses Regex Atom" in {
-    passTest(regexAtom)
-  }
-  
-  "RegularExpressionGrammar: parses single fixed chars" in{
-    passTest(singleFixedChar)
-  }
-  
-  "RegularExpressionGrammar: parses digit number" in{
-    passTest(digit)
-  }
-  
-  "RegularExpressionGrammar: parses small num hex" in{
-    passTestCaseInsensitive(smallHexNumber)
-  }
+  "RegularExpressionGrammar" should {
+    "parse Regex Atom" in {
+      passTest(regexAtom)
+    }
 
-  "RegularExpressionGrammar: parses unicode char" in{
-    passTestCaseInsensitive(unicodeChar)
-  }
+    "parse single fixed chars" in{
+      passTest(singleFixedChar)
+    }
 
-  "RegularExpressionGrammar: parses octal char" in{
-    passTest(octalNumber)
-  }
+    "parse digit number" in{
+      passTest(digit)
+    }
 
-  "RegularExpressionGrammar: parses other char" in{
-    passTest(otherChar)
-  }
+    "parse small num hex" in{
+      passTestCaseInsensitive(smallHexNumber)
+    }
 
-  "RegularExpressionGrammar: parses boundary match" in{
-    passTest(boundaryMatch)
-  }
+    "parse unicode char" in{
+      passTestCaseInsensitive(unicodeChar)
+    }
 
-  "RegularExpressionGrammar: parses Shorthand Character Class" in{
-    passTest(shorthandCharacterClass)
-  }
+    "parse octal char" in{
+      passTest(octalNumber)
+    }
 
-  "RegularExpressionGrammar: parses Posix Character Class" in{
-    passTest(posixCharacterClass)
-  }
+    "parse other char" in{
+      passTest(otherChar)
+    }
 
-  "RegularExpressionGrammar: parses Escape Sequence" in{
-    passTest(escapeSequence)
-  }
+    "parse boundary match" in{
+      passTest(boundaryMatch)
+    }
 
-  "RegularExpressionGrammar: parses Flag Group" in{
-    passTest(flags)
-    passTest(flagGroup)
-  }
+    "parse Shorthand Character Class" in{
+      passTest(shorthandCharacterClass)
+    }
 
-  "RegularExpressionGrammar: parses Quotation" in{
-    passTest(quotation)
-  }
-  "RegularExpressionGrammar: parses Back Reference" in{
-    passTest(backReference)
-  }
+    "parse Posix Character Class" in{
+      passTest(posixCharacterClass)
+    }
 
-  "RegularExpressionGrammar: parses Single Char " in{
-    passTest(singleChar)
-  }
+    "parse Escape Sequence" in{
+      passTest(escapeSequence)
+    }
 
-  "RegularExpressionGrammar: parses Character Class" in{
-    passTest(characterClass)
-  }
+    "parse Flag Group" in{
+      passTest(flags)
+      passTest(flagGroup)
+    }
 
-  "RegularExpressionGrammar: parses Non Capturing Group" in{
-    passTest(nonCapturingGroup)
-  }
+    "parse Quotation" in{
+      passTest(quotation)
+    }
+    "parse Back Reference" in{
+      passTest(backReference)
+    }
 
-  "RegularExpressionGrammar: parses Atomic Group" in{
-    passTest(atomicGroup)
-  }
+    "parse Single Char " in{
+      passTest(singleChar)
+    }
 
-  "RegularExpressionGrammar: parses Named Capture Group" in{
-    passTest(namedCaptureGroup)
-  }
+    "parse Character Class" in{
+      passTest(characterClass)
+    }
 
-  "RegularExpressionGrammar: parses Look Around" in{
-    passTest(lookAround)
-  }
+    "parse Non Capturing Group" in{
+      passTest(nonCapturingGroup)
+    }
 
-  "RegularExpressionGrammar: parses Group" in{
-    passTest(group)
+    "parse Atomic Group" in{
+      passTest(atomicGroup)
+    }
+
+    "parse Named Capture Group" in{
+      passTest(namedCaptureGroup)
+    }
+
+    "parse Look Around" in{
+      passTest(lookAround)
+    }
+
+    "parse Group" in{
+      passTest(group)
+    }
+
+    "Regression 1" in {
+      RegularExpressionPatten.isDefinedAt("""(?<prefixPath>(?:[^\n.](?:[^\n/]|/[^\n\.])+)/?)?""") must beTrue
+    }
   }
 
   private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)) == n) must pass

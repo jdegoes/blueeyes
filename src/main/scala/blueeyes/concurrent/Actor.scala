@@ -160,6 +160,8 @@ sealed case class ActorFactory[A, B, S](factory: S => PartialFunction[A, B])
 }
 
 object Actor {
+  implicit def actorOfFutureToFlattenedActor[A, B](a: Actor[A, Future[B]]): Actor[A, B] = a.flatten
+
   /**
    *
    * {{{
@@ -181,7 +183,7 @@ object Actor {
     def apply(a: A): Future[B] = Future.lift(b)
   }
 
-  def apply[A, B](f: PartialFunction[A, B])(implicit ActorExecutionStrategy: ActorExecutionStrategy): Actor[A, B] = new Actor[A, B] { self =>
+  def apply[A, B](f: PartialFunction[A, B])(implicit strategy: ActorExecutionStrategy): Actor[A, B] = new Actor[A, B] { self =>
     def isDefinedAt(request: A): Boolean = {
       try f.isDefinedAt(request)
       catch {
@@ -196,7 +198,7 @@ object Actor {
         response.cancel(new Exception("This actor does not handle the message " + request))
       }
       else {
-        ActorExecutionStrategy.submit(f, (request, response))
+        strategy.submit(f, (request, response))
       }
 
       response
