@@ -1,12 +1,12 @@
 package blueeyes.core.service
 
 import org.spex.Specification
-import blueeyes.concurrent.{Future, FutureImplicits}
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import java.net.InetAddress
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
 
-class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators with HttpClientTransformerImplicits with FutureImplicits {
+class HttpClientTransformerCombinatorsSpec extends Specification with HttpClientTransformerCombinators with HttpClientTransformerImplicits with FutureImplicits with FutureDeliveryStrategySequential{
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "")
   private val responseFuture = Future[String]("")
   private val mockClient = new HttpClient[String]{

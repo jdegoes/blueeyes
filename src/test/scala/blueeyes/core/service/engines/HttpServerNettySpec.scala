@@ -3,7 +3,7 @@ package blueeyes.core.service.engines
 import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilderString
 import java.util.concurrent.CountDownLatch
@@ -13,7 +13,7 @@ import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 
-class HttpServerNettySpec extends Specification {
+class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential{
 
   private val configPattern = """server{
   port = %d
@@ -129,7 +129,7 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesStri
   }
 }
 
-class SampleClientFacade(port: Int, sslPort: Int) extends HttpClientTransformerCombinators{
+class SampleClientFacade(port: Int, sslPort: Int) extends HttpClientTransformerCombinators with FutureDeliveryStrategySequential{
   def httpsRequest = protocol$("https"){
     host$("localhost"){
       port$(sslPort){

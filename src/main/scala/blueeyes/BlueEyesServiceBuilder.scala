@@ -3,9 +3,9 @@ package blueeyes
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.service._
-import blueeyes.concurrent.{Future, FutureImplicits}
+import concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
 
-/** Convenience trait for building services with many common mixins. 
+/** Convenience trait for building services with many common mixins.
  * <pre>
  * services {
  *   email {
@@ -66,7 +66,8 @@ trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with
   HttpRequestHandlerCombinators with 
   HttpRequestHandlerImplicits with
   RestPathPatternImplicits with
-  HttpServiceDescriptorFactoryCombinators{
+  HttpServiceDescriptorFactoryCombinators with
+  FutureDeliveryStrategySequential{
 
 }
 trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[Array[Byte]] with BijectionsByteArray

@@ -4,7 +4,7 @@ import org.spex.Specification
 import java.util.concurrent.{CountDownLatch, Executors}
 import util.Random
 
-class StrategyThreadedNSpec extends Specification{
+class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySequential{
 
   private val random = new Random()
 

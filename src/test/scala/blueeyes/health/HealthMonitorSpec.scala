@@ -4,10 +4,10 @@ import metrics.Counter
 import org.specs.Specification
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.json.JsonAST._
 
-class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
+class HealthMonitorSpec extends Specification with blueeyes.json.Implicits with FutureDeliveryStrategySequential{
 
   private val precision = 5.0
 

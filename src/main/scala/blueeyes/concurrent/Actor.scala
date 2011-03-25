@@ -159,7 +159,7 @@ sealed case class ActorFactory[A, B, S](factory: S => PartialFunction[A, B])
   def bind(state: => S): () => Actor[A, B] = () => self.apply(state)
 }
 
-object Actor {
+object Actor extends FutureDeliveryStrategySequential{
   /**
    *
    * {{{
