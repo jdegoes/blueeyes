@@ -2,14 +2,14 @@ package blueeyes.core.service
 
 import scala.xml.NodeSeq
 
-import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.core.data.Bijection
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
-trait HttpRequestHandlerCombinators {
+trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
   /** The path combinator creates a handler that is defined only for suffixes 
    * of the specified path pattern.
    *

@@ -4,13 +4,13 @@ import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 
 import blueeyes.core.http._
-import blueeyes.concurrent.Future
 import blueeyes.util.CommandLineArguments
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
 import java.net.InetAddress
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -34,7 +34,7 @@ trait HttpReflectiveServiceList[T] { self =>
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
  */
-trait HttpServer[T] extends HttpRequestHandler[T] { self =>
+trait HttpServer[T] extends HttpRequestHandler[T] with FutureDeliveryStrategySequential{ self =>
 
   private lazy val NotFound            = HttpResponse[T](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError))

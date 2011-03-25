@@ -6,9 +6,9 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
-import blueeyes.concurrent.Future
 import blueeyes.util.Clock
 import java.net.InetAddress
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 /** A request logger is a function from (request/future of response) to future 
  * of log line. Request loggers do not have side effects.
@@ -30,7 +30,7 @@ trait HttpRequestLogger[T, S] extends ((HttpRequest[T], Future[HttpResponse[S]])
   }
 }
 
-object HttpRequestLogger {
+object HttpRequestLogger extends FutureDeliveryStrategySequential{
   import blueeyes.parsers.W3ExtendedLogGrammar._
   import blueeyes.parsers.W3ExtendedLogAST._
   

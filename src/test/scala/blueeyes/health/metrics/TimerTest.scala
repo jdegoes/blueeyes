@@ -3,10 +3,10 @@ package blueeyes.health.metrics
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.Spec
 import blueeyes.health.time.Duration
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import java.util.concurrent.CountDownLatch
 
-class TimerTest extends Spec with MustMatchers {
+class TimerTest extends Spec with MustMatchers with FutureDeliveryStrategySequential {
   val precision = 5.0 // milliseconds
 
   describe("timing an event") {

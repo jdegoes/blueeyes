@@ -8,7 +8,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.util.CharsetUtil
 import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
@@ -17,7 +17,7 @@ import net.lag.logging.Logger
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 
-class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters{
+class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters with FutureDeliveryStrategySequential{
   private val handler       = mock[HttpRequestHandler[String]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]

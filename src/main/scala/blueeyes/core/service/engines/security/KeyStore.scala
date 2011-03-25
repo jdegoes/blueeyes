@@ -7,8 +7,7 @@ import net.lag.logging.Logger
 import java.io.{FileInputStream, File, ByteArrayInputStream}
 import java.security.cert.Certificate
 import java.security.{Key, KeyStore, KeyFactory}
-
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 object CertificateDecoder{
   def apply(encodedPrivateKey: String, encodedCertificate: String) = {
@@ -40,7 +39,7 @@ object KeyStoreFactory {
   }
 }
 
-object JavaKeyTool {
+object JavaKeyTool extends FutureDeliveryStrategySequential{
   import java.lang.{Process, ProcessBuilder}
   import java.io.{InputStream, ByteArrayOutputStream}
   import scala.actors.Actor.actor

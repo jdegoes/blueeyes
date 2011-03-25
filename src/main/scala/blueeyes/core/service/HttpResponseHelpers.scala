@@ -1,12 +1,12 @@
 package blueeyes.core.service
 
-import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
-trait HttpResponseHelpers {
+trait HttpResponseHelpers extends FutureDeliveryStrategySequential{
   /** Shorthand function to create a future of an HttpResponse from the given parameters.
    * {{{
    * respond(content = Some(<html></html>))
