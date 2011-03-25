@@ -5,10 +5,10 @@ import org.specs.Specification
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpMethods._
-import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
-class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators {
+class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators with FutureDeliveryStrategySequential{
   type Handler[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
   
   "refineContentType should throw an exception when type cannot be refined to specified subtype" in {

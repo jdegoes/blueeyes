@@ -1,5 +1,7 @@
 package blueeyes.concurrent
 
+import scalaz.{Validation, Success, Failure}
+
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
  * this future has three possible states: undecided (not done), canceled (aborted
  * due to request or error), or delivered. The triune nature of the future makes
@@ -14,7 +16,7 @@ package blueeyes.concurrent
  * the exceptions will not terminate calling code. All such "swallowed" exceptions
  * are reported to the thread's default exception handler.
  */
-class Future[T] extends ReadWriteLock{
+class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadWriteLock{
   import scala.collection.mutable.ArrayBuffer
 
   private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
@@ -64,11 +66,7 @@ class Future[T] extends ReadWriteLock{
         // because the future's state is set to delivered, so _listeners
         // list cannot possibly change except through this method.
 
-        _listeners.foreach { listener =>
-          trapError[Unit] {
-            listener(deliverable)
-          }
-        }
+        deliverAndHandleError(_result.get, _listeners.toList)
 
         _listeners.clear()
     }
@@ -103,7 +101,7 @@ class Future[T] extends ReadWriteLock{
    */
   def ifCanceled(f: Option[Throwable] => Unit): Future[T] = {
     writeLock {
-      if (isCanceled) f(_error)
+      if (isCanceled) deliverAndHandleError(_error, f :: Nil)
       else if (!isDone) _canceled.append(f)
     }
 
@@ -161,9 +159,9 @@ class Future[T] extends ReadWriteLock{
 
     ifCanceled { why =>
       trapError(defaultFactory(why)) match {
-        case Left(why)     => f.fatal(Some(why))
+        case Failure(why)     => f.fatal(Some(why))
 
-        case Right(result) => f.deliver(result)
+        case Success(result) => f.deliver(result)
       }
     }
 
@@ -202,7 +200,7 @@ class Future[T] extends ReadWriteLock{
   def deliverTo(f: T => Unit): Future[T] = {
     writeLock {
       if (!isCanceled) {
-        if (isDelivered) f(_result.get)
+        if (isDelivered) deliverAndHandleError(_result.get, f :: Nil)
         else _listeners.append(f)
       }
       this
@@ -390,11 +388,7 @@ class Future[T] extends ReadWriteLock{
       case false =>
 
       case true =>
-        _canceled.foreach { listener =>
-          trapError {
-            listener(error)
-          }
-        }
+        deliverAndHandleError(error ,_canceled.toList)
 
         _canceled.clear()
     }
@@ -423,20 +417,32 @@ class Future[T] extends ReadWriteLock{
     }
   }
 
-  private def trapError[T](f: => T): Either[Throwable, T] = {
+  private def trapError[T](f: => T): Validation[Throwable, T] = {
     try {
-      Right(f)
+      Success(f)
     }
     catch {
-      case error: Throwable =>
-        Thread.getDefaultUncaughtExceptionHandler match {
-          case handler: Thread.UncaughtExceptionHandler =>
-            handler.uncaughtException(Thread.currentThread, error)
+      case error: Throwable => handleErrors(error :: Nil)
+        Failure(error)
+    }
+  }
 
-          case null =>
+  private def deliverAndHandleError[A](value: A, listeners: Iterable[A => Unit]){
+    deliveryStrategy.deliver(value, listeners) match{
+      case success: Success[List[Throwable], Unit] =>
+      case failure: Failure[List[Throwable], Unit] => handleErrors(failure.e)
+    }
+  }
+
+  private def handleErrors(errors: Iterable[Throwable]){
+    Thread.getDefaultUncaughtExceptionHandler match {
+      case handler: Thread.UncaughtExceptionHandler =>
+        val currentThread = Thread.currentThread
+        errors foreach { error =>
+          handler.uncaughtException(currentThread, error)
         }
 
-        Left(error)
+      case null =>
     }
   }
 }
@@ -444,23 +450,23 @@ class Future[T] extends ReadWriteLock{
 object Future {
   /** Creates a "dead" future that is canceled and will never be delivered.
    */
-  def dead[T]: Future[T] = {
+  def dead[T](implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
     val f = new Future[T]
     f.cancel
     f
   }
 
-  def dead[T](e: Throwable): Future[T] = {
+  def dead[T](e: Throwable)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
     val f = new Future[T]
     f.cancel(e)
     f
   }
 
-  def lift[T](t: T): Future[T] = new Future().deliver(t: T)
+  def lift[T](t: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = new Future().deliver(t: T)
 
-  def apply[T](t: T): Future[T] = lift(t)
+  def apply[T](t: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = lift(t)
 
-  def apply[T](futures: Future[T]*): Future[List[T]] = {
+  def apply[T](futures: Future[T]*)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[List[T]] = {
     import java.util.concurrent.ConcurrentHashMap
 
     val resultsMap = new ConcurrentHashMap[Int, T]
@@ -503,7 +509,7 @@ object Future {
     result
   }
 
-  def async[T](f: => T): Future[T] = {
+  def async[T](f: => T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
     val result = new Future[T]
 
     import scala.actors.Actor.actor
@@ -515,7 +521,7 @@ object Future {
     result
   }
 
-  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T]): Future[T] = {
+  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T])(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
     val newF = new Future[T]
 
     f.respond { t =>
@@ -527,7 +533,7 @@ object Future {
 }
 
 trait FutureImplicits {
-  implicit def any2Future[T, S >: T](any: T): Future[S] = Future(any: S)
+  implicit def any2Future[T, S >: T](any: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[S] = Future(any: S)
 
   implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = new {
     def join: Future[(U, V)] = tuple._1.zip(tuple._2)

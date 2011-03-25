@@ -2,8 +2,7 @@ package blueeyes.persistence.cache
 
 import scala.collection.mutable.Map
 import scala.actors.Actor
-
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 /** A stage is a particular kind of cache that is used for staging IO updates.
  * Many kinds of IO updates can be combined (e.g. instead of writing a single
@@ -17,7 +16,7 @@ import blueeyes.concurrent.Future
  * Stopping a stage evicts all entries from the stage. As part of shutdown, in
  * order to avoid data loss, every stage should be stopped.
  */
-trait Stage[K, V] extends Map[K, V] {
+trait Stage[K, V] extends Map[K, V] with FutureDeliveryStrategySequential{
   def settings: CacheSettings[K, V]
 
   def coalesce: (K, V, V) => V

@@ -1,6 +1,5 @@
 package blueeyes.core.service.engines
 
-import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.data.Bijection
@@ -15,9 +14,10 @@ import org.xlightweb.client.{HttpClient => XLHttpClient}
 import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
                       OptionsRequest, PostRequest, PutRequest, BodyDataSource}
 import scala.collection.JavaConversions._
+import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 
-sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T]{
+sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeliveryStrategySequential{
   def contentBijection: Bijection[BodyDataSource, Option[T]]
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()

@@ -3,13 +3,13 @@ package blueeyes.core.service
 import org.specs.Specification
 import blueeyes.parsers.W3ExtendedLogAST._
 import blueeyes.core.http._
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.util.ClockMock
 import org.joda.time.format.DateTimeFormat
 import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._
 
-class HttpRequestLoggerSpec extends Specification with ClockMock{
+class HttpRequestLoggerSpec extends Specification with ClockMock with FutureDeliveryStrategySequential{
 
   private val DateFormatter = DateTimeFormat.forPattern("yyyy-MM-dd")
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")
