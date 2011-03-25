@@ -29,8 +29,6 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
   """.format(System.getProperty("java.io.tmpdir") + File.separator + "w3log.log")
 
-  println(System.getProperty("java.io.tmpdir"))
-  
   implicit val httpClient: HttpClient[String] = new HttpClient[String] {
     def apply(r: HttpRequest[String]): Future[HttpResponse[String]] = {
       Future(HttpResponse[String](content = Some(r.path match {

@@ -140,7 +140,7 @@ object RestPathPattern extends RegexParsers {
 object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar with RegexUtil{
   override def skipWhitespace = false
 
-  def validUrlFrag:     Parser[String] = """[a-zA-Z0-9\-_.+!*'()]+""".r
+  def validUrlFrag:     Parser[String] = """[^/]+""".r
   def validSymbolName:  Parser[String] = """[a-zA-Z_][a-zA-Z_0-9]*""".r
   def pathSeparator:    Parser[String] = "/"
   def startOfString:    Parser[String] = """^""".r
