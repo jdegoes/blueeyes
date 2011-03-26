@@ -4,12 +4,12 @@ import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.json.JsonAST._
 
 /**
- * Simple abstraction for representing a bunch of patches to a mongo collection.
+ * Simple abstraction for representing a collections of MongoDB patches.
  */
 case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) extends FutureDeliveryStrategySequential {
   def append(that: MongoPatches): MongoPatches = this :+ that
 
-  /** Combines the two patches into a single patches object.
+  /** Combines the two collections of patches into a single collection.
    */
   def :+ (that: MongoPatches): MongoPatches = {
     val allFilters = this.patches.keys ++ that.patches.keys
@@ -27,6 +27,10 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) extends FutureDe
   }
 
   def +: (that: MongoPatches): MongoPatches = this.append(that)
+
+  /** Adds a single patch to this collection of patches.
+   */
+  def + (patch: (MongoFilter, MongoUpdate)): MongoPatches = this :+ MongoPatches(Map(patch))
 
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
