@@ -17,7 +17,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
       val update1 = this.patches.get(filter).getOrElse(MongoUpdateNothing)
       val update2 = that.patches.get(filter).getOrElse(MongoUpdateNothing)
 
-      val totalUpdate = update1 + update2
+      val totalUpdate = update1 & update2
 
       patches + (filter -> totalUpdate)
     })
