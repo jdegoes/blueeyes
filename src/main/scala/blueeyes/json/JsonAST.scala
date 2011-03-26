@@ -35,6 +35,25 @@ object JsonAST {
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product {
     type Values
 
+    /** Sorts the JValue according to natural ordering. This can be considered a
+     * form of "normalization" to aid comparisons between different JValues.
+     *
+     * {{{
+     * json.sort
+     * }}}
+     */
+    def sort: this.type = {
+      import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
+
+      (this match {
+        case JObject(fields)      => JObject(fields.map(_.sort).sorted(JValueOrdering))
+        case JArray(elements)     => JArray(elements.map(_.sort).sorted(JValueOrdering))
+        case JField(name, value)  => JField(name, value.sort)
+
+        case _ => this
+      }).asInstanceOf[this.type]
+    }
+
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
      * <p>

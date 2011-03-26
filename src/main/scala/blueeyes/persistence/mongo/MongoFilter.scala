@@ -57,6 +57,16 @@ sealed trait MongoFilter { self =>
     case (_, MongoFilterAll)   => self
     case _  => MongoOrFilter(self :: that :: Nil)
   }
+
+  final override def hashCode = sorted.hashCode
+
+  final override def equals(that: Any) = that match {
+    case that: MongoFilter => this.sorted == that.sorted
+
+    case _ => false
+  }
+
+  private lazy val sorted = filter.sort
 }
 
 case object MongoFilterAll extends MongoFilter {
