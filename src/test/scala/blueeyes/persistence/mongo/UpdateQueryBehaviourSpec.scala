@@ -17,14 +17,14 @@ class UpdateQueryBehaviourSpec  extends Specification {
 
     val query  = update("collection").set(jObject).where("name" === "Joe")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(1)).update(filter, jObject, false, false)
 
-    result.value must eventually (beSome(JNothing))
+    result must be (JNothing)
   }
   "Does not call collection method when update is MongoUpdateNothing" in{
     when(collection.getLastError).thenReturn(None)
@@ -33,13 +33,13 @@ class UpdateQueryBehaviourSpec  extends Specification {
 
     val query  = update("collection").set(MongoUpdateNothing).where("name" === "Joe")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()        
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(0)).update(filter, MongoUpdateNothing, false, false)
 
-    result.value must eventually (beSome(JNothing))
+    result must be (JNothing)
   }
 }

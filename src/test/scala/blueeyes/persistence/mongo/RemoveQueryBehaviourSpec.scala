@@ -17,27 +17,27 @@ class RemoveQueryBehaviourSpec extends Specification {
 
     val query  = remove.from("collection").where("name" === "Joe")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(1)).remove(filter)
 
-    result.value must eventually (beSome(JNothing))
+    result must be (JNothing)
   }
   "Call collection method with dummy JObject when filter is not specified" in{
     when(collection.getLastError).thenReturn(None)
 
     val query = remove.from("collection")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()        
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(1)).remove(None)
     
-    result.value must eventually (beSome(JNothing))
+    result must be (JNothing)
   }
 }

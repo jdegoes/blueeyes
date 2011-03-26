@@ -7,34 +7,29 @@ import com.mongodb.MongoException
 import blueeyes.concurrent._
 
 private[mongo] object QueryBehaviours{
-  trait QueryBehaviour[T] extends Function[DatabaseCollection, Future[T]]
+  trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
 
   trait AsynchQueryBehaviour[T] extends QueryBehaviour[T]{
-    private implicit val strategy = ActorExecutionStrategy
-    private val mongoActor = Actor[DatabaseCollection, T]{
-      case collection: DatabaseCollection => {
-        collection.requestStart
-        val result: Either[Throwable, T] = try {
-          val answer    = query(collection)
-          val lastError = collection.getLastError
+    def apply(collection: DatabaseCollection) = {
+      collection.requestStart
+      val result: Either[Throwable, T] = try {
+        val answer    = query(collection)
+        val lastError = collection.getLastError
 
-          lastError.map(why => Left(new MongoException(why))).getOrElse(Right(answer))
-        }
-        catch {
-         case error: Throwable => Left(error)
-        }
-        finally {
-          collection.requestDone
-        }
+        lastError.map(why => Left(new MongoException(why))).getOrElse(Right(answer))
+      }
+      catch {
+       case error: Throwable => Left(error)
+      }
+      finally {
+        collection.requestDone
+      }
 
-        result match {
-          case Left(why)     => throw why
-          case Right(answer) => answer
-        }
+      result match {
+        case Left(why)     => throw why
+        case Right(answer) => answer
       }
     }
-
-    def apply(collection: DatabaseCollection): Future[T] = mongoActor(collection)
 
     def query(collection: DatabaseCollection): T
   }

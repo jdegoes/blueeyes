@@ -1,6 +1,6 @@
 package blueeyes.concurrent
 
-import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, BlockingQueue, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, ThreadPoolExecutor, BlockingQueue, SynchronousQueue, LinkedBlockingQueue, TimeUnit}
 
 trait ActorExecutionStrategy {
   def submit[A, B](f: A => B, work: (A, Future[B])): Unit
@@ -110,7 +110,7 @@ trait ActorExecutionStrategyFixedPool extends ActorExecutionStrategyMultiThreade
 }
 
 object ActorExecutionStrategy extends ActorExecutionStrategyMultiThreaded {
-  lazy val executorService = Executors.newCachedThreadPool()
+  lazy val executorService = new ThreadPoolExecutor(2, 1000, 10*60, TimeUnit.SECONDS, new SynchronousQueue())
 }
 
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>

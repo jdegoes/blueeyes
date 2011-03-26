@@ -3,6 +3,7 @@ package blueeyes.demo
 import blueeyes.concurrent.Future
 import blueeyes.config.ConfiggyModule
 import blueeyes.persistence.mongo.mock.MockMongoModule
+import blueeyes.persistence.mongo.RealMongoModule
 import com.google.inject.Guice
 import blueeyes.BlueEyesServer
 import net.lag.configgy.ConfigMap

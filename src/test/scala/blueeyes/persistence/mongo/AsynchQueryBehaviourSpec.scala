@@ -8,7 +8,7 @@ import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 
-class AsynchQueryBehaviourSpec extends Specification {
+/*class AsynchQueryBehaviourSpec extends Specification {
   private val query       = new QueryBehaviours.AsynchQueryBehaviour[Int]{
     def query(collection: DatabaseCollection): Int = 1
   }
@@ -49,4 +49,4 @@ class AsynchQueryBehaviourSpec extends Specification {
 
     result.isCanceled must eventually (be (true))
   }
-}
+}*/

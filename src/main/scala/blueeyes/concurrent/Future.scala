@@ -16,11 +16,13 @@ import scalaz.{Validation, Success, Failure}
  * the exceptions will not terminate calling code. All such "swallowed" exceptions
  * are reported to the thread's default exception handler.
  */
-class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadWriteLock{
+class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
   import scala.collection.mutable.ArrayBuffer
 
+  private val lock = new ReadWriteLock{}
+
   private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
-  private def listeners: List[T => Unit] = readLock { _listeners.toList }
+  private def listeners: List[T => Unit] = lock.readLock { _listeners.toList }
 
   private var _result: Option[T] = None
   private var _isSet: Boolean = false
@@ -38,7 +40,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadW
    * used to cancel the future.
    */
   def deliver(computation: => T): Future[T] = {
-    writeLock {
+    lock.writeLock {
       if (_isSet) Predef.error("Future already delivered")
       else if (_isCanceled) None
       else {
@@ -100,7 +102,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadW
    * explicitly known the result of a future will not be used.
    */
   def ifCanceled(f: Option[Throwable] => Unit): Future[T] = {
-    writeLock {
+    lock.writeLock {
       if (isCanceled) deliverAndHandleError(_error, f :: Nil)
       else if (!isDone) _canceled.append(f)
     }
@@ -198,7 +200,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadW
    * is delivered.
    */
   def deliverTo(f: T => Unit): Future[T] = {
-    writeLock {
+    lock.writeLock {
       if (!isCanceled) {
         if (isDelivered) deliverAndHandleError(_result.get, f :: Nil)
         else _listeners.append(f)
@@ -376,7 +378,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadW
   def toEither: Either[Throwable, T] = if (isCanceled) Left(error.get) else Right(value.get)
 
   protected def forceCancel(error: Option[Throwable]): Future[T] = {
-    writeLock {
+    lock.writeLock {
       if (_isCanceled) false
       else {
         _error      = error
@@ -397,7 +399,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy) extends ReadW
   }
 
   private def internalCancel(error: Option[Throwable]): Boolean = {
-    writeLock {
+    lock.writeLock {
       if (isDone) Left(false)           // <-- Already done, can't be canceled
       else if (isCanceled) Left(true)   // <-- Already canceled, nothing to do
       else Right(())

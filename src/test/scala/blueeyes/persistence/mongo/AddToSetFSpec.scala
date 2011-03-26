@@ -11,6 +11,9 @@ class AddToSetFSpec extends Specification{
   "fuse with AddToSetF(String) creates AddToSetF(String) with all elements" in {
     "n".addToSet(MongoPrimitiveString("bar")).fuseWith(JPath("n").addToSet(MongoPrimitiveString("foo"))) must beSome((JPath("n").addToSet(MongoPrimitiveString("bar"), MongoPrimitiveString("foo"))))
   }
+  "fuse with AddToSetF(String) with the same strings creates AddToSetF(String) with one elements" in {
+    "n".addToSet(MongoPrimitiveString("bar")).fuseWith(JPath("n").addToSet(MongoPrimitiveString("bar"))) must beSome((JPath("n").addToSet(MongoPrimitiveString("bar"))))
+  }
   "fuse with AddToSetF(Array) creates AddToSetF(String) with all elements" in {
     "n".addToSet(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")).fuseWith(JPath("n").addToSet(MongoPrimitiveString("baz"))) must beSome((JPath("n").addToSet(MongoPrimitiveString("bar"), MongoPrimitiveString("foo"), MongoPrimitiveString("baz"))))
   }

@@ -309,6 +309,7 @@ private[mongo] object UpdateFieldFunctions{
           case (MongoPrimitiveArray(x), MongoPrimitiveArray(y)) => Some(path.addToSet(y ::: x :_*))
           case (MongoPrimitiveArray(x), y)                      => Some(path.addToSet(y :: x :_*))
           case (x, MongoPrimitiveArray(y))                      => Some(path.addToSet((y ::: List(x)) :_*))
+          case (x, y) if (x == y)                               => Some(this)
           case (x, y)                                           => Some(path.addToSet(y, x))
         }
       }

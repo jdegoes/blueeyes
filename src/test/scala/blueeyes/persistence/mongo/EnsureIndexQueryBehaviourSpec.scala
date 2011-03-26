@@ -15,13 +15,13 @@ class EnsureIndexQueryBehaviourSpec extends Specification {
 
     val query  = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()    
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(1)).ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
 
-    result.value must eventually (beSome (JNothing))
+    result must be (JNothing)
   }
 }

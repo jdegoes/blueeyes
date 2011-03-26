@@ -18,13 +18,13 @@ class InsertQueryBehaviourSpec extends Specification {
 
     val query  = insert(jObject).into("collection")
     val result = query(collection)
-    val countDown = new CountDownLatch(1)
-
-    result.deliverTo{v => countDown.countDown()}
-    countDown.await()    
+//    val countDown = new CountDownLatch(1)
+//
+//    result.deliverTo{v => countDown.countDown()}
+//    countDown.await()
 
     Mockito.verify(collection, times(1)).insert(jObject2MongoObject(jObject) :: Nil)
 
-    result.value must eventually (beSome(JNothing))
+    result must be (JNothing)
   }
 }

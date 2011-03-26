@@ -1,9 +1,10 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import blueeyes.concurrent.Future
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
+import com.mongodb.MongoException
+import blueeyes.concurrent.{ActorExecutionStrategy, Actor, Future}
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -39,13 +40,22 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
+  private val mongoActor = Actor[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
+    case v: Tuple2[MongoQuery[_], DatabaseCollection] => {
+      val (query, collection) = v
+      query(collection)
+    }
+  }
+
   def apply[T](query: MongoQuery[T]): Future[T]  = {
     val databaseCollection = query.collection match{
       case MongoCollectionReference(name)         => collection(name)
       case MongoCollectionHolder(realCollection)  => realCollection
     }
-    query(databaseCollection)
+    mongoActor(Tuple2[MongoQuery[_], DatabaseCollection](query, databaseCollection)).asInstanceOf[Future[T]]
   }
+
+  protected def actorExecutionStrategy: ActorExecutionStrategy
 
   protected def collection(collectionName: String): DatabaseCollection
 }
