@@ -72,8 +72,8 @@ case class MongoUpdateBuilder(jpath: JPath) {
 }
 
 import Changes._
-sealed trait MongoUpdate{ self =>
 
+sealed trait MongoUpdate{ self =>
   import Changelist._
   import MongoUpdateObject._
 
@@ -87,7 +87,7 @@ sealed trait MongoUpdate{ self =>
   def & (that: MongoUpdate): MongoUpdate = (self, that) match {
     case (x: MongoUpdateField,   y: MongoUpdateField)  => x *> y
     case (x: MongoUpdateField,   y: MongoUpdateFields) => x *> toChanges(y)
-    
+
     case (x: MongoUpdateFields, y: MongoUpdateField)   => x *> y
     case (x: MongoUpdateFields, y: MongoUpdateFields)  => x *> toChanges(y)
 
@@ -97,6 +97,16 @@ sealed trait MongoUpdate{ self =>
     case (MongoUpdateNothing, _)  => that
     case (_, MongoUpdateNothing)  => self
   }
+
+  final override def hashCode = sorted.hashCode
+
+  final override def equals(that: Any) = that match {
+    case that: MongoUpdate => this.sorted == that.sorted
+
+    case _ => false
+  }
+
+  private lazy val sorted = toJValue.sort
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate{
