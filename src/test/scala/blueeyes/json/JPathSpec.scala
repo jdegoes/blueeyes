@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package blueeyes.json
 
 import org.specs.{Specification, ScalaCheck}
@@ -33,13 +33,13 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath {
         JPath(jpath.toString) mustEqual jpath
       } must pass
     }
-    
-  
+
+
     "forgivingly parse initial field name without leading dot" in {
       JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
     }
   }
-  
+
   "Extractor" should {
     "extract a second level node" in {
       val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
@@ -47,24 +47,28 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath {
       JPath("address.city").extract(j) mustEqual(JString("B") :: Nil)
     }
   }
-  
+
   "Parent" should {
     "return parent" in {
-      JPath(".foo.bar").parent mustEqual Some(JPath(".foo"))
+      JPath(".foo.bar").parent must beSome(JPath(".foo"))
     }
-    
+
+    "return Identity for path 1 level deep" in {
+      JPath(".foo").parent must beSome(JPath.Identity)
+    }
+
     "return None when there is no parent" in {
-      JPath(".foo").parent mustEqual None
+      JPath.Identity.parent mustEqual None
     }
   }
-  
+
   "Ancestors" should {
     "return two ancestors" in {
-      JPath(".foo.bar.baz").ancestors mustEqual List(JPath(".foo.bar"), JPath(".foo"))
+      JPath(".foo.bar.baz").ancestors mustEqual List(JPath(".foo.bar"), JPath(".foo"), JPath.Identity)
     }
-    
-    "return empty list" in {
-      JPath(".foo").ancestors mustEqual Nil
+
+    "return empty list for identity" in {
+      JPath.Identity.ancestors mustEqual Nil
     }
   }
 }
