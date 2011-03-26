@@ -96,7 +96,7 @@ object JPath {
   private val PathPattern  = """\.|(?=\[\d+\])""".r
   private val IndexPattern = """^\[(\d+)\]$""".r
 
-  def Identity = apply()
+  val Identity = apply()
 
   def apply(n: JPathNode*): JPath = CompositeJPath(n.toList)
 
