@@ -1,6 +1,8 @@
 package blueeyes.concurrent
 
+import scalaz.{Success, Validation}
 import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, ThreadPoolExecutor, BlockingQueue, SynchronousQueue, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.atomic.AtomicLong
 
 trait ActorExecutionStrategy {
   def submit[A, B](f: A => B, work: (A, Future[B])): Unit
@@ -69,32 +71,48 @@ trait ActorExecutionStrategyMultiThreaded {
 }
 
 private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments: ConcurrentMap[_ => _, StrategyWorker[_, _]]) extends Runnable{
-  private val sequential = new ActorExecutionStrategySequential { }
+  private val executionSequential = new ActorExecutionStrategySequential { }
+  private val deliverySequential  = new FutureDeliveryStrategySequential { }
+  private val deliveryCount       = new AtomicLong(0)
 
   val doneLock = new ReadWriteLock{}
-  val queue: BlockingQueue[(A, Future[B])] = new LinkedBlockingQueue[(A, Future[B])]()
+  val queue: BlockingQueue[StrategyWorkerTask] = new LinkedBlockingQueue[StrategyWorkerTask]()
 
   var done = false
 
-  def offer(work: (A, Future[B])) = {
+  def offer(work: (A, Future[B])): Unit = offer(Work(work))
+
+  def offer[T](value: T, listeners: Iterable[T => Unit]): Unit = {
+    offer(Deliver(value, listeners))
+    deliveryCount.decrementAndGet
+  }
+
+  def waitDelivery = deliveryCount.incrementAndGet
+
+  private def offer(task: StrategyWorkerTask): Unit = {
     doneLock.readLock {
-      if (!done) queue.offer(work)
+      if (!done) queue.offer(task)
       else throw new NullPointerException()
     }
   }
 
   def run() = {
-    while (!done) {
-      val head = queue.poll(1, TimeUnit.MILLISECONDS)
+    ActorContext.withWorker(this){
+      while (!done) {
+        val head = queue.poll(1, TimeUnit.MILLISECONDS)
 
-      if (head != null) {
-        sequential.actorExecutionStrategy.submit(actorFn, head)
-      }
-      else {
-        doneLock.writeLock {
-          if (queue.size == 0) {
-            done = true
-            assignments.remove(actorFn, this)
+        if (head != null) {
+          head match{
+            case w: Work[A, B] => executionSequential.actorExecutionStrategy.submit(actorFn, w.work)
+            case d: Deliver[_] => deliverySequential.futureDeliveryStrategy.deliver(d.value, d.listeners)
+          }
+        }
+        else {
+          doneLock.writeLock {
+            if (queue.size == 0 && deliveryCount.get == 0) {
+              done = true
+              assignments.remove(actorFn, this)
+            }
           }
         }
       }
@@ -102,6 +120,18 @@ private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments
   }
 }
 
+private[concurrent] sealed trait StrategyWorkerTask
+private[concurrent] case class Work[A, B](work: (A, Future[B])) extends StrategyWorkerTask
+private[concurrent] case class Deliver[A](value: A, listeners: Iterable[A => Unit]) extends StrategyWorkerTask
+
+private[concurrent] class FutureDeliveryStrategyWorker(worker: StrategyWorker[_, _]) extends FutureDeliveryStrategy{
+ worker.waitDelivery
+ def deliver[A](value: A, listeners: Iterable[A => Unit]): Validation[List[Throwable], Unit] = {
+   worker.offer(value, listeners)
+
+   Success(())
+ }
+}
 
 trait ActorExecutionStrategyFixedPool extends ActorExecutionStrategyMultiThreaded {
   def actorExecutionStrategyThreadPoolSize: Int
@@ -160,6 +190,8 @@ sealed case class ActorFactory[A, B, S](factory: S => PartialFunction[A, B])
 }
 
 object Actor extends FutureDeliveryStrategySequential{
+  private val sequential = new FutureDeliveryStrategySequential{}
+
   implicit def actorOfFutureToFlattenedActor[A, B](a: Actor[A, Future[B]]): Actor[A, B] = a.flatten
 
   /**
@@ -192,7 +224,10 @@ object Actor extends FutureDeliveryStrategySequential{
     }
 
     def apply(request: A): Future[B] = {
-      val response = new Future[B]
+
+      val deliveryStrategy = ActorContext.get.map(worker => new FutureDeliveryStrategyWorker(worker)).getOrElse(sequential.futureDeliveryStrategy)
+
+      val response = new Future[B]()(deliveryStrategy)
 
       if (!isDefinedAt(request)) {
         response.cancel(new Exception("This actor does not handle the message " + request))
@@ -202,6 +237,24 @@ object Actor extends FutureDeliveryStrategySequential{
       }
 
       response
+    }
+  }
+}
+
+private[concurrent] object ActorContext{
+  private val tl = new ThreadLocal[StrategyWorker[_, _]]
+
+  def get : Option[StrategyWorker[_, _]] = {
+    if (tl.get() != null) Some(tl.get()) else None
+  }
+
+  def withWorker(x : StrategyWorker[_, _])(f : => Unit) = {
+    val old = get
+    try {
+      tl.set(x)
+      f
+    } finally {
+      tl.set(old.getOrElse(null))
     }
   }
 }

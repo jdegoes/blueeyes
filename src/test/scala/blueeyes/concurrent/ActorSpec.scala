@@ -4,6 +4,7 @@ import org.spex.Specification
 
 
 class ActorSpec extends Specification with ActorExecutionStrategySequential {
+
   "Actor" should {
     "process message" in {
       val actor = Actor[String, String] {
@@ -54,6 +55,28 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
       pow4AsStringA(0).value must eventually (beSome("0"))
       pow4AsStringA(1).value must eventually (beSome("1"))
       pow4AsStringA(2).value must eventually (beSome("16"))
+    }
+  }
+
+  "Actor to Actor" in{
+    "deliver future in actor thread" in{
+      var deliveried = false
+      val actor1 = Actor[String, Unit]{
+        case message: String => {
+          val thread  = Thread.currentThread
+           val actor2 = Actor[String, String]{
+            case message: String => "actor2"
+           }(ActorExecutionStrategy.actorExecutionStrategy)
+          val future = actor2("bar")
+
+          future.deliverTo{v =>
+            deliveried = thread == Thread.currentThread
+          }
+        }
+      }(ActorExecutionStrategy.actorExecutionStrategy)
+      actor1("test")
+
+      deliveried must eventually (be(true))
     }
   }
 }

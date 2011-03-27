@@ -40,7 +40,7 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
     }
   }
 
-  "StrategyThreadedN: handle musltiple requests from multiple threads for multiple functions" in{
+  "StrategyThreadedN: handle multiple requests from multiple threads for multiple functions" in{
     val executor = Executors.newFixedThreadPool(40)
 
     val functions  = Array.fill(2){f _}
