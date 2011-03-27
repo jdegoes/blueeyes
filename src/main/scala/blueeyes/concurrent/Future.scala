@@ -430,13 +430,10 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
   }
 
   private def deliverAndHandleError[A](value: A, listeners: Iterable[A => Unit]){
-    deliveryStrategy.deliver(value, listeners) match{
-      case success: Success[List[Throwable], Unit] =>
-      case failure: Failure[List[Throwable], Unit] => handleErrors(failure.e)
-    }
+    deliveryStrategy.deliver(value, listeners, handleErrors _)
   }
 
-  private def handleErrors(errors: Iterable[Throwable]){
+  private def handleErrors(errors: List[Throwable]){
     Thread.getDefaultUncaughtExceptionHandler match {
       case handler: Thread.UncaughtExceptionHandler =>
         val currentThread = Thread.currentThread

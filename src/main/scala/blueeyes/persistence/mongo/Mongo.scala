@@ -4,7 +4,7 @@ import scala.collection.IterableView
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
-import blueeyes.concurrent.{ActorExecutionStrategy, Actor, Future}
+import blueeyes.concurrent.{ActorImplementation, ActorExecutionStrategy, Actor, Future}
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -40,7 +40,7 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
-  private val mongoActor = Actor[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
+  private lazy val mongoActor = actorImplementation[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
     case v: Tuple2[MongoQuery[_], DatabaseCollection] => {
       val (query, collection) = v
       query(collection)
@@ -55,7 +55,7 @@ trait MongoDatabase{
     mongoActor(Tuple2[MongoQuery[_], DatabaseCollection](query, databaseCollection)).asInstanceOf[Future[T]]
   }
 
-  protected def actorExecutionStrategy: ActorExecutionStrategy
+  protected def actorImplementation: ActorImplementation
 
   protected def collection(collectionName: String): DatabaseCollection
 }

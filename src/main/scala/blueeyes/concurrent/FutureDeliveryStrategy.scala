@@ -4,12 +4,12 @@ import scalaz.{Success, Failure, Validation}
 import collection.mutable.ListBuffer
 
 trait FutureDeliveryStrategy {
- def deliver[A](value: A, listeners: Iterable[A => Unit]): Validation[List[Throwable], Unit]
+ def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit): Unit
 }
 
 trait FutureDeliveryStrategySequential {
  implicit val futureDeliveryStrategy = new FutureDeliveryStrategy {
-   def deliver[A](value: A, listeners: Iterable[A => Unit]): Validation[List[Throwable], Unit] = {
+   def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) = {
      val buffer = new ListBuffer[Throwable]
 
      listeners foreach { listener =>
@@ -19,8 +19,7 @@ trait FutureDeliveryStrategySequential {
        }
      }
 
-     if (buffer.length > 0) Failure(buffer.toList)
-     else Success(())
+     if (buffer.length > 0) errorHandler(buffer.toList)
    }
  }
 }

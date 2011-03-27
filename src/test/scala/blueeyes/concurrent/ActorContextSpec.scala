@@ -5,6 +5,7 @@ import org.spex.Specification
 
 class ActorContextSpec extends Specification{
 
+  import StrategyWorker._
   "Context is initialized by actor" in {
     var contextIsSet = false
 

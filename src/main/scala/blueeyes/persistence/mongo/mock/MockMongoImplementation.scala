@@ -7,7 +7,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
-import blueeyes.concurrent.{ActorExecutionStrategy, ActorExecutionStrategySequential, ReadWriteLock}
+import blueeyes.concurrent.{ActorImplementationSequential, ActorExecutionStrategy, ActorExecutionStrategySequential, ReadWriteLock}
 
 @com.google.inject.Singleton
 class MockMongo() extends Mongo{
@@ -20,8 +20,10 @@ class MockMongo() extends Mongo{
   }
 }
 
-private[mongo] class MockMongoDatabase() extends MongoDatabase with ActorExecutionStrategySequential{
+private[mongo] class MockMongoDatabase() extends MongoDatabase{
   private val collections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
+
+  protected val actorImplementation = new ActorImplementationSequential{}
 
   def collection(collectionName: String) = {
     collections.get(collectionName).getOrElse({

@@ -5,9 +5,10 @@ import org.spex.Specification
 
 class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
+  private val actorImplementation = new ActorImplementationSequential{}
   "Actor" should {
     "process message" in {
-      val actor = Actor[String, String] {
+      val actor = actorImplementation[String, String] {
         case message: String => message + "_done"
       }
 
@@ -17,7 +18,7 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
   "Actor of future" should {
     "flatten implicitly" in {
-      val actor1 = Actor[String, String] {
+      val actor1 = actorImplementation[String, String] {
         case message: String => message + "_done"
       }
 
@@ -32,7 +33,7 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
   "Actor examples" should {
     "compile" in {
       // Easy actor definition:
-      val squarePositiveA = Actor[Int, Int] {
+      val squarePositiveA = actorImplementation[Int, Int] {
         case x: Int if (x > 0) => x * x
       }
 
@@ -66,14 +67,14 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
           val thread  = Thread.currentThread
            val actor2 = Actor[String, String]{
             case message: String => "actor2"
-           }(ActorExecutionStrategy.actorExecutionStrategy)
+           }
           val future = actor2("bar")
 
           future.deliverTo{v =>
             deliveried = thread == Thread.currentThread
           }
         }
-      }(ActorExecutionStrategy.actorExecutionStrategy)
+      }
       actor1("test")
 
       deliveried must eventually (be(true))

@@ -12,23 +12,18 @@ class FutureDeliveryStrategySequentialSpec extends Specification{
 
       futureDeliveryStrategy.deliver("foo", { s: String =>
         result = Some(s)
-      } :: Nil)
+      } :: Nil, {errors => })
 
       result must eventually (beEqualTo(Some("foo")))
     }
-    "return Success when value is delivered" in{
-      val result = futureDeliveryStrategy.deliver("foo", { s: String =>
-      } :: Nil)
-
-      result must eventually (beEqualTo(Success(())))
-    }
-    "return Failure with error when value is not delivered" in{
+    "deliver errors with error handler when value is not delivered" in{
+      var delivered = false
       val error = new NullPointerException()
       val result = futureDeliveryStrategy.deliver("foo", { s: String =>
         throw error
-      } :: Nil)
+      } :: Nil, {errors => delivered = true})
 
-      result must eventually (beEqualTo(Failure(error :: Nil)))
+      delivered must eventually (be(true))
     }
   }
 
