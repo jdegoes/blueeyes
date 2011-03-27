@@ -73,7 +73,8 @@ trait ActorExecutionStrategyMultiThreaded {
 private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments: ConcurrentMap[_ => _, StrategyWorker[_, _]]) extends Runnable{
   private val executionSequential = new ActorExecutionStrategySequential { }
   private val deliverySequential  = new FutureDeliveryStrategySequential { }
-  private val deliveryCount       = new AtomicLong(0)
+  @volatile
+  private var deliveryCount       = 0
 
   val doneLock = new ReadWriteLock{}
   val queue: BlockingQueue[StrategyWorkerTask] = new LinkedBlockingQueue[StrategyWorkerTask]()
@@ -82,12 +83,10 @@ private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments
 
   def offer(work: (A, Future[B])): Unit = offer(Work(work))
 
-  def offer[T](value: T, listeners: Iterable[T => Unit]): Unit = {
-    offer(Deliver(value, listeners))
-    deliveryCount.decrementAndGet
-  }
+  def offer[T](value: T, listeners: Iterable[T => Unit]): Unit = offer(Deliver(value, listeners))
 
-  def waitDelivery = deliveryCount.incrementAndGet
+
+  def waitDelivery = deliveryCount = deliveryCount + 1
 
   private def offer(task: StrategyWorkerTask): Unit = {
     doneLock.readLock {
@@ -104,12 +103,14 @@ private[concurrent] case class StrategyWorker[A, B](actorFn: A => B, assignments
         if (head != null) {
           head match{
             case w: Work[A, B] => executionSequential.actorExecutionStrategy.submit(actorFn, w.work)
-            case d: Deliver[_] => deliverySequential.futureDeliveryStrategy.deliver(d.value, d.listeners)
+            case d: Deliver[_] =>
+              deliverySequential.futureDeliveryStrategy.deliver(d.value, d.listeners)
+              deliveryCount = deliveryCount - 1
           }
         }
         else {
           doneLock.writeLock {
-            if (queue.size == 0 && deliveryCount.get == 0) {
+            if (queue.size == 0 && deliveryCount == 0) {
               done = true
               assignments.remove(actorFn, this)
             }
