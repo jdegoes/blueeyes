@@ -58,10 +58,10 @@ sealed trait MongoFilter { self =>
     case _  => MongoOrFilter(self :: that :: Nil)
   }
 
-  final override def hashCode = sorted.hashCode
+  final override lazy val hashCode = sorted.hashCode
 
   final override def equals(that: Any) = that match {
-    case that: MongoFilter => this.sorted == that.sorted
+    case that: MongoFilter if (this.hashCode == that.hashCode) => this.sorted == that.sorted
 
     case _ => false
   }
@@ -82,7 +82,7 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
-    lhs.nodes match{
+    lhs.nodes match {
       case Nil => value
       case _   => JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)
     }

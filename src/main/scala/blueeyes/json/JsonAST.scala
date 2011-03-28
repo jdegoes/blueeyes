@@ -537,7 +537,7 @@ object JsonAST {
     def values = Map() ++ fields.map(_.values : (String, Any))
 
     override def equals(that: Any): Boolean = that match {
-      case o: JObject => Set(fields.toArray: _*) == Set(o.fields.toArray: _*)
+      case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
       case _ => false
     }
   }
@@ -545,11 +545,6 @@ object JsonAST {
     type Values = List[Any]
     def values = elements.map(_.values)
     override def apply(i: Int): JValue = elements(i)
-
-    override def equals(that: Any): Boolean = that match {
-      case a: JArray => Set(elements.toArray: _*) == Set(a.elements.toArray: _*)
-      case _ => false
-    }
   }
 
   /** Renders JSON.

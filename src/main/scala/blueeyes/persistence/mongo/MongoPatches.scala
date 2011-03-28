@@ -7,30 +7,25 @@ import blueeyes.json.JsonAST._
  * Simple abstraction for representing a collections of MongoDB patches.
  */
 case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) extends FutureDeliveryStrategySequential {
-  def append(that: MongoPatches): MongoPatches = this :+ that
+  def append(that: MongoPatches): MongoPatches = this ++ that
 
   /** Combines the two collections of patches into a single collection.
    */
-  def :+ (that: MongoPatches): MongoPatches = {
-    val allFilters = this.patches.keys ++ that.patches.keys
+  def ++ (that: MongoPatches): MongoPatches = {
+    MongoPatches(that.patches.foldLeft(this.patches) { (allPatches, tuple) =>
+      val (filter, update2) = tuple
 
-    val empty = Map.empty[MongoFilter, MongoUpdate]
+      val update1 = allPatches.get(filter).getOrElse(MongoUpdateNothing)
 
-    MongoPatches(allFilters.foldLeft(empty) { (patches, filter) =>
-      val update1 = this.patches.get(filter).getOrElse(MongoUpdateNothing)
-      val update2 = that.patches.get(filter).getOrElse(MongoUpdateNothing)
-
-      val totalUpdate = update1 & update2
-
-      patches + (filter -> totalUpdate)
+      allPatches + (filter -> (update1 & update2))
     })
   }
 
-  def +: (that: MongoPatches): MongoPatches = this.append(that)
-
   /** Adds a single patch to this collection of patches.
    */
-  def + (patch: (MongoFilter, MongoUpdate)): MongoPatches = this :+ MongoPatches(Map(patch))
+  def + (patch: (MongoFilter, MongoUpdate)): MongoPatches = copy(
+    patches = patches + (patch._1 -> patches.get(patch._1).map(_ & patch._2).getOrElse(patch._2))
+  )
 
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
@@ -52,7 +47,7 @@ object MongoPatches {
   def apply(patch: (MongoFilter, MongoUpdate)): MongoPatches = MongoPatches(Map(patch))
 
   def apply(iter: Iterable[(MongoFilter, MongoUpdate)]): MongoPatches = iter.foldLeft(empty) { (patches, patch) =>
-    patches :+ apply(patch)
+    patches + patch
   }
 
   def apply(varargs: (MongoFilter, MongoUpdate)*): MongoPatches = apply(varargs: Iterable[(MongoFilter, MongoUpdate)])

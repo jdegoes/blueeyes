@@ -98,10 +98,10 @@ sealed trait MongoUpdate{ self =>
     case (_, MongoUpdateNothing)  => self
   }
 
-  final override def hashCode = sorted.hashCode
+  final override lazy val hashCode = sorted.hashCode
 
   final override def equals(that: Any) = that match {
-    case that: MongoUpdate => this.sorted == that.sorted
+    case that: MongoUpdate if (this.hashCode == that.hashCode) => this.sorted == that.sorted
 
     case _ => false
   }
