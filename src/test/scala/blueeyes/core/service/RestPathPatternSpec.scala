@@ -13,6 +13,9 @@ class RestPathPatternSpec extends Specification{
     "match regexp element with first named group" in{
       testPath("(?<bar>[a-z]+)", List(("foo", Map('bar -> "foo"))), List("1970"))
     }
+    "match regexp element with null named group" in{
+      testPath("([1-2]+)((?<foo>[1-2]+)?)", List(("1", Map('foo -> ""))), List())
+    }
     "match regexp element with not first named group" in{
       testPath("(foo(?<bar>baz))", List(("foobaz", Map('bar -> "baz"))), List("barfoo"))
     }

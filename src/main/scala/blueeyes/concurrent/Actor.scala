@@ -120,6 +120,10 @@ private[concurrent] class StrategyWorker[A, B](actorFn: A => B, assignments: Con
       }
     }
   }
+
+  private[StrategyWorker] sealed trait StrategyWorkerTask
+  private[StrategyWorker] case class Work[A, B](work: (A, Future[B])) extends StrategyWorkerTask
+  private[StrategyWorker] case class Deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) extends StrategyWorkerTask
 }
 
 private[concurrent] object StrategyWorker{
@@ -141,10 +145,6 @@ private[concurrent] object StrategyWorker{
     }
   }
 }
-
-private[concurrent] sealed trait StrategyWorkerTask
-private[concurrent] case class Work[A, B](work: (A, Future[B])) extends StrategyWorkerTask
-private[concurrent] case class Deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) extends StrategyWorkerTask
 
 trait ActorExecutionStrategyFixedPool extends ActorExecutionStrategyMultiThreaded {
   def actorExecutionStrategyThreadPoolSize: Int

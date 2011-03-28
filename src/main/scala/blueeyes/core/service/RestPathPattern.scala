@@ -197,7 +197,9 @@ object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar
         //(regex findFirstMatchIn (source.subSequence(start, source.length))) match {
         (regex findPrefixMatchOf (source.subSequence(start, source.length))) match {
           case Some(matched) =>
-            Success(Map(groupNames.map(name => Symbol(name) -> matched.group(name)): _*), in.drop(start + matched.end - offset))
+            Success(Map(groupNames.map{name =>
+              val value = matched.group(name)
+              Symbol(name) -> (if (value != null) value else "")}: _*), in.drop(start + matched.end - offset))
           case None =>
             Failure("string matching regex `"+regex+"' expected but `"+in.first+"' found", in.drop(start - offset))
         }
