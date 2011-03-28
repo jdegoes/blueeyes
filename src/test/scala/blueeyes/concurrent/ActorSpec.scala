@@ -62,20 +62,20 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
   "Actor to Actor" in{
     "deliver future in actor thread" in{
       var deliveried = false
-      val actor1 = Actor[String, Unit]{
+      val actor = Actor[String, Unit]{
         case message: String => {
           val thread  = Thread.currentThread
-           val actor2 = Actor[String, String]{
-            case message: String => "actor2"
+           val nestedActor = Actor[String, String]{
+            case message: String => "answer"
            }
-          val future = actor2("bar")
+          val future = nestedActor("bar")
 
           future.deliverTo{v =>
             deliveried = thread == Thread.currentThread
           }
         }
       }
-      actor1("test")
+      actor("test")
 
       deliveried must eventually (be(true))
     }

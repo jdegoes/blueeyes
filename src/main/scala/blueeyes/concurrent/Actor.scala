@@ -47,7 +47,9 @@ trait ActorExecutionStrategyMultiThreaded {
 
   val assignments = new ConcurrentHashMap[ActorFn, StrategyWorker[_, _]]
 
-  def submit[A, B](actorFn: A => B, work: (A, Future[B])): Unit = {
+  def submit[A, B](actorFn: A => B, work: (A, Future[B])): Unit = submit0(actorFn, Work(work))
+
+  def submit0[A, B](actorFn: A => B, strategyTask: StrategyWorkerTask): Unit = {
     var exit = false
 
     while (!exit) {
@@ -58,7 +60,7 @@ trait ActorExecutionStrategyMultiThreaded {
       }
 
       try {
-        assignments.get(actorFn).asInstanceOf[StrategyWorker[A, B]].offer(work)
+        assignments.get(actorFn).asInstanceOf[StrategyWorker[A, B]].offer(strategyTask)
 
         exit = true
       }
@@ -74,30 +76,21 @@ private[concurrent] class StrategyWorker[A, B](actorFn: A => B, assignments: Con
   import StrategyWorker._
   private val executionSequential = new ActorExecutionStrategySequential { }
   private val deliverySequential  = new FutureDeliveryStrategySequential { }
-  @volatile
-  private var deliveryCount       = 0
 
   val doneLock = new ReadWriteLock{}
   val queue: BlockingQueue[StrategyWorkerTask] = new LinkedBlockingQueue[StrategyWorkerTask]()
 
   var done = false
 
-  def offer(work: (A, Future[B])): Unit = offer(Work(work))
-
-  def offer[T](value: T, listeners: Iterable[T => Unit], errorHandler: List[Throwable] => Unit): Unit = offer(Deliver(value, listeners, errorHandler))
-
-
-  def waitDelivery = deliveryCount = deliveryCount + 1
-
-  private def offer(task: StrategyWorkerTask): Unit = {
+  def offer(strategyTask: StrategyWorkerTask): Unit = {
     doneLock.readLock {
-      if (!done) queue.offer(task)
+      if (!done) queue.offer(strategyTask)
       else throw new NullPointerException()
     }
   }
 
   def run() = {
-    ActorContext.withWorker(this){
+    ActorContext.withActorFn(actorFn){
       while (!done) {
         val head = queue.poll(1, TimeUnit.MILLISECONDS)
 
@@ -106,12 +99,11 @@ private[concurrent] class StrategyWorker[A, B](actorFn: A => B, assignments: Con
             case w: Work[A, B] => executionSequential.actorExecutionStrategy.submit(actorFn, w.work)
             case d: Deliver[_] =>
               deliverySequential.futureDeliveryStrategy.deliver(d.value, d.listeners, d.errorHandler)
-              deliveryCount = deliveryCount - 1
           }
         }
         else {
           doneLock.writeLock {
-            if (queue.size == 0 && deliveryCount == 0) {
+            if (queue.size == 0) {
               done = true
               assignments.remove(actorFn, this)
             }
@@ -120,24 +112,24 @@ private[concurrent] class StrategyWorker[A, B](actorFn: A => B, assignments: Con
       }
     }
   }
-
-  private[StrategyWorker] sealed trait StrategyWorkerTask
-  private[StrategyWorker] case class Work[A, B](work: (A, Future[B])) extends StrategyWorkerTask
-  private[StrategyWorker] case class Deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) extends StrategyWorkerTask
 }
+
+private[concurrent] sealed trait StrategyWorkerTask
+private[concurrent] case class Work[A, B](work: (A, Future[B])) extends StrategyWorkerTask
+private[concurrent] case class Deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) extends StrategyWorkerTask
 
 private[concurrent] object StrategyWorker{
   object ActorContext{
-    private val tl = new ThreadLocal[StrategyWorker[_, _]]
+    private val tl = new ThreadLocal[_ => _]
 
-    def get : Option[StrategyWorker[_, _]] = {
+    def get : Option[_ => _] = {
       if (tl.get() != null) Some(tl.get()) else None
     }
 
-    def withWorker(x : StrategyWorker[_, _])(f : => Unit) = {
+    def withActorFn(actorFn: _ => _)(f : => Unit) = {
       val old = get
       try {
-        tl.set(x)
+        tl.set(actorFn)
         f
       } finally {
         tl.set(old.getOrElse(null))
@@ -254,14 +246,13 @@ trait ActorImplementationSequential extends ActorImplementation{
 trait ActorImplementationMultiThreaded extends ActorImplementation{
   private val sequential = new FutureDeliveryStrategySequential{}
 
-  implicit def futureDeliveryStrategy = StrategyWorker.ActorContext.get.map(worker => new FutureDeliveryStrategyWorker(worker)).getOrElse(sequential.futureDeliveryStrategy)
+  implicit def futureDeliveryStrategy = StrategyWorker.ActorContext.get.map(actorFn => new FutureDeliveryStrategyWorker(actorFn)).getOrElse(sequential.futureDeliveryStrategy)
 
   implicit def actorExecutionStrategy = ActorExecutionStrategy.actorExecutionStrategy
 
-  private[ActorImplementationMultiThreaded] class FutureDeliveryStrategyWorker(worker: StrategyWorker[_, _]) extends FutureDeliveryStrategy{
-   worker.waitDelivery
+  private[ActorImplementationMultiThreaded] class FutureDeliveryStrategyWorker[A, B](actorFn: A => B) extends FutureDeliveryStrategy{
    def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) {
-     worker.offer(value, listeners, errorHandler)
+     actorExecutionStrategy.submit0(actorFn, Deliver(value, listeners, errorHandler))
    }
   }
 }
