@@ -10,7 +10,7 @@ import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 
 trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
-  /** The path combinator creates a handler that is defined only for suffixes 
+  /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
    *
    * {{{
@@ -21,45 +21,45 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    */
   def path[T, S](path: RestPathPattern) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.subpath) && h.isDefinedAt(path.shift(r))
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       val pathParameters = path(r.subpath)
-      
+
       val shiftedRequest = path.shift(r)
-      
+
       h(shiftedRequest.copy(parameters = shiftedRequest.parameters ++ pathParameters))
     }
   }
-  
-  /** Yields the remaining path to the specified function, which should return 
+
+  /** Yields the remaining path to the specified function, which should return
    * a request handler.
    * {{{
    * remainingPath { path =>
    *   get {
-   *     ... 
+   *     ...
    *   }
    * }
    * }}}
    */
-  def remainingPath[T, S](handler: String => HttpRequestHandler2[T, S]) = path(RestPathPattern.Root `...` ('remainingPath)) { 
+  def remainingPath[T, S](handler: String => HttpRequestHandler2[T, S]) = path(RestPathPattern.Root `...` ('remainingPath)) {
     parameter(IdentifierWithDefault('remainingPath, () => "")) {
       handler
     }
   }
-  
-  /** The method combinator creates a handler that is defined only for the 
+
+  /** The method combinator creates a handler that is defined only for the
    * specified HTTP method.
    */
   def method[T, S](method: HttpMethod) = (h: HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = r.method == method && h.isDefinedAt(r)
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
       case `method` => h(r)
-      
+
       case _ => error("The handler " + h + " can only respond to HTTP method " + method)
     }
   }
-  
+
   /**
    * <pre>
    * path("/foo") {
@@ -69,14 +69,14 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    */
   def orFail[T, S](h: HttpRequest[T] => (HttpFailure, String)): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       val fail = h(r)
-      
+
       Future.dead(HttpException(fail._1, fail._2))
     }
   }
-  
+
   /**
    * <pre>
    * path("/foo") {
@@ -85,12 +85,12 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    * </pre>
    */
   def orFail[T, S](msg: String): HttpRequestHandler2[T, S] = orFail { request => HttpStatusCodes.BadRequest -> msg }
-  
-  /** The path end combinator creates a handler that is defined only for paths 
+
+  /** The path end combinator creates a handler that is defined only for paths
    * that are fully matched.
    */
   def $ [T, S](h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
-  
+
   /** Forces a particular combinator to match.
    * <pre>
    * commit(r => BadRequest -> "Bad path: " + r.path) {
@@ -102,18 +102,18 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    */
   def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: HttpRequestHandler2[T, S]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       if (!h.isDefinedAt(r)) {
         val (statusCode, reason) = msgGen(r)
-        
+
         Future.dead(HttpException(statusCode, reason))
       }
       else h.apply(r)
     }
   }
-  
-  /** Converts a full request handler into a partial request handler that 
+
+  /** Converts a full request handler into a partial request handler that
    * handles every input. Note: This is an implicit and will automatically
    * convert all full request handlers into partial request handlers,
    * as required by type signatures.
@@ -126,7 +126,7 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
     }
   }
 
-  /** Attemps to peek to see if a particular handler will handle a request. 
+  /** Attemps to peek to see if a particular handler will handle a request.
    * Used to convert a fast-failing handler into a skipping one.
    * <pre>
    * justTry {
@@ -145,10 +145,10 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
         case _ => false
       }
     }
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h.apply(r)
   }
-  
+
   def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { commit { h } } }
   def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { commit { h } } }
   def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { commit { h } } }
@@ -165,21 +165,21 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    * {{{
    * getRange { (ranges, unit) =>
    *   (unit, ranges) match {
-   *     case ("indices", (lowerBound, upperBound) :: Nil) => 
+   *     case ("indices", (lowerBound, upperBound) :: Nil) =>
    *       // Retrieve all elements from lowerBound to upperBound
    *   }
    * }
    * }}}
    */
-  def getRange[T, S](h: (List[(Int, Int)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = method(HttpMethods.GET) {
+  def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = method(HttpMethods.GET) {
     new HttpRequestHandler2[T, S] {
-      private def extractRange(headers: Map[String, String]): (List[(Int, Int)], String) = {
+      private def extractRange(headers: Map[String, String]): (List[(Long, Long)], String) = {
         val rangeStr = headers.find(_._1.toLowerCase == "range").map(_._2).getOrElse("")
 
         rangeStr.split("=").toList match {
-          case unit :: specifiers :: Nil => 
+          case unit :: specifiers :: Nil =>
             (specifiers.split(",").toList.map { range =>
-              range.split("-").toList.map(_.trim.toInt) match {
+              range.split("-").toList.map(_.trim.toLong) match {
                 case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
 
                 case _ => error("missing upper and/or lower bound for range")
@@ -208,12 +208,12 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
   }
 
   /**
-   * Extracts data from the request. The extractor combinators can be used to 
+   * Extracts data from the request. The extractor combinators can be used to
    * factor out extraction logic that's duplicated across a range of handlers.
    * <p>
    * Extractors are fail-fast combinators. If they cannot extract the required
    * information during evaluation of isDefinedAt() method, they immediately
-   * throw an HttpException. 
+   * throw an HttpException.
    * <pre>
    * extract(_.parameters('username)) { username =>
    *   ...
@@ -224,21 +224,21 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         val extracted = extractor(r)
-        
+
         h(extracted).isDefinedAt(r)
       }
       catch {
         case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
       val extracted = extractor(r)
-      
+
       h(extracted).apply(r)
     }
   }
-  
+
   /** A special-case extractor for parameters.
    * <pre>
    * parameter('token) { token =>
@@ -265,11 +265,11 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
 
       h(value).apply(addParameter(r, (s1AndDefault.identifier -> value)))
     }
-     
+
     private def extract(r: HttpRequest[T]): String = {
       r.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
     }
-     
+
     private def addParameter(r: HttpRequest[T], newParam: (Symbol, String)): HttpRequest[T] = {
       r.copy(parameters = r.parameters + newParam)
     }
@@ -316,14 +316,14 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
 
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
     val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
-    
+
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(error("Expected request body to be JSON object"))
-      
+
       extractField(content, s1AndDefault)
     } (h)
   }
-  
+
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
@@ -331,44 +331,44 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
   def accept[T, S, U](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[U, T]): HttpRequestHandler2[U, S] = new HttpRequestHandler2[U, S] {
     def isDefinedAt(r: HttpRequest[U]): Boolean = {
       val requestMimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- r.headers) yield mimeTypes.toList).toList.flatten
-      
+
       requestMimeType.find(_ == mimeType).map { mimeType =>
         h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
       }.orElse {
         r.content.map(b.isDefinedAt _)
       }.getOrElse(false)
     }
-    
+
     def apply(r: HttpRequest[U]) = h(r.copy(content = r.content.map(b.apply)))
   }
-  
-  /** The produce combinator creates a handler that is produces responses 
+
+  /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
   def produce[T, S, V](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[S, V]): HttpRequestHandler2[T, V] = new HttpRequestHandler2[T, V] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = h.isDefinedAt(r)
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[V]] = h(r).map { response =>
       response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType))
     }
   }
-  
+
   /** The content type combinator creates a handler that accepts and produces
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
    */
   def contentType[T, S](mimeType: MimeType)(h: HttpRequestHandler[T])(implicit b1: Bijection[S, T]): HttpRequestHandler[S] = {
     implicit val b2 = b1.inverse
-    
+
     accept(mimeType) {
       produce(mimeType) {
         h
       }
     }
   }
-  
-  /** The jsonp combinator creates a handler that accepts and produces JSON. 
+
+  /** The jsonp combinator creates a handler that accepts and produces JSON.
    * The handler also transparently works with JSONP, if the client specifies
    * a "callback" parameter in the query string. Clients may encode both
    * HTTP method and content using the query string parameters "method" and
@@ -376,87 +376,87 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    */
   def jsonp[T](h: HttpRequestHandler[JValue])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
     implicit val b2 = b1.inverse
-    
+
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       r.content.map(b1.isDefinedAt _).getOrElse(true) && {
         val r2 = convert(r)
-      
+
         h.isDefinedAt(r2)
       }
     }
-    
+
     def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
       val r2 = convert(r)
-      
+
       h(r2).map { response =>
         val callback = r.parameters.get('callback)
-        
+
         convert(response, callback)
       }
     }
-    
+
     private def convert(r: HttpRequest[T]): HttpRequest[JValue] = {
       import blueeyes.json.JsonParser.parse
       import blueeyes.json.xschema.DefaultSerialization._
-      
+
       r.parameters.get('callback) match {
         case Some(callback) if (r.method == HttpMethods.GET) =>
           if (!r.content.isEmpty) throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")
-          
+
           val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
           val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
           val content = r.parameters.get('content).map(parse _)
           val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
-          
+
           r.copy(method = method, content = content, headers = r.headers ++ headers)
-          
-        case Some(callback) => 
+
+        case Some(callback) =>
           throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")
-          
+
         case None =>
           r.copy(content = r.content.map(b1.apply))
       }
     }
-    
+
     private def convert(r: HttpResponse[JValue], callback: Option[String]): HttpResponse[T] = {
       import blueeyes.json.xschema.DefaultSerialization._
       import blueeyes.json.Printer._
-      
+
       (callback match {
         case Some(callback) =>
           val meta = compact(render(JObject(
             JField("headers", r.headers.serialize) ::
-            JField("status", 
+            JField("status",
               JObject(
                 JField("code",    r.status.code.value.serialize) ::
                 JField("reason",  r.status.reason) ::
                 Nil
               )
-            ) :: 
+            ) ::
             Nil
           )))
-          
+
           r.copy(content = r.content.map { content =>
             bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
           }.orElse {
             Some(
               bstr.inverse.apply(callback + "(undefined," + meta + ");")
             )
-          })
-        
+          }, headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript))
+
         case None =>
-          r.copy(content = r.content.map(b2.apply))
-      }).copy(headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+          r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+      })
     }
   }
-  
-  /** The json combinator creates a handler that accepts and produces JSON. 
+
+  /** The json combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
    */
   def jvalue[T](h: HttpRequestHandler[JValue])(implicit b: Bijection[T, JValue]): HttpRequestHandler[T] = contentType(MimeTypes.application/MimeTypes.json) { h }
-  
-  /** The xml combinator creates a handler that accepts and produces XML. 
+
+  /** The xml combinator creates a handler that accepts and produces XML.
    * Requires an implicit bijection used for transcoding.
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }

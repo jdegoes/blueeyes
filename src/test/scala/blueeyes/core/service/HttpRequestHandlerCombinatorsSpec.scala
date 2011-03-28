@@ -30,7 +30,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       handler mustBe handler
     }
   }
-  
+
   "jsonp combinator" should {
     "detect jsonp by callback & method parameters" in {
       val handler: HttpRequestHandler[String] = {
@@ -42,17 +42,17 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
-      
+
       val content: String = handler {
         HttpRequest[String](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET"
         )
       }.value.get.content.get
-      
+
       content mustEqual """jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});"""
     }
-    
+
     "retrieve POST content from query string parameter" in {
       val handler: HttpRequestHandler[String] = {
         jsonp {
@@ -63,17 +63,17 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
-      
+
       val content: String = handler {
         HttpRequest[String](
           method  = HttpMethods.GET,
           uri     = "/?callback=jsFunc&method=POST&content=" + encodeUrl("{\"bar\":123}", "UTF-8")
         )
       }.value.get.content.get
-      
+
       content mustEqual """jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});"""
     }
-    
+
     "retrieve headers from query string parameter" in {
       val handler: HttpRequestHandler[String] = {
         jsonp {
@@ -84,17 +84,17 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
-      
+
       val content: String = handler {
         HttpRequest[String](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8")
         )
       }.value.get.content.get
-      
+
       content mustEqual """jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});"""
     }
-    
+
     "pass undefined to callback when there is no content" in {
       val handler: HttpRequestHandler[String] = {
         jsonp {
@@ -105,17 +105,17 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
-      
+
       val content: String = handler {
         HttpRequest[String](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8")
         )
       }.value.get.content.get
-      
+
       content mustEqual """jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});"""
     }
-    
+
     "return headers in 2nd argument to callback function" in {
       val handler: HttpRequestHandler[String] = {
         jsonp {
@@ -126,14 +126,14 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }
-      
+
       val content: String = handler {
         HttpRequest[String](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET"
         )
       }.value.get.content.get
-      
+
       content mustEqual """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});"""
     }
   }
@@ -165,18 +165,18 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       f.value must eventually(beSomething)
       f.value.get.content must beSome("blahblah")
     }
-    
+
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
         parameter[String, String]('bar ?: "bebe") { bar =>
           get { (request: HttpRequest[String]) =>
             request.parameters mustEqual Map('bar -> "bebe")
-            
+
             Future(HttpResponse[String](content=Some(bar)))
           }
         }
       }
-      
+
       handler {
         HttpRequest[String](HttpMethods.GET, "/foo/")
       }
