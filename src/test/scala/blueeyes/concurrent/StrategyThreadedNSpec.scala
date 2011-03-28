@@ -8,16 +8,12 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
 
   private val random = new Random()
 
-  private val strategy = new ActorExecutionStrategyFixedPool {
-    val actorExecutionStrategyThreadPoolSize = 5
-  }
-
-  private val s = strategy.actorExecutionStrategy
+  private val strategy = Actor.actorExecutionStrategy
 
   "StrategyThreadedN: handle one request" in{
     val future = new Future[Int]()
 
-    strategy.actorExecutionStrategy.submit(f _, (1, future))
+    strategy.submit(f _, (1, future))
 
     awaitFuture(future)
 
@@ -30,7 +26,7 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
     val fun = f _
 
     futures foreach { future =>
-      strategy.actorExecutionStrategy.submit(fun, (1, future))
+      strategy.submit(fun, (1, future))
     }
 
     awaitFuture(Future(futures: _*))
@@ -52,9 +48,9 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
         def run = {
           Thread.sleep(random.nextInt(150))
 
-          strategy.actorExecutionStrategy.submit(f._1, (1, f._2))
+          strategy.submit(f._1, (1, f._2))
 
-          strategy.actorExecutionStrategy.assignments.size must beLessThan (functions.size + 1)
+          strategy.assignments.size must beLessThan (functions.size + 1)
         }
       })
     }
@@ -65,7 +61,7 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
       future.value mustEqual(Some(3))
     }
 
-    strategy.actorExecutionStrategy.assignments.size must be (0)
+    strategy.assignments.size must be (0)
   }
 
   private def awaitFuture(future: Future[_]) = {
