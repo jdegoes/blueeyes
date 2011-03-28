@@ -11,6 +11,10 @@ class AddToSetFieldEvaluatorSpec  extends Specification{
     val operation = "foo" addToSet (MongoPrimitiveString("foo"), MongoPrimitiveString("bar"))
     AddToSetFieldEvaluator(JNothing, operation.filter) mustEqual(JArray(JString("foo") :: JString("bar") :: Nil))
   }
+  "create new Array with duplicating elements for not existing field" in {
+    val operation = "foo" addToSet (MongoPrimitiveString("foo"), MongoPrimitiveString("foo"))
+    AddToSetFieldEvaluator(JNothing, operation.filter) mustEqual(JArray(JString("foo") :: JString("foo") :: Nil))
+  }
   "add new element to existing field" in {
     val operation = "foo" addToSet (MongoPrimitiveInt(3), MongoPrimitiveInt(4))
     AddToSetFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: JInt(3) :: JInt(4) :: Nil))
