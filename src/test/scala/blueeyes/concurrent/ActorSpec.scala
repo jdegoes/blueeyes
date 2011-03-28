@@ -6,23 +6,27 @@ import org.spex.Specification
 class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
   private val actorImplementation = new ActorImplementationSequential{}
+
   "Actor" should {
     "process message" in {
-      val actor = actorImplementation[String, String] {
+      import actorImplementation._
+      val messageProcessor = actor[String, String] {
         case message: String => message + "_done"
       }
 
-     actor("foo").value must eventually (beSome("foo_done"))
+     messageProcessor("foo").value must eventually (beSome("foo_done"))
     }
   }
 
   "Actor of future" should {
     "flatten implicitly" in {
-      val actor1 = actorImplementation[String, String] {
+      import actorImplementation._
+
+      val actor1 = actor[String, String] {
         case message: String => message + "_done"
       }
 
-      val actor2: Actor[String, String] = Actor[String, Future[String]] {
+      val actor2: Actor[String, String] = Actor.actor[String, Future[String]] {
         case message: String  => actor1 ! message
       }
 
@@ -32,12 +36,13 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
   "Actor examples" should {
     "compile" in {
+      import Actor._
       // Easy actor definition:
-      val squarePositiveA = actorImplementation[Int, Int] {
+      val squarePositiveA = actor[Int, Int] {
         case x: Int if (x > 0) => x * x
       }
 
-      val squareNegativeA = Actor[Int, Int] {
+      val squareNegativeA = actor[Int, Int] {
         case x: Int if (x < 0) => x * x
       }
 
@@ -67,11 +72,12 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
   "Actor to Actor" in{
     "deliver future in actor thread" in{
+      import Actor._
       var deliveried = false
-      val actor = Actor[String, Unit]{
+      val rootActor = actor[String, Unit]{
         case message: String => {
           val thread  = Thread.currentThread
-           val nestedActor = Actor[String, String]{
+           val nestedActor = actor[String, String]{
             case message: String => "answer"
            }
           val future = nestedActor("bar")
@@ -81,7 +87,7 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
           }
         }
       }
-      actor("test")
+      rootActor("test")
 
       deliveried must eventually (be(true))
     }

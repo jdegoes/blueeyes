@@ -40,7 +40,7 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
-  private lazy val mongoActor = actorImplementation[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
+  private lazy val mongoActor = actorImplementation.actor[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
     case v: Tuple2[MongoQuery[_], DatabaseCollection] => {
       val (query, collection) = v
       query(collection)
