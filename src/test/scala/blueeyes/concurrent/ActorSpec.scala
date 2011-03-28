@@ -53,9 +53,15 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
       // Actor response mapping:
       val pow4AsStringA = pow4A.map(_.toString)
 
-      pow4AsStringA(0).value must eventually (beSome("0"))
-      pow4AsStringA(1).value must eventually (beSome("1"))
-      pow4AsStringA(2).value must eventually (beSome("16"))
+      // Safe actor-to-actor communication:
+      val doublePow4A: Actor[Int, Int] = actor {
+       case x: Int => for (pow4 <- pow4A ! x) yield pow4 * 2
+      }
+
+      (pow4AsStringA ! 0).value must eventually (beSome("0"))
+      (pow4AsStringA ! 1).value must eventually (beSome("1"))
+      (pow4AsStringA ! 2).value must eventually (beSome("16"))
+      (doublePow4A   ! 2).value must eventually (beSome(8))
     }
   }
 
