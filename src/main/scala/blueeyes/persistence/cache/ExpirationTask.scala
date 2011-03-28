@@ -7,11 +7,12 @@ private[cache] sealed class ExpirationTask[K, V](expirable: Expirable[K, V], has
   private final val hasExpiredRef = new WeakReference[Expirable[K, V] => Boolean](hasExpired)
 
   def run() = {
-    (hasExpiredRef.get, expirableRef.get) match {
-      case (hasExpired: (Expirable[K, V] => Boolean), expirable: Expirable[K, V]) =>
-        if (hasExpired(expirable)) {
-          evict(expirable)
-        }
+    val (hasExpired, expirable) = (hasExpiredRef.get, expirableRef.get)
+
+    if (hasExpired != null && expirable != null) {
+      if (hasExpired(expirable)) {
+        evict(expirable)
+      }
     }
   }
 }
