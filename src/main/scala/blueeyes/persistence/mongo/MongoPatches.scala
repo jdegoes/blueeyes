@@ -12,6 +12,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) extends FutureDe
   /** Combines the two collections of patches into a single collection.
    */
   def ++ (that: MongoPatches): MongoPatches = {
+    // TODO: Start with larger map!
     MongoPatches(that.patches.foldLeft(this.patches) { (allPatches, tuple) =>
       val (filter, update2) = tuple
 

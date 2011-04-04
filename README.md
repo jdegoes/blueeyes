@@ -15,7 +15,13 @@ The framework has been designed to meet the following requirements:
 
 BlueEyes does not have any features for server-side generation of HTML, CSS, or JavaScript. BlueEyes does not (natively) serve static files, like Apache or Jetty. BlueEyes is intended *only* for creating RESTful web services that are consumed by clients (such as browsers or servers).
 
-Those looking for a traditional MVC web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
+Those looking for a traditional model/view web framework for the Scala programming language are directed to the [Lift Web Framework](http://www.liftweb.net/).
+
+## Mailing List
+
+If you have bugs to report, please use the GitHub issues tracker. If you have questions about BlueEyes, you are invited to join the BlueEyes Web Framework discussion group:
+
+  * [BlueEyes Web Framework Discussion Group](http://groups.yahoo.com/group/blueeyes-web)
 
 ## Maven
 
@@ -32,7 +38,7 @@ Repository: http://oss.sonatype.org/content/repositories/releases
 ### SBT
 
     val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
-    
+
     val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.2.7" % "compile"
 
 ## Origins
@@ -110,10 +116,10 @@ Since a request handler is just an ordinary partial function, it's possible to c
 
     new PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
       def isDefinedAt(request: HttpRequest[T]): Boolean = ...
-      
+
       def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = ...
     }
-    
+
     {
       case HttpRequest(...) => ...
       case HttpRequest(...) => ...
@@ -236,7 +242,7 @@ Similarly, if you're going to perform a lot of requests that all share the same 
     def myService[T, S](r: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = {
       port(123) {
         path$("http://myservice.com/api/v1") {
-          r 
+          r
         }
       }
     }
@@ -285,7 +291,7 @@ A server created in this way has *start* and *stop* methods, which can be used f
 A single server can run any number of services, although the recommended practice is to run each service on a separate server, on a separate port, and use a load balancer like *HAProxy* to unify the HTTP interface to the services. This approach confers a number of benefits:
 
  * Independent provisioning of services based on requirements (some services may be needed to maintain 100% uptime and thus may be replicated across instances and data centers, while others may not need such high-availability);
- * Independent scaling of services based on load; 
+ * Independent scaling of services based on load;
  * Isolation of services so that the crash of one service has no effect on others;
  * Independent deployment of services so that risk to production is minimized.
 
@@ -313,7 +319,7 @@ The anonymous final argument passed to the *service* function is actually a serv
 
 BlueEyes ships with many useful service descriptor factory combinators that are designed to augment your service with additional features. For example, the *logging* combinator adds logging to your service:
 
-    val myService = service("myservice", "2.39.23") { 
+    val myService = service("myservice", "2.39.23") {
       logging { logger =>
         context =>
          request { state =>
@@ -349,7 +355,7 @@ BlueEyes provides a combinator that provides services with a logger that can be 
                 }
               }
             }
-        }    
+        }
      }
 
 A service's logger is configured through a *log* block inside the root config for the service.
@@ -400,11 +406,11 @@ The following values can be configured for request logging:
 #### Health Monitor
 
 Health monitor allows services to export real-time metrics on health status, for use in continuous deployment.
- 
+
 The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests.
 
       trait HealthMonitorDemo extends BlueEyesServiceBuilder {
-        val healthMonitorService = service("healthmon", "1.32") {         
+        val healthMonitorService = service("healthmon", "1.32") {
          healthMonitor { monitor =>
            context =>
              request { state =>
@@ -446,7 +452,7 @@ If you have multiple services, and one service needs to consume another, you can
                       }
                     }
                   }
-                  
+
                   // Do something with content
                   ...
                 }
@@ -513,7 +519,7 @@ If you wish to use the above code, you should create a file in */etc/default/blu
     mongo {
       servers: ["host1:port1", "host2:port2", ...]
     }
-    
+
 Once you have access to Mongo, you can then create references to databases:
 
     val database = mongo.database( "mydb" )
