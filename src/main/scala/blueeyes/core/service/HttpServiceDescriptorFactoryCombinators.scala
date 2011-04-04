@@ -63,7 +63,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    */
   def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val logger = LoggingHelper.initializeLogging(context.config, context.serviceName + ".v" + context.serviceVersion.majorVersion)
+      val logger = LoggingHelper.initializeLogging(context.config, context.toString)
 
       f(logger)(context)
     }
@@ -89,12 +89,11 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       if (enabled){
         def fieldsDirective: FieldsDirective = {
-          configMap.getString("fields") map { configValue =>
-            W3ExtendedLog("#Fields: " + configValue) match {
-              case (e: FieldsDirective) :: Nil => e
-              case _ => error("Log directives are not specified.")
-            }
-          } getOrElse (error("Log directives are not specified."))
+          val configValue = configMap.getString("fields", "time cs-method cs-uri sc-status")
+          W3ExtendedLog("#Fields: " + configValue) match {
+            case (e: FieldsDirective) :: Nil => e
+            case _ => error("Log directives are not specified.")
+          }
         }
 
         val policy = configMap.getString("roll", "never").toLowerCase match {
@@ -111,10 +110,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
           case x            => error("Unknown logfile rolling policy: " + x)
         }
 
-        val fileName = configMap.getString("file") match{
-          case Some(x) => x
-          case None => error("Logfile is not specified.")
-        }
+        val fileName = configMap.getString("file", context.toString + "-request.log")
 
         val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 1)
 
