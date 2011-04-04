@@ -8,32 +8,32 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
 
   private val actorImplementation = new ActorImplementationSequential{}
 
-//  "Actor" should {
-//    "process message" in {
-//      import actorImplementation._
-//      val messageProcessor = actor[String, String] {
-//        case message: String => message + "_done"
-//      }
-//
-//     messageProcessor("foo").value must eventually (beSome("foo_done"))
-//    }
-//  }
+  "Actor" should {
+    "process message" in {
+      import actorImplementation._
+      val messageProcessor = actor[String, String] {
+        case message: String => message + "_done"
+      }
 
-//  "Actor of future" should {
-//    "flatten implicitly" in {
-//      import actorImplementation._
-//
-//      val actor1 = actor[String, String] {
-//        case message: String => message + "_done"
-//      }
-//
-//      val actor2: Actor[String, String] = Actor.actor[String, Future[String]] {
-//        case message: String  => actor1 ! message
-//      }
-//
-//      (actor2 ! "foo").value must eventually (beSome("foo_done"))
-//    }
-//  }
+     messageProcessor("foo").value must eventually (beSome("foo_done"))
+    }
+  }
+
+  "Actor of future" should {
+    "flatten implicitly" in {
+      import actorImplementation._
+
+      val actor1 = actor[String, String] {
+        case message: String => message + "_done"
+      }
+
+      val actor2: Actor[String, String] = Actor.actor[String, Future[String]] {
+        case message: String  => actor1 ! message
+      }
+
+      (actor2 ! "foo").value must eventually (beSome("foo_done"))
+    }
+  }
 
   "Actor examples" should {
     "compile" in {
@@ -67,21 +67,10 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
       (pow4AsStringA ! 0).value must eventually (beSome("0"))
       (pow4AsStringA ! 1).value must eventually (beSome("1"))
       (pow4AsStringA ! 2).value must eventually (beSome("16"))
-      awaitFuture((doublePow4A   ! 2)) must beSome(32)
+      val doublePow4AFuture = doublePow4A ! 2
+      doublePow4AFuture.value must eventually (beSome(32))
     }
   }
-
-  private def awaitFuture(future: Future[_]) = {
-    val countDownLatch = new CountDownLatch(1)
-    future deliverTo { v =>
-      countDownLatch.countDown
-    }
-    countDownLatch.await
-
-    future.value
-   }
-
-
 //  "Actor to Actor" in{
 //    "deliver future in actor thread" in{
 //      import Actor._
