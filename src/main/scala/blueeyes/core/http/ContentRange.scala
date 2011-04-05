@@ -24,7 +24,7 @@ object ContentByteRanges extends RegexParsers{
   private def bytePairParser = (digitalParser <~ "-") ~ digitalParser ^^ {case first ~ last => new ByteRanges.BytePair(Some(HttpNumbers.LongNumber(first.toInt)), HttpNumbers.LongNumber(last.toInt))}
 
   private def parser = opt(
-    regex("[a-z]+".r) ~ bytePairParser ~ ("/" ~> regex("""(\d+)|\*""".r)) ^^ {case unit ~ bpair ~ length => ByteInstance (unit, bpair, length)}
+    (regex("[a-z]+".r) <~ "=") ~ bytePairParser ~ ("/" ~> regex("""(\d+)|\*""".r)) ^^ {case unit ~ bpair ~ length => ByteInstance (unit, bpair, length)}
   )
 
   def parseContentByteRanges(inString: String) = parser(new CharSequenceReader(inString.toLowerCase)) match {

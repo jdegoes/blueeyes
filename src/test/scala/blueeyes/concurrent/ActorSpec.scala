@@ -64,9 +64,12 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
        case x: Int => for (xTo4 <- (pow4A ! x)) yield xTo4 * 2
       }
 
-      (pow4AsStringA ! 0).value must eventually (beSome("0"))
-      (pow4AsStringA ! 1).value must eventually (beSome("1"))
-      (pow4AsStringA ! 2).value must eventually (beSome("16"))
+      val pow4AsStringAFuture0 = (pow4AsStringA ! 0)
+      pow4AsStringAFuture0.value must eventually (beSome("0"))
+      val pow4AsStringAFuture1 = (pow4AsStringA ! 1)
+      pow4AsStringAFuture1.value must eventually (beSome("1"))
+      val pow4AsStringAFuture2 = (pow4AsStringA ! 2)
+      pow4AsStringAFuture2.value must eventually (beSome("16"))
       val doublePow4AFuture = doublePow4A ! 2
       doublePow4AFuture.value must eventually (beSome(32))
     }
