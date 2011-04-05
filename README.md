@@ -25,7 +25,14 @@ If you have bugs to report, please use the GitHub issues tracker. If you have qu
 
 ## Maven
 
-Repository: http://oss.sonatype.org/content/repositories/releases
+Repositories:
+
+ * http://oss.sonatype.org/content/repositories/releases/
+ * http://scala-tools.org/repo-snapshots/
+ * http://repository.jboss.org/nexus/content/groups/public/
+ * http://scalablesolutions.se/akka/repository/
+
+Library dependency:
 
     <dependency>
       <groupId>com.github.blueeyes</groupId>
@@ -37,7 +44,10 @@ Repository: http://oss.sonatype.org/content/repositories/releases
 
 ### SBT
 
-    val sonatypeRepository = MavenRepository("Sonatype Releases", "http://oss.sonatype.org/content/repositories/releases")
+    val sonatype_repo     = MavenRepository("Sonatype",     "http://oss.sonatype.org/content/repositories/releases/")
+    val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
+    val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
+    val akka_repo         = MavenRepository("Akka",         "http://scalablesolutions.se/akka/repository/")
 
     val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.2.7" % "compile"
 
