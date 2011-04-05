@@ -1,25 +1,27 @@
 package blueeyes.core.http
 
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 import blueeyes.util.ProductPrefixUnmangler
-import scala.util.matching.Regex
 
 sealed trait ConnectionToken extends ProductPrefixUnmangler {
   def value = unmangledName 
   override def toString = value
 }
 
+object ConnectionTokens extends RegexParsers {
 
-object ConnectionTokens {
+  private def parser = (
+    "close" ^^^ close |
+     regex("""([a-zA-Z-])+"""r) ^^ {case value => CustomConnectionToken(value)}
+  )?
 
-  def parseConnectionTokens(inString: String): Option[ConnectionToken] = {
-    def ConnectionRegex = new Regex("""([a-zA-Z-])+""") 
-    var outConnectionTokens: Option[ConnectionToken] = ConnectionRegex.findFirstIn(inString.trim).getOrElse("")
-    match {
-      case "close" => Some(close)
-      case "" => None
-      case default => Some(CustomConnectionToken(default))
-    }
-    return outConnectionTokens
+  def parseConnectionTokens(inString: String) = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The ConnectionTokens " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object close extends ConnectionToken

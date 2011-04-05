@@ -1,7 +1,9 @@
 package blueeyes.core.http
 
-import scala.util.matching.Regex
 import blueeyes.util.ProductPrefixUnmangler
+
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 /* From :
   IANA: 
@@ -14,31 +16,35 @@ sealed trait CharSet {
   def aliases: List[String] 
 }
 
-object CharSets {
+object CharSets extends RegexParsers{
 
-  def parseCharSets(inString: String): Array[CharSet] = {
-    def CharSetRegex = new Regex("""([a-zA-Z\-_\d])+""")
+  private def elementParser: Parser[CharSet] = regex("""([a-zA-Z\-_\d])+""".r) ^^ {case str =>
+    val charSet = str.replace("_", "-")
+    charSet match {
+      case "us-ascii"     => `US-ASCII`
+      case "ascii"        => `US-ASCII`
+      case "iso-8859-1"   => `ISO-8859-1`
+      case "iso-8859-2"   => `ISO-8859-2`
+      case "iso-8859-3"   => `ISO-8859-3`
+      case "iso-8859-4"   => `ISO-8859-4`
+      case "iso-8859-5"   =>  `ISO-8859-5`
+      case "iso-8859-6"   =>  `ISO-8859-6`
+      case "iso-8859-7"   =>  `ISO-8859-7`
+      case "iso-8859-8"   =>  `ISO-8859-8`
+      case "iso-8859-9"   =>  `ISO-8859-9`
+      case "iso-8859-10"  =>  `ISO-8859-10`
+      case _ => new CustomCharSet(charSet)
+    }
+  }
 
-    var outCharSets: Array[CharSet] = inString.toLowerCase.split(",")
-        .map(x => CharSetRegex.findFirstIn(x.trim)).map(_.getOrElse(""))
-        .map(str => str.replace("_", "-"))
-        .map( charSet =>  charSet match {
-            case "us-ascii"     => `US-ASCII`
-            case "ascii"        => `US-ASCII`
-            case "iso-8859-1"   => `ISO-8859-1`
-            case "iso-8859-2"   => `ISO-8859-2`
-            case "iso-8859-3"   => `ISO-8859-3`
-            case "iso-8859-4"   => `ISO-8859-4`
-            case "iso-8859-5"   =>  `ISO-8859-5`
-            case "iso-8859-6"   =>  `ISO-8859-6`
-            case "iso-8859-7"   =>  `ISO-8859-7`
-            case "iso-8859-8"   =>  `ISO-8859-8`
-            case "iso-8859-9"   =>  `ISO-8859-9`
-            case "iso-8859-10"  =>  `ISO-8859-10`
-            case _ => new CustomCharSet(charSet)
-          }
-        )
-    return outCharSets
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
+
+  def parseCharSets(inString: String): List[CharSet] = parser(new CharSequenceReader(inString.toLowerCase)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The charSets " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   trait GenericCharSet extends ProductPrefixUnmangler with CharSet{

@@ -41,7 +41,7 @@ class MimeTypeSpec extends Specification {
 
   "Content-Type:  Should be */* with anymaintype/anysubtype" in {
     HttpHeaders.`Content-Type`(anymaintype/anysubtype).value mustEqual "*/*"
-  }   
+  }
 
   "Content-Type:  Should return a Content Type with MimeType inputs" in {
     HttpHeaders.`Content-Type`(MimeTypes.parseMimeTypes("multipart/mixed, application/*"): _*).value mustEqual "multipart/mixed, application/*"

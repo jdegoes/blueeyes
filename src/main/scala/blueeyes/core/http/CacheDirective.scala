@@ -1,6 +1,7 @@
 package blueeyes.core.http
 
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 import blueeyes.util.ProductPrefixUnmangler
 
 sealed trait CacheDirective extends ProductPrefixUnmangler {
@@ -12,29 +13,37 @@ sealed trait CacheDirective extends ProductPrefixUnmangler {
   override def toString = value;
 }
 
-object CacheDirectives {
+object CacheDirectives extends RegexParsers with HttpNumberImplicits{
 
-  def parseCacheDirectives(inString: String): Array[CacheDirective] ={
-    def noFieldRegex = new Regex("""([a-z\-]+)((=(\d)+)|(="[a-zA-Z-]+"))?""" )
+  private def literalValueParser = regex("\"([a-zA-Z-])+\"".r)
+  private def digitalValueParser = regex("""[\d]+""".r)
 
-    def directives: Array[CacheDirective] = (noFieldRegex.findAllIn(inString)).toArray.map(_.trim.split("=")).map( _ match {
-      case Array("private", any)      => Some(`private`(Some(any)))
-      case Array("no-cache", any)     => Some(`no-cache`(Some(any)))
-      case Array("private")           => Some(`private`(None))
-      case Array("no-cache")          => Some(`no-cache`)
-      case Array("no-store")          => Some(`no-store`)
-      case Array("max-age", delta)    => Some(`max-age`(HttpNumbers.parseHttpNumbers(delta)))
-      case Array("max-stale", delta)  => Some(`max-stale`(HttpNumbers.parseHttpNumbers(delta)))
-      case Array("min-fresh", delta)  => Some(`min-fresh`(HttpNumbers.parseHttpNumbers(delta)))
-      case Array("no-transform")      => Some(`no-transform`)
-      case Array("only-if-cached")    => Some(`only-if-cached`)
-      case Array("public")            => Some(`public`)
-      case Array("must-revalidate")   => Some(`must-revalidate`)
-      case Array("proxy-revalidate")  => Some(`proxy-revalidate`)
-      case Array("s-maxage", delta)   => Some(`s-maxage`(HttpNumbers.parseHttpNumbers(delta)))
-      case default                    => None
-    }).filterNot(_ == None).map(_.get)
-    return directives
+  private def elementParser: Parser[Option[CacheDirective]] =
+  (
+    "private="          ~> literalValueParser ^^ {case v => `private`(Some(v))} |
+    "no-cache="         ~> literalValueParser ^^ {case v => `no-cache`(Some(v))} |
+    "private"                                 ^^^ `private`(None) |
+    "no-cache"                                ^^^ `no-cache` |
+    "no-store"                                ^^^ `no-store` |
+    "no-transform"                            ^^^ `no-transform` |
+    "only-if-cached"                          ^^^ `only-if-cached` |
+    "public"                                  ^^^ `public` |
+    "must-revalidate"                         ^^^ `must-revalidate` |
+    "proxy-revalidate"                        ^^^ `proxy-revalidate` |
+    "max-age="          ~> digitalValueParser ^^ {case v => `max-age`(Some(v.toLong))} |
+    "max-stale="        ~> digitalValueParser ^^ {case v => `max-stale`(Some(v.toLong))} |
+    "min-fresh="        ~> digitalValueParser ^^ {case v => `min-fresh`(Some(v.toLong))} |
+    "s-maxage="         ~> digitalValueParser ^^ {case v => `s-maxage`(Some(v.toLong))}
+  )?
+
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.filter(_ != None).map(_.get) }
+
+  def parseCacheDirectives(inString: String) = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The CacheDirectives " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   sealed abstract class RequestDirective extends CacheDirective 

@@ -1,7 +1,6 @@
 package blueeyes.core.http
 
 import org.joda.time.DateTime
-import scala.util.matching.Regex
 
 /* For use in the Cookie HTTP Header */
 

@@ -1,6 +1,7 @@
 package blueeyes.core.http
 
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 sealed trait Expectation {
   def code: HttpStatusCode 
@@ -8,16 +9,19 @@ sealed trait Expectation {
   override def toString: String = value.toString + "-" + code.name.toLowerCase
 }
 
-object Expectations {
+object Expectations extends RegexParsers {
 
-  def parseExpectations(inString: String): Option[Expectation] = {
-    def CodeRegex = new Regex("""\d{3}""")
-    def outExpectation: Option[Expectation] = CodeRegex.findFirstIn(inString.trim).getOrElse("") match {
-      case "100"  => Some(continue)
-      case "417"  => Some(failure)
-      case _      => return None
-    }
-    return outExpectation
+  private def parser = (
+    "100" ^^^ continue |
+    "417" ^^^ failure
+  )?
+
+  def parseExpectations(inString: String): Option[ExpectType] = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The Expectations " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   sealed abstract class ExpectType(inCode: HttpStatusCode) extends Expectation {

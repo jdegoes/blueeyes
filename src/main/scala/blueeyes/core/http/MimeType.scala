@@ -1,7 +1,9 @@
 package blueeyes.core.http
 
-import scala.util.matching.Regex
 import blueeyes.util.ProductPrefixUnmangler
+
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 /*
 Usage: 
@@ -33,81 +35,65 @@ sealed trait MimeType {
   override def toString = value
 }
 
-object MimeTypes {
+object MimeTypes extends RegexParsers {
+  private def elementParser: Parser[Option[MimeType]] =
+      (("*" ~> "/" <~ "*"                            ^^^ anymaintype / anysubtype |
+      "application" ~> "/" <~ "*"                   ^^^ application / anysubtype |
+      "application" ~> "/" <~ "javascript"          ^^^ application / javascript |
+      "text"        ~> "/" <~ "javascript"          ^^^ text / javascript |
+      "application" ~> "/" <~ "x-javascript"        ^^^ application / `x-javascript` |
+      "application" ~> "/" <~ "soap+xml"            ^^^ application / `soap+xml` |
+      "application" ~> "/" <~ "xhtml+xml"           ^^^ application / `xhtml+xml` |
+      "application" ~> "/" <~ "xml-dtd"             ^^^ application / `xml-dtd` |
+      "application" ~> "/" <~ "json"                ^^^ application / json |
+      "application" ~> "/" <~ "x-latex"             ^^^ application / `x-latex` |
+      "application" ~> "/" <~ "octet-stream"        ^^^ application / `octet-stream` |
+      "application" ~> "/" <~ "ogg"                 ^^^ application / ogg |
+      "application" ~> "/" <~ "pdf"                 ^^^ application / `pdf` |
+      "application" ~> "/" <~ "postscript"          ^^^ application / `postscript` |
+      "application" ~> "/" <~ "x-dvi"               ^^^ application / `x-dvi` |
+      "application" ~> "/" <~ "x-shockwave-flash"   ^^^ application / `x-shockwave-flash` |
+      "application" ~> "/" <~ "x-tar"               ^^^ application / `x-tar` |
+      "application" ~> "/" <~ "x-ttf"               ^^^ application / `x-ttf` |
+      "application" ~> "/" <~ "zip"                 ^^^ application / `zip` |
+      "audio"       ~> "/" <~ "basic"               ^^^ audio / basic |
+      "audio"       ~> "/" <~ "mp4"                 ^^^ audio / mp4 |
+      "audio"       ~> "/" <~ "midi"                ^^^ audio / midi |
+      "audio"       ~> "/" <~ "mpeg"                ^^^ audio / mpeg |
+      "audio"       ~> "/" <~ "vorbis"              ^^^ audio / vorbis |
+      "audio"       ~> "/" <~ "x-ms-wma"            ^^^ audio / `x-ms-wma` |
+      "audio"       ~> "/" <~ "x-ms-wax"            ^^^ audio / `x-ms-wax` |
+      "audio"       ~> "/" <~ "x-realaudio"         ^^^ audio / `x-realaudio` |
+      "audio"       ~> "/" <~ "x-wav"               ^^^ audio / `x-wav` |
+      "image"       ~> "/" <~ "gif"                 ^^^ image / gif |
+      "image"       ~> "/" <~ "png"                 ^^^ image / png |
+      "image"       ~> "/" <~ "jpeg"                ^^^ image / jpeg |
+      "image"       ~> "/" <~ "svg+xml"             ^^^ image / `svg+xml` |
+      "image"       ~> "/" <~ "tiff"                ^^^ image / tiff |
+      "image"       ~> "/" <~ "vnd.microsoft.icon"  ^^^ image / `vnd.microsoft.icon` |
+      "multipart"   ~> "/" <~ "mixed"               ^^^ multipart / mixed |
+      "multipart"   ~> "/" <~ "alternative"         ^^^ multipart / alternative |
+      "multipart"   ~> "/" <~ "related"             ^^^ multipart / related |
+      "multipart"   ~> "/" <~ "form-data"           ^^^ multipart / `form-data` |
+      "multipart"   ~> "/" <~ "signed"              ^^^ multipart / signed |
+      "multipart"   ~> "/" <~ "encrypted"           ^^^ multipart / encrypted |
+      "text"        ~> "/" <~ "css"                 ^^^ text / css |
+      "text"        ~> "/" <~ "csv"                 ^^^ text / csv |
+      "text"        ~> "/" <~ "html"                ^^^ text / html |
+      "text"        ~> "/" <~ "plain"               ^^^ text / plain |
+      "text"        ~> "/" <~ "x-c"                 ^^^ text / `x-c` |
+      "text"        ~> "/" <~ "xml"                 ^^^ text / xml |
+      "video"       ~> "/" <~ "quicktime"           ^^^ video / quicktime |
+      "video"       ~> "/" <~ "x-msvideo"           ^^^ video / `x-msvideo`)?) <~ regex("""[^,]*""".r) ^^ {case v => v}
 
-  def parseMimeTypes(inString: String): Array[MimeType] = {
-    def MimeTypeRegex = new Regex("""([a-z\-]+)/(([.+a-z\-]+)|\*)|\*/\*""")
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.filter(_ != None).map(_.get) }
 
-    /* Split the string on commas, which separate the mimes */
-    var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
-      .flatMap(MimeTypeRegex findFirstIn _).map(_.split("/"))
-      .flatMap ( mimeType =>  mimeType match {
+  def parseMimeTypes(inString: String): List[MimeType] = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
 
-        case Array("*" , "*")                     => Array(anymaintype / anysubtype)
+    case Failure(msg, _) => error("The mimeTypes " + inString + " has a syntax error: " + msg)
 
-        case Array("application", "*")            => Array(application / anysubtype)
-        case Array("application", "javascript")   => Array(application / javascript)
-        case Array("text", "javascript")          => Array(text / javascript)
-
-        case Array("application", "x-javascript") => Array(application / `x-javascript`)
-        case Array("application", "soap+xml")     => Array(application / `soap+xml`) 
-        case Array("application", "xhtml+xml")    => Array(application / `xhtml+xml`)
-        case Array("application", "xml-dtd")      => Array(application / `xml-dtd`)
-        case Array("application", "json")         => Array(application / json)
-        case Array("application", "x-latex")      => Array(application / `x-latex`) 
-        case Array("application", "octet-stream") => Array(application / `octet-stream`)
-        case Array("application", "ogg" )         => Array(application / ogg)
-        case Array("application", "pdf" )         => Array(application / `pdf`)
-        case Array("application", "postscript" )  => Array(application / `postscript`)
-        case Array("application", "x-dvi")        => Array(application / `x-dvi`)
-        case Array("application", "x-shockwave-flash") => Array(application / `x-shockwave-flash`)
-        case Array("application", "x-tar")        => Array(application / `x-tar`)
-        case Array("application", "x-ttf")        => Array(application / `x-ttf`)
-        case Array("application", "zip")          => Array(application / `zip`)
-
-        /* Audio */
-        case Array("audio", "basic")              => Array(audio / basic)
-        case Array("audio", "mp4")                => Array(audio / mp4)
-        case Array("audio", "midi")               => Array(audio / midi)
-        case Array("audio", "mpeg")               => Array(audio / mpeg)
-        case Array("audio", "vorbis")             => Array(audio / vorbis)
-        case Array("audio", "x-ms-wma")           => Array(audio / `x-ms-wma`)
-        case Array("audio", "x-ms-wax")           => Array(audio / `x-ms-wax`)
-        case Array("audio", "x-realaudio")        => Array(audio / `x-realaudio`)
-        case Array("audio", "x-wav")              => Array(audio / `x-wav`)
-
-        /* Image */
-        case Array("image", "gif")                => Array(image / gif)
-        case Array("image", "png")                => Array(image / png)
-        case Array("image", "jpeg")               => Array(image / jpeg)
-        case Array("image", "svg+xml")            => Array(image / `svg+xml`)
-        case Array("image", "tiff")               => Array(image / tiff)
-        case Array("image", "vnd.microsoft.icon") => Array(image / `vnd.microsoft.icon`)
-
-        /* Multipart */
-        case Array("multipart", "mixed")            => Array(multipart / mixed)
-        case Array("multipart", "alternative")    => Array(multipart / alternative)
-        case Array("multipart", "related")        => Array(multipart / related)
-        case Array("multipart", "form-data")      => Array(multipart / `form-data`)
-        case Array("multipart", "signed")         => Array(multipart / signed)
-        case Array("multipart", "encrypted")      => Array(multipart / encrypted)
-
-        /* Text */
-        case Array("text", "css")                 => Array(text / css)
-        case Array("text", "csv")                 => Array(text / csv)
-        case Array("text", "html")                => Array(text / html)
-        case Array("text", "plain")               => Array(text / plain)
-        case Array("text", "x-c")                 => Array(text / `x-c`)
-        case Array("text", "xml")                 => Array(text / xml)
-
-        /* Video */
-        case Array("video", "quicktime")          => Array(video / quicktime)
-        case Array("video", "x-msvideo")          => Array(video / `x-msvideo`)
-
-        case _ => Nil
-      }
-    )
-    return outMimes 
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   trait GenericType extends ProductPrefixUnmangler {

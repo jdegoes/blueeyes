@@ -1,7 +1,8 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 /*
   Encodings for AcceptEncoding
@@ -13,26 +14,29 @@ sealed trait Encoding extends ProductPrefixUnmangler {
   override def toString = value
 }
 
-object Encodings {
+object Encodings extends RegexParsers {
 
-  def parseEncodings(inString: String): Array[Encoding] = {
-    def EncodingRegex = new Regex("""([a-z]\-\*)+""")
+  private def elementParser = regex("""([a-z\-\*])+""".r) ^^ {case encoding => encoding match {
+      case "compress"   => compress
+      case "chunked"    => chunked
+      case "deflate"    => deflate
+      case "gzip"       => gzip
+      case "identity"   => identity
+      case "x-compress" => `x-compress`
+      case "x-zip"      => `x-zip`
+      case "*"          => `*`
+      case _            => new CustomEncoding(encoding)
+    }
+  }
 
-    var outEncodings: Array[Encoding] = inString.split(",").map(_.trim)
-        .flatMap(EncodingRegex findFirstIn _)
-        .map ( encoding =>  encoding match { 
-            case "compress" => compress  
-            case "chunked" => chunked
-            case "deflate" => deflate
-            case "gzip" => gzip 
-            case "identity" => identity 
-            case "x-compress" => `x-compress`
-            case "x-zip" => `x-zip`
-            case "*" => `*`
-            case _ => new CustomEncoding(encoding) 
-          }
-        )
-    return outEncodings
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
+
+  def parseEncodings(inString: String) = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The Encodings " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object compress extends Encoding
