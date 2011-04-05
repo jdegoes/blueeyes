@@ -85,6 +85,10 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpClientTrans
           }
 
           val future = new SpecClient(example, what)(clientTransformer)
+          future trap {errors => errors match {
+            case x :: xs => throw x
+            case Nil =>
+          }}
           waitForResponseWithRetry(future, retries)
         }
 
