@@ -1,7 +1,8 @@
 package blueeyes.core.http
 
 import java.net.URI
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 
 sealed trait HttpUri {
@@ -15,7 +16,7 @@ sealed trait HttpUri {
 
 }
 
-object HttpUris {
+object HttpUris extends RegexParsers{
 
   def parseHttpUris(inString: String): Option[HttpUri] = {
     var uri: URI = null
@@ -25,26 +26,22 @@ object HttpUris {
     } catch {
       case _ => return None
     }
-
     if (uri == null)
       return None
 
-    def port: Option[Int] = """(?<=[a-z]):\d+""".r.findFirstIn(inString).map(_.toInt)
-    return Some(CustomUri(uri, port))
+    return Some(CustomUri(uri, if (uri.getPort != -1) Some(uri.getPort) else None))
   }
 
   def parseEmails(inString: String): Option[HttpUri] = {
-    def EmailRegex = """([a-zA-Z\d_-]|\.)+@([a-zA-Z\d_-]|\.)+""".r
-    def email: Option[String] = EmailRegex.findFirstIn(inString.trim)
-    def emailUri: Option[URI] = email.getOrElse("").split("@").toList.length match {
-        case 2 => try { Some(new URI(email.get)) } catch { case _ => return None }
-        case _ => return None
-      }
-    def port: Option[Int] = """:\d+""".r.findFirstIn(inString).map(_.toInt)
-    if (emailUri == None) {
-      return None
+    def parser = (regex("""([a-zA-Z\d_-]|\.)+@([a-zA-Z\d_-]|\.)+""".r)?) ^^ {case email => email.map(v => CustomUri(new URI(v), None))}
+
+    parser(new CharSequenceReader(inString)) match {
+      case Success(result, _) => result
+
+      case Failure(msg, _) => error("The charSets " + inString + " has a syntax error: " + msg)
+
+      case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
     }
-    return Some(CustomUri(emailUri.get, port))
   }
 
   case class CustomUri(uri: URI, port: Option[Int]) extends HttpUri
