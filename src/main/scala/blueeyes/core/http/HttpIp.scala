@@ -1,7 +1,9 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
+
 import java.net.InetAddress
 
 /* For use in the X-Forwarded-For Header */
@@ -16,28 +18,20 @@ sealed trait HttpIp {
 
 }
 
+object HttpIps extends RegexParsers{
 
-object HttpIps {
+  private def elementParser = regex("""([\d]{1,3}\.){3}[\d]{1,3}""".r) ^^ {case v => CustomIP(InetAddress.getByName(v))}
 
-  def ipRegex = """((\d){1,3}\.){3}(\d){1,3}""".r
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
 
-  def parseHttpIps(inString: String): Array[HttpIp] = { 
+  def parseSingleIp(inString: String): Option[HttpIp] = parseHttpIps(inString).headOption
 
-    def inetAddresses: Array[InetAddress] = ipRegex.findAllIn(inString).toArray.map(x => InetAddress.getByName(x)).filterNot(_ == null)
-    def customIps: Array[HttpIp] = inetAddresses.map(x => CustomIP(x)) 
-    return customIps
+  def parseHttpIps(inString: String): List[HttpIp] = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
 
-  }
+    case Failure(msg, _) => error("The HttpIps " + inString + " has a syntax error: " + msg)
 
-  def parseSingleIp(inString: String): Option[HttpIp] = {
-    
-    def httpIp: Option[HttpIp] = ipRegex.findFirstIn(inString).map(x => InetAddress.getByName(x)) match {
-      case None       => None
-      case Some(null) => None
-      case Some(d)    => Some(CustomIP(d))
-    }
-
-    return httpIp
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class CustomIP(ip: InetAddress) extends HttpIp

@@ -467,7 +467,7 @@ object HttpHeaders {
   object Trailer {
     def apply(fields: HttpHeaderField*) = new Trailer(fields: _*)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer")
-      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "trailer") else None
+      Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "trailer")) else None
   }
 
   class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeader {
@@ -584,7 +584,7 @@ object HttpHeaders {
   object `Access-Control-Request-Headers` {
     def apply(fields: HttpHeaderField*) = new `Access-Control-Request-Headers`(fields:_ *)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-request-headers") 
-      HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl") else None
+      Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl")) else None
   }
   
   class CustomHeader(override val name: String, val value: String) extends HttpHeader {

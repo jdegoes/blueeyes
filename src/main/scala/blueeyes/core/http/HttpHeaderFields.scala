@@ -1,8 +1,8 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
-import scala.util.matching.Regex
-
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 sealed trait HttpHeaderField extends ProductPrefixUnmangler {
   
@@ -16,74 +16,80 @@ sealed trait HttpHeaderField extends ProductPrefixUnmangler {
 
 /* Careful with namespace pollution - these are precisely the same names as
  * those in HttpHeader */
-object HttpHeaderFields {
+object HttpHeaderFields extends RegexParsers{
 
-  def parseHttpHeaderFields(inString: String, parseType: String): Option[Array[HttpHeaderField]] = {
-    def outFields = inString.toLowerCase.trim.split(",").toList.map(_.trim match {
-        case "accept" => Accept 
-        case "accept-charset" => `Accept-Charset` 
-        case "accept-encoding" => `Accept-Encoding` 
-        case "accept-language" => `Accept-Language` 
-        case "accept-ranges" => `Accept-Ranges` 
-        case "authorization" => Authorization 
-        case "connection" => Connection 
-        case "cookie" => Cookie 
-        case "content-length" => `Content-Length` // Trailer cannot include
-        case "content-type" => `Content-Type` 
-        case "date" => Date 
-        case "expect" => Expect 
-        case "from" => From 
-        case "host" => Host 
-        case "if-match" => `If-Match` 
-        case "if-modified-since" => `If-Modified-Since` 
-        case "if-none-match" => `If-None-Match` 
-        case "if-range" => `If-Range` 
-        case "if-unmodified-since" => `If-Unmodified-Since` 
-        case "max-forwards" => `Max-Forwards` 
-        case "pragma" => Pragma 
-        case "proxy-authorization" => `Proxy-Authorization` 
-        case "range" => Range 
-        case "referer" => Referer 
-        case "te" => TE 
-        case "upgrade" => Upgrade 
-        case "user-agent" => `User-Agent` 
-        case "via" => Via 
-        case "warning" => Warning 
+  def elementParser: Parser[HttpHeaderField] = (
+    "accept" ^^^ Accept  |
+    "accept-charset" ^^^ `Accept-Charset`  |
+    "accept-encoding" ^^^ `Accept-Encoding`  |
+    "accept-language" ^^^ `Accept-Language`  |
+    "accept-ranges" ^^^ `Accept-Ranges`  |
+    "authorization" ^^^ Authorization  |
+    "connection" ^^^ Connection  |
+    "cookie" ^^^ Cookie  |
+    "content-length" ^^^ `Content-Length` | // Trailer cannot include
+    "content-type" ^^^ `Content-Type`  |
+    "date" ^^^ Date  |
+    "expect" ^^^ Expect  |
+    "from" ^^^ From  |
+    "host" ^^^ Host  |
+    "if-match" ^^^ `If-Match`  |
+    "if-modified-since" ^^^ `If-Modified-Since`  |
+    "if-none-match" ^^^ `If-None-Match`  |
+    "if-range" ^^^ `If-Range`  |
+    "if-unmodified-since" ^^^ `If-Unmodified-Since`  |
+    "max-forwards" ^^^ `Max-Forwards`  |
+    "pragma" ^^^ Pragma  |
+    "proxy-authorization" ^^^ `Proxy-Authorization`  |
+    "range" ^^^ Range  |
+    "referer" ^^^ Referer  |
+    "te" ^^^ TE  |
+    "upgrade" ^^^ Upgrade  |
+    "user-agent" ^^^ `User-Agent`  |
+    "via" ^^^ Via  |
+    "warning" ^^^ Warning  |
+    "age" ^^^ Age  | /* Response */
+    "allow" ^^^ Allow  |
+    "cache-control" ^^^ `Cache-Control`  |
+    "content-encoding" ^^^ `Content-Encoding`  |
+    "content-language" ^^^ `Content-Language`  |
+    "content-location" ^^^ `Content-Location`  |
+    "content-disposition" ^^^ `Content-Disposition`  |
+    "content-md5" ^^^ `Content-MD5`  |
+    "content-range" ^^^ `Content-Range`  |
+    "etag" ^^^ ETag  |
+    "expires" ^^^ Expires  |
+    "last-modified" ^^^ `Last-Modified`  |
+    "location" ^^^ Location  |
+    "proxy-authenticate" ^^^ `Proxy-Authenticate`  |
+    "refresh" ^^^ Refresh  |
+    "retry-after" ^^^ `Retry-After`  |
+    "server" ^^^ Server  |
+    "set-cookie" ^^^ `Set-Cookie`  |
+    "trailer" ^^^ Trailer |                         // Trailer cannot include
+    "transfer-encoding" ^^^ `Transfer-Encoding` |  // Trailer cannot include
+    "vary" ^^^ Vary  |
+    "www-authenticate" ^^^ `WWW-Authenticate`  |
+    "x-frame-option" ^^^ `X-Frame-Options`  | /* Extra Headers */
+    "x-xss-protection" ^^^ `X-XSS-Protection`  |
+    "x-content-type-options" ^^^ `X-Content-Type-Options`  |
+    "x-requested-with" ^^^ `X-Requested-With`  |
+    "x-forwarded-for" ^^^ `X-Forwarded-For`  |
+    "x-forwarded-proto" ^^^ `X-Forwarded-Proto`  |
+    "x-powered-by" ^^^ `X-Powered-By` |
+    regex("[^,]+".r) ^^^ NullHeader
+  )
 
-        /* Response */
-        case "age" => Age 
-        case "allow" => Allow 
-        case "cache-control" => `Cache-Control` 
-        case "content-encoding" => `Content-Encoding` 
-        case "content-language" => `Content-Language` 
-        case "content-location" => `Content-Location` 
-        case "content-disposition" => `Content-Disposition` 
-        case "content-md5" => `Content-MD5` 
-        case "content-range" => `Content-Range` 
-        case "etag" => ETag 
-        case "expires" => Expires 
-        case "last-modified" => `Last-Modified` 
-        case "location" => Location 
-        case "proxy-authenticate" => `Proxy-Authenticate` 
-        case "refresh" => Refresh 
-        case "retry-after" => `Retry-After` 
-        case "server" => Server 
-        case "set-cookie" => `Set-Cookie` 
-        case "trailer" => Trailer                         // Trailer cannot include
-        case "transfer-encoding" => `Transfer-Encoding`   // Trailer cannot include
-        case "vary" => Vary 
-        case "www-authenticate" => `WWW-Authenticate` 
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
 
-        /* Extra Headers */
-        case "x-frame-option" => `X-Frame-Options` 
-        case "x-xss-protection" => `X-XSS-Protection` 
-        case "x-content-type-options" => `X-Content-Type-Options` 
-        case "x-requested-with" => `X-Requested-With` 
-        case "x-forwarded-for" => `X-Forwarded-For` 
-        case "x-forwarded-proto" => `X-Forwarded-Proto` 
-        case "x-powered-by" => `X-Powered-By` 
-        case default => NullHeader
-    })
+  def parseHttpHeaderFields(inString: String, parseType: String): List[HttpHeaderField] = {
+    def outFields = parser(new CharSequenceReader(inString.toLowerCase)) match {
+      case Success(result, _) => result
+
+      case Failure(msg, _) => error("The HttpHeaderFields " + inString + " has a syntax error: " + msg)
+
+      case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    }
 
     def notInTrailer(x: HttpHeaderField): Boolean = {
       x match {
@@ -95,12 +101,13 @@ object HttpHeaderFields {
       }
     }
 
-    if (parseType == "trailer") 
-      return Some(outFields.filterNot(notInTrailer(_)).toArray)
-    else 
-      return Some(outFields.filterNot(_ match {
+    val ss = outFields
+    if (parseType == "trailer")
+      return outFields.filterNot(notInTrailer(_))
+    else
+      return outFields.filterNot(_ match {
         case NullHeader => true
-        case _ => false }).toArray)
+        case _ => false })
   }
 
   /** Requests **/

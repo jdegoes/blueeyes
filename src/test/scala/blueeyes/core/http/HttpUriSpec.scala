@@ -2,11 +2,13 @@ package blueeyes.core.http
 
 import org.specs.Specification
 import blueeyes.core.http.MimeTypes._
+import java.net.URI
+import HttpUris._
 
 class HttpUriSpec extends Specification {
 
   "From:  Should return the correct email name with a well-formed email and parse to None otherwise" in {
-    HttpHeaders.From(HttpUris.parseEmails("johnsmith@socialmedia.com").get).value mustEqual "johnsmith@socialmedia.com"
+    HttpHeaders.From(HttpUris.parseEmails("johnsmith@socialmedia.com ").get).value mustEqual "johnsmith@socialmedia.com"
   }
 
   "From: Should return the correct (although weird) email" in {
@@ -23,6 +25,10 @@ class HttpUriSpec extends Specification {
 
   "Host:  Should parse correct host uri" in {
     HttpHeaders.Host(HttpUris.parseHttpUris("http://maps.google.com/coolmap.html").get).value mustEqual "maps.google.com"
+  }
+
+  "Host:  Should parse correct host uri with port" in {
+    HttpUris.parseHttpUris("http://maps.google.com:8080/coolmap.html").get mustEqual CustomUri(new URI("http://maps.google.com:8080/coolmap.html"), Some(8080))
   }
 
   "HttpUris: Should parse nonstandard characters to None" in {
