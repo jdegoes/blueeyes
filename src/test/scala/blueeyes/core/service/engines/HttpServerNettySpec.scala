@@ -1,6 +1,5 @@
 package blueeyes.core.service.engines
 
-import com.ning.http.client._
 import blueeyes.core.service._
 import org.specs.Specification
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
@@ -37,7 +36,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
         Configgy.configureFromString(configPattern.format(port, port + 1))
 
         val startFuture = sampleServer.start
-        
+
         startFuture.deliverTo { _ =>
           error = None
           doneSignal.countDown()
@@ -49,8 +48,8 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
           doneSignal.countDown()
         }
 
-        server = Some(sampleServer)        
-        
+        server = Some(sampleServer)
+
         doneSignal.await()
       }while(error != None)
 
@@ -192,9 +191,9 @@ class SampleClientFacade(port: Int, sslPort: Int) extends HttpClientTransformerC
 
 trait SampleService extends BlueEyesServiceBuilderString {
   import blueeyes.core.http.MimeTypes._
-  
+
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
-  
+
   val sampleService: HttpService[String] = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
@@ -202,11 +201,11 @@ trait SampleService extends BlueEyesServiceBuilderString {
           get { request: HttpRequest[String] =>
             new Future[HttpResponse[String]]().deliver(response)
           }
-        } ~ 
+        } ~
         path("/foo") {
           get { request: HttpRequest[String] =>
             new Future[HttpResponse[String]]().deliver(response)
-          }  
+          }
         } ~
         path("/error") {
           get { request: HttpRequest[String] =>

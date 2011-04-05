@@ -3,15 +3,15 @@ import de.element34.sbteclipsify._
 
 trait OneJar { this: DefaultProject =>
   lazy val oneJar = oneJarAction
-  
+
   def oneJarAction = oneJarTask.dependsOn(`package`) describedAs("Creates a single JAR containing all dependencies that runs the project's mainClass")
-  
-  def oneJarTask: Task = task { 
+
+  def oneJarTask: Task = task {
     import FileUtilities._
     import java.io.{ByteArrayInputStream, File}
     import java.util.jar.Manifest
     import org.apache.commons.io.FileUtils
-    
+
     val manifest = new Manifest(new ByteArrayInputStream((
       "Manifest-Version: 1.0\n" +
       "Main-Class: " + mainClass.get + "\n").getBytes))
@@ -22,8 +22,8 @@ trait OneJar { this: DefaultProject =>
       case _ => version.toString
     }
 
-    val allDependencies = jarPath +++ runClasspath +++ mainDependencies.scalaJars 
-    
+    val allDependencies = jarPath +++ runClasspath +++ mainDependencies.scalaJars
+
     log.info("All dependencies of " + name + ": " + allDependencies)
 
     val destJar = (normalizedName + versionString + ".jar"): Path
@@ -31,11 +31,11 @@ trait OneJar { this: DefaultProject =>
     FileUtilities.withTemporaryDirectory(log) { tmpDir =>
       val tmpPath = Path.fromFile(tmpDir)
 
-      allDependencies.get.foreach { dependency => 
+      allDependencies.get.foreach { dependency =>
         log.info("Unzipping " + dependency + " to " + tmpPath)
 
         if (dependency.ext.toLowerCase == "jar") {
-          unzip(dependency, tmpPath, log) 
+          unzip(dependency, tmpPath, log)
         }
         else if (dependency.asFile.isDirectory) {
           FileUtils.copyDirectory(dependency.asFile, tmpDir)
@@ -43,8 +43,8 @@ trait OneJar { this: DefaultProject =>
         else {
           copyFile(dependency.asFile, tmpDir, log)
         }
-      } 
-      
+      }
+
       new File(tmpDir, "META-INF/MANIFEST.MF").delete
 
       log.info("Creating single jar out of all dependencies: " + destJar)
@@ -57,32 +57,35 @@ trait OneJar { this: DefaultProject =>
 }
 
 class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin with CoverageProject{
-  val commonsio      = "commons-io"                   % "commons-io"          % "1.3.2"         % "test"
-  val scalatest      = "org.scalatest"                % "scalatest"           % "1.2"           % "test"
-  val scalacheck     = "org.scala-tools.testing"      % "scalacheck_2.8.0"    % "1.7"           % "compile"
-  val mockito        = "org.mockito"                  % "mockito-all"         % "1.8.4"         % "compile"
-  val paranamer      = "com.thoughtworks.paranamer"   % "paranamer"           % "2.0"
-  val junit          = "junit"                        % "junit"               % "4.7"           % "compile"
-  val scalaspec      = "org.scala-tools.testing"      % "specs_2.8.0"         % "1.6.6-SNAPSHOT"       % "compile"  
-  val netty          = "org.jboss.netty"              % "netty"               % "3.2.4.Final"   % "compile"
-  val async          = "com.ning"                     % "async-http-client"   % "1.3.3"         % "compile"
-  val mongo          = "org.mongodb"                  % "mongo-java-driver"   % "2.5.2"         % "compile"
-  val jodatime       = "joda-time"                    % "joda-time"           % "1.6.2"         % "compile"
-  val configgy       = "net.lag"                      % "configgy"            % "2.0.0"         % "compile" intransitive()
-  val guice          = "com.google.inject"            % "guice"               % "2.0"           % "compile"
-  val rhino          = "rhino"                        % "js"                  % "1.7R2"         % "compile"
-  val xlightweb      = "org.xlightweb"                % "xlightweb"           % "2.13.2"        % "compile"
-  val commonscodec   = "commons-codec"                % "commons-codec"       % "1.4"           % "compile"
-  val clhm_lru       = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
-  val apacheColl     = "commons-collections"          % "commons-collections" % "3.2.1"         % "compile"
-  val scalazCore     = "org.scalaz"                   %% "scalaz-core"        % "6.0-SNAPSHOT"
-  
+  val commons_io    = "commons-io"                  %  "commons-io"         % "2.0.1"         % "compile"
+  val specs         = "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "compile"
+  val scala_check   = "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "compile"
+  val scala_test    = "org.scalatest"               % "scalatest"           % "1.3"           % "test"
+  val mockito       = "org.mockito"                 % "mockito-all"         % "1.8.5"         % "compile"
+  val paranamer     = "com.thoughtworks.paranamer"  % "paranamer"           % "2.3"
+  val junit         = "junit"                       % "junit"               % "4.8.2"         % "compile"
+  val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
+  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.2"         % "compile"
+  val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
+  val configgy      = "net.lag"                     % "configgy"            % "2.0.0"         % "compile" intransitive()
+  val guice         = "com.google.inject"           % "guice"               % "2.0"           % "compile"
+  val rhino         = "rhino"                       % "js"                  % "1.7R2"         % "compile"
+  val xlightweb     = "org.xlightweb"               % "xlightweb"           % "2.13.2"        % "compile"
+  val codec         = "commons-codec"               % "commons-codec"       % "1.5"           % "compile"
+  val clhm_lru      = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
+  val collections   = "commons-collections"         % "commons-collections" % "3.2.1"         % "compile"
+  val scalaz_core   = "org.scalaz"                  %% "scalaz-core"        % "6.0-SNAPSHOT"
+
   lazy val benchmark = benchmarkTask
 
   def benchmarkTask = task { args =>
     val duration = if (args.isEmpty) "600" else args(0)
-    runTask(Some("blueeyes.benchmark.Benchmark"), runClasspath, Array(duration)) dependsOn(compile, copyResources) describedAs("Run benchmark test") 
+    runTask(Some("blueeyes.benchmark.Benchmark"), runClasspath, Array(duration)) dependsOn(compile, copyResources) describedAs("Run benchmark test")
   }
+
+  def specs2Framework = new TestFramework("org.specs2.runner.SpecsFramework")
+
+  override def testFrameworks = super.testFrameworks ++ Seq(specs2Framework)
 
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }

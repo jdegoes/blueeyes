@@ -2,6 +2,7 @@ package blueeyes.parsers
 
 import org.scalacheck._
 import Gen._
+import Arbitrary.arbitrary
 import scala.util.Random
 
 object RegexpGen{
@@ -13,7 +14,7 @@ object RegexpGen{
   def boundaryMatch = oneOf("$", "^", "\\b", "\\B", "\\A", "\\z", "\\Z", "\\G")
 
   def shorthandCharacterClass = oneOf("\\s", "\\S", "\\d", "\\D", "\\w", "\\W")
-  
+
   def escapeSequence = oneOf("\\t", "\\n", "\\r", "\\f", "\\a", "\\e")
 
   def posixCharacterClass = oneOf("\\p{Lower}", "\\p{Upper}", "\\p{ASCII}", "\\p{Alpha}", "\\p{Digit}", "\\p{Alnum}", "\\p{Punct}", "\\p{Graph}", "\\p{Print}", "\\p{Blank}", "\\p{Cntrl}", "\\p{XDigit}", "\\p{Space}")
@@ -39,7 +40,7 @@ object RegexpGen{
   def flags = {
     def flag = oneOf("s", "i", "m")
     for{
-      withHyphen <- genBool
+      withHyphen <- arbitrary[Boolean]
       size       <- choose(1, 3)
       flags1     <- flag
       flags2     <- flag
@@ -71,7 +72,7 @@ object RegexpGen{
 
   def regexAtom: Gen[String] = {
     for{
-      withQuantifier   <- genBool
+      withQuantifier   <- arbitrary[Boolean]
       regexAtomElement <- oneOf(singleChar, boundaryMatch, shorthandCharacterClass, posixCharacterClass, escapeSequence, characterClass, flagGroup, quotation, namedCaptureGroup, nonCapturingGroup, atomicGroup, lookAround, group,  backReference, oneOf(".", "|"))
       quantifier       <- quantifier
     } yield ( regexAtomElement + (if (withQuantifier) quantifier else "") )
@@ -83,11 +84,11 @@ object RegexpGen{
       values <- listOfN(size, choose(49, 57))
     } yield ("\\" + values.mkString(""))
   }
-  
+
   def quantifier = oneOf(reluctantQuantifier, possessiveQuantifier, greedyQuantifier)
 
   def reluctantQuantifier = greedyQuantifier.map(_ + "?")
-  
+
   def possessiveQuantifier = greedyQuantifier.map(_ + "+")
 
   def greedyQuantifier = {
@@ -100,8 +101,8 @@ object RegexpGen{
 
   def characterClass = {
     for {
-      withCaret            <- genBool
-      withSquareBracketEnd <- genBool
+      withCaret            <- arbitrary[Boolean]
+      withSquareBracketEnd <- arbitrary[Boolean]
       size                 <- choose(1, 10)
       generateSize         <- if (withSquareBracketEnd) size - 1 else size
       values               <- listOfN(generateSize, characterClassAtom)
@@ -120,7 +121,7 @@ object RegexpGen{
 
   def nonCapturingGroup: Gen[String] = {
     for{
-      withFlags <- genBool
+      withFlags <- arbitrary[Boolean]
       flags1    <- flags
       size      <- choose(0, 10)
       values    <- listOfN(1, regexAtom)
@@ -144,8 +145,8 @@ object RegexpGen{
 
   def lookAround = {
     for{
-      ahead     <- genBool
-      positive  <- genBool
+      ahead     <- arbitrary[Boolean]
+      positive  <- arbitrary[Boolean]
       size      <- choose(0, 10)
       values    <- listOfN(1, regexAtom)
     } yield ( "(?" + (if (ahead) "" else "<") + (if (positive) "=" else "!") + values.mkString("")  + ")")
@@ -155,7 +156,7 @@ object RegexpGen{
     for{
       size      <- choose(0, 10)
       values    <- listOfN(1, regexAtom)
-    } yield ( "(" + values.mkString("")  + ")") 
+    } yield ( "(" + values.mkString("")  + ")")
   }
 
   private def hexDigit   = frequency((1, choose(48, 57)), (1, choose(65, 70)), (1, choose(97, 102))).map(_.toChar)
