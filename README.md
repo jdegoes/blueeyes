@@ -196,13 +196,14 @@ The path combinator deserves special treatment. Although in the preceding exampl
 Rest path patterns are composed from the following building blocks:
 
  * String literals, such as "/foo/bar".
- * Symbols, which are placeholders for url fragments, such as "/foo/'fooId". Symbols do not match path separator characters or periods, although they do match underscores, dashes, numbers, and spaces.
- * Regular expressions.
+ * Symbols, which are placeholders for url fragments, such as "/foo/'fooId". Symbols do not match path separator characters or periods, although they do match underscores, dashes, numbers, and spaces. Symbols are extracted and placed into request parameters, keyed by symbol name.
+ * Regular expressions, such as "/foo/bar/baz.(?<extension>\w{3,4})". Any part of a string wrapped in parentheses is automatically treated as a regular expression. Named capture groups are extracted and placed into request parameters, keyed by capture group name.
 
 Although it's most common to create patterns from strings or symbols, you can also create them using the methods available on an existing pattern. For example:
 
     pattern / 'foo
     pattern / "foo"
+    pattern / "(?<email>\w+@\w+\.\w{2,3})"
 
 ### Consumption
 
@@ -465,7 +466,7 @@ If you have multiple services, and one service needs to consume another, you can
 
 #### Configurable Root
 
-The configurable root combinator uses the *rootPath* setting in the service's config block to shift the request handler rightward by the specified string. This is useful when you want to combine many services on a single server, but avoid name clashes.
+The configurable root combinator uses the *rootPath* setting in the service's config block to shift the request handler rightward by the specified string. This is useful when you want to combine many services on a single server, and avoid name clashes.
 
     trait ConfigurableRootDemo extends BlueEyesServiceBuilder {
       val configurableRootService = service("configurableroot", "1.0.2") {
@@ -479,17 +480,12 @@ The configurable root combinator uses the *rootPath* setting in the service's co
       }
     }
 
-#### Request Logging
-
-The request logging combinator allows you to log all requests.
-
-
-
 ## Data Exchange
 
 ### JSON
 
-BlueEyes comes with the most fully-featured Scala library for JSON parsing, rendering, and manipulation.
+BlueEyes comes with the most fully-featured Scala library for JSON parsing, rendering, and manipulation. The library is
+derived from Lift Json, but with more features and a more uniform API.
 
 ## Persistence
 
@@ -498,7 +494,6 @@ BlueEyes comes with the most fully-featured Scala library for JSON parsing, rend
 BlueEyes has several kinds of caches:
 
  * Concurrent cache, which can be used by any number of threads without synchronizing;
- * Non-concurrent cache, which is not concurrent safe but can be safely used by actors;
  * Stage, most often used to coalesce IO operations in a staging area before execution.
 
 All caches support user-defined expiration policy and eviction handlers.
@@ -507,18 +502,7 @@ All caches support user-defined expiration policy and eviction handlers.
 
 BlueEyes has a full-featured Scala facade to MongoDB.
 
-First of all, you need to create an instance to the Mongo facade. If you wish to use Guice, you could use the following code:
-
-    import blueeyes.persistence.mongo._
-
-    lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
-    val mongo         = injector.getInstance(classOf[Mongo])
-
-If you wish to use the above code, you should create a file in */etc/default/blueeyes.conf* which has the following block:
-
-    mongo {
-      servers: ["host1:port1", "host2:port2", ...]
-    }
+First of all, you need to create an instance to the Mongo facade. You have your choice of RealMongo or MockMongo. The latter is a memory-only Mongo facade that is designed for automated testing.
 
 Once you have access to Mongo, you can then create references to databases:
 
