@@ -1,6 +1,7 @@
 package blueeyes.core.http
 
-import scala.util.matching.Regex
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 /* Language Ranges are used for the Accept-Language Http Header */
 
 sealed trait LanguageRange {
@@ -13,21 +14,20 @@ sealed trait LanguageRange {
   override def toString = value
 }
 
-object LanguageRanges {
-  def parseLanguageRanges(inString: String): Array[LanguageRange] = {
-    def ParseLanguageRegex = new Regex("""(?:\b|^)([a-z]{2}(\-[a-z]+){0,2})""")
+object LanguageRanges extends RegexParsers {
+  private def elementParser = opt(
+    regex("""(?:\b|^)""".r) ~> regex("""[a-z]{2}""".r) ~ ("-" ~>  regex("[a-z]+".r)) ~ ("-" ~>  regex("[a-z]+".r)) <~ regex("[^,]*".r) ^^ {case mainType ~ subType ~ subSubType => Range(mainType, subType, subSubType)} |
+    regex("""(?:\b|^)""".r) ~> regex("""[a-z]{2}""".r) ~ ("-" ~>  regex("[a-z]+".r)) <~ regex("[^,]*".r) ^^ {case mainType ~ subType => Range(mainType, subType)} |
+    regex("""(?:\b|^)""".r) ~> regex("""([a-z]{2})""".r) <~ regex("[^,]*".r) ^^ {case mainType => Range(mainType)})
 
-    var outLangRanges: Array[LanguageRange] = inString.toLowerCase.split(",").map(_.trim)
-    .flatMap(ParseLanguageRegex.findFirstIn(_)).map(_.split("-")).map { languageRanges =>
-      languageRanges match {
-        case Array(mainType, subType, subSubType) => Range(mainType, subType, subSubType)
-        
-        case Array(mainType, subType) => Range(mainType, subType)
-        
-        case Array(mainType) => Range(mainType)
-      }
-    }
-    return outLangRanges
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
+
+  def parseLanguageRanges(inString: String): List[Range] = parser(new CharSequenceReader(inString.toLowerCase)) match {
+    case Success(result, _) => result filter(_ != None) map (_.get)
+
+    case Failure(msg, _) => error("The LanguageRanges " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class Range (mainType: String, subType: Option[String], subSubType: Option[String]) extends LanguageRange

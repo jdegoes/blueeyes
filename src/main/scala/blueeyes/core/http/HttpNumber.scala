@@ -19,7 +19,6 @@ object HttpNumbers {
   }
 
   case class LongNumber(number: Long) extends HttpNumber
-
 }
 
 

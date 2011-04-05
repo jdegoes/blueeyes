@@ -1,5 +1,9 @@
 package blueeyes.core.http
 
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
+import blueeyes.core.http.HttpNumbers.LongNumber
+
 /* For use with the Range Header */
 
 sealed trait ByteRange {
@@ -11,28 +15,27 @@ sealed trait ByteRange {
 
 }
 
-object ByteRanges {
+object ByteRanges extends RegexParsers with HttpNumberImplicits{
 
-  def parseByteRanges(inString: String): Option[ByteRange] = {
-    def unit = """[a-zA-Z]+""".r.findFirstIn(inString.trim).getOrElse("")
-    if (unit == "") 
-      return None
+  private def digitalParser = regex("""[\d]+""".r)
 
-    def BytesRegex = """([\d\s]|,|-)+""".r
-    def byteString: List[String] = BytesRegex.findFirstIn(inString.trim).getOrElse("")
-      .split(",").toList.map(_.trim)
+  private def bytePairParser = opt(
+    digitalParser ~ ("-" ~> digitalParser) ^^ {case first ~ last => BytePair(Some(LongNumber(first.toLong)), LongNumber(last.toLong))} |
+    "-" ~> digitalParser ^^ {case last => BytePair(None, LongNumber(last.toLong))}
+  )
+  private def bytePairsParser = repsep(bytePairParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.filter(_ != None).map(_.get) }
 
-    def bytes: List[BytePair] = byteString.map(_.split("-")).map(numPair => 
-        numPair.map(x => HttpNumbers.parseHttpNumbers(x)) 
-        match {
-          case Array(None, Some(y))     => Some(BytePair(None, y))
-          case Array(Some(x), Some(y))  => Some(BytePair(Some(x), y))
-          case default                  => None
-        }
-      ).filterNot(x => x == None).map(_.get)
-    if (bytes.length == 0) 
-      return None
-    return Some(ByteRangeList(bytes, unit))
+  private def parser = opt(regex("""[a-zA-Z]+""".r) <~ "=") ~ bytePairsParser ^^ {case unit ~ pairs => unit.flatMap(unitValue => pairs match {
+    case x :: xs => Some(ByteRangeList(pairs, unitValue))
+    case Nil => None
+  })}
+
+  def parseByteRanges(inString: String) = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The ByteRanges " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class ByteRangeList(bytePairs: List[BytePair], unit: String) extends ByteRange
