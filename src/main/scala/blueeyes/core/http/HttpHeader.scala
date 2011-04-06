@@ -46,9 +46,8 @@ class HttpHeaders (private val headers: Map[String, String]) extends Map[String,
   def header[T <: HttpHeader](implicit m: Manifest[T]) = headerOption(m).getOrElse(error("Header % cannot be found.".format(m.erasure.getName)))
 
   def headerOption[T <: HttpHeader](implicit m: Manifest[T]): Option[T] = {
-    val clazz           = Class.forName(m.erasure.getName + "$")
-    val applyMethod     = clazz.getMethods find {method => method.getName == "apply"} get
-
+    val clazz        = Class.forName(m.erasure.getName + "$")
+    val applyMethod  = clazz.getMethods find {method => method.getName == "apply"} get
     val headerObject = clazz.newInstance.asInstanceOf[{
       def unapply(keyValue: (String, String)): Option[_]
     }]

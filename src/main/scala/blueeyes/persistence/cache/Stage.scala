@@ -3,6 +3,7 @@ package blueeyes.persistence.cache
 import scala.collection.mutable.Map
 import scala.actors.Actor
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import util.control.ControlThrowable
 
 /** A stage is a particular kind of cache that is used for staging IO updates.
  * Many kinds of IO updates can be combined (e.g. instead of writing a single
@@ -70,7 +71,10 @@ trait Stage[K, V] extends Map[K, V] with FutureDeliveryStrategySequential{
           case GetAll =>
             reply(GotAll(accumulator.toList))
         }
-        catch { case e => e.printStackTrace }
+        catch {
+          case e: ControlThrowable =>
+          case e => e.printStackTrace
+        }
       }
     }
   }
