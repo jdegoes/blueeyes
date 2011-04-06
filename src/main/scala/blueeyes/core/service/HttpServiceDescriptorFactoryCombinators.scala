@@ -36,15 +36,17 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestHandler(underlying.request(state), monitor)})
+      val startTime = System.currentTimeMillis
 
       descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
         get {
           request: HttpRequest[T] => {
-            val version = context.serviceVersion
-            val who     = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
-            val server  = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
-            val health  = monitor.toJValue
-            HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server))))
+            val version       = context.serviceVersion
+            val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
+            val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
+            val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
+            val health        = monitor.toJValue
+            HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
           }
         }
       }
