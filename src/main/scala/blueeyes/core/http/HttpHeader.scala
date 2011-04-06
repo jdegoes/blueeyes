@@ -64,7 +64,7 @@ object HttpHeaders {
 
   /************ Requests ************/
 
-  class Accept(val mimeTypes: MimeType*) extends HttpHeader {
+  class Accept(val mimeTypes: MimeType*) extends HttpHeaderRequest {
     def value = mimeTypes.map(_.value).mkString(", ")
   }
   object Accept {
@@ -73,7 +73,7 @@ object HttpHeaders {
       Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
   
-  class `Accept-Charset`(val charSets: CharSet*) extends HttpHeader {
+  class `Accept-Charset`(val charSets: CharSet*) extends HttpHeaderRequest {
     def value = charSets.map(_.value).mkString(", ")
   }
   object `Accept-Charset` {
@@ -82,7 +82,7 @@ object HttpHeaders {
       Some(CharSets.parseCharSets(keyValue._2)) else None
   }
 
-  class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeader  {
+  class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeaderRequest  {
     def value = encodings.map(_.value).mkString(", ")
   }
   object `Accept-Encoding` {
@@ -90,7 +90,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
-  class `Accept-Language`(val languageRanges: LanguageRange*) extends HttpHeader {
+  class `Accept-Language`(val languageRanges: LanguageRange*) extends HttpHeaderRequest {
     def value = languageRanges.map(_.value).mkString(", ");
   }
   object `Accept-Language` {
@@ -98,7 +98,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
   }
 
-  class `Accept-Ranges`(val rangeUnit: RangeUnit) extends HttpHeader {
+  class `Accept-Ranges`(val rangeUnit: RangeUnit) extends HttpHeaderResponse {
     def value = rangeUnit.toString
   }
   object `Accept-Ranges` {
@@ -107,7 +107,7 @@ object HttpHeaders {
       RangeUnits.parseRangeUnits(keyValue._2) else None
   }
 
-  class Authorization(val credentials: String) extends HttpHeader {
+  class Authorization(val credentials: String) extends HttpHeaderRequest {
     def value = credentials
   }
   object Authorization {
@@ -115,7 +115,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
   }
 
-  class Connection(val connectionToken: ConnectionToken) extends HttpHeader {
+  class Connection(val connectionToken: ConnectionToken) extends HttpHeaderRequest {
     def value = connectionToken.toString 
   }
   object Connection {
@@ -124,7 +124,7 @@ object HttpHeaders {
       ConnectionTokens.parseConnectionTokens(keyValue._2) else None
   }
 
-  class Cookie(val cookies: List[HttpCookie]) extends HttpHeader {
+  class Cookie(val cookies: List[HttpCookie]) extends HttpHeaderRequest {
     val value = cookies.mkString(";")
   }
   object Cookie {
@@ -133,7 +133,7 @@ object HttpHeaders {
       Some(CookiesPattern(keyValue._2)) else None
   }
 
-  class `Content-Length`(val length: Long) extends HttpHeader {
+  class `Content-Length`(val length: Long) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = length.toString
   }
   object `Content-Length` {
@@ -142,7 +142,7 @@ object HttpHeaders {
       Some(keyValue._2.toLong) else None
   }
 
-  class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeader {
+  class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = mimeTypes.map(_.value).mkString(", ")
   }
   object `Content-Type` {
@@ -151,7 +151,7 @@ object HttpHeaders {
       Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
   }
 
-  class Date(val httpDate: HttpDateTime) extends HttpHeader {
+  class Date(val httpDate: HttpDateTime) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = httpDate.toString
   }
   object Date {
@@ -160,7 +160,7 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class Expect(val expectation: Expectation) extends HttpHeader {
+  class Expect(val expectation: Expectation) extends HttpHeaderRequest {
     def value = expectation.toString
   }
   object Expect {
@@ -169,7 +169,7 @@ object HttpHeaders {
       Expectations.parseExpectations(keyValue._2) else None
   }
 
-  class From(val email: HttpUri) extends HttpHeader {
+  class From(val email: HttpUri) extends HttpHeaderRequest {
     def value = email.toString
   }
   object From {
@@ -178,7 +178,7 @@ object HttpHeaders {
       HttpUris.parseEmails(keyValue._2) else None
   }
 
-  class Host(val domain: HttpUri) extends HttpHeader {
+  class Host(val domain: HttpUri) extends HttpHeaderRequest {
     def value = domain.host 
   }
   object Host {
@@ -188,7 +188,7 @@ object HttpHeaders {
   }
 
   /* Need to add parsing to array */
-  class `If-Match`(val tags: EntityTag) extends HttpHeader {
+  class `If-Match`(val tags: EntityTag) extends HttpHeaderRequest {
     def value = tags.toString
   }
   object `If-Match` { // going to need a new type here
@@ -197,7 +197,7 @@ object HttpHeaders {
       EntityTags.parseEntityTags(keyValue._2) else None
   }
 
-  class `If-Modified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
+  class `If-Modified-Since`(val httpDate: HttpDateTime) extends HttpHeaderRequest {
     def value = httpDate.toString
   }
   object `If-Modified-Since` {
@@ -207,7 +207,7 @@ object HttpHeaders {
   }
 
   /* Need to add parsing to array */
-  class `If-None-Match`(val tags: EntityTag) extends HttpHeader {
+  class `If-None-Match`(val tags: EntityTag) extends HttpHeaderRequest {
     def value = tags.toString
   }
   object `If-None-Match` {
@@ -217,7 +217,7 @@ object HttpHeaders {
   }
 
   /* If-Range needs to add a way to include the date -- probably need new class */
-  class `If-Range`(val tag: IfRange) extends HttpHeader {
+  class `If-Range`(val tag: IfRange) extends HttpHeaderRequest {
     def value = tag.toString 
   }
   object `If-Range` {
@@ -227,7 +227,7 @@ object HttpHeaders {
   }
 
 
-  class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeader {
+  class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeaderRequest {
     def value = httpDate.toString
   }
   object `If-Unmodified-Since` {
@@ -236,7 +236,7 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class `Max-Forwards`(val maxf: HttpNumber) extends HttpHeader {
+  class `Max-Forwards`(val maxf: HttpNumber) extends HttpHeaderRequest {
     def value = maxf.toString 
   }
   object `Max-Forwards` {
@@ -245,7 +245,7 @@ object HttpHeaders {
       HttpNumbers.parseHttpNumbers(keyValue._2) else None
   }
 
-  class Pragma(val primeDirective: PragmaDirective) extends HttpHeader {
+  class Pragma(val primeDirective: PragmaDirective) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = primeDirective.toString
   }
   object Pragma {
@@ -254,7 +254,7 @@ object HttpHeaders {
       PragmaDirectives.parsePragmaDirectives(keyValue._2) else None
   }
 
-  class `Proxy-Authorization`(val auth: String) extends HttpHeader {
+  class `Proxy-Authorization`(val auth: String) extends HttpHeaderRequest {
     def value = auth
   }
   object `Proxy-Authorization` {
@@ -263,7 +263,7 @@ object HttpHeaders {
       Some(keyValue._2) else None
   }
 
-  class Range(val byteRange: ByteRange) extends HttpHeader {
+  class Range(val byteRange: ByteRange) extends HttpHeaderRequest {
     def value = byteRange.toString
   }
   object Range {
@@ -272,7 +272,7 @@ object HttpHeaders {
       ByteRanges.parseByteRanges(keyValue._2) else None
   }
 
-  class Referer(val domain: HttpUri) extends HttpHeader {
+  class Referer(val domain: HttpUri) extends HttpHeaderRequest {
     def value = domain.absoluteUri
   }
   object Referer {
@@ -281,7 +281,7 @@ object HttpHeaders {
       HttpUris.parseHttpUris(keyValue._2) else None
   }
 
-  class TE(val tcodings: TCoding*) extends HttpHeader {
+  class TE(val tcodings: TCoding*) extends HttpHeaderRequest {
     def value = tcodings.map(_.toString).mkString(", ")
   }
   object TE {
@@ -290,7 +290,7 @@ object HttpHeaders {
       Some(TCodings.parseTCodings(keyValue._2)) else None
   }
 
-  class Upgrade(val products: ProductType*) extends HttpHeader {
+  class Upgrade(val products: ProductType*) extends HttpHeaderRequest {
     def value = products.map(_.toString).mkString(", ")
   }
   object Upgrade {
@@ -299,7 +299,7 @@ object HttpHeaders {
       ProductTypes.parseProductTypes(keyValue._2) else None
   }
 
-  class `User-Agent`(val product: String) extends HttpHeader {
+  class `User-Agent`(val product: String) extends HttpHeaderRequest {
     def value = product
   }
   object `User-Agent` {
@@ -308,7 +308,7 @@ object HttpHeaders {
       Some(keyValue._2) else None
   }
 
-  class Via(val info: ViaInfo*) extends HttpHeader {
+  class Via(val info: ViaInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = info.map(_.toString).mkString(", ")
   }
   object Via {
@@ -317,7 +317,7 @@ object HttpHeaders {
       Some(ViaInfos.parseViaInfos(keyValue._2)) else None
   }
 
-  class Warning(val warnings: WarningInfo*) extends HttpHeader {
+  class Warning(val warnings: WarningInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = warnings.map(_.toString).mkString(", ")
   }
   object Warning {
@@ -328,7 +328,7 @@ object HttpHeaders {
 
   /*********** Responses ************/
 
-  class Age(val age: Double) extends HttpHeader {
+  class Age(val age: Double) extends HttpHeaderResponse {
     def value = age.toString
   }
   object Age {
@@ -337,7 +337,7 @@ object HttpHeaders {
       Some(keyValue._2.toDouble) else None
   }
 
-  class Allow(val methods: HttpMethod*) extends HttpHeader {
+  class Allow(val methods: HttpMethod*) extends HttpHeaderResponse {
     def value = methods.map(_.value).mkString(",")
   }
   object Allow {
@@ -346,7 +346,7 @@ object HttpHeaders {
       Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
   }
 
-  class `Cache-Control`(val directives: CacheDirective*) extends HttpHeader {
+  class `Cache-Control`(val directives: CacheDirective*) extends HttpHeaderResponse {
     def value = directives.map(_.toString).mkString(", ") 
   }
   object `Cache-Control` {
@@ -355,7 +355,7 @@ object HttpHeaders {
       Some(CacheDirectives.parseCacheDirectives(keyValue._2)) else None
   }
 
-  class `Content-Encoding`(val encodings: Encoding*) extends HttpHeader {
+  class `Content-Encoding`(val encodings: Encoding*) extends HttpHeaderResponse {
     def value = encodings.map(_.toString).mkString(", ")
   }
   object `Content-Encoding` {
@@ -364,7 +364,7 @@ object HttpHeaders {
       Some(Encodings.parseEncodings(keyValue._2)) else None
   }
 
-  class `Content-Language`(languageRanges: LanguageRange*) extends HttpHeader {
+  class `Content-Language`(languageRanges: LanguageRange*) extends HttpHeaderResponse {
     def value = languageRanges.map(_.toString).mkString(", ")
   }
   object `Content-Language` {
@@ -376,14 +376,14 @@ object HttpHeaders {
   /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?
    * .. I Think this is referring to the path of the URL
    */
-  class `Content-Location`(val value: String) extends HttpHeader {
+  class `Content-Location`(val value: String) extends HttpHeaderResponse {
   }
   object `Content-Location` {
     def apply(location: String) = new `Content-Location`(location)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-location") Some(keyValue._2) else None
   }
 
-  class `Content-Disposition`(val disposition: DispositionType) extends HttpHeader {
+  class `Content-Disposition`(val disposition: DispositionType) extends HttpHeaderResponse {
     def value = disposition.toString
   }
   object `Content-Disposition` {
@@ -392,14 +392,14 @@ object HttpHeaders {
       Some(DispositionTypes.parseDispositionTypes(keyValue._2)) else None
   }
 
-  class `Content-MD5`(val value: String) extends HttpHeader {
+  class `Content-MD5`(val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
   }
   object `Content-MD5` {
     def apply(hash: String) = new `Content-MD5`(hash)  
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-md5") Some(keyValue._2) else None
   }
 
-  class `Content-Range`(val byteRange: ContentByteRange) extends HttpHeader {
+  class `Content-Range`(val byteRange: ContentByteRange) extends HttpHeaderResponse {
     def value = byteRange.toString  
   }
   object `Content-Range` {
@@ -408,7 +408,7 @@ object HttpHeaders {
       ContentByteRanges.parseContentByteRanges(keyValue._2) else None
   }
 
-  class ETag(val tag: EntityTag) extends HttpHeader {
+  class ETag(val tag: EntityTag) extends HttpHeaderResponse {
     def value = tag.toString
   }
   object ETag {
@@ -417,7 +417,7 @@ object HttpHeaders {
       EntityTags.parseEntityTags(keyValue._2) else None
   }
 
-  class Expires(val date: HttpDateTime) extends HttpHeader {
+  class Expires(val date: HttpDateTime) extends HttpHeaderResponse {
     def value = date.toString
   }
   object Expires {
@@ -426,7 +426,7 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class `Last-Modified`(val date: HttpDateTime) extends HttpHeader {
+  class `Last-Modified`(val date: HttpDateTime) extends HttpHeaderResponse {
     def value = date.toString
   }
   object `Last-Modified` {
@@ -435,7 +435,7 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class Location(val domain: HttpUri) extends HttpHeader {
+  class Location(val domain: HttpUri) extends HttpHeaderResponse {
     def value = domain.absoluteUri
   }
   object Location {
@@ -444,7 +444,7 @@ object HttpHeaders {
       HttpUris.parseHttpUris(keyValue._2) else None
   }
 
-  class `Proxy-Authenticate`(val challenge: String) extends HttpHeader {
+  class `Proxy-Authenticate`(val challenge: String) extends HttpHeaderResponse {
     def value = challenge
   }
   object `Proxy-Authenticate` {
@@ -454,7 +454,7 @@ object HttpHeaders {
   }
 
   /* Sometimes contains a Url --  Will need to change this */
-  class Refresh(val time: HttpNumber) extends HttpHeader {
+  class Refresh(val time: HttpNumber) extends HttpHeaderResponse {
     def value = time.toString
   }
   object Refresh {
@@ -464,7 +464,7 @@ object HttpHeaders {
   }
 
   /* Could also be a date -- will need to change this */
-  class `Retry-After`(val num: HttpNumber) extends HttpHeader {
+  class `Retry-After`(val num: HttpNumber) extends HttpHeaderResponse {
     def value = num.toString
   }
   object `Retry-After` {
@@ -474,7 +474,7 @@ object HttpHeaders {
   }
 
   /* Server comments can be almost anything */
-  class Server(val comment: String) extends HttpHeader {
+  class Server(val comment: String) extends HttpHeaderResponse {
     def value = comment
   }
   object Server {
@@ -482,7 +482,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
   }
 
-  class `Set-Cookie`(val cookies: List[HttpCookie]) extends HttpHeader {
+  class `Set-Cookie`(val cookies: List[HttpCookie]) extends HttpHeaderResponse {
     val value = cookies.mkString(";")
   }
   object `Set-Cookie` {
@@ -492,7 +492,7 @@ object HttpHeaders {
   }
 
   /* Will take a while to implement */
-  class Trailer(val fields: HttpHeaderField*) extends HttpHeader {
+  class Trailer(val fields: HttpHeaderField*) extends HttpHeaderResponse {
     def value = fields.map(_.toString).mkString(", ")
   }
   object Trailer {
@@ -501,7 +501,7 @@ object HttpHeaders {
       Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "trailer")) else None
   }
 
-  class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeader {
+  class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeaderResponse {
     def value = encodings.map(_.toString).mkString(", ")
   }
   object `Transfer-Encoding` {
@@ -511,14 +511,14 @@ object HttpHeaders {
   }
 
   /* There are problems with using Vary in IE.  */
-  class Vary(val value: String) extends HttpHeader {
+  class Vary(val value: String) extends HttpHeaderResponse {
   }
   object Vary {
     def apply(value: String) = new Vary(value)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "vary") Some(keyValue._2) else None
   }
 
-  class `WWW-Authenticate`(val challenge: String) extends HttpHeader {
+  class `WWW-Authenticate`(val challenge: String) extends HttpHeaderResponse {
     def value = challenge
   }
   object `WWW-Authenticate` {
@@ -526,7 +526,7 @@ object HttpHeaders {
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "www-authenticate") Some(keyValue._2) else None
   }
 
-  class `X-Frame-Options`(val option: FrameOption) extends HttpHeader {
+  class `X-Frame-Options`(val option: FrameOption) extends HttpHeaderResponse {
     def value = option.toString
   }
   object `X-Frame-Options` {
@@ -536,7 +536,7 @@ object HttpHeaders {
   }
 
   /* X-XSS-Protection Seems to be primarily used by IE8 */
-  class `X-XSS-Protection`(val xss: String) extends HttpHeader {
+  class `X-XSS-Protection`(val xss: String) extends HttpHeaderResponse {
     def value = xss;
   }
   object `X-XSS-Protection` {
@@ -545,7 +545,7 @@ object HttpHeaders {
         Some(keyValue._2) else None
   }
 
-  class `X-Content-Type-Options`(val option: ContentTypeOption) extends HttpHeader {
+  class `X-Content-Type-Options`(val option: ContentTypeOption) extends HttpHeaderResponse {
     def value = option.toString
   }
   object `X-Content-Type-Options` {
@@ -554,7 +554,7 @@ object HttpHeaders {
       ContentTypeOptions.parseContentTypeOptions(keyValue._2) else None
   }
 
-  class `X-Requested-With`(val requested: RequestedWith) extends HttpHeader {
+  class `X-Requested-With`(val requested: RequestedWith) extends HttpHeaderRequest {
     def value = requested.toString
   }
   object `X-Requested-With` {
@@ -563,7 +563,7 @@ object HttpHeaders {
       RequestedWiths.parseRequestedWiths(keyValue._2) else None
   }
 
-  class `X-Forwarded-For`(val ips: HttpIp*) extends HttpHeader {
+  class `X-Forwarded-For`(val ips: HttpIp*) extends HttpHeaderRequest {
     def value = ips.map(_.toString).mkString(", ")
   }
   object `X-Forwarded-For` {
@@ -572,7 +572,7 @@ object HttpHeaders {
       Some(HttpIps.parseHttpIps(keyValue._2)) else None
   }
 
-  class `X-Forwarded-Proto`(val proto: String) extends HttpHeader {
+  class `X-Forwarded-Proto`(val proto: String) extends HttpHeaderRequest {
     def value = proto
   }
   object `X-Forwarded-Proto` {
@@ -581,7 +581,7 @@ object HttpHeaders {
       Some(keyValue._2) else None
   }
 
-  class `X-Powered-By`(val products: ProductType*) extends HttpHeader {
+  class `X-Powered-By`(val products: ProductType*) extends HttpHeaderRequest{
     def value = products.map(_.toString).mkString(",")
   }
   object `X-Powered-By` {
@@ -591,7 +591,7 @@ object HttpHeaders {
   }  
 
   /* Very new headers */
-  class `Access-Control-Allow-Origin`(val origin: String) extends HttpHeader {
+  class `Access-Control-Allow-Origin`(val origin: String) extends HttpHeaderResponse {
     def value = origin
   }
   object `Access-Control-Allow-Origin` {
@@ -600,7 +600,7 @@ object HttpHeaders {
       Some(keyValue._2) else None
   }
 
-  class `Access-Control-Request-Method`(val methods: HttpMethod*) extends HttpHeader {
+  class `Access-Control-Request-Method`(val methods: HttpMethod*) extends HttpHeaderRequest {
     def value = methods.map(_.toString).mkString(",") 
   }
   object `Access-Control-Request-Method` {
@@ -609,7 +609,7 @@ object HttpHeaders {
       Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
   }
 
-  class `Access-Control-Request-Headers`(val fields: HttpHeaderField*) extends HttpHeader {
+  class `Access-Control-Request-Headers`(val fields: HttpHeaderField*) extends HttpHeaderRequest {
     def value = fields.map(_.toString).mkString(",")
   }
   object `Access-Control-Request-Headers` {
@@ -618,7 +618,7 @@ object HttpHeaders {
       Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl")) else None
   }
   
-  class CustomHeader(override val name: String, val value: String) extends HttpHeader {
+  class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
   }
 }
 
