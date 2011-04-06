@@ -31,7 +31,8 @@ class ActorSpec extends Specification with ActorExecutionStrategySequential {
         case message: String  => actor1 ! message
       }
 
-      (actor2 ! "foo").value must eventually (beSome("foo_done"))
+      val future = (actor2 ! "foo")
+      future.value must eventually (beSome("foo_done"))
     }
   }
 

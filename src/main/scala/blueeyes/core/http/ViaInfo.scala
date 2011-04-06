@@ -13,13 +13,13 @@ sealed trait ViaInfo {
 
 object ViaInfos {
 
-  def parseViaInfos(inString: String): Array[ViaInfo] = { 
+  def parseViaInfos(inString: String): List[ViaInfo] = {
     def parsedInfos: Array[ViaInfo] = inString.split(",").map(_.trim.split(" ") match {
       case Array(x, y, z) => CustomViaInfo(HttpVersions.parseByVersionNum(x), y)
       case Array(x, y) => CustomViaInfo(HttpVersions.parseByVersionNum(x), y)
       case _ => NullViaInfo(HttpVersions.`HTTP/1.1`, "name")
     })
-    return parsedInfos
+    return parsedInfos.toList
   }
 
   case class CustomViaInfo(httpVersion: HttpVersion, receivedBy: String) extends ViaInfo

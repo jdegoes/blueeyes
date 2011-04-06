@@ -20,7 +20,7 @@ sealed trait DispositionType extends ProductPrefixUnmangler{
 object DispositionTypes {
 
   def parseDispositionTypes(inString: String): DispositionType = {
-    def splitStr: Array[String] = inString.toLowerCase.split(";")
+    def splitStr = inString.toLowerCase.split(";")
     def disBuild = new DispositionTypeBuilder(splitStr(0))
     if (splitStr.length > 1) {
       disBuild.filename = Some(splitStr(1))

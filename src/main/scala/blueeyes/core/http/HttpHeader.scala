@@ -29,7 +29,39 @@ sealed trait HttpHeader extends Product2[String, String] with ProductPrefixUnman
   }
 }
 
+sealed trait HttpHeaderRequest extends HttpHeader
+sealed trait HttpHeaderResponse extends HttpHeader
+
+class HttpHeaders (private val headers: Map[String, String]) extends Map[String, String]{
+  def this() = this(Map[String, String]())
+
+  def +[B1 >: String](kv: (String, B1)) = new HttpHeaders(headers + Tuple2(kv._1, kv._2.asInstanceOf[String]))
+
+  def -(key: String): HttpHeaders = new HttpHeaders(headers - key)
+
+  def iterator = headers.iterator
+
+  def get(key: String) = headers.get(key)
+
+  def header[T <: HttpHeader](implicit m: Manifest[T]) = headerOption(m).getOrElse(error("Header % cannot be found.".format(m.erasure.getName)))
+
+  def headerOption[T <: HttpHeader](implicit m: Manifest[T]): Option[T] = {
+    val clazz           = Class.forName(m.erasure.getName + "$")
+    val applyMethod     = clazz.getMethods find {method => method.getName == "apply"} get
+
+    val headerObject = clazz.newInstance.asInstanceOf[{
+      def unapply(keyValue: (String, String)): Option[_]
+    }]
+
+    val headerValue  = headers find {header => headerObject.unapply(header).map(v => true).getOrElse(false) } map {header => headerObject.unapply(header)}
+
+    headerValue map { header => applyMethod.invoke(headerObject, header.get.asInstanceOf[AnyRef]).asInstanceOf[T] }
+  }
+}
+
 object HttpHeaders {
+
+  def apply() = new HttpHeaders()
 
   /************ Requests ************/
 
@@ -664,5 +696,7 @@ trait HttpHeaderImplicits {
   }
   
   implicit def headersList2HeadersMap(headers: Seq[HttpHeader]): Map[String, String] = Map(headers.map(header => {header: (String, String)}): _*)
+
+  implicit def headersMap2Headers(headers: Map[String, String]): HttpHeaders = new HttpHeaders(headers)
 }
 object HttpHeaderImplicits extends HttpHeaderImplicits

@@ -13,12 +13,12 @@ sealed trait ProductType {
 
 object ProductTypes {
 
-  def parseProductTypes(inString: String): Option[Array[ProductType]] = {
-    def outProducts: Array[ProductType] = inString.trim.split(",").map(_.trim.split("/") match {
+  def parseProductTypes(inString: String): Option[List[ProductType]] = {
+    def outProducts = inString.trim.split(",").map(_.trim.split("/") match {
       case Array(x, y) => CustomProduct(x, y)
       case Array(x) => CustomProduct(x)
     })
-    return Some(outProducts)
+    return Some(outProducts.toList)
   }
 
   case class CustomProduct(product: String, version: Option[String]) extends ProductType
