@@ -20,7 +20,6 @@ package json {
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class ExampleTest extends Runner(Examples) with JUnit
 object Examples extends Specification {
   import JsonAST._
   import JsonDSL._

@@ -147,8 +147,6 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     // For every product, we test both serialization & deserialization (in basic ways):
-    code.newline.addln("class DataProductSerializationTest extends Runner(DataProductSerializationExamples) with JUnit")
-    
     code.add("object DataProductSerializationExamples extends Specification ").block {
       code.join(database.productsIn(namespace), code.newline.newline) { defn =>
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
@@ -191,8 +189,6 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
     }
     
-    code.newline.addln("class DataCoproductSerializationTest extends Runner(DataCoproductSerializationExamples) with JUnit")
-    
     code.add("object DataCoproductSerializationExamples extends Specification ").block {
       code.join(database.coproductsIn(namespace), code.newline.newline) { defn =>
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
@@ -219,8 +215,6 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
     }
-    
-    code.newline.addln("class DataConstantsSerializationTest extends Runner(DataConstantsSerializationExamples) with JUnit")
     
     code.add("object DataConstantsSerializationExamples extends Specification ").block {
       code.join(database.constantsIn(namespace), code.newline.newline) { constant => 

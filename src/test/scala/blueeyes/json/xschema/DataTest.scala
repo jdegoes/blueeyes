@@ -66,7 +66,6 @@ package blueeyes.json.xschema {
     
     lazy val ExampleXOrderIgnore: blueeyes.json.xschema.XOrderIgnore.type = blueeyes.json.xschema.Extractors.XOrderIgnoreExtractor.extract(JObject(Nil))
   }
-  class DataProductSerializationTest extends Runner(DataProductSerializationExamples) with JUnit
   object DataProductSerializationExamples extends Specification {
     "Deserialization of XRoot succeeds even when information is missing" in {
       ExampleProductData.ExampleXRoot.isInstanceOf[blueeyes.json.xschema.XRoot] must be (true)
@@ -349,7 +348,6 @@ package blueeyes.json.xschema {
     lazy val ExampleXOrderFromXOrderDescending: blueeyes.json.xschema.XOrder = JObject(JField("XOrderDescending", blueeyes.json.xschema.Decomposers.XOrderDescendingDecomposer.decompose(blueeyes.json.xschema.ExampleProductData.ExampleXOrderDescending)) :: Nil).deserialize[blueeyes.json.xschema.XOrder]
     lazy val ExampleXOrderFromXOrderIgnore: blueeyes.json.xschema.XOrder = JObject(JField("XOrderIgnore", blueeyes.json.xschema.Decomposers.XOrderIgnoreDecomposer.decompose(blueeyes.json.xschema.ExampleProductData.ExampleXOrderIgnore)) :: Nil).deserialize[blueeyes.json.xschema.XOrder]
   }
-  class DataCoproductSerializationTest extends Runner(DataCoproductSerializationExamples) with JUnit
   object DataCoproductSerializationExamples extends Specification {
     "Deserialization of XSchema succeeds even when information is missing" in {
       ExampleMultitypeData.ExampleXSchema.isInstanceOf[blueeyes.json.xschema.XSchema] must be (true)
@@ -813,7 +811,6 @@ package blueeyes.json.xschema {
       ExampleMultitypeData.ExampleXOrderFromXOrderIgnore.serialize mustNot be (JObject(Nil))
     }
   }
-  class DataConstantsSerializationTest extends Runner(DataConstantsSerializationExamples) with JUnit
   object DataConstantsSerializationExamples extends Specification {
     
   }

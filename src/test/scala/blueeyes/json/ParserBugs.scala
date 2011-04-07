@@ -4,8 +4,6 @@ import org.specs.Specification
 import org.specs.runner.{Runner, JUnit}
 import scala.util.control.Exception._
 
-class ParserBugsTest extends Runner(ParserBugs) with JUnit
-
 object ParserBugs extends Specification {
   "Unicode ffff is a valid char in string literal" in {
     JsonParser.parseOpt(""" {"x":"\uffff"} """).isDefined mustEqual true

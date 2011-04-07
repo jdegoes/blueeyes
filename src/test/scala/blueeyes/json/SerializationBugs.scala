@@ -20,7 +20,6 @@ package json {
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class SerializationBugsTest extends Runner(SerializationBugs) with JUnit
 object SerializationBugs extends Specification {
   import Serialization.{read, write => swrite}
 
