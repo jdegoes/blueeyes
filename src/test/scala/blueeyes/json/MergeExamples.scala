@@ -18,7 +18,6 @@ package blueeyes {
 package json {
 
 import _root_.org.specs.Specification
-import _root_.org.specs.runner.{Runner, JUnit}
 
 object MergeExamples extends Specification {
   import JsonAST._

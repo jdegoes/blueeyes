@@ -1,7 +1,6 @@
 package blueeyes.json
 
 import org.specs.Specification
-import org.specs.runner.{Runner, JUnit}
 import scala.util.control.Exception._
 
 object ParserBugs extends Specification {

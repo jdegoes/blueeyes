@@ -1,6 +1,5 @@
 package blueeyes.json.xschema.codegen {
   import _root_.org.specs.Specification
-  import _root_.org.specs.runner.{Runner, JUnit}
 
   import _root_.blueeyes.json.JsonAST._
   import _root_.blueeyes.json.JsonParser._

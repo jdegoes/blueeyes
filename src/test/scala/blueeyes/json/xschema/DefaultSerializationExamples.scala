@@ -16,7 +16,6 @@
 package blueeyes.json.xschema {
 
 import _root_.org.specs.Specification
-import _root_.org.specs.runner.{Runner, JUnit}
 
 object DefaultSerializationExamples extends Specification {
   import _root_.blueeyes.json.JsonAST._
