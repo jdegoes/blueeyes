@@ -1,12 +1,13 @@
 package blueeyes.core.service
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 import org.mockito.Mockito.{times}
 import org.mockito.Mockito
+import org.specs.mock.MocksCreation
 
-class HttpServiceBuilderSpec extends Specification{
+class HttpServiceBuilderSpec extends Specification with MocksCreation{
   "HttpServiceBuilder startup: creates StartupDescriptor with specified startup function" in{
     var executed = false
     val builder  = new HttpServiceBuilder[Unit]{

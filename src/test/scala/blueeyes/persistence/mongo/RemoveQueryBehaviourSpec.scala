@@ -1,13 +1,14 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.CountDownLatch
-import org.spex.Specification
+import org.specs.Specification
+import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 
-class RemoveQueryBehaviourSpec extends Specification {
+class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
   private val collection  = mock[DatabaseCollection]
 
   "Call collection method" in{

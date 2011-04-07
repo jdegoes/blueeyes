@@ -20,7 +20,6 @@ package json {
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class DiffExamplesTest extends Runner(DiffExamples) with JUnit
 object DiffExamples extends Specification {
   import JsonAST._
   import JsonParser._
@@ -73,7 +72,7 @@ object DiffExamples extends Specification {
   }
 
   private def read(resource: String) = 
-    parse(scala.io.Source.fromInputStream(classOf[DiffExamplesTest].getResourceAsStream(resource)).getLines.mkString)
+    parse(scala.io.Source.fromInputStream(getClass.getResourceAsStream(resource)).getLines.mkString)
 }
 
 }

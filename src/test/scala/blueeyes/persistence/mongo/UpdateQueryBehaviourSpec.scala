@@ -1,13 +1,14 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.CountDownLatch
-import org.spex.Specification
+import org.specs.Specification
+import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 
-class UpdateQueryBehaviourSpec  extends Specification {
+class UpdateQueryBehaviourSpec  extends Specification with MocksCreation{
   private val collection  = mock[DatabaseCollection]
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
   "Call collection method" in{

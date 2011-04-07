@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.json.JsonAST._
 
 class ErrorStatSpec extends Specification{

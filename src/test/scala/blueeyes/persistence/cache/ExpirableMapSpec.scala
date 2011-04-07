@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.spex.Specification
+import org.specs.Specification
 import java.util.concurrent.{ConcurrentHashMap, Executors}
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 

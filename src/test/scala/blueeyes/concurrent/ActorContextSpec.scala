@@ -1,6 +1,6 @@
 package blueeyes.concurrent
 
-import org.spex.Specification
+import org.specs.Specification
 
 
 class ActorContextSpec extends Specification{

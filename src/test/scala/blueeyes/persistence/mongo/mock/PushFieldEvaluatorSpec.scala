@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo.mock
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
 import MockMongoUpdateEvaluators._

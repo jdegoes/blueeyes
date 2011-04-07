@@ -61,7 +61,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val scala_check   = "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "compile"
   val mockito       = "org.mockito"                 % "mockito-all"         % "1.8.5"         % "compile"
   val paranamer     = "com.thoughtworks.paranamer"  % "paranamer"           % "2.3"
-  val junit         = "junit"                       % "junit"               % "4.8.2"         % "compile"
   val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
   val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.2"         % "compile"
   val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
@@ -71,7 +70,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val xlightweb     = "org.xlightweb"               % "xlightweb"           % "2.13.2"        % "compile"
   val codec         = "commons-codec"               % "commons-codec"       % "1.5"           % "compile"
   val clhm_lru      = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
-  val collections   = "commons-collections"         % "commons-collections" % "3.2.1"         % "compile"
   val scalaz_core   = "org.scalaz"                  %% "scalaz-core"        % "6.0-SNAPSHOT"
 
   lazy val benchmark = benchmarkTask
