@@ -65,7 +65,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val paranamer     = "com.thoughtworks.paranamer"  % "paranamer"           % "2.3"
   val junit         = "junit"                       % "junit"               % "4.8.2"         % "compile"
   val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
-  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.2"         % "compile"
+  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.3"         % "compile"
   val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
   val configgy      = "net.lag"                     % "configgy"            % "2.0.0"         % "compile" intransitive()
   val guice         = "com.google.inject"           % "guice"               % "2.0"           % "compile"
