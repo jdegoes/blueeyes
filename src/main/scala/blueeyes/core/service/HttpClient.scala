@@ -76,3 +76,11 @@ trait  HttpClient2[A] extends HttpRequestHandler[A] { self =>
     request.copy(uri = newUrl)
   }
 }
+
+object HttpClient2 {
+  implicit def requestHandlerToHttpClient[A](h: HttpRequestHandler[A]): HttpClient2[A] = new HttpClient2[A] {
+    def isDefinedAt(r: HttpRequest[A]): Boolean = h.isDefinedAt(r)
+
+    def apply(r: HttpRequest[A]): Future[HttpResponse[A]] = h.apply(r)
+  }
+}
