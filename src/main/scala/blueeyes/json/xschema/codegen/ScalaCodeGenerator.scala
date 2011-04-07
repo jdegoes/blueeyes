@@ -146,7 +146,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     // For every product, we test both serialization & deserialization (in basic ways):
-    code.add("object DataProductSerializationExamples extends Specification ").block {
+    code.newline.add("object DataProductSerializationExamples extends Specification ").block {
       code.join(database.productsIn(namespace), code.newline.newline) { defn =>
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
           code.add("""
