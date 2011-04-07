@@ -1,27 +1,25 @@
 package blueeyes.health.metrics
 
-import org.scalatest.matchers.MustMatchers
-import org.scalatest.Spec
 import blueeyes.health.time.Duration
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
-import java.util.concurrent.CountDownLatch
+import org.specs.Specification
 
-class TimerTest extends Spec with MustMatchers with FutureDeliveryStrategySequential {
+class TimerTest extends Specification with FutureDeliveryStrategySequential {
   val precision = 5.0 // milliseconds
 
-  describe("timing an event") {
-    it("returns the event's value") {
+  "timing an event" should {
+    "returns the event's value" in {
       val timer = new Timer
-      timer.time { 1 + 1 } must equal(2)
+      timer.time { 1 + 1 } mustEqual(2)
     }
 
-    it("records the duration of the event") {
+    "records the duration of the event" in {
       val timer = new Timer
       timer.time { Thread.sleep(10) }
-      timer.mean.ms.value must not be(0.0)
+      timer.mean.ms.value mustNotBe(0.0)
     }
 
-    it("records the duration of the event specified by future") {
+    "records the duration of the event specified by future" in {
       val timer  = new Timer
       val future = new Future[Unit]()
 
@@ -30,42 +28,42 @@ class TimerTest extends Spec with MustMatchers with FutureDeliveryStrategySequen
       Thread.sleep(10)
       future.deliver(())
 
-      timer.mean.ms.value must not be(0.0)
+      timer.mean.ms.value mustNotBe(0.0)
     }
 
-    it("records the existence of the event") {
+    "records the existence of the event" in {
       val timer = new Timer
       timer.time { Thread.sleep(10) }
 
-      timer.count must be(1)
+      timer.count mustEqual(1)
     }
   }
 
-  describe("a blank timer") {
+  "a blank timer" should {
     val timer = new Timer
 
-    it("has a max of zero") {
-      timer.max.ms.value must be(0.0 plusOrMinus precision)
+    "has a max of zero" in {
+      timer.max.ms.value must beCloseTo(0.0, precision)
     }
 
-    it("has a min of zero") {
-      timer.min.ms.value must be(0.0 plusOrMinus precision)
+    "has a min of zero" in {
+      timer.min.ms.value must beCloseTo(0.0, precision)
     }
 
-    it("has a mean of zero") {
-      timer.mean.ms.value must be(0.0 plusOrMinus precision)
+    "has a mean of zero" in {
+      timer.mean.ms.value must beCloseTo(0.0, precision)
     }
 
-    it("has a standard deviation of zero") {
-      timer.standardDeviation.ms.value must be(0.0 plusOrMinus precision)
+    "has a standard deviation of zero" in {
+      timer.standardDeviation.ms.value must beCloseTo(0.0, precision)
     }
 
-    it("has a count of zero") {
-      timer.count must be (0)
+    "has a count of zero" in {
+      timer.count mustEqual (0)
     }
   }
 
-  describe("timing a series of events") {
+  "timing a series of events" should {
     val timer = new Timer
     timer ++= List(
       Duration.milliseconds(10),
@@ -75,36 +73,36 @@ class TimerTest extends Spec with MustMatchers with FutureDeliveryStrategySequen
       Duration.milliseconds(40)
     )
 
-    it("calculates the maximum duration") {
-      timer.max.ms.value must be(40.0 plusOrMinus precision)
+    "calculates the maximum duration" in {
+      timer.max.ms.value must beCloseTo(40.0, precision)
     }
 
-    it("calculates the minimum duration") {
-      timer.min.ms.value must be(10.0 plusOrMinus precision)
+    "calculates the minimum duration" in {
+      timer.min.ms.value must beCloseTo(10.0, precision)
     }
 
-    it("calculates the mean") {
-      timer.mean.ms.value must be(24.0 plusOrMinus precision)
+    "calculates the mean" in {
+      timer.mean.ms.value must beCloseTo(24.0, precision)
     }
 
-    it("calculates the standard deviation") {
-      timer.standardDeviation.ms.value must be(11.4 plusOrMinus precision)
+    "calculates the standard deviation" in {
+      timer.standardDeviation.ms.value must beCloseTo(11.4, precision)
     }
 
-    it("records the count") {
-      timer.count must be (5)
+    "records the count" in {
+      timer.count mustEqual (5)
     }
   }
 
-  describe("timing crazy-variant values") {
+  "timing crazy-variant values" should {
     val timer = new Timer
     timer ++= List(
       Duration.milliseconds(Long.MaxValue),
       Duration.milliseconds(0)
     )
 
-    it("calculates the standard deviation without overflowing") {
-      timer.standardDeviation.ms.value must be(6.521908912666392E12 plusOrMinus 1E3)
+    "calculates the standard deviation without overflowing" in {
+      timer.standardDeviation.ms.value must beCloseTo(6.521908912666392E12, 1E3)
     }
   }
 }

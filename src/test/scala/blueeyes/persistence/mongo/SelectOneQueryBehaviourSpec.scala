@@ -1,7 +1,8 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.CountDownLatch
-import org.spex.Specification
+import org.specs.Specification
+import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
 import blueeyes.json.JPathImplicits._
 import org.mockito.Mockito.{times, when}
@@ -9,7 +10,7 @@ import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 
-class SelectOneQueryBehaviourSpec extends Specification {
+class SelectOneQueryBehaviourSpec extends Specification with MocksCreation{
   private val collection  = mock[DatabaseCollection]
 
   private val keys     = MongoSelection(JPath("foo") :: JPath("bar") :: Nil)

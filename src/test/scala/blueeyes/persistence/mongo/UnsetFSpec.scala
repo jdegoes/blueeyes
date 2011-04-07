@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import org.spex.Specification
+import org.specs.Specification
 import UpdateFieldFunctions._
 
 class UnsetFSpec extends Specification{

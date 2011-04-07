@@ -1,6 +1,6 @@
 package blueeyes.health
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.json.JsonAST.JInt
 
 class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{

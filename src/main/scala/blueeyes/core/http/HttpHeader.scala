@@ -52,7 +52,7 @@ class HttpHeaders (private val headers: Map[String, String]) extends Map[String,
       def unapply(keyValue: (String, String)): Option[_]
     }]
 
-    val headerValue  = headers find {header => headerObject.unapply(header).map(v => true).getOrElse(false) } map {header => headerObject.unapply(header)}
+    val headerValue  = headers map {headerObject.unapply(_) } headOption
 
     headerValue map { header => applyMethod.invoke(headerObject, header.get.asInstanceOf[AnyRef]).asInstanceOf[T] }
   }

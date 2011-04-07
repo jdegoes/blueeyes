@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.spex.Specification
+import org.specs.Specification
 
 class LRUMapSpec extends Specification{
   "LRUMap.put: adds new value" in {

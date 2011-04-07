@@ -1,12 +1,12 @@
 package blueeyes.persistence.mongo
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.json.JPath
 import UpdateFieldFunctions._
 
 class AddToSetFSpec extends Specification{
   "fuse applies addtoSet to set update" in {
-    "n".addToSet(MongoPrimitiveString("bar")).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
+    "n".addToSet(MongoPrimitiveString("bar")).fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo") :: Nil))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("foo") :: MongoPrimitiveString("bar") :: Nil))))
   }
   "fuse with AddToSetF(String) creates AddToSetF(String) with all elements" in {
     "n".addToSet(MongoPrimitiveString("bar")).fuseWith(JPath("n").addToSet(MongoPrimitiveString("foo"))) must beSome((JPath("n").addToSet(MongoPrimitiveString("bar"), MongoPrimitiveString("foo"))))

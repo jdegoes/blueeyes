@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import org.spex.Specification
+import org.specs.Specification
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
