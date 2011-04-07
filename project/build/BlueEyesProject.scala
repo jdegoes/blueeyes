@@ -83,10 +83,6 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
     runTask(Some("blueeyes.benchmark.Benchmark"), runClasspath, Array(duration)) dependsOn(compile, copyResources) describedAs("Run benchmark test")
   }
 
-  def specs2Framework = new TestFramework("org.specs2.runner.SpecsFramework")
-
-  override def testFrameworks = super.testFrameworks ++ Seq(specs2Framework)
-
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
 }
 
