@@ -5,8 +5,6 @@
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/concurrentlinkedhashmap-lru-1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/js-1.7R2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/configgy-2.0.0.jar" sourcepath="/home/jsimpson/workspace/configgy"/>
-	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/aopalliance-1.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/guice-2.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/joda-time-1.6.2.jar"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
@@ -15,13 +13,13 @@
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/xSocket-2.8.15.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/netty-3.2.4.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/scalaz-core_2.8.1-6.0-SNAPSHOT.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/commons-codec-1.5.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/mockito-all-1.8.5.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/mongo-java-driver-2.5.3.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/paranamer-2.3.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/scalacheck_2.8.1-1.8.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/specs_2.8.1-1.6.7.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.8.1/compile/test-interface-0.5.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/commons-codec-1.5.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/mongo-java-driver-2.5.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/compile/paranamer-2.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/provided/mockito-all-1.8.5.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/provided/scalacheck_2.8.1-1.8.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/provided/specs_2.8.1-1.6.7.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/provided/test-interface-0.5.jar"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
