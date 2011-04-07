@@ -1,15 +1,15 @@
 package blueeyes.health.time
 
-import org.scalatest.matchers.MustMatchers
-import org.scalatest.{BeforeAndAfterEach, Spec}
+import org.specs.Specification
 
-class ClockTest extends Spec with MustMatchers with BeforeAndAfterEach {
-  override protected def afterEach() {
+class ClockTest extends Specification {
+
+  doAfter{
     Clock.unfreezeTime()
   }
 
-  describe("the clock") {
-    it("returns the current time in nanoseconds (with millisecond precision)") {
+  "the clock" should {
+    "returns the current time in nanoseconds (with millisecond precision)" in {
       val before = System.nanoTime
       val time   = Clock.nanoTime
       val after  = System.nanoTime
@@ -19,18 +19,18 @@ class ClockTest extends Spec with MustMatchers with BeforeAndAfterEach {
     }
   }
 
-  describe("a frozen clock") {
-    it("returns a fixed number") {
+  "a frozen clock" should {
+    "returns a fixed number" in {
       Clock.freezeTime(100)
-      Clock.nanoTime must equal(100)
+      Clock.nanoTime mustEqual(100)
     }
   }
 
-  describe("a unfrozen clock") {
-    it("returns the current time again") {
+  "a unfrozen clock" should {
+    "returns the current time again" in {
       Clock.freezeTime(100)
       Clock.unfreezeTime()
-      Clock.nanoTime must be(System.nanoTime plusOrMinus 1e6.toLong)
+      Clock.nanoTime must beCloseTo(System.nanoTime, 1e8.toLong)
     }
   }
 }

@@ -2,9 +2,8 @@ package blueeyes.util.logging
 
 import org.specs.Specification
 import blueeyes.parsers.W3ExtendedLogAST._
-import java.io.{FileInputStream, File}
 import RollPolicies._
-import org.apache.commons.io.IOUtils
+import java.io.{ByteArrayOutputStream, FileInputStream, File}
 
 class W3ExtendedLoggerSpec extends Specification{
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
@@ -51,7 +50,21 @@ class W3ExtendedLoggerSpec extends Specification{
   private def getContents(file: File) = {
     val inputStream = new FileInputStream(file)
     try {
-      IOUtils.toString(inputStream, "UTF-8")
+
+      val byteContents  = new ByteArrayOutputStream()
+      val buffer        = new Array[Byte](1024)
+      var bytesRead     = 0
+
+      while (bytesRead != -1) {
+        bytesRead = inputStream.read(buffer)
+        if (bytesRead != -1) {
+          byteContents.write(buffer, 0, bytesRead);
+        }
+      }
+
+      byteContents.flush();
+
+      new String(byteContents.toByteArray(), "UTF-8")
     }
     finally inputStream.close
   }

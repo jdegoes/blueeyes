@@ -1,135 +1,134 @@
 package blueeyes.health.time
 
-import org.scalatest.Spec
-import org.scalatest.matchers.MustMatchers
 import java.util.concurrent.TimeUnit
+import org.specs.Specification
 
-class DurationTest extends Spec with MustMatchers {
+class DurationTest extends Specification {
   val precision = 1e-5
 
-  describe("a duration of three nanoseconds") {
+  "a duration of three nanoseconds" should {
     val d = Duration.nanoseconds(3)
 
-    it("is in nanoseconds") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.NANOSECONDS)
+    "is in nanoseconds" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.NANOSECONDS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00ns")
+    "is human-readable" in {
+      d.toString mustEqual("3.00ns")
     }
   }
 
-  describe("a duration of three microseconds") {
+  "a duration of three microseconds" should {
     val d = Duration.microseconds(3)
 
-    it("is in microseconds") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.MICROSECONDS)
+    "is in microseconds" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.MICROSECONDS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00us")
+    "is human-readable" in {
+      d.toString mustEqual("3.00us")
     }
   }
 
-  describe("a duration of three milliseconds") {
+  "a duration of three milliseconds" should {
     val d = Duration.milliseconds(3)
 
-    it("is in milliseconds") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.MILLISECONDS)
+    "is in milliseconds" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.MILLISECONDS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00ms")
+    "is human-readable" in {
+      d.toString mustEqual("3.00ms")
     }
   }
 
-  describe("a duration of three seconds") {
+  "a duration of three seconds" should {
     val d = Duration.seconds(3)
 
-    it("is in seconds") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.SECONDS)
+    "is in seconds" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.SECONDS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00s")
+    "is human-readable" in {
+      d.toString mustEqual("3.00s")
     }
   }
 
-  describe("a duration of three minutes") {
+  "a duration of three minutes" should{
     val d = Duration.minutes(3)
 
-    it("is in minutes") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.MINUTES)
+    "is in minutes" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.MINUTES)
     }
 
-    it("is equal to 0.002083 days") {
-      d.d.value must be(0.002083 plusOrMinus precision)
-      d.d.unit must be(TimeUnit.DAYS)
+    "is equal to 0.002083 days" in {
+      d.d.value must beCloseTo(0.002083, precision)
+      d.d.unit mustEqual(TimeUnit.DAYS)
     }
 
-    it("is equal to 0.05 hours") {
-      d.h.value must be(0.05 plusOrMinus precision)
-      d.h.unit must be(TimeUnit.HOURS)
+    "is equal to 0.05 hours" in {
+      d.h.value must beCloseTo(0.05, precision)
+      d.h.unit mustEqual(TimeUnit.HOURS)
     }
 
-    it("is equal to 3 minutes") {
-      d.m.value must be(3.0 plusOrMinus precision)
-      d.m.unit must be(TimeUnit.MINUTES)
+    "is equal to 3 minutes" in {
+      d.m.value must beCloseTo(3.0, precision)
+      d.m.unit mustEqual(TimeUnit.MINUTES)
     }
 
-    it("is equal to 180 seconds") {
-      d.s.value must be(180.0 plusOrMinus precision)
-      d.s.unit must be(TimeUnit.SECONDS)
+    "is equal to 180 seconds" in {
+      d.s.value must beCloseTo(180.0, precision)
+      d.s.unit mustEqual(TimeUnit.SECONDS)
     }
 
-    it("is equal to 180,000 milliseconds") {
-      d.ms.value must be(180000.0 plusOrMinus precision)
-      d.ms.unit must be(TimeUnit.MILLISECONDS)
+    "is equal to 180,000 milliseconds" in {
+      d.ms.value must beCloseTo(180000.0, precision)
+      d.ms.unit mustEqual(TimeUnit.MILLISECONDS)
     }
 
-    it("is equal to 180,000,000 microseconds") {
-      d.us.value must be(180000000.0 plusOrMinus precision)
-      d.us.unit must be(TimeUnit.MICROSECONDS)
+    "is equal to 180,000,000 microseconds" in {
+      d.us.value must beCloseTo(180000000.0, precision)
+      d.us.unit mustEqual(TimeUnit.MICROSECONDS)
     }
 
-    it("is equal to 180,000,000,000 nanoseconds") {
-      d.ns.value must be(180000000000.0 plusOrMinus precision)
-      d.ns.unit must be(TimeUnit.NANOSECONDS)
+    "is equal to 180,000,000,000 nanoseconds" in {
+      d.ns.value must beCloseTo(180000000000.0, precision)
+      d.ns.unit mustEqual(TimeUnit.NANOSECONDS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00min")
+    "is human-readable" in {
+      d.toString mustEqual("3.00min")
     }
   }
 
-  describe("a duration of three hours") {
+  "a duration of three hours" should {
     val d = Duration.hours(3)
 
-    it("is in hours") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.HOURS)
+    "is in hours" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.HOURS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00h")
+    "is human-readable" in {
+      d.toString mustEqual("3.00h")
     }
   }
 
-  describe("a duration of three days") {
+  "a duration of three days" should {
     val d = Duration.days(3)
 
-    it("is in days") {
-      d.value must be(3.0 plusOrMinus precision)
-      d.unit must be(TimeUnit.DAYS)
+    "is in days" in {
+      d.value must beCloseTo(3.0, precision)
+      d.unit mustEqual(TimeUnit.DAYS)
     }
 
-    it("is human-readable") {
-      d.toString must equal("3.00d")
+    "is human-readable" in {
+      d.toString mustEqual("3.00d")
     }
   }
 }

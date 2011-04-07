@@ -1,42 +1,37 @@
 package blueeyes.health.metrics
 
-import org.scalatest.matchers.MustMatchers
-import org.scalatest.Spec
 import blueeyes.json.JsonAST.JInt
+import org.specs.Specification
 
-class CounterTest extends Spec with MustMatchers {
-  describe("a counter of zero") {
+class CounterTest extends Specification {
+  "a counter of zero" should {
     def makeCounter = new Counter(0)
 
-    describe("incremented by one") {
+    "incremented by one" in {
       val counter = makeCounter
       counter  += 1
 
-      it(" equals one") {
-        counter.count must equal(1)
-      }
+      counter.count mustEqual(1)
     }
 
-    describe("incremented by two") {
+    "incremented by two" in {
       val counter = makeCounter
       counter += 2
 
-      it("equals two") {
-        counter.count must equal(2)
-      }
+      counter.count mustEqual(2)
     }
 
-    describe("composes Counter"){
+    "composes Counter" in{
       val counter = new Counter(0)
       counter += 2
 
-      counter.toJValue must equal(JInt(2))
+      counter.toJValue mustEqual(JInt(2))
     }
   }
 
-  describe("a counter without an explicit initial value") {
-    it("equals one") {
-      new Counter().count must equal(0)
+  "a counter without an explicit initial value" should {
+    "equals one" in {
+      new Counter().count mustEqual(0)
     }
   }
 }
