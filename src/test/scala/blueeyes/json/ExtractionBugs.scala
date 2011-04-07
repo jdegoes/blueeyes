@@ -20,8 +20,7 @@ package json {
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class ExtractionBugsTest extends Runner(ExtractionBugs) with JUnit
-object ExtractionBugs extends Specification {  
+object ExtractionBugs extends Specification {
   implicit val formats = DefaultFormats
   
   "ClassCastException (BigInt) regression 2 must pass" in {

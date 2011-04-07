@@ -23,7 +23,6 @@ import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 import _root_.org.specs.ScalaCheck
 
-class ParserTest extends Runner(ParserSpec) with JUnit
 object ParserSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
   import JsonParser._

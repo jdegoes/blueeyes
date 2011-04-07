@@ -704,7 +704,6 @@ package data.fringe {
     
     lazy val ExampleProductWithUnionField: data.fringe.ProductWithUnionField = JObject(Nil).deserialize[data.fringe.ProductWithUnionField]
   }
-  class DataProductSerializationTest extends Runner(DataProductSerializationExamples) with JUnit
   object DataProductSerializationExamples extends Specification {
     "Deserialization of ConstantSingleton succeeds even when information is missing" in {
       ExampleProductData.ExampleConstantSingleton.isInstanceOf[data.fringe.ConstantSingleton.type] must be (true)
@@ -732,11 +731,9 @@ package data.fringe {
   object ExampleMultitypeData {
     
   }
-  class DataCoproductSerializationTest extends Runner(DataCoproductSerializationExamples) with JUnit
   object DataCoproductSerializationExamples extends Specification {
     
   }
-  class DataConstantsSerializationTest extends Runner(DataConstantsSerializationExamples) with JUnit
   object DataConstantsSerializationExamples extends Specification {
     "Deserialization of constant ConstantBool succeeds" in {
       Constants.ConstantBool.serialize.deserialize[Boolean] must be (Constants.ConstantBool)

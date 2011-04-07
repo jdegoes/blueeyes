@@ -23,7 +23,6 @@ import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 import _root_.org.specs.ScalaCheck
 
-class PrintingTest extends Runner(PrintingSpec) with JUnit
 object PrintingSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
   import scala.text.Document

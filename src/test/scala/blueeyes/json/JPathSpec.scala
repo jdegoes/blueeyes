@@ -24,8 +24,6 @@ import JsonAST._
 
 import scala.util.matching.Regex
 
-class JPathSpecTest extends Runner(JPathSpec) with JUnit
-
 object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath {
   "Parser" should {
     "parse all valid JPath strings" in {

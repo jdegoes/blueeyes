@@ -5,8 +5,6 @@ import _root_.org.specs.runner.{Runner, JUnit}
 
 import java.io.{Writer, PrintWriter}
 
-class XSchemaDatabaseExamplesTest extends Runner(XSchemaDatabaseExamples) with JUnit
-
 object XSchemaDatabaseExamples extends Specification {
   import _root_.blueeyes.json.JsonAST._
   import _root_.blueeyes.json.JsonParser._
