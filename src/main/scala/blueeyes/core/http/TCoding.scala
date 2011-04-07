@@ -1,6 +1,8 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 /* For use in TE HTTP Header */
 
@@ -10,16 +12,22 @@ sealed trait TCoding extends ProductPrefixUnmangler {
   override def toString = value
 }
 
-object TCodings {
+object TCodings extends RegexParsers {
 
-  def parseTCodings(inString: String): Array[TCoding] = {
-    def tcodings: Array[TCoding] = inString.toLowerCase.trim.split(",").map(_.trim).map(("""[a-z]+""").r.findFirstIn(_).getOrElse(""))
-      .map( _ match {
-        case "trailers" => trailers
-        case "deflate" => deflate
-        case any => CustomTCoding(any)
-    })
-    return tcodings
+  private def elementParser = (
+    "trailers" ^^^ trailers |
+    "deflate" ^^^ deflate |
+    regex("""[a-z]+""".r) ^^ {case value => CustomTCoding(value)}
+  )?
+
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
+
+  def parseTCodings(inString: String): List[TCoding] = parser(new CharSequenceReader(inString.toLowerCase.trim)) match {
+    case Success(result, _) => result filter(_ != None) map (_.get)
+
+    case Failure(msg, _) => error("The TCodings " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object trailers extends TCoding

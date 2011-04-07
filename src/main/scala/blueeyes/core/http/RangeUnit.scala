@@ -1,5 +1,7 @@
 package blueeyes.core.http
 import blueeyes.util.ProductPrefixUnmangler
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 /* For use in the Accept-Ranges Http Header */
 
@@ -9,16 +11,19 @@ sealed trait RangeUnit extends ProductPrefixUnmangler{
   override def toString = value
 }
 
-object RangeUnits {
+object RangeUnits extends RegexParsers{
 
-  def parseRangeUnits(inString: String): Option[RangeUnit] = {
-    def outRangeUnits: Option[RangeUnit] = ("""([a-z])+""").r.findFirstIn(inString.toLowerCase.trim)
-      .getOrElse("bytes") match {
-      case "none" => Some(none)
-      case "bytes" => Some(bytes)
-      case x => None
-    }
-    return outRangeUnits
+  private def parser = (
+    "bytes" ^^^ bytes |
+    "none" ^^^ none
+  )?
+
+  def parseRangeUnits(inString: String): Option[RangeUnit] = parser(new CharSequenceReader(inString.toLowerCase.trim)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => error("The RangeUnits " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object none extends RangeUnit

@@ -57,7 +57,35 @@ class FutureSpec extends Specification with FutureDeliveryStrategySequential{
       result must eventually (beEqualTo(Some("foo")))
     }
   }
-  
+  "Future.trap" should {
+    "traps errors when listener is added before deliver" in {
+      val f = new Future[String]()
+      val e = new Exception("foo")
+      var result: List[Throwable] = Nil
+
+      f trap { errors => result = errors}
+
+      f.deliverTo(v => throw e)
+
+      f.deliver("foo")
+
+      result must eventually (beEqualTo(List(e)))
+    }
+    "traps errors when listener is added after deliver" in {
+      val f = new Future[String]()
+      val e = new Exception("foo")
+      var result: List[Throwable] = Nil
+
+      f trap { errors => result = errors}
+
+      f.deliver("foo")
+
+      f.deliverTo(v => throw e)
+
+      result must eventually (beEqualTo(List(e)))
+    }
+  }
+
   "Future.zip" should {
     "not be done until both futures are done" in {
       val f1 = new Future[Int]()

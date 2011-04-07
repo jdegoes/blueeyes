@@ -426,7 +426,7 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
       (callback match {
         case Some(callback) =>
           val meta = compact(render(JObject(
-            JField("headers", r.headers.serialize) ::
+            JField("headers", r.headers.asInstanceOf[Map[String, String]].serialize) ::
             JField("status",
               JObject(
                 JField("code",    r.status.code.value.serialize) ::

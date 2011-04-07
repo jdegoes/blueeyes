@@ -1,5 +1,7 @@
 package blueeyes.core.http
 
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 /* For use in the Content Range Header */
 
 sealed trait ContentByteRange {
@@ -15,25 +17,22 @@ sealed trait ContentByteRange {
   override def toString = value
 }
 
-object ContentByteRanges {
+object ContentByteRanges extends RegexParsers{
 
-  def parseContentByteRanges(inString: String): Option[ContentByteRange] = {
-    def unit: String =  """([a-z]+)""".r.findFirstIn(inString.toLowerCase).getOrElse("none")
-    if (unit == "none") 
-      return None
+  private def digitalParser = regex("""[\d]+""".r)
 
-    def pair: Array[Int] = """\d+-\d+""".r.findFirstIn(inString).getOrElse("").split("-").map(_.toInt)
-    if (pair.length != 2) 
-      return None
+  private def bytePairParser = (digitalParser <~ "-") ~ digitalParser ^^ {case first ~ last => new ByteRanges.BytePair(Some(HttpNumbers.LongNumber(first.toInt)), HttpNumbers.LongNumber(last.toInt))}
 
-    def bpair: ByteRanges.BytePair = new ByteRanges.BytePair(
-      Some(HttpNumbers.LongNumber(pair(0))), HttpNumbers.LongNumber(pair(1)))
+  private def parser = opt(
+    (regex("[a-z]+".r) <~ "=") ~ bytePairParser ~ ("/" ~> regex("""(\d+)|\*""".r)) ^^ {case unit ~ bpair ~ length => ByteInstance (unit, bpair, length)}
+  )
 
-    def length: String = """(?<=/)(\d+)|\*""".r.findFirstIn(inString).getOrElse("none")
-    if (length == "none") 
-      return None 
+  def parseContentByteRanges(inString: String) = parser(new CharSequenceReader(inString.toLowerCase)) match {
+    case Success(result, _) => result
 
-    return Some(ByteInstance (unit, bpair, length))
+    case Failure(msg, _) => error("The ContentByteRanges " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class ByteInstance (unit: String, bytePair: ByteRanges.BytePair, instanceLength: String) extends ContentByteRange

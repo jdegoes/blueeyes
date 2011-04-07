@@ -9,8 +9,8 @@ sealed trait HttpMethod extends Product {
 object HttpMethods {
   
   /* Perhaps needs some regex */
-  def parseHttpMethods(inString: String): Array[HttpMethod] = {
-    def outMethods: Array[HttpMethod] = inString.trim.toLowerCase.split(",").map(_.trim match {
+  def parseHttpMethods(inString: String): List[HttpMethod] = {
+    inString.trim.toLowerCase.split(",").toList.map(_.trim match {
       case "get"      => GET     
       case "put"      => PUT
       case "post"     => POST
@@ -22,7 +22,6 @@ object HttpMethods {
       case "trace"    => TRACE
       case x          => CUSTOM(x)    // Perhaps shouldn't return custom?
     })
-    return outMethods
   }
   
 

@@ -9,8 +9,6 @@ import blueeyes.json.JsonAST._
 
 class HealthMonitorSpec extends Specification with blueeyes.json.Implicits with FutureDeliveryStrategySequential{
 
-  private val precision = 5.0
-
   private val montor = new HealthMonitor()
 
   "records count" in{

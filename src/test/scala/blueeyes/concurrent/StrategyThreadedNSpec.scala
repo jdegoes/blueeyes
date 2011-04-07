@@ -1,6 +1,6 @@
 package blueeyes.concurrent
 
-import org.spex.Specification
+import org.specs.Specification
 import java.util.concurrent.{CountDownLatch, Executors}
 import util.Random
 

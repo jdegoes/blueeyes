@@ -1,7 +1,8 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.CountDownLatch
-import org.spex.Specification
+import org.specs.Specification
+import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
@@ -9,7 +10,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import com.mongodb.MongoException
 
-class MongoQueryBehaviourSpec extends Specification {
+class MongoQueryBehaviourSpec extends Specification with MocksCreation{
   private val query       = new QueryBehaviours.MongoQueryBehaviour[Int]{
     def query(collection: DatabaseCollection): Int = 1
   }

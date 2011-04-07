@@ -1,6 +1,6 @@
 package blueeyes.parsers
 
-import org.spex.Specification
+import org.specs.Specification
 import org.specs.ScalaCheck
 import org.scalacheck._
 import org.scalacheck.Prop.forAllNoShrink

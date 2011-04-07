@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import org.spex.Specification
+import org.specs.Specification
 
 class HistogramSpec extends Specification{
   "builds Histogram" in{

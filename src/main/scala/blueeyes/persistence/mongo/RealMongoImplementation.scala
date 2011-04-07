@@ -6,9 +6,8 @@ import blueeyes.json.JsonAST._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import blueeyes.json.{JPath}
-import blueeyes.concurrent.{Actor, ActorExecutionStrategy}
+import blueeyes.concurrent.{Actor}
 
-@com.google.inject.Singleton
 class RealMongo(config: ConfigMap) extends Mongo{
   val ServerAndPortPattern = "(.+):(.+)".r
 

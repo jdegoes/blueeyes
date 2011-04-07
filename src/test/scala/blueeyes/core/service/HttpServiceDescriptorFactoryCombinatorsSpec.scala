@@ -65,6 +65,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       
       content \ "service" \ "name"    mustEqual(JString("email"))
       content \ "service" \ "version" mustEqual(JString("1.2.3"))
+      content \ "uptimeSeconds"       mustNotEq(JNothing)
     }
   } should "adds health monitor statistics"
   

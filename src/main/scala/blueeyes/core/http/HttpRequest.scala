@@ -5,7 +5,7 @@ import java.net.InetAddress
 import java.net.URI
 
 //import HttpVersions._
-sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parameters: Map[Symbol, String], headers: Map[String, String], content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
+sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parameters: Map[Symbol, String], headers: HttpHeaders, content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
 
   def path                = nonNull(new URI(uri).getPath)
   def host                = nonNull(new URI(uri).getHost)

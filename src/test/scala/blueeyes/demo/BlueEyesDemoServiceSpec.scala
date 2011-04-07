@@ -2,11 +2,8 @@ package blueeyes.demo
 
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.service.test.BlueEyesServiceSpecification
-import blueeyes.persistence.mongo.Mongo
-import blueeyes.config.ConfiggyModule
-import blueeyes.persistence.mongo.mock.MockMongoModule
+import blueeyes.persistence.mongo.{Mongo, MockMongo}
 import blueeyes.core.http.{HttpStatus, HttpResponse, MimeTypes}
-import com.google.inject.Guice
 import blueeyes.json.JsonAST.{JValue, JObject, JField, JString, JNothing, JArray}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
@@ -101,8 +98,6 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     } should "search contact"
   }
 
-  private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)
-
-  lazy val mongo    = injector.getInstance(classOf[Mongo])
+  lazy val mongo    = new MockMongo()
   lazy val database = mongo.database(databaseName)
 }

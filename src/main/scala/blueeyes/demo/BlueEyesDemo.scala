@@ -1,10 +1,6 @@
 package blueeyes.demo
 
 import blueeyes.concurrent.Future
-import blueeyes.config.ConfiggyModule
-import blueeyes.persistence.mongo.mock.MockMongoModule
-import blueeyes.persistence.mongo.RealMongoModule
-import com.google.inject.Guice
 import blueeyes.BlueEyesServer
 import net.lag.configgy.ConfigMap
 import blueeyes.json.JsonAST._
@@ -16,10 +12,10 @@ import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.json.{JPathField, JPath}
+import blueeyes.persistence.mongo.MockMongo
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
-  private lazy val injector = Guice.createInjector(new ConfiggyModule(rootConfig), new MockMongoModule)
-  lazy val mongo = injector.getInstance(classOf[Mongo])
+  lazy val mongo = new MockMongo()
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 

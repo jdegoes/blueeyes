@@ -1,12 +1,11 @@
 package blueeyes.core.service.engines
 
-import org.scalatest.mock.MockitoSugar
 import org.specs.Specification
+import org.specs.mock.MocksCreation
 import org.jboss.netty.handler.codec.http.{HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest
 import org.jboss.netty.channel._
 import org.jboss.netty.util.CharsetUtil
-import org.mockito.Mockito.{when, times}
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.service.RestPathPatternImplicits._
@@ -16,8 +15,10 @@ import java.net.InetSocketAddress
 import net.lag.logging.Logger
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
+import org.mockito.Mockito.{times, when}
+import org.mockito.Mockito
 
-class NettyRequestHandlerSpec extends Specification with MockitoSugar with NettyConverters with FutureDeliveryStrategySequential{
+class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation{
   private val handler       = mock[HttpRequestHandler[String]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]

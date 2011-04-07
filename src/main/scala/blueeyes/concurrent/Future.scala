@@ -21,6 +21,8 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
 
   private val lock = new ReadWriteLock{}
 
+  private val _errorHandlers: ArrayBuffer[List[Throwable] => Unit] = new ArrayBuffer()
+  private def errorHandlers: List[List[Throwable] => Unit] = lock.readLock { _errorHandlers.toList }
   private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
   private def listeners: List[T => Unit] = lock.readLock { _listeners.toList }
 
@@ -68,7 +70,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
         // because the future's state is set to delivered, so _listeners
         // list cannot possibly change except through this method.
 
-        deliverAndHandleError(_result.get, _listeners.toList)
+        deliverAndHandleError(_result.get, listeners, errorHandlers)
 
         _listeners.clear()
     }
@@ -103,7 +105,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
    */
   def ifCanceled(f: Option[Throwable] => Unit): Future[T] = {
     lock.writeLock {
-      if (isCanceled) deliverAndHandleError(_error, f :: Nil)
+      if (isCanceled) deliverAndHandleError(_error, f :: Nil, errorHandlers)
       else if (!isDone) _canceled.append(f)
     }
 
@@ -202,10 +204,19 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
   def deliverTo(f: T => Unit): Future[T] = {
     lock.writeLock {
       if (!isCanceled) {
-        if (isDelivered) deliverAndHandleError(_result.get, f :: Nil)
+        if (isDelivered) deliverAndHandleError(_result.get, f :: Nil, errorHandlers)
         else _listeners.append(f)
       }
       this
+    }
+  }
+
+  /** Delivers listeners errors to the specified handler as soon as they
+   * are happened.
+  */
+  def trap(errorHandler: List[Throwable] => Unit){
+    lock.writeLock {
+      _errorHandlers.append(errorHandler)
     }
   }
 
@@ -390,7 +401,7 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
       case false =>
 
       case true =>
-        deliverAndHandleError(error ,_canceled.toList)
+        deliverAndHandleError(error ,_canceled.toList, errorHandlers)
 
         _canceled.clear()
     }
@@ -424,25 +435,32 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
       Success(f)
     }
     catch {
-      case error: Throwable => handleErrors(error :: Nil)
+      case error: Throwable => handleErrors(errorHandlers)(error :: Nil)
         Failure(error)
     }
   }
 
-  private def deliverAndHandleError[A](value: A, listeners: Iterable[A => Unit]){
-    deliveryStrategy.deliver(value, listeners, handleErrors _)
+  private def deliverAndHandleError[A](value: A, listeners: Iterable[A => Unit], errorHandlers: List[List[Throwable] => Unit]){
+    deliveryStrategy.deliver(value, listeners, handleErrors(errorHandlers) _)
   }
 
-  private def handleErrors(errors: List[Throwable]){
-    Thread.getDefaultUncaughtExceptionHandler match {
-      case handler: Thread.UncaughtExceptionHandler =>
-        val currentThread = Thread.currentThread
-        errors foreach { error =>
-          handler.uncaughtException(currentThread, error)
-        }
+  private def handleErrors(errorHandlers: List[List[Throwable] => Unit])(errors: List[Throwable]){
 
-      case null =>
+    val actualHandlers = errorHandlers match {
+      case x :: xs => errorHandlers
+      case Nil => List[List[Throwable] => Unit]({errors: List[Throwable] =>
+        Thread.getDefaultUncaughtExceptionHandler match {
+          case handler: Thread.UncaughtExceptionHandler =>
+            val currentThread = Thread.currentThread
+            errors foreach { error =>
+              handler.uncaughtException(currentThread, error)
+            }
+
+          case null =>
+        }
+      })
     }
+    actualHandlers foreach {handler => handler(errors)}
   }
 }
 

@@ -1,11 +1,11 @@
 package blueeyes.persistence.mongo
 
-import org.spex.Specification
+import org.specs.Specification
 import UpdateFieldFunctions._
 
 class PullFSpec extends Specification{
   "fuse applies pull to set update" in {
-    PullF("n", "" === "foo").fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar"), MongoPrimitiveString("foo")))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar")))))
+    PullF("n", "" === "foo").fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar") :: MongoPrimitiveString("foo") :: Nil))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar") :: Nil))))
   }
   "fuse with pull (with '' === value filter) composes pull" in {
     PullF("n", "" === "foo").fuseWith(PullF("n", "" === "bar")) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
