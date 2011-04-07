@@ -9,7 +9,6 @@ import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import blueeyes.concurrent.{ActorImplementationSequential, ActorExecutionStrategy, ActorExecutionStrategySequential, ReadWriteLock}
 
-@com.google.inject.Singleton
 class MockMongo() extends Mongo{
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
   def database(databaseName: String) = {
