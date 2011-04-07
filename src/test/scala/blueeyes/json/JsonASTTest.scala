@@ -23,7 +23,6 @@ import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 import _root_.org.specs.ScalaCheck
 
-class JsonASTTest extends Runner(JsonASTSpec) with JUnit
 object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
 

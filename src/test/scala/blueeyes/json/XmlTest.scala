@@ -23,7 +23,6 @@ import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 import _root_.org.specs.ScalaCheck
 
-class XmlTest extends Runner(XmlSpec) with JUnit
 object XmlSpec extends Specification with NodeGen with JValueGen with ScalaCheck {
   import Xml._
   import JsonAST._

@@ -16,7 +16,6 @@ package blueeyes.demo {
   object ExampleProductData {
     lazy val ExampleContact: blueeyes.demo.Contact = JObject(Nil).deserialize[blueeyes.demo.Contact]
   }
-  class DataProductSerializationTest extends Runner(DataProductSerializationExamples) with JUnit
   object DataProductSerializationExamples extends Specification {
     "Deserialization of Contact succeeds even when information is missing" in {
       ExampleProductData.ExampleContact.isInstanceOf[blueeyes.demo.Contact] must be (true)
@@ -29,11 +28,9 @@ package blueeyes.demo {
   object ExampleMultitypeData {
     
   }
-  class DataCoproductSerializationTest extends Runner(DataCoproductSerializationExamples) with JUnit
   object DataCoproductSerializationExamples extends Specification {
     
   }
-  class DataConstantsSerializationTest extends Runner(DataConstantsSerializationExamples) with JUnit
   object DataConstantsSerializationExamples extends Specification {
     
   }

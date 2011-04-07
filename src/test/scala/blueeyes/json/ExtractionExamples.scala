@@ -21,7 +21,6 @@ import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class ExtractionExampleTest extends Runner(ExtractionExamples) with JUnit
 object ExtractionExamples extends Specification {
   import JsonAST._
   import JsonParser._

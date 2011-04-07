@@ -6,8 +6,6 @@ package blueeyes.json.xschema.codegen {
   import _root_.blueeyes.json.JsonParser._
   import java.io._
 
-  class XCodeGeneratorExamplesTest extends Runner(XCodeGeneratorExamples) with JUnit
-
   object XCodeGeneratorExamples extends Specification {
     import _root_.java.io._
     import _root_.blueeyes.json.xschema.SampleSchemas._
