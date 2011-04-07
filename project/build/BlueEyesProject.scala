@@ -62,7 +62,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val mockito       = "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
   val paranamer     = "com.thoughtworks.paranamer"  % "paranamer"           % "2.3"
   val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
-  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.2"         % "compile"
+  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.3"         % "compile"
   val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
   val configgy      = "net.lag"                     % "configgy"            % "2.0.0"         % "compile" intransitive()
   val rhino         = "rhino"                       % "js"                  % "1.7R2"         % "compile"
