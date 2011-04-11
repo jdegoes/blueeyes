@@ -34,7 +34,7 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parame
 }
 
 object HttpRequest{
-  def apply[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: Map[String, String] = Map(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
+  def apply[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
     val subpath = new URI(uri).getPath
     
     val query = new URI(uri).getQuery match {

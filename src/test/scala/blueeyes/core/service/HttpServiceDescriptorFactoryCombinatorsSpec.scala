@@ -5,7 +5,8 @@ import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.json.JsonParser.{parse => j}
-import blueeyes.json.JsonAST.{JInt, JNothing, JString}
+import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
+import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import java.io.File
 
@@ -37,6 +38,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
         case _ => "it does not work!"
       })))
     }
+    def isDefinedAt(x: HttpRequest[String]) = true
   }
 
   doAfterSpec {
@@ -47,36 +49,42 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     new File(System.getProperty("java.io.tmpdir")).listFiles filter{ file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
   }
 
-  path$("/foo"){
-    get${ response: HttpResponse[String] =>
-      response.status  mustEqual(HttpStatus(OK))
-      response.content mustEqual(None)
+  service should {
+    "support health monitor service" in { client: HttpClient[String] =>
+      val f = client.get("/foo")
+      f.value must eventually(beSomething)
+      f.value.get.content must beNone
+      f.value.get.status  mustEqual(HttpStatus(OK))
     }
-  } should "adds health monitor service"
 
-  path$("/blueeyes/services/email/v1/health"){
-    get${ response: HttpResponse[String] =>
+    "support health monitor statistics" in { client: HttpClient[String] =>
+      val f = client.get("/blueeyes/services/email/v1/health")
+      f.value must eventually(beSomething)
+
+      val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
 
       val content  = j(response.content.get)
 
       content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
-      
+
       content \ "service" \ "name"    mustEqual(JString("email"))
       content \ "service" \ "version" mustEqual(JString("1.2.3"))
       content \ "uptimeSeconds"       mustNotEq(JNothing)
     }
-  } should "adds health monitor statistics"
-  
-  path$("/proxy"){
-    get$ { response: HttpResponse[String] =>
-      response.status  mustEqual(HttpStatus(OK))
-      response.content must eventually (beEqualTo(Some("it works!")))
-    }
-  } should "add service locator"
 
-  "RequestLogging: Creates logRequest" in{
+    "add service locator" in { client: HttpClient[String] =>
+      val f = client.get("/proxy")
+      f.value must eventually(beSomething)
+
+      val response = f.value.get
+      response.status  mustEqual(HttpStatus(OK))
+      response.content must beSome("it works!")
+    }
+  }
+
+  specifyExample("RequestLogging: Creates logRequest") in{
     findLogFile mustNot be (None)
   }
 }

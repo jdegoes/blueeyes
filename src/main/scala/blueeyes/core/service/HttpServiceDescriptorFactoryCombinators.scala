@@ -15,8 +15,8 @@ import blueeyes.util.logging._
 import java.util.Calendar
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
-  private[this] object TransformerCombinators extends HttpClientTransformerCombinators
-  import TransformerCombinators.{path$}
+//  private[this] object TransformerCombinators
+//  import TransformerCombinators.{path$}
 
   /** Augments the service with health monitoring. By default, various metrics 
    * relating to request type, request timing, and request fulfillment are
@@ -159,12 +159,10 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   }
   
   type ServiceLocator[T] = (String, HttpServiceVersion) => ServiceInvoker[T]
-  
+
   case class ServiceInvoker[T](serviceRootUrl: String)(implicit client: HttpClient[T]) {
-    def apply[X](transformer: HttpClientTransformer[T, X]): Future[X] = {
-      client {
-        path$(serviceRootUrl) { transformer }
-      }
+    def apply[X](transformer: HttpClient[T] => X): Future[X] = {
+      transformer(client.path(serviceRootUrl))
     }
   }
   
@@ -178,10 +176,8 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * {{{
    * serviceLocator { locator =>
    *   ...
-   *   val content = locator("email", "1.01") { 
-   *     get$ { response =>
-   *       response.content.get
-   *     }
+   *   val content = locator("email", "1.01") { client =>
+   *     client.get("").map{ response => response.content.get }
    *   }
    * }
    * }}}

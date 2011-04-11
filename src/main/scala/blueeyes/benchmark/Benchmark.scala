@@ -11,8 +11,9 @@ import blueeyes.json.JsonParser.{parse => j}
 
 object Benchmark extends ServerStart{ self =>
 
-  private val blueEyesDemoFacade = new BlueEyesDemoFacade{
+  class BlueEyesDemoFacadeImpl extends BlueEyesDemoFacade{
     def port = self.port
+    val httpClient = new HttpClientXLightWebEnginesArrayByte{}
   }
 
   def main(args: Array[String]){
@@ -40,8 +41,8 @@ object Benchmark extends ServerStart{ self =>
   }
 
   private def healthReport{
-    val client = new HttpClientXLightWebEnginesArrayByte{}
-    val future = client.apply(blueEyesDemoFacade.health())
+    val blueEyesDemoFacade = new BlueEyesDemoFacadeImpl{}
+    val future = blueEyesDemoFacade.health()
 
     val taskCounDown  = new CountDownLatch(1)
 
@@ -76,7 +77,7 @@ object Benchmark extends ServerStart{ self =>
   }
 
   private def startBenchmarkTask(contact: Contact, timer: Timer, duration: Int) = {
-    val benchmarkTask = new BenchmarkTask(blueEyesDemoFacade, contact, timer, duration)
+    val benchmarkTask = new BenchmarkTask(new BlueEyesDemoFacadeImpl(), contact, timer, duration)
     new Thread(benchmarkTask).start
     benchmarkTask
   }
@@ -95,10 +96,10 @@ class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, 
     taskCounDown.countDown
   }
 
-  private def process[T](f: Contact => HttpClient[Array[Byte]] => Future[T]) = {
+  private def process[T](f: Contact => Future[T]) = {
     val countDown = new CountDownLatch(1)
     timer.time{
-      val future    = apply[T](f(contact))
+      val future    = f(contact)
       future.deliverTo(response =>{
         countDown.countDown
       })

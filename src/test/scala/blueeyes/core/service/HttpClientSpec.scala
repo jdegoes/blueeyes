@@ -1,4 +1,57 @@
 package blueeyes.core.service
 
+import org.specs.Specification
+import blueeyes.core.http._
+import blueeyes.core.data.BijectionsByteArray
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import java.net.InetAddress
+import org.jboss.netty.handler.codec.http.CookieEncoder
 
-class HttpClientSpec
+class HttpClientSpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray{
+
+  private val initialRequest = HttpRequest[String](HttpMethods.GET, "/baz")
+
+  private val mockClient = new HttpClient[String]{
+    var request: Option[HttpRequest[String]] = None
+
+    def apply(r: HttpRequest[String]) = {
+      request = Some(r)
+      Future[HttpResponse[String]](HttpResponse[String]())
+    }
+
+    def isDefinedAt(x: HttpRequest[String]) = true
+  }
+
+  "sets protocol, host, port and path to request" in {  makeTest(HttpRequest[String](HttpMethods.GET, "https://google.com:8080/bar/foo" +  initialRequest.uri))
+  {client => client.protocol("https").host("google.com").port(8080).path("/bar/foo")} }
+
+  "sets uri and method" in{  makeTest(HttpRequest[String](HttpMethods.DELETE, "foo-foo"), "foo-foo", HttpMethods.DELETE) {client => client} }
+
+  "sets path" in{  makeTest(HttpRequest[String](HttpMethods.GET, "http://google.com" +  initialRequest.uri)) {client => client.path("http://google.com")} }
+
+  "sets content" in{  makeTest(initialRequest.copy(content = Some("1"))) {client => client.content("1".getBytes)} }
+
+  "sets cookies" in{
+    val cookieEncoder = new CookieEncoder(false)
+    cookieEncoder.addCookie("foo", "bar")
+
+    makeTest(initialRequest.copy(headers = initialRequest.headers + Tuple2("Cookie", cookieEncoder.encode()))) {client => client.cookies(("foo", "bar"))}
+  }
+
+  "sets parameters request" in{  makeTest(initialRequest.copy(parameters = Map[Symbol, String]('foo -> "bar"))) {client => client.parameters('foo -> "bar")} }
+
+  "sets query" in{  makeTest(HttpRequest[String](HttpMethods.GET, initialRequest.uri + "?foo=bar", Map('foo -> "bar"))) {client => client.query("foo", "bar")} }
+
+  "sets http version" in{ makeTest(initialRequest.copy(version = HttpVersions.`HTTP/1.0`)) {client => client.version(HttpVersions.`HTTP/1.0`)} }
+
+  "sets headers request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("Content-Length" -> "1"))) {client => client.header("content-length", "1")} }
+
+  "sets remote host header request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress()),
+      remoteHost = Some(InetAddress.getLocalHost))) {client => client.remoteHost(InetAddress.getLocalHost)} }
+
+  private def makeTest(expectation: HttpRequest[String], uri: String = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]){
+    builder(mockClient).custom(method, uri)
+
+    mockClient.request.get mustEqual(expectation)
+  }
+}

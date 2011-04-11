@@ -46,6 +46,11 @@ object Bijection {
   }
 }
 
+trait BijectionsJson{
+  implicit val JsonToJson  = Bijection.identity[JValue]
+}
+object BijectionsJson extends BijectionsJson
+
 trait BijectionsString {
   implicit val ByteArrayToString = new Bijection[Array[Byte], String] {
     def apply(t: Array[Byte]): String   = new String(t)
