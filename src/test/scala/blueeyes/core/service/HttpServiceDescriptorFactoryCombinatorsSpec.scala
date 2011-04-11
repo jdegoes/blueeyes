@@ -4,7 +4,6 @@ import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilderString
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
-import blueeyes.json.JsonParser.{parse => j}
 import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
@@ -58,13 +57,13 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "support health monitor statistics" in { client: HttpClient[String] =>
-      val f = client.get("/blueeyes/services/email/v1/health")
+      val f = client.contentType[JValue](application/json).get("/blueeyes/services/email/v1/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
 
-      val content  = j(response.content.get)
+      val content  = response.content.get
 
       content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
