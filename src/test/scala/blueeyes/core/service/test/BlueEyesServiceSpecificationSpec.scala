@@ -13,12 +13,13 @@ import org.specs.util._
 import org.specs.util.TimeConversions._
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
-  service.contentType[String](text/html) should{
-    "support get by valid URL" in { client: HttpClient[String] =>
+  "Service Specification" should {
+    def client = service.contentType[String](text/html)
+    "support get by valid URL" in {
       val f = client.get("/bar/id/bar.html")
       f.value must eventually (beSome(serviceResponse))
     }
-    "support asynch get by valid URL" in { client: HttpClient[String] =>
+    "support asynch get by valid URL" in {
       val f = client.get("/asynch/future")
       f.value must eventually(5, new Duration(10000)) (beSome(serviceResponse))
     }

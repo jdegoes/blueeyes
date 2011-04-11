@@ -7,9 +7,9 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 
 class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] with ServerHealthMonitorService{
-  service.contentType[JValue](application/json) should{
-    "get server health" in { client: HttpClient[JValue] =>
-      val f = client.get("/blueeyes/server/health")
+   "Server Health Monitor Service" should{
+    "get server health" in {
+      val f = service.contentType[JValue](application/json).get("/blueeyes/server/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get

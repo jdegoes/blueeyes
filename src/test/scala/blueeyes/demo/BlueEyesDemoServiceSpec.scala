@@ -37,9 +37,9 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
   }
   """.format(databaseName, collectionName)
 
-  service.contentType[JValue](application/MimeTypes.json) should {
-    "create contact" in { client: HttpClient[JValue] =>
-      val f = client.post("/contacts")(contact.serialize)
+  "Demo Service" should {
+    "create contact" in {
+      val f = service.post("/contacts")(contact.serialize)
       f.value must eventually(beSomething)
 
       val response = f.value.get
@@ -56,7 +56,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
     }
   }
 
-   service.contentType[JValue](application/MimeTypes.json) should {
+   "Demo Service" should {
      def awaitResult[T](future: Future[T]) = {
        val countDown = new CountDownLatch(1)
        future deliverTo {v => countDown.countDown()}
@@ -68,7 +68,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
      val removed  = awaitResult[JNothing.type](database[JNothing.type](remove.from(collectionName)))
      val inserted = awaitResult[JNothing.type](database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName)))
 
-     "return contact list" in { client: HttpClient[JValue] =>
+     def client = service.contentType[JValue](application/MimeTypes.json)
+     "return contact list" in {
         val f = client.get("/contacts")
         f.value must eventually(beSomething)
 
@@ -77,7 +78,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
         response.status  mustEqual(HttpStatus(OK))
         response.content must beSome(JArray(List(contact \\ "name")))
      }
-     "return contact list" in { client: HttpClient[JValue] =>
+     "return contact list" in {
         val f = client.get("/contacts/Sherlock")
         f.value must eventually(beSomething)
 
@@ -86,7 +87,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[Array[Byte]] 
         response.status  mustEqual(HttpStatus(OK))
         response.content must beSome(contact.serialize)
      }
-     "search contact" in { client: HttpClient[JValue] =>
+     "search contact" in {
         val f = client.post("/contacts/search")(filter)
         f.value must eventually(beSomething)
 

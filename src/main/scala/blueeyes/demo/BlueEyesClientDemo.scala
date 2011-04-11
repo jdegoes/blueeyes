@@ -4,14 +4,13 @@ import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
-import blueeyes.BlueEyesClientBuilder
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
-import blueeyes.core.data.BijectionsJson
+import blueeyes.core.data.{BijectionsJson, BijectionsByteArray}
 
 object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
@@ -48,7 +47,7 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
   }
 }
 
-trait BlueEyesDemoFacade extends BlueEyesClientBuilder with BijectionsJson{
+trait BlueEyesDemoFacade extends BijectionsJson with BijectionsByteArray{
 
   def httpClient: HttpClient[Array[Byte]]
 

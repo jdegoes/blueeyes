@@ -7,7 +7,6 @@ import blueeyes.core.service._
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
-import org.specs.specification.{Examples}
 
 class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] with HttpReflectiveServiceList[T] { self: HttpServer[T] =>
   shareVariables()
@@ -38,35 +37,6 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] w
   private lazy val _rootConfig = {
     Configgy.configureFromString(configuration)
     Configgy.config
-  }
-
-  private val currentClient = new ThreadLocal[HttpClient[_]]
-
-  implicit def specifyServiceExample(desc: String) = {
-    new ServiceExampleSpecification(specifyExample(desc))
-  }
-
-  class ServiceExampleSpecification(exampleSpecification: ExampleSpecification){
-    def in[S, V](expectations: (HttpClient[S]) => V)(implicit m: scala.reflect.ClassManifest[V]) = {
-      val exampleClient = currentClient.get.asInstanceOf[HttpClient[S]]
-      exampleSpecification.in[V]({
-        expectations(exampleClient)
-      })(m)
-    }
-  }
-
-  implicit def specifyServicesSus[V](httpClient: HttpClient[V]) = {
-    new SpecifiedServicesSus(httpClient, specifySus(services.mkString(", ")))
-  }
-
-  class SpecifiedServicesSus[V](httpClient: HttpClient[V], specifiedSus: SpecifiedSus){
-    def should(noExampleGiven: => Examples): Unit = {
-      specifiedSus.should({
-        currentClient.set(httpClient)
-        noExampleGiven
-        currentClient.set(null)
-      })
-    }
   }
 
   private class SpecClient extends HttpClient[T]{

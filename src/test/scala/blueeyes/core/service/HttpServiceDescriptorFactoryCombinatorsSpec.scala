@@ -48,16 +48,16 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     new File(System.getProperty("java.io.tmpdir")).listFiles filter{ file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
   }
 
-  service should {
-    "support health monitor service" in { client: HttpClient[String] =>
-      val f = client.get("/foo")
+  "service" should {
+    "support health monitor service" in {
+      val f = service.get("/foo")
       f.value must eventually(beSomething)
       f.value.get.content must beNone
       f.value.get.status  mustEqual(HttpStatus(OK))
     }
 
-    "support health monitor statistics" in { client: HttpClient[String] =>
-      val f = client.contentType[JValue](application/json).get("/blueeyes/services/email/v1/health")
+    "support health monitor statistics" in {
+      val f = service.contentType[JValue](application/json).get("/blueeyes/services/email/v1/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get
@@ -73,8 +73,8 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       content \ "uptimeSeconds"       mustNotEq(JNothing)
     }
 
-    "add service locator" in { client: HttpClient[String] =>
-      val f = client.get("/proxy")
+    "add service locator" in {
+      val f = service.get("/proxy")
       f.value must eventually(beSomething)
 
       val response = f.value.get
