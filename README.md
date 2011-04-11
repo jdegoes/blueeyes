@@ -275,14 +275,18 @@ BlueEyes is built from the ground up to support automated, comprehensive, fast-r
 
 The testing framework is currently compatible with *Specs*, and extends the *Specification* trait to make testing services easy.
 
-To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a variety of helper methods, including client transformer combinators.
+To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a helper "service" method to create service client.
 
     class EmailServicesSpec extends BlueEyesServiceSpecification[Array[Byte]] with EmailServices {
-      path$("/emails/") {
-        get$ { response =>
+      "EmailService" should {
+        "get emails" in {
+          val f = service.contentType[JValue](application/json).get("/emails")
+          f.value must eventually(beSomething)
+
+          val response = f.value.get
           response.status mustEqual(HttpStatus(OK))
         }
-      } should "return OK status"
+      }
     }
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
