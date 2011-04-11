@@ -3,9 +3,8 @@ package blueeyes
 import concurrent.{FutureDeliveryStrategySequential, FutureImplicits}
 import core.data.{BijectionsString, BijectionsByteArray}
 import core.http._
-import core.service.{HttpClientTransformerImplicits, HttpClientTransformerCombinators}
-trait BlueEyesClientTransformerBuilderBase[T] extends HttpClientTransformerCombinators with
-    FutureImplicits with
+import core.service.{HttpClientTransformerImplicits}
+trait BlueEyesClientTransformerBuilderBase[T] extends FutureImplicits with
     HttpHeaderImplicits with
     HttpStatusImplicits with
     HttpStatusCodeImplicits with
