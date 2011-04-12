@@ -99,6 +99,7 @@ case class SchedulableActor[A, B](actor: Actor[A, B]) {
 
   def !@ [Z](msg: A, time: Long, unit: TimeUnit, times: Int, seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.repeat(() => actor ! msg , time, unit, times, seed)(fold)
 }
+
 object ScheduledActor {
   implicit def actorToSchedulableActor[A, B](a: Actor[A, B]): SchedulableActor[A, B] = new SchedulableActor(a)
 }

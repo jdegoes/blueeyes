@@ -44,7 +44,7 @@ class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySeq
   }
   "ScheduledExecutor.repeat" should {
     "execute function specified times" in{
-      @volatile var executionCount      = 0
+      @volatile var executionCount = 0
 
       val f = ScheduledExecutor.repeat(() => {
         executionCount = executionCount + 1
@@ -58,7 +58,7 @@ class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySeq
   }
   "ScheduledExecutor.repeatWhile" should {
     "execute function while condition is true" in{
-      @volatile var executionCount      = 0
+      @volatile var executionCount = 0
 
       val f = ScheduledExecutor.repeatWhile(() => {
         executionCount = executionCount + 1
@@ -68,6 +68,20 @@ class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySeq
 
       f.value must eventually(5, new Duration(1000)) (beSome(20))
       executionCount mustEqual(5)
+    }
+    "be cancelled" in{
+      @volatile var executionCount = 0
+
+      val f = ScheduledExecutor.repeatWhile(() => {
+        executionCount = executionCount + 1
+        Future.lift[Int](1)
+      }, 200, TimeUnit.MILLISECONDS, (z: Int) => {z < 20}, 15)((z: Int, a: Int) => z + a)
+
+      Thread.sleep(200)
+      f.cancel
+
+      f.isCanceled must eventually(be(true))
+      executionCount must lessThan(5)
     }
   }
 }
