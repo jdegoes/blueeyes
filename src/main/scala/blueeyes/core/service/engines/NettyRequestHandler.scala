@@ -22,11 +22,11 @@ import net.lag.logging.Logger
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class NettyRequestHandler[T] (requestHandler: HttpRequestHandler[T], log: Logger)(implicit contentBijection: Bijection[ChannelBuffer, T]) extends SimpleChannelUpstreamHandler with NettyConverters{
-  private val pendingResponses = new HashSet[Future[HttpResponse[T]]] with SynchronizedSet[Future[HttpResponse[T]]]
+private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[ChunkReader], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
+  private val pendingResponses = new HashSet[Future[HttpResponse[ChunkReader]]] with SynchronizedSet[Future[HttpResponse[ChunkReader]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
-    def writeResponse(e: MessageEvent, response: HttpResponse[T]) {
+    def writeResponse(e: MessageEvent, response: HttpResponse[ChunkReader]) {
       val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
       val nettyResponse = toNettyResponse(response)
       val keepAlive     = isKeepAlive(request)

@@ -32,7 +32,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
   shareVariables()
 
   private var port = 8585
-  private var server: Option[NettyEngineString] = None
+  private var server: Option[NettyEngine] = None
   private var clientFacade: SampleClientFacade = _
   private var uri = ""
 
@@ -216,12 +216,12 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
   }
 }
 
-import blueeyes.BlueEyesServiceBuilderString
+import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
 
-object EchoServer extends EchoService with HttpReflectiveServiceList[String] with NettyEngineString { }
+object EchoServer extends EchoService with HttpReflectiveServiceList[ChunkReader] with NettyEngine{ }
 
-trait EchoService extends BlueEyesServiceBuilderString {
+trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReader{
   import blueeyes.core.http.MimeTypes._
 
   private implicit val ordering = new Ordering[Symbol] {
@@ -233,7 +233,7 @@ trait EchoService extends BlueEyesServiceBuilderString {
   private def response(content: Option[String] = None) =
     HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content, headers = Map("kludgy" -> "header test"))
 
-  private def handler(request: HttpRequest[String]) = {
+  private def handler(request: HttpRequest[ChunkReader]) = {
     val params = request.parameters.toList.sorted.foldLeft(List[String]()) { (l: List[String], p: Tuple2[Symbol, String]) =>
       l ++ List("%s=%s".format(p._1.name, p._2))
     }.mkString("&")
@@ -242,18 +242,19 @@ trait EchoService extends BlueEyesServiceBuilderString {
     	l ++ List("%s: %s".format(h._1, h._2))
       }.mkString("&")
     }.getOrElse("")
-    val content = params + request.content.getOrElse("") + headers
-    new Future[HttpResponse[String]]().deliver(response(content = Some(content)))
+    val content: String = request.content.map(v => ChunkReaderToString(v)).getOrElse("")
+    val newContent = params + content + headers
+    new Future[HttpResponse[String]]().deliver(response(content = Some(newContent)))
   }
 
-  val echoService: HttpService[String] = service("echo", "1.0.0") { context =>
+  val echoService: HttpService[ChunkReader] = service("echo", "1.0.0") { context =>
     request {
-      produce(text/html) {
+      produce[ChunkReader, String, ChunkReader](text/html) {
         path("/echo") {
           get(handler) ~
-	  post(handler) ~
-	  put(handler) ~
-	  head(handler)
+	        post(handler) ~
+	        put(handler) ~
+	        head(handler)
         }
       }
     }

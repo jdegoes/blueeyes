@@ -18,15 +18,15 @@ import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation{
-  private val handler       = mock[HttpRequestHandler[String]]
+class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkReader{
+  private val handler       = mock[HttpRequestHandler[ChunkReader]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
   private implicit val bijection  = NettyBijections.ChannelBufferToString
 
-  private val response      = HttpResponse[String](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some("12"), HttpVersions.`HTTP/1.1`)
+  private val response      = HttpResponse[ChunkReader](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), HttpVersions.`HTTP/1.1`)
   private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
 
@@ -34,7 +34,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
     val event  = mock[MessageEvent]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
-    val future       = new Future[HttpResponse[String]]().deliver(response)
+    val future       = new Future[HttpResponse[ChunkReader]]().deliver(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getRemoteAddress()).thenReturn(remoteAddress)
@@ -54,7 +54,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
     val stateEvent   = mock[ChannelStateEvent]
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
-    val future       = new Future[HttpResponse[String]]()
+    val future       = new Future[HttpResponse[ChunkReader]]()
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getRemoteAddress()).thenReturn(remoteAddress)

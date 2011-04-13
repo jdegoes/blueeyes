@@ -5,14 +5,15 @@ import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
-import blueeyes.BlueEyesServiceBuilderString
+import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
+import blueeyes.core.data.BijectionsString
 import TestService._
 import org.specs.util._
 import org.specs.util.TimeConversions._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[ChunkReader] with TestService with BijectionsChunkReader{
   "Service Specification" should {
     def client = service.contentType[String](text/html)
     "support get by valid URL" in {
@@ -29,7 +30,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[Stri
   }
 }
 
-trait TestService extends BlueEyesServiceBuilderString {
+trait TestService extends BlueEyesServiceBuilder with BijectionsChunkReader{
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {

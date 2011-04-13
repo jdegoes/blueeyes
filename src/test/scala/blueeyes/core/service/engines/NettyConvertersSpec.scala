@@ -8,10 +8,10 @@ import java.net.InetSocketAddress;
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes}
+import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes, BijectionsChunkReader, ChunkReader}
 import blueeyes.core.http.MimeTypes._
 
-class NettyConvertersSpec extends Specification with NettyConverters{
+class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkReader{
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
@@ -25,8 +25,8 @@ class NettyConvertersSpec extends Specification with NettyConverters{
     toNettyStatus(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
   }
   "convert service HttpResponse to netty HttpResponse" in {
-    val response      = HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some("12"), `HTTP/1.0`)
-    val nettyResponse = toNettyResponse(response)(NettyBijections.ChannelBufferToString)
+    val response      = HttpResponse[ChunkReader](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), `HTTP/1.0`)
+    val nettyResponse = toNettyResponse(response)
 
     nettyResponse.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     nettyResponse.getContent.toString(CharsetUtil.UTF_8)  mustEqual("12")
@@ -40,13 +40,13 @@ class NettyConvertersSpec extends Specification with NettyConverters{
     nettyRequest.setHeader("retry-after", "1")
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
-    val request = fromNettyRequest(nettyRequest, address)(NettyBijections.ChannelBufferToString)
+    val request = fromNettyRequest(nettyRequest, address)
 
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
     request.parameters  mustEqual(Map('param1 -> "value1"))
     request.headers     mustEqual(Map("retry-after" -> "1"))
-    request.content     mustEqual(Some("12"))
+    request.content.map(m => new String(m.nextChunk, "UTF-8"))     must beSome("12")
     request.version     mustEqual(`HTTP/1.0`)
     request.remoteHost  mustEqual(Some(address.getAddress()))
   }
@@ -59,13 +59,13 @@ class NettyConvertersSpec extends Specification with NettyConverters{
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
     val forwardedAddress = new InetSocketAddress("111.11.11.1", 8080)
-    val request = fromNettyRequest(nettyRequest, address)(NettyBijections.ChannelBufferToString)
+    val request = fromNettyRequest(nettyRequest, address)
 
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual("http://foo/bar?param1=value1")
     request.parameters  mustEqual(Map('param1 -> "value1"))
     request.headers     mustEqual(Map("retry-after" -> "1", "X-Forwarded-For" -> "111.11.11.1, 121.21.2.2"))
-    request.content     mustEqual(Some("12"))
+    request.content.map(m => new String(m.nextChunk, "UTF-8"))     must beSome("12")
     request.version     mustEqual(`HTTP/1.0`)
     request.remoteHost  mustEqual(Some(forwardedAddress.getAddress()))
   }
@@ -75,7 +75,7 @@ class NettyConvertersSpec extends Specification with NettyConverters{
     nettyRequest.addHeader("retry-after", "1")
     nettyRequest.addHeader("retry-after", "2")
 
-    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))(NettyBijections.ChannelBufferToString)
+    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
 
     request.headers     mustEqual(Map("retry-after" -> "1,2"))
   }

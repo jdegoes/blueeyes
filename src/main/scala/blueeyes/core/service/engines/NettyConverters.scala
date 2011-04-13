@@ -4,12 +4,13 @@ import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatu
 
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
-
+import java.io.ByteArrayOutputStream
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
-import org.jboss.netty.buffer.{ChannelBuffer}
+import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.Bijection
+import blueeyes.core.http.OneChunkReader
 
 trait NettyConverters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -37,25 +38,34 @@ trait NettyConverters {
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNettyResponse[T, S](response: HttpResponse[T])(implicit contentBijection: Bijection[ChannelBuffer, T]): NettyHttpResponse = {
+  implicit def toNettyResponse(response: HttpResponse[ChunkReader]): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
-    response.content.foreach(content => nettyResponse.setContent(contentBijection.unapply(content)))
+    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(content.nextChunk)))
     response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
 
     nettyResponse
   }
 
-  implicit def fromNettyRequest[T, S](request: NettyHttpRequest, remoteAddres: SocketAddress)(implicit contentBijection: Bijection[ChannelBuffer, T]): HttpRequest[T] = {
+  implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ChunkReader] = {
     val parameters          = getParameters(request.getUri())
     val headers             = buildHeaders(request.getHeaders())
     val nettyContent        = request.getContent()
-    val content             = if (nettyContent.readable()) Some(contentBijection(nettyContent)) else None
+    val content             = if (nettyContent.readable()) Some(new OneChunkReader(extractContent(nettyContent))) else None
   
     val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
     val remoteHost = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+  }
+
+  private def extractContent(content: ChannelBuffer) = {
+    val stream = new ByteArrayOutputStream()
+    try {
+      content.readBytes(stream, content.readableBytes)
+      stream.toByteArray
+    }
+    finally stream.close
   }
 
   private def getParameters(uri: String) = {

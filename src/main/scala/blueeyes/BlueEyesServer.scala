@@ -18,6 +18,6 @@ import blueeyes.concurrent.{Future, FutureImplicits}
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServer extends HttpServer[Array[Byte]] with HttpReflectiveServiceList[Array[Byte]] with NettyEngineArrayByte {
+trait BlueEyesServer extends HttpServer[ChunkReader] with HttpReflectiveServiceList[ChunkReader] with NettyEngine {
 
 }

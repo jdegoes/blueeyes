@@ -8,7 +8,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.persistence.mongo.MongoImplicits._
-import blueeyes.core.http.{HttpRequest, HttpResponse}
+import blueeyes.core.http.{HttpRequest, HttpResponse, ChunkReader, BijectionsChunkReader}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.json.{JPathField, JPath}
@@ -19,7 +19,7 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators {
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReader{
   def mongo: Mongo
 
   val contactListService = service("contactlist", "1.0.0") {
@@ -35,8 +35,8 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         import demoConfig._
 
         path("/contacts"){
-          produce(application/json) {
-            get { request: HttpRequest[Array[Byte]] =>
+          produce[ChunkReader, JValue, ChunkReader](application/json) {
+            get { request: HttpRequest[ChunkReader] =>
               val contacts = database(select(".name").from(collection)) map {records =>
                 JArray(records.flatMap(row => (row \\ "name").value).toList)
               }
@@ -44,7 +44,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               contacts.map(v => HttpResponse[JValue](content=Some(v)))
             }
           } ~
-          jvalue {
+          jvalue[ChunkReader] {
             post {
               refineContentType[JValue, JObject] { request =>
                 database[JNothing.type](insert(request.content.get).into(collection))
@@ -54,13 +54,13 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             }
           } ~
           path("/'name") {
-            produce(application/json) {
-              get { request: HttpRequest[Array[Byte]] =>
+            produce[ChunkReader, JValue, ChunkReader](application/json) {
+              get { request: HttpRequest[ChunkReader] =>
                 val contact = database(selectOne().from(collection).where("name" === request.parameters('name)))
 
                 contact.map(v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound))
               } ~
-              delete { request: HttpRequest[Array[Byte]] =>
+              delete { request: HttpRequest[ChunkReader] =>
                 database[JNothing.type](remove.from(collection).where("name" === request.parameters('name)))
 
                 HttpResponse[JValue]()
@@ -68,7 +68,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             }
           } ~
           path("/search") {
-            jvalue {
+            jvalue[ChunkReader] {
               post {
                 refineContentType[JValue, JObject] { request =>
                   val contacts = searchContacts(request.content, demoConfig)

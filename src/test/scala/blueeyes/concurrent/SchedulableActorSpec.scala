@@ -1,9 +1,8 @@
 package blueeyes.concurrent
 
-import java.util.concurrent.TimeUnit
 import org.specs.Specification
-import org.specs.util.Duration
 import ScheduledActor._
+import Duration._
 
 class SchedulableActorSpec extends Specification with FutureDeliveryStrategySequential{
 
@@ -16,7 +15,7 @@ class SchedulableActorSpec extends Specification with FutureDeliveryStrategySequ
         case message: String => message + "_done"
       }
 
-      val f = messageProcessor !@ ("foo", 10, TimeUnit.MILLISECONDS)
+      val f = messageProcessor !@ ("foo", 10.milliseconds)
 
       f.value must eventually (beSome("foo_done"))
     }

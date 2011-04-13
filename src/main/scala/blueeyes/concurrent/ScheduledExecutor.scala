@@ -3,82 +3,104 @@ package blueeyes.concurrent
 import java.util.concurrent.{ScheduledExecutorService, Executors, TimeUnit}
 
 trait ScheduledExecutor{
+
+  type ActorType[A, B] = A => Future[B]
+
   def scheduledExecutor: ScheduledExecutorService
 
-  def once[A](actor: () => Future[A], time: Long, unit: TimeUnit)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[A] = {
-    val future = new Future[A]()
+  def once[A, B](actor: ActorType[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[B] = {
+    val future = new Future[B]()
 
     val executorFuture = scheduledExecutor.schedule(new Runnable{
       def run = {
-        val actorFuture = actor()
+        val actorFuture = actor(message)
 
-        actorFuture.deliverTo(a => future.deliver(a))
+        actorFuture.deliverTo(b => future.deliver(b))
         actorFuture.ifCanceled(error => future.cancel(error))
 
         future.ifCanceled(error => actorFuture.cancel(error) )
       }
-    }, time, unit)
+    }, duration.time, duration.unit)
 
     future.ifCanceled(error => executorFuture.cancel(true) )
 
     future
   }
 
-  def forever[A](actor: () => Future[A], time: Long, unit: TimeUnit)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = {
+  def forever[A, B](actor: ActorType[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = {
     val future = new Future[Unit]()
 
     val executorFuture = scheduledExecutor.scheduleWithFixedDelay(new Runnable{
       def run = {
-        val actorFuture = actor()
+        val actorFuture = actor(message)
 
         future.ifCanceled(error => actorFuture.cancel(error))
       }
-    }, time, time, unit)
+    }, duration.time, duration.time, duration.unit)
 
     future.ifCanceled(error => executorFuture.cancel(true))
 
     future
   }
 
-  def repeat[A, Z](actor: () => Future[A], time: Long, unit: TimeUnit, times: Int, seed: Z)(fold: (Z, A) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
+  def repeat[A, B, Z](actor: ActorType[A, B], message: => A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
     class Folder{
       private var count = 0
 
-      def countedFold(z: Z, a: A) = {
+      def countedFold(z: Z, b: B) = {
         count = count + 1
-        fold(z, a)
+        fold(z, b)
       }
       def pred(z: Z) = count < times
     }
 
     val folder = new Folder()
-    repeatWhile(actor, time, unit, folder.pred _, seed)(folder.countedFold _)
+    repeatWhile(actor, message, duration, folder.pred _)(seed)(folder.countedFold _)
   }
 
-  def repeatWhile[A, Z](actor: () => Future[A], time: Long, unit: TimeUnit, pred: (Z) => Boolean, seed: Z)(fold: (Z, A) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
-    val future = new Future[Z]()
-
+  def repeatWhile[A, B, Z](actor: ActorType[A, B], message: => A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
     if (pred(seed)){
-      val executorFuture = scheduledExecutor.scheduleWithFixedDelay(new Runnable{
-        private var result   = seed
-
-        def run = {
-          if (pred(result)){
-            val actorFuture = actor()
-
-            actorFuture.deliverTo(a => result = fold(result, a))
-
-            future.ifCanceled(error => actorFuture.cancel(error))
-
-            if (!pred(result)) future.deliver(result)
-          }
-        }
-      }, time, time, unit)
-
-      future.ifCanceled(error => executorFuture.cancel(true))
-      future.deliverTo(z => executorFuture.cancel(true))
+      unfold(actor, message, duration)(seed){(z: Z, b: B) =>
+        val newZ = fold(z, b)
+        (newZ, if (pred(newZ)) Some(message) else None )
+      }
     }
-    else future.deliver(seed)
+    else Future.lift[Z](seed)
+  }
+
+  def unfold[A, B, Z](actor: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A]))(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
+
+    val future      = new Future[Z]()
+
+    val normalDelay = duration
+    val doubleDelay = Duration(duration.time * 2, duration.unit)
+
+    def delayed(message: A) = once(actor, message, duration)
+    def now(message: A)     = actor(message)
+
+    def schedule(scheduleActor: A => Future[B], message: A, scheduleSeed: Z, scheduleDelay: Duration){
+      val nextSchedule   = System.currentTimeMillis + scheduleDelay.unit.convert(scheduleDelay.time, TimeUnit.MILLISECONDS)
+
+      val actorFuture    = scheduleActor(message)
+      future.ifCanceled(error => actorFuture.cancel(error))
+      actorFuture.ifCanceled(error => future.cancel(error))
+
+      actorFuture.deliverTo {b =>
+        val (newZ, newA) = generator(scheduleSeed, b)
+
+        newA match{
+          case None    if !future.isCanceled    => future.deliver(newZ)
+          case Some(x) if !future.isCanceled => {
+            val (currentActor, delay) = if (System.currentTimeMillis < nextSchedule) (delayed _, doubleDelay)
+            else (now _, normalDelay)
+
+            schedule(currentActor, x, newZ, delay)
+          }
+          case _ =>
+        }
+      }
+    }
+    schedule(delayed _, firstMessage, seed, doubleDelay)
 
     future
   }
@@ -91,15 +113,32 @@ trait ScheduledExecutorMultiThreaded extends ScheduledExecutor{
 object ScheduledExecutor extends ScheduledExecutorMultiThreaded
 
 case class SchedulableActor[A, B](actor: Actor[A, B]) {
-  def !@ (msg: A, time: Long, unit: TimeUnit)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[B] = ScheduledExecutor.once(() => actor ! msg , time, unit)
+  def !@ (msg: A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[B] = ScheduledExecutor.once(actor.! _, msg , duration)
 
-  def !@~ (msg: A, time: Long, unit: TimeUnit)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = ScheduledExecutor.forever(() => actor ! msg , time, unit)
+  def !@~ (msg: A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = ScheduledExecutor.forever(actor.! _, msg , duration)
 
-  def !@ [Z](msg: A, time: Long, unit: TimeUnit, pred: (Z) => Boolean, seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.repeatWhile(() => actor ! msg , time, unit, pred, seed)(fold)
+  def !@ [Z](msg: A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.repeatWhile(actor.! _, msg , duration, pred)(seed)(fold)
 
-  def !@ [Z](msg: A, time: Long, unit: TimeUnit, times: Int, seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.repeat(() => actor ! msg , time, unit, times, seed)(fold)
+  def !@ [Z](msg: A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.repeat(actor.! _, msg , duration, times)(seed)(fold)
+
+  def !@ [Z](msg: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A]))(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = ScheduledExecutor.unfold(actor.! _, msg , duration)(seed)(generator)
 }
 
 object ScheduledActor {
   implicit def actorToSchedulableActor[A, B](a: Actor[A, B]): SchedulableActor[A, B] = new SchedulableActor(a)
+}
+
+case class Duration(time: Long, unit: TimeUnit)
+
+object Duration {
+  // So user can write: 23.milliseconds, 92.seconds, etc.
+  implicit def longToDuration(value: Long) = new {
+    def milliseconds = Duration(value, TimeUnit.MILLISECONDS)
+    def nanoseconds  = Duration(value, TimeUnit.NANOSECONDS)
+    def microseconds = Duration(value, TimeUnit.MICROSECONDS)
+    def seconds      = Duration(value, TimeUnit.SECONDS)
+    def minutes      = Duration(value, TimeUnit.MINUTES)
+    def hours        = Duration(value, TimeUnit.HOURS)
+    def days         = Duration(value, TimeUnit.DAYS)
+  }
 }

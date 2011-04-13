@@ -18,8 +18,9 @@ import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
 import net.lag.logging.Logger
+import blueeyes.core.http.ChunkReader
 
-trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
+trait NettyEngine extends HttpServerEngine[ChunkReader] with HttpServer[ChunkReader]{ self =>
 
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
@@ -90,8 +91,6 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
     })
   }
 
-  implicit def contentBijection: Bijection[ChannelBuffer, T]
-
   class HttpServerPipelineFactory(val protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
     def getPipeline(): ChannelPipeline = {
       val pipeline = Channels.pipeline()
@@ -101,7 +100,7 @@ trait NettyEngine[T] extends HttpServerEngine[T] with HttpServer[T]{ self =>
       pipeline.addLast("encoder",     new HttpResponseEncoder())
       pipeline.addLast("deflater",    new HttpContentCompressor())
 
-      pipeline.addLast("handler",     new NettyRequestHandler[T](self, Logger.get))
+      pipeline.addLast("handler",     new NettyRequestHandler(self, Logger.get))
 
       pipeline
     }
@@ -144,32 +143,5 @@ private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String,
     val path = initialLine(1)
     if (!fullUriRegexp.pattern.matcher(path).matches) initialLine(1) = baseUri + (if (path.startsWith("/")) path else "/" + path)
     super.createMessage(initialLine)
-  }
-}
-
-trait NettyEngineArrayByte extends NettyEngine[Array[Byte]]{ self: HttpServer[Array[Byte]] =>
-  implicit val contentBijection = NettyBijections.ChannelBufferToByteArray
-}
-
-trait NettyEngineString extends NettyEngine[String]{ self: HttpServer[String] =>
-  implicit val contentBijection = NettyBijections.ChannelBufferToString
-}
-
-object NettyBijections{
-  val ChannelBufferToByteArray = new Bijection[ChannelBuffer, Array[Byte]]{
-    def apply(content: ChannelBuffer) = {
-      val stream = new ByteArrayOutputStream()
-      try {
-        content.readBytes(stream, content.readableBytes)
-        stream.toByteArray
-      }
-      finally stream.close
-    }
-    def unapply(content: Array[Byte]) = ChannelBuffers.copiedBuffer(content)
-  }
-
-  val ChannelBufferToString = new Bijection[ChannelBuffer, String]{
-    def apply(content: ChannelBuffer) = new String(ChannelBufferToByteArray.apply(content), CharsetUtil.UTF_8) 
-    def unapply(content: String)      = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8)
   }
 }

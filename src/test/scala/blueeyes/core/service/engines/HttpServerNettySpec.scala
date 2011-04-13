@@ -5,10 +5,11 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.BlueEyesServiceBuilderString
+import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.data.BijectionsString
 import blueeyes.core.http._
+import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
@@ -27,7 +28,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
   val retries = 30
 
   private var port = 8585
-  private var server: Option[NettyEngineString] = None
+  private var server: Option[NettyEngine] = None
   private var clientFacade: SampleClientFacade = _
   private var client: LocalHttpsClient = _
 
@@ -108,7 +109,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
   }
 }
 
-class SampleServer extends SampleService with HttpReflectiveServiceList[String] with NettyEngineString { }
+class SampleServer extends SampleService with HttpReflectiveServiceList[ChunkReader] with NettyEngine { }
 
 class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesString{
   override protected def createSSLContext = {
@@ -138,31 +139,31 @@ class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]
   def httpErrorHttpRequest  = client.get("/http/error")
 }
 
-trait SampleService extends BlueEyesServiceBuilderString {
+trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReader{
   import blueeyes.core.http.MimeTypes._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
 
-  val sampleService: HttpService[String] = service("sample", "1.32") { context =>
+  val sampleService: HttpService[ChunkReader] = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ChunkReader] =>
             new Future[HttpResponse[String]]().deliver(response)
           }
         } ~
         path("/foo") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ChunkReader] =>
             new Future[HttpResponse[String]]().deliver(response)
           }
         } ~
         path("/error") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ChunkReader] =>
             throw new RuntimeException("Unexecpcted Error.")
           }
         } ~
         path("/http/error") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ChunkReader] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }

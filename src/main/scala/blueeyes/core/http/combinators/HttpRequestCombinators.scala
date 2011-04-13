@@ -36,7 +36,7 @@ trait HttpRequestCombinators {
       }
     }
   }
-  
+
   def requireContent[T, S](p: T => Boolean)(f: Handler[T, S])(implicit m: Manifest[T]): Handler[T, S] = {
     (request: HttpRequest[T]) => {
       request.content match {
