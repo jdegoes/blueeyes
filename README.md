@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.3.0</version>
+      <version>0.3.1</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://scalablesolutions.se/akka/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.0" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.1" % "compile"
 
 ## Origins
 
