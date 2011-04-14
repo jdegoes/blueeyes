@@ -18,6 +18,7 @@ import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
 import net.lag.logging.Logger
+import org.jboss.netty.handler.stream.ChunkedWriteHandler
 
 trait NettyEngine extends HttpServerEngine[ChunkReader] with HttpServer[ChunkReader]{ self =>
 
@@ -94,12 +95,12 @@ trait NettyEngine extends HttpServerEngine[ChunkReader] with HttpServer[ChunkRea
     def getPipeline(): ChannelPipeline = {
       val pipeline = Channels.pipeline()
 
-      pipeline.addLast("decoder",     new FullURIHttpRequestDecoder(protocol, host, port))
-      pipeline.addLast("aggregator",  new HttpChunkAggregator(1048576));
-      pipeline.addLast("encoder",     new HttpResponseEncoder())
-      pipeline.addLast("deflater",    new HttpContentCompressor())
-
-      pipeline.addLast("handler",     new NettyRequestHandler(self, Logger.get))
+      pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port))
+      pipeline.addLast("aggregator",    new HttpChunkAggregator(1048576));
+      pipeline.addLast("encoder",       new HttpResponseEncoder())
+      pipeline.addLast("deflater",      new HttpContentCompressor())
+      pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
+      pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))
 
       pipeline
     }

@@ -4,6 +4,7 @@ import org.specs.Specification
 import org.specs.mock.MocksCreation
 import org.jboss.netty.handler.codec.http.{HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest
+import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.channel._
 import org.jboss.netty.util.CharsetUtil
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
@@ -34,6 +35,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
     val future       = new Future[HttpResponse[ChunkReader]]().deliver(response)
+    val (nettyMessage, nettyContent) = toNettyResponse(response)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
     when(event.getRemoteAddress()).thenReturn(remoteAddress)
@@ -41,7 +43,8 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
     when(handler.apply(request)).thenReturn(future, future)
     when(event.getChannel()).thenReturn(channel, channel)
     when(event.getChannel().isConnected).thenReturn(true)
-    when(channel.write(Matchers.argThat(new RequestMatcher(toNettyResponse(response))))).thenReturn(channelFuture, channelFuture)
+    when(channel.write(Matchers.argThat(new RequestMatcher(nettyMessage)))).thenReturn(channelFuture, channelFuture)
+    when(channel.write(Matchers.argThat(new ContentMatcher(nettyContent.get)))).thenReturn(channelFuture, channelFuture)
 
     nettyHandler.messageReceived(context, event)
 
@@ -69,8 +72,13 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {
      def matches(arg: Object ): Boolean = {
-       val repsonce = arg.asInstanceOf[NettyHttpResponse]
-       matchingResponce.getStatus == repsonce.getStatus && matchingResponce.getContent.toString(CharsetUtil.UTF_8) == repsonce.getContent.toString(CharsetUtil.UTF_8)
+       val response = arg.asInstanceOf[NettyHttpResponse]
+       response != null && matchingResponce.getStatus == response.getStatus
+     }
+  }
+  class ContentMatcher(chunkedInput: ChunkedInput) extends ArgumentMatcher[NettyHttpResponse] {
+     def matches(arg: Object ): Boolean = {
+       arg != null
      }
   }
 }

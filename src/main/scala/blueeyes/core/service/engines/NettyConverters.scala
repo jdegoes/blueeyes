@@ -1,6 +1,7 @@
 package blueeyes.core.service.engines
 
-import org.jboss.netty.handler.codec.http.{QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.handler.stream.ChunkedInput
 
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
@@ -37,13 +38,13 @@ trait NettyConverters {
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNettyResponse(response: HttpResponse[ChunkReader]): NettyHttpResponse = {
+  implicit def toNettyResponse(response: HttpResponse[ChunkReader]): (NettyHttpResponse, Option[ChunkedInput]) = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
-    response.content.foreach(content => nettyResponse.setContent(ChannelBuffers.copiedBuffer(content.nextChunk)))
     response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
+    nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, response.content.map(_.contentLength).getOrElse(0l))
 
-    nettyResponse
+    (nettyResponse, response.content.map(content => new NettyChunkedInput(content)))
   }
 
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ChunkReader] = {
@@ -84,4 +85,15 @@ trait NettyConverters {
     })
     headers
   }
+}
+
+import org.jboss.netty.buffer.ChannelBuffers
+class NettyChunkedInput(chunkedReader: ChunkReader) extends ChunkedInput{
+  def close = {chunkedReader.close}
+
+  def isEndOfInput = !hasNextChunk()
+
+  def nextChunk = ChannelBuffers.wrappedBuffer(chunkedReader.nextChunk)
+
+  def hasNextChunk = chunkedReader.hasNextChunk
 }

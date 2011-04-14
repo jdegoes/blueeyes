@@ -7,7 +7,6 @@ import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import org.jboss.netty.buffer.{ChannelBuffer}
 import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
 import blueeyes.core.data.ChunkReader
@@ -27,14 +26,14 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     def writeResponse(e: MessageEvent, response: HttpResponse[ChunkReader]) {
-      val request       = e.getMessage().asInstanceOf[NettyHttpRequest]
-      val nettyResponse = toNettyResponse(response)
-      val keepAlive     = isKeepAlive(request)
-
-      if (keepAlive) nettyResponse.setHeader(Names.CONTENT_LENGTH, nettyResponse.getContent().readableBytes())
+      val request             = e.getMessage().asInstanceOf[NettyHttpRequest]
+      val (message, content)  = toNettyResponse(response)
+      val keepAlive           = isKeepAlive(request)
 
       if (e.getChannel().isConnected){
-        val future = e.getChannel().write(nettyResponse)
+        val messageFuture = e.getChannel().write(message)
+        val contentFuture = content.map(value => e.getChannel().write(value))
+        val future        = contentFuture.getOrElse(messageFuture)
 
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }

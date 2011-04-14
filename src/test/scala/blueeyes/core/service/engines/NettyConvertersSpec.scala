@@ -2,14 +2,14 @@ package blueeyes.core.service.engines
 
 import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
-import org.jboss.netty.buffer.ChannelBuffers
+import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import org.jboss.netty.util.CharsetUtil
 import java.net.InetSocketAddress;
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
 import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes}
-import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString}
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString, OneChunkReader}
 import blueeyes.core.http.MimeTypes._
 
 class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkReaderString{
@@ -26,13 +26,15 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
     toNettyStatus(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
   }
   "convert service HttpResponse to netty HttpResponse" in {
-    val response      = HttpResponse[ChunkReader](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), `HTTP/1.0`)
-    val nettyResponse = toNettyResponse(response)
+    val response           = HttpResponse[ChunkReader](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), `HTTP/1.0`)
+    val (message, content) = toNettyResponse(response)
 
-    nettyResponse.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
-    nettyResponse.getContent.toString(CharsetUtil.UTF_8)  mustEqual("12")
-    nettyResponse.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
-    Map(nettyResponse.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("retry-after" -> "1"))
+    message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
+    message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
+    Map(message.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("retry-after" -> "1", "Content-Length" -> "2"))
+
+    val chunk = content.get.nextChunk.asInstanceOf[ChannelBuffer]
+    ChunkReaderToString(new OneChunkReader(Array[Byte](chunk.getByte(0), chunk.getByte(1)))) mustEqual("12")
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {

@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{ChunkReader, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
+import blueeyes.core.data.{MultiChunkReader, ChunkReader, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -102,6 +102,20 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.context)
     }
+    "return hude content"in{
+      val response = clientFacade.hugeRequest
+
+      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value.get.status.code must be (OK)
+      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+    }
+    "return hude content by htpps"in{
+      val response = clientFacade.httpsHugeRequest
+
+      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value.get.status.code must be (OK)
+      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+    }
 
     doLast{
       server.foreach(_.stop)
@@ -137,6 +151,10 @@ class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]
   def errorHttpRequest      = client.get("/error")
 
   def httpErrorHttpRequest  = client.get("/http/error")
+
+  def hugeRequest           = client.get("/huge")
+
+  def httpsHugeRequest      = sslClient.get("/huge")
 }
 
 trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
@@ -149,12 +167,12 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
           get { request: HttpRequest[ChunkReader] =>
-            new Future[HttpResponse[String]]().deliver(response)
+            Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/foo") {
           get { request: HttpRequest[ChunkReader] =>
-            new Future[HttpResponse[String]]().deliver(response)
+            Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/error") {
@@ -167,12 +185,23 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }
+      } ~
+      path("/huge"){
+        get { request: HttpRequest[ChunkReader] =>
+          val content      = Context.hugeContext.iterator
+          def nextChunk  = if (content.hasNext) Some(content.next) else None
+          val chunkReader  = new MultiChunkReader(Context.hugeContext.map(v => v.length).foldLeft(0){(s, v) => s + v}, nextChunk _)
+
+          val response     = HttpResponse[ChunkReader](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunkReader))
+          Future.lift[HttpResponse[ChunkReader]](response)
+        }
       }
     }
   }
 }
 
 object Context{
+  val hugeContext = List[Array[Byte]]("1, 2".getBytes, "3, 4".getBytes)
   val context = """<html>
 <head>
 </head>
