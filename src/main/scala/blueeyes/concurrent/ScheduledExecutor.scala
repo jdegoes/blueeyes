@@ -27,21 +27,8 @@ trait ScheduledExecutor{
     future
   }
 
-  def forever[A, B](actor: ActorType[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = {
-    val future = new Future[Unit]()
-
-    val executorFuture = scheduledExecutor.scheduleWithFixedDelay(new Runnable{
-      def run = {
-        val actorFuture = actor(message)
-
-        future.ifCanceled(error => actorFuture.cancel(error))
-      }
-    }, duration.time, duration.time, duration.unit)
-
-    future.ifCanceled(error => executorFuture.cancel(true))
-
-    future
-  }
+  def forever[A, B](actor: ActorType[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] =
+    unfold[A, B, Unit](actor, message, duration)(())((z: Unit, b: B) => ((), Some(message)))
 
   def repeat[A, B, Z](actor: ActorType[A, B], message: => A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
     class Folder{
@@ -71,15 +58,13 @@ trait ScheduledExecutor{
   def unfold[A, B, Z](actor: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A]))(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
 
     val future      = new Future[Z]()
-
-    val normalDelay = duration
-    val doubleDelay = Duration(duration.time * 2, duration.unit)
+    val start       = System.currentTimeMillis
 
     def delayed(message: A) = once(actor, message, duration)
     def now(message: A)     = actor(message)
 
-    def schedule(scheduleActor: A => Future[B], message: A, scheduleSeed: Z, scheduleDelay: Duration){
-      val nextSchedule   = System.currentTimeMillis + scheduleDelay.unit.convert(scheduleDelay.time, TimeUnit.MILLISECONDS)
+    def schedule(scheduleActor: A => Future[B], message: A, scheduleSeed: Z, nextSchedule: Long){
+      val nextScheduleTime   = System.currentTimeMillis + duration.unit.convert(duration.time * nextSchedule, TimeUnit.MILLISECONDS)
 
       val actorFuture    = scheduleActor(message)
       future.ifCanceled(error => actorFuture.cancel(error))
@@ -91,16 +76,16 @@ trait ScheduledExecutor{
         newA match{
           case None    if !future.isCanceled    => future.deliver(newZ)
           case Some(x) if !future.isCanceled => {
-            val (currentActor, delay) = if (System.currentTimeMillis < nextSchedule) (delayed _, doubleDelay)
-            else (now _, normalDelay)
+            val (currentActor, delay) = if (System.currentTimeMillis < nextScheduleTime) (delayed _, 2)
+            else (now _, 1)
 
-            schedule(currentActor, x, newZ, delay)
+            schedule(currentActor, x, newZ, nextSchedule + delay)
           }
           case _ =>
         }
       }
     }
-    schedule(delayed _, firstMessage, seed, doubleDelay)
+    schedule(delayed _, firstMessage, seed, 2)
 
     future
   }

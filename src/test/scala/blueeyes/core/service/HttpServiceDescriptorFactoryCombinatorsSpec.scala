@@ -3,13 +3,15 @@ package blueeyes.core.service
 import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, ChunkReader, BijectionsChunkReader}
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderJson, BijectionsChunkReaderString}
 import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import java.io.File
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[ChunkReader] with HeatlhMonitorService with BijectionsChunkReader{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[ChunkReader] with HeatlhMonitorService with BijectionsChunkReaderJson{
+  import BijectionsChunkReaderString._
   override def configuration = """
     services {
       foo {
@@ -88,7 +90,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkReader{
+trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkReaderJson{
   implicit def httpClient: HttpClient[ChunkReader]
   
   val emailService = service ("email", "1.2.3") {

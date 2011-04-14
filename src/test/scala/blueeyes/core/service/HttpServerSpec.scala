@@ -4,11 +4,12 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
-class HttpServerSpec extends Specification with BijectionsChunkReader{
+class HttpServerSpec extends Specification with BijectionsChunkReaderString{
 
   private val server = new TestServer()
 
@@ -63,7 +64,7 @@ class HttpServerSpec extends Specification with BijectionsChunkReader{
 
 class TestServer extends TestService with HttpReflectiveServiceList[ChunkReader]
 
-trait TestService extends HttpServer[ChunkReader] with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReader{
+trait TestService extends HttpServer[ChunkReader] with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
   var startupCalled   = false
   var shutdownCalled  = false
   lazy val testService = service("test", "1.0.7") {
@@ -74,7 +75,7 @@ trait TestService extends HttpServer[ChunkReader] with BlueEyesServiceBuilder wi
       } ->
       request { value: String =>
         path("/foo/bar") {
-          produce[ChunkReader, String, ChunkReader](text/plain) {
+          produce(text/plain) {
             get {
               request: HttpRequest[ChunkReader] => Future(HttpResponse[String](content=Some(value)))
             } ~

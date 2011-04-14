@@ -4,11 +4,12 @@ import org.specs.Specification
 import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.service._
+import blueeyes.core.data.BijectionsIdentity
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
-class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] with HttpReflectiveServiceList[T] { self: HttpServer[T] =>
+class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] with HttpReflectiveServiceList[T] with BijectionsIdentity{ self: HttpServer[T] =>
   shareVariables()
 
   doBeforeSpec {

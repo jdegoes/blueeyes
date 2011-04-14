@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.2.12</version>
+      <version>0.3.0</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://scalablesolutions.se/akka/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.2.12" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.0" % "compile"
 
 ## Origins
 
@@ -243,7 +243,7 @@ The testing framework is currently compatible with *Specs*, and extends the *Spe
 
 To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a helper "service" method to create service client.
 
-    class EmailServicesSpec extends BlueEyesServiceSpecification[Array[Byte]] with EmailServices {
+    class EmailServicesSpec extends BlueEyesServiceSpecification[ChunkReader] with EmailServices {
       "EmailService" should {
         "get emails" in {
           val f = service.contentType[JValue](application/json).get("/emails")

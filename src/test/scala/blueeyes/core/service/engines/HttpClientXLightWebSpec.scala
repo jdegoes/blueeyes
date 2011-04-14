@@ -1,8 +1,8 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.data.BijectionsByteArray._
-import blueeyes.core.data.{BijectionsString, BijectionsByteArray}
 import blueeyes.core.http._
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString, BijectionsIdentity}
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
@@ -12,10 +12,8 @@ import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
-import BijectionsByteArray.ByteArrayToByteArray
-import BijectionsString.StringToString
 
-class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential{
+class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential with BijectionsIdentity{
   import HttpHeaderImplicits._
 
   val duration = 250
@@ -221,7 +219,7 @@ import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
 
 object EchoServer extends EchoService with HttpReflectiveServiceList[ChunkReader] with NettyEngine{ }
 
-trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReader{
+trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderString{
   import blueeyes.core.http.MimeTypes._
 
   private implicit val ordering = new Ordering[Symbol] {
@@ -249,7 +247,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReader{
 
   val echoService: HttpService[ChunkReader] = service("echo", "1.0.0") { context =>
     request {
-      produce[ChunkReader, String, ChunkReader](text/html) {
+      produce(text/html) {
         path("/echo") {
           get(handler) ~
 	        post(handler) ~

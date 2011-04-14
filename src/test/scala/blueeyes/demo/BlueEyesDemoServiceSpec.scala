@@ -3,7 +3,7 @@ package blueeyes.demo
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.service.test.BlueEyesServiceSpecification
 import blueeyes.persistence.mongo.{Mongo, MockMongo}
-import blueeyes.core.http.{HttpStatus, HttpResponse, MimeTypes, ChunkReader}
+import blueeyes.core.http.{HttpStatus, HttpResponse, MimeTypes}
 import blueeyes.json.JsonAST.{JValue, JObject, JField, JString, JNothing, JArray}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
@@ -12,9 +12,9 @@ import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import blueeyes.core.service.HttpClient
-import blueeyes.core.data.BijectionsJson
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderJson, Bijection}
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[ChunkReader] with BlueEyesDemoService with BijectionsJson{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification[ChunkReader] with BlueEyesDemoService with BijectionsChunkReaderJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   private val databaseName   = "mydb"

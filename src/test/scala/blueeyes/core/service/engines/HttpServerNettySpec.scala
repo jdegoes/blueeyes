@@ -7,15 +7,15 @@ import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
-import blueeyes.core.data.BijectionsString
 import blueeyes.core.http._
+import blueeyes.core.data.{ChunkReader, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 
-class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsString{
+class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential{
 
   private val configPattern = """server{
   port = %d
@@ -121,7 +121,7 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesStri
   }
 }
 
-class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]) extends BijectionsString{
+class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]) extends BijectionsByteArray with BijectionsIdentity{
 
   def client    = httpClient.protocol("http").host("localhost").port(port)
   def sslClient = httpClient.protocol("https").host("localhost").port(sslPort)
@@ -139,7 +139,7 @@ class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]
   def httpErrorHttpRequest  = client.get("/http/error")
 }
 
-trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReader{
+trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
   import blueeyes.core.http.MimeTypes._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))

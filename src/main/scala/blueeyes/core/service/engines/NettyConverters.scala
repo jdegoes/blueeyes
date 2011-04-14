@@ -9,8 +9,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import java.net.{SocketAddress, InetSocketAddress}
-import blueeyes.core.data.Bijection
-import blueeyes.core.http.OneChunkReader
+import blueeyes.core.data.{ChunkReader, OneChunkReader}
 
 trait NettyConverters {
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {

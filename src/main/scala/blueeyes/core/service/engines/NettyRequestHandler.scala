@@ -10,7 +10,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.buffer.{ChannelBuffer}
 import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
-import blueeyes.core.data.Bijection
+import blueeyes.core.data.ChunkReader
 import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._

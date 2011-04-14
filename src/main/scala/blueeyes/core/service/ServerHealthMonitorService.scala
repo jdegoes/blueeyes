@@ -3,14 +3,18 @@ package blueeyes.core.service
 import blueeyes.json.JsonAST._
 import blueeyes.core.data._
 import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder}
-import blueeyes.core.http.{HttpResponse, ChunkReader, BijectionsChunkReader}
+import blueeyes.core.http.HttpResponse
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderJson}
+import blueeyes.core.http.MimeTypes._
 
-trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkReader{
+trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkReaderJson{
   def createService = service("serverhealth", "1.0.0"){ context =>
     request{
       path("/blueeyes/server/health") {
-        get { request =>
-          HttpResponse[ChunkReader](content=Some(JValueToChunkReader(toJValue(context))))
+        produce(application/json){
+          get { request =>
+            HttpResponse[JValue](content=Some(toJValue(context)))
+          }
         }
       }
     }

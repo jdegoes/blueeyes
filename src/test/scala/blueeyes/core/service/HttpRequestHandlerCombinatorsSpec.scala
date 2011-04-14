@@ -1,12 +1,17 @@
 package blueeyes.core.service
 
+import blueeyes.json.JsonAST._
+import blueeyes.json.Printer._
+import blueeyes.json.JsonParser
+import blueeyes.json.JsonAST.JValue
+
 import org.specs.Specification
 import org.specs.matcher.Matchers._
 
+import blueeyes.core.data.{BijectionsIdentity, Bijection}
 import blueeyes.core.http._
 import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.BijectionsString._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits
@@ -14,7 +19,13 @@ import blueeyes.concurrent.FutureImplicits
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
 
-class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits{
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity{
+  implicit val JValueToString = new Bijection[JValue, String] {
+    def apply(s: JValue)   = compact(render(s))
+    def unapply(t: String) = JsonParser.parse(t)
+  }
+  implicit val StringToJValue    = JValueToString.inverse
+
   "composition of paths" should {
     "have the right type" in {
       val handler: HttpRequestHandler[Int] = {

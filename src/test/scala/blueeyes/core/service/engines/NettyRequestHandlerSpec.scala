@@ -11,6 +11,7 @@ import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString}
 import java.net.InetSocketAddress
 import net.lag.logging.Logger
 import blueeyes.core.http._
@@ -18,13 +19,11 @@ import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkReader{
+class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkReaderString{
   private val handler       = mock[HttpRequestHandler[ChunkReader]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
-
-  private implicit val bijection  = NettyBijections.ChannelBufferToString
 
   private val response      = HttpResponse[ChunkReader](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), HttpVersions.`HTTP/1.1`)
   private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)

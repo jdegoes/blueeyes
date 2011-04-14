@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.service._
 import org.jboss.netty.util.CharsetUtil
-import blueeyes.core.data.Bijection
+import blueeyes.core.data.ChunkReader
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import blueeyes.concurrent.Future
 import org.jboss.netty.bootstrap.ServerBootstrap
@@ -18,7 +18,6 @@ import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
 import net.lag.logging.Logger
-import blueeyes.core.http.ChunkReader
 
 trait NettyEngine extends HttpServerEngine[ChunkReader] with HttpServer[ChunkReader]{ self =>
 

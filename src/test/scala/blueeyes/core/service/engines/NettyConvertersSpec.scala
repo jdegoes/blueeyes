@@ -8,10 +8,11 @@ import java.net.InetSocketAddress;
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes, BijectionsChunkReader, ChunkReader}
+import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes}
+import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString}
 import blueeyes.core.http.MimeTypes._
 
-class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkReader{
+class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkReaderString{
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
