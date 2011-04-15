@@ -18,6 +18,6 @@ import core.data.Chunk
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServer extends HttpServer[Chunk] with HttpReflectiveServiceList[Chunk] with NettyEngine {
+trait BlueEyesServer extends HttpServer with HttpReflectiveServiceList[Chunk] with NettyEngine {
 
 }

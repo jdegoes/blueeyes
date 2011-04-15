@@ -10,7 +10,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import java.io.File
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification[Chunk] with HeatlhMonitorService with BijectionsChunkReaderJson{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkReaderJson{
   import BijectionsChunkReaderString._
   override def configuration = """
     services {

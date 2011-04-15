@@ -7,7 +7,7 @@ import blueeyes.core.data.Chunk
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 
-class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification[Chunk] with ServerHealthMonitorService{
+class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService{
    "Server Health Monitor Service" should{
     "get server health" in {
       val f = service.contentType[JValue](application/json).get("/blueeyes/server/health")

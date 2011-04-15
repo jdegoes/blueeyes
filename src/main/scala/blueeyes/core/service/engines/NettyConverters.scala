@@ -12,7 +12,7 @@ import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.concurrent.FutureDeliveryStrategySequential
 import blueeyes.core.data.{Chunk, MemoryChunk}
 
-trait NettyConverters  extends FutureDeliveryStrategySequential{
+trait NettyConverters{
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
     case "HTTP/1.0" => `HTTP/1.0`
     case "HTTP/1.1" => `HTTP/1.1`

@@ -64,7 +64,7 @@ class HttpServerSpec extends Specification with BijectionsChunkReaderString{
 
 class TestServer extends TestService with HttpReflectiveServiceList[Chunk]
 
-trait TestService extends HttpServer[Chunk] with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
+trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
   var startupCalled   = false
   var shutdownCalled  = false
   lazy val testService = service("test", "1.0.7") {

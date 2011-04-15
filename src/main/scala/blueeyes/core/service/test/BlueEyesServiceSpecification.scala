@@ -4,12 +4,12 @@ import org.specs.Specification
 import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.service._
-import blueeyes.core.data.BijectionsIdentity
+import blueeyes.core.data.{BijectionsIdentity, Chunk}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
-class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] with HttpReflectiveServiceList[T] with BijectionsIdentity{ self: HttpServer[T] =>
+class BlueEyesServiceSpecification extends Specification with HttpServer with HttpReflectiveServiceList[Chunk] with BijectionsIdentity{ self: HttpServer =>
   shareVariables()
 
   doBeforeSpec {
@@ -24,7 +24,7 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] w
   def stopTimeOut    = 60000
   def configuration  = ""
 
-  def service: HttpClient[T] = new SpecClient()
+  def service: HttpClient[Chunk] = new SpecClient()
 
   private def startServer = waitForResponse[Unit](start, Some(startTimeOut), why => throw why)
   private def stopServer  = waitForResponse[Unit](stop,  Some(stopTimeOut),  why => throw why)
@@ -40,14 +40,14 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] w
     Configgy.config
   }
 
-  private class SpecClient extends HttpClient[T]{
-    def apply(request: HttpRequest[T]) = {
-      def convertErrorToResponse(th: Throwable): HttpResponse[T] = th match {
-        case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
+  private class SpecClient extends HttpClient[Chunk]{
+    def apply(request: HttpRequest[Chunk]) = {
+      def convertErrorToResponse(th: Throwable): HttpResponse[Chunk] = th match {
+        case e: HttpException => HttpResponse[Chunk](HttpStatus(e.failure, e.reason))
         case _ => {
           val reason = th.fullStackTrace
 
-          HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
+          HttpResponse[Chunk](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
         }
       }
 
@@ -55,11 +55,11 @@ class BlueEyesServiceSpecification[T] extends Specification with HttpServer[T] w
         self.apply(request)
       }
       catch {
-        case t: Throwable => Future[HttpResponse[T]](convertErrorToResponse(t))
+        case t: Throwable => Future[HttpResponse[Chunk]](convertErrorToResponse(t))
       }
     }
 
-    def isDefinedAt(x: HttpRequest[T]) = true
+    def isDefinedAt(x: HttpRequest[Chunk]) = true
   }
 
   private def waitForResponse[S](future: Future[S], timeout: Option[Long], f: Throwable => Unit): Option[S] = {

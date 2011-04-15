@@ -17,7 +17,7 @@ import util.matching.Regex
 import net.lag.logging.Logger
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 
-trait NettyEngine extends HttpServerEngine[Chunk] with HttpServer[Chunk]{ self =>
+trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
 

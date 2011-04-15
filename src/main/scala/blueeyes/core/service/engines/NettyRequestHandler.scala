@@ -97,13 +97,13 @@ class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput wit
     nextChunkFuture.value.map{chunk =>
       val data = chunk.data
       ChannelBuffers.wrappedBuffer(Integer.toHexString(data.length).getBytes ++ CRLF ++ data ++ CRLF)
-    }.getOrElse{
+    }.orElse{
       nextChunkFuture.deliverTo{nextChunk =>
         channel.getPipeline().get(classOf[ChunkedWriteHandler]).resumeTransfer
         channel.write(new NettyChunkedInput(nextChunk, channel))
       }
-      null
-    }
+      None
+    }.orNull
   }
 
   def hasNextChunk = {

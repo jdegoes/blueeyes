@@ -82,7 +82,7 @@ trait BijectionsByteArray {
 }
 object BijectionsByteArray extends BijectionsByteArray
 
-trait BijectionsChunkReaderJson extends FutureDeliveryStrategySequential{
+trait BijectionsChunkReaderJson{
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
 
   implicit val JValueToChunkReader      = new Bijection[JValue, Chunk]{
@@ -100,7 +100,7 @@ trait BijectionsChunkReaderJson extends FutureDeliveryStrategySequential{
 }
 object BijectionsChunkReaderJson extends BijectionsChunkReaderJson
 
-trait BijectionsChunkReaderString extends FutureDeliveryStrategySequential {
+trait BijectionsChunkReaderString {
   implicit val StringToChunkReader = new Bijection[String, Chunk] {
     def apply(s: String): Chunk   = new MemoryChunk(s.getBytes("UTF-8"))
     def unapply(t: Chunk): String = new String(t.data, "UTF-8")
@@ -110,7 +110,7 @@ trait BijectionsChunkReaderString extends FutureDeliveryStrategySequential {
 }
 object BijectionsChunkReaderString extends BijectionsChunkReaderString
 
-trait BijectionsChunkReaderByteArray extends FutureDeliveryStrategySequential {
+trait BijectionsChunkReaderByteArray {
   implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], Chunk] {
     def apply(t: Array[Byte]): Chunk    = new MemoryChunk(t)
     def unapply(s: Chunk): Array[Byte]  = s.data
@@ -120,7 +120,7 @@ trait BijectionsChunkReaderByteArray extends FutureDeliveryStrategySequential {
 }
 object BijectionsChunkReaderByteArray extends BijectionsChunkReaderByteArray
 
-trait BijectionsXML extends FutureDeliveryStrategySequential {
+trait BijectionsXML {
   import java.io.{ByteArrayInputStream}
   implicit val XMLToChunkReader   = new Bijection[NodeSeq, Chunk] {
     def apply(s: NodeSeq)          = new MemoryChunk(s.toString.getBytes)

@@ -13,7 +13,7 @@ import TestService._
 import org.specs.util._
 import org.specs.util.TimeConversions._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[Chunk] with TestService with BijectionsChunkReaderString{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkReaderString{
   "Service Specification" should {
     def client = service.contentType[String](text/html)
     "support get by valid URL" in {
