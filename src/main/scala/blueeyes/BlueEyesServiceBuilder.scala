@@ -70,4 +70,4 @@ trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with
   FutureDeliveryStrategySequential{
 
 }
-trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[ChunkReader]
+trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[Chunk]
