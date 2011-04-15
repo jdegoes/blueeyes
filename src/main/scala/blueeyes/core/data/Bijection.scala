@@ -7,6 +7,7 @@ import blueeyes.json.JsonAST.JValue
 
 import scala.xml.NodeSeq
 import scala.xml.XML
+import blueeyes.concurrent.FutureDeliveryStrategySequential
 
 trait Bijection[T, S] { self =>
   def isDefinedAt(t: T): Boolean = {
@@ -81,49 +82,49 @@ trait BijectionsByteArray {
 }
 object BijectionsByteArray extends BijectionsByteArray
 
-trait BijectionsChunkReaderJson{
+trait BijectionsChunkReaderJson extends FutureDeliveryStrategySequential{
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
 
-  implicit val JValueToChunkReader      = new Bijection[JValue, ChunkReader]{
+  implicit val JValueToChunkReader      = new Bijection[JValue, Chunk]{
     def apply(t: JValue)         = {
       val stream = new ByteArrayOutputStream()
 
       compact(render(t), new OutputStreamWriter(stream))
 
-      new OneChunkReader(stream.toByteArray())
+      new MemoryChunk(stream.toByteArray())
     }
-    def unapply(s: ChunkReader)  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.nextChunk)))
+    def unapply(s: Chunk)  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
   }
 
   implicit val ChunkReaderToJValue    = JValueToChunkReader.inverse
 }
 object BijectionsChunkReaderJson extends BijectionsChunkReaderJson
 
-trait BijectionsChunkReaderString {
-  implicit val StringToChunkReader = new Bijection[String, ChunkReader] {
-    def apply(s: String): ChunkReader   = new OneChunkReader(s.getBytes("UTF-8"))
-    def unapply(t: ChunkReader): String = new String(t.nextChunk, "UTF-8")
+trait BijectionsChunkReaderString extends FutureDeliveryStrategySequential {
+  implicit val StringToChunkReader = new Bijection[String, Chunk] {
+    def apply(s: String): Chunk   = new MemoryChunk(s.getBytes("UTF-8"))
+    def unapply(t: Chunk): String = new String(t.data, "UTF-8")
   }
 
   implicit val ChunkReaderToString    = StringToChunkReader.inverse
 }
 object BijectionsChunkReaderString extends BijectionsChunkReaderString
 
-trait BijectionsChunkReaderByteArray {
-  implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], ChunkReader] {
-    def apply(t: Array[Byte]): ChunkReader    = new OneChunkReader(t)
-    def unapply(s: ChunkReader): Array[Byte]  = s.nextChunk
+trait BijectionsChunkReaderByteArray extends FutureDeliveryStrategySequential {
+  implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], Chunk] {
+    def apply(t: Array[Byte]): Chunk    = new MemoryChunk(t)
+    def unapply(s: Chunk): Array[Byte]  = s.data
   }
 
   implicit val ChunkReaderToArrayByte = ArrayByteToChunkReader.inverse
 }
 object BijectionsChunkReaderByteArray extends BijectionsChunkReaderByteArray
 
-trait BijectionsXML {
+trait BijectionsXML extends FutureDeliveryStrategySequential {
   import java.io.{ByteArrayInputStream}
-  implicit val XMLToChunkReader   = new Bijection[NodeSeq, ChunkReader] {
-    def apply(s: NodeSeq)          = new OneChunkReader(s.toString.getBytes)
-    def unapply(t: ChunkReader)    = XML.load(new ByteArrayInputStream(t.nextChunk))
+  implicit val XMLToChunkReader   = new Bijection[NodeSeq, Chunk] {
+    def apply(s: NodeSeq)          = new MemoryChunk(s.toString.getBytes)
+    def unapply(t: Chunk)    = XML.load(new ByteArrayInputStream(t.data))
   }
 
   implicit val ChunkReaderToXML = XMLToChunkReader.inverse

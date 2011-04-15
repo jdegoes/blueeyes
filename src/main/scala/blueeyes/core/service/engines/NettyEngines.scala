@@ -1,16 +1,13 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.service._
-import org.jboss.netty.util.CharsetUtil
-import blueeyes.core.data.ChunkReader
-import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
+import blueeyes.core.data.Chunk
 import blueeyes.concurrent.Future
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.{Executors, Executor}
 import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
-import java.io.ByteArrayOutputStream
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
 import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
@@ -20,7 +17,7 @@ import util.matching.Regex
 import net.lag.logging.Logger
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 
-trait NettyEngine extends HttpServerEngine[ChunkReader] with HttpServer[ChunkReader]{ self =>
+trait NettyEngine extends HttpServerEngine[Chunk] with HttpServer[Chunk]{ self =>
 
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
 

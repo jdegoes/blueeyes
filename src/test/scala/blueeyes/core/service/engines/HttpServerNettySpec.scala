@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{MultiChunkReader, ChunkReader, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
+import blueeyes.core.data.{MemoryChunk, Chunk, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -102,14 +102,21 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.context)
     }
-    "return hude content"in{
+    "return huge content"in{
       val response = clientFacade.hugeRequest
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
-    "return hude content by htpps"in{
+    "return huge delayed content"in{
+      val response = clientFacade.hugeDelayedRequest
+
+      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value.get.status.code must be (OK)
+      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+    }
+    "return huge content by htpps"in{
       val response = clientFacade.httpsHugeRequest
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
@@ -123,7 +130,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
   }
 }
 
-class SampleServer extends SampleService with HttpReflectiveServiceList[ChunkReader] with NettyEngine { }
+class SampleServer extends SampleService with HttpReflectiveServiceList[Chunk] with NettyEngine { }
 
 class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesString{
   override protected def createSSLContext = {
@@ -154,6 +161,8 @@ class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]
 
   def hugeRequest           = client.get("/huge")
 
+  def hugeDelayedRequest    = client.get("/huge/delayed")
+
   def httpsHugeRequest      = sslClient.get("/huge")
 }
 
@@ -162,38 +171,52 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
 
-  val sampleService: HttpService[ChunkReader] = service("sample", "1.32") { context =>
+  val sampleService: HttpService[Chunk] = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
-          get { request: HttpRequest[ChunkReader] =>
+          get { request: HttpRequest[Chunk] =>
             Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/foo") {
-          get { request: HttpRequest[ChunkReader] =>
+          get { request: HttpRequest[Chunk] =>
             Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/error") {
-          get { request: HttpRequest[ChunkReader] =>
+          get { request: HttpRequest[Chunk] =>
             throw new RuntimeException("Unexecpcted Error.")
           }
         } ~
         path("/http/error") {
-          get { request: HttpRequest[ChunkReader] =>
+          get { request: HttpRequest[Chunk] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }
       } ~
       path("/huge"){
-        get { request: HttpRequest[ChunkReader] =>
-          val content      = Context.hugeContext.iterator
-          def nextChunk  = if (content.hasNext) Some(content.next) else None
-          val chunkReader  = new MultiChunkReader(Context.hugeContext.map(v => v.length).foldLeft(0){(s, v) => s + v}, nextChunk _)
+        get { request: HttpRequest[Chunk] =>
+          val chunk  = new MemoryChunk(Context.hugeContext.head, () => Some(Future.lift(new MemoryChunk(Context.hugeContext.tail.head))))
 
-          val response     = HttpResponse[ChunkReader](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunkReader))
-          Future.lift[HttpResponse[ChunkReader]](response)
+          val response     = HttpResponse[Chunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future.lift[HttpResponse[Chunk]](response)
+        }
+      } ~
+      path("/huge/delayed"){
+        get { request: HttpRequest[Chunk] =>
+
+          val nextChunkFuture = new Future[Chunk]()
+          import scala.actors.Actor.actor
+          actor {
+            Thread.sleep(2000)
+            nextChunkFuture.deliver(new MemoryChunk(Context.hugeContext.tail.head))
+          }
+
+          val chunk  = new MemoryChunk(Context.hugeContext.head, () => Some(nextChunkFuture))
+
+          val response     = HttpResponse[Chunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future.lift[HttpResponse[Chunk]](response)
         }
       }
     }
@@ -207,6 +230,7 @@ object Context{
 </head>
 
 <body>
+    <h1>Test</h1>
     <h1>Test</h1>
 </body>
 </html>"""

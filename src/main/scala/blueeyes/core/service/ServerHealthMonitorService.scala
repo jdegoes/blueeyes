@@ -4,7 +4,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.data._
 import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder}
 import blueeyes.core.http.HttpResponse
-import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderJson}
+import blueeyes.core.data.BijectionsChunkReaderJson
 import blueeyes.core.http.MimeTypes._
 
 trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkReaderJson{

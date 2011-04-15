@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.data.BijectionsByteArray._
 import blueeyes.core.http._
-import blueeyes.core.data.{ChunkReader, BijectionsChunkReaderString, BijectionsIdentity}
+import blueeyes.core.data.{Chunk, BijectionsChunkReaderString, BijectionsIdentity}
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
@@ -217,7 +217,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
 
-object EchoServer extends EchoService with HttpReflectiveServiceList[ChunkReader] with NettyEngine{ }
+object EchoServer extends EchoService with HttpReflectiveServiceList[Chunk] with NettyEngine{ }
 
 trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderString{
   import blueeyes.core.http.MimeTypes._
@@ -231,7 +231,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
   private def response(content: Option[String] = None) =
     HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content, headers = Map("kludgy" -> "header test"))
 
-  private def handler(request: HttpRequest[ChunkReader]) = {
+  private def handler(request: HttpRequest[Chunk]) = {
     val params = request.parameters.toList.sorted.foldLeft(List[String]()) { (l: List[String], p: Tuple2[Symbol, String]) =>
       l ++ List("%s=%s".format(p._1.name, p._2))
     }.mkString("&")
@@ -245,7 +245,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
     new Future[HttpResponse[String]]().deliver(response(content = Some(newContent)))
   }
 
-  val echoService: HttpService[ChunkReader] = service("echo", "1.0.0") { context =>
+  val echoService: HttpService[Chunk] = service("echo", "1.0.0") { context =>
     request {
       produce(text/html) {
         path("/echo") {
