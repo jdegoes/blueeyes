@@ -198,6 +198,16 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
   }
 
   "path combinator" should {
+    "extract symbol" in {
+      (path('token) {
+        parameter('token) { token =>
+          get { (request: HttpRequest[String]) =>
+            Future(HttpResponse[String](content=Some(token)))
+          }
+        }
+      }).apply(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B", content = None)).value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
+    }
+
     "support nested paths" in {
       val f = path("/foo/") {
         path('bar  / "entries") {
