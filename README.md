@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.2.10</version>
+      <version>0.3.1</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://scalablesolutions.se/akka/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.2.10" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.1" % "compile"
 
 ## Origins
 
@@ -219,55 +219,21 @@ Although it's most common to create patterns from strings or symbols, you can al
 
 The dual of providing HTTP services is consuming them. BlueEyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the BlueEyes stack.
 
-The core client interface is *HttpClient*, which is a partial function from request to a future of response. The *apply* method is seldom used directly. Instead, BlueEyes provides so-called *client transformer combinators*, which are functions that map an *HttpClient* into a future of some value.
-
-For the most part, the client transformer combinators mirror the request handler combinators, except all methods are suffixed with a dollar sign character ('$'). This means you can consume services using a syntax almost identical to the one you use to construct them.
+The core client interface is *HttpClient*, which is a partial function from request to a future of response. The *apply* method is seldom used directly. Instead, BlueEyes provides methods for all http request, such as "GET", "POST", etc.
 
 Given a reference to *client*, you could perform a simple HTTP GET on the path "/foo" with the following code:
 
-    val content = client {
-      path$("http://myservice.com/foo") {
-        get$ { response =>
-          response.content.get
-        }
-      }
-    }
+    val responseFuture = client.get("http://myservice.com/foo")
+    responseFuture map {response => response.content.get}
 
-The great power of this design lies in its composability. If you wanted to perform an HTTP GET on path "/foo/bar" at the same time as the first GET, without duplicating all the same code, you could do so using the join operator ('~'):
+If you're going to perform a lot of requests that all share the same or similar structure, then you can create your own client:
 
-    val contentTuple = client {
-      path$("http://myservice.com/foo") {
-        get$ { response =>
-          response.content.get
-        } ~
-        path$("/bar") { response =>
-          get$ { response =>
-            response.content.get
-          }
-        }
-      }
-    }
+    def myService: HttpClient[JValue] = client.path("http://myservice.com/").contentType[JValue](application/json)
 
-Similarly, if you're going to perform a lot of requests that all share the same or similar structure, then you can create your own combinator:
+    val responseFuture = myService.get("api/v1")
+    responseFuture map {response => response.content.get}
 
-    def myService[T, S](r: HttpClientTransformer[T, S]): HttpClientTransformer[T, S] = {
-      port(123) {
-        path$("http://myservice.com/api/v1") {
-          r
-        }
-      }
-    }
-
-    ...
-    val content = client {
-      myService {
-        get$ { response =>
-          response.content.get
-        }
-      }
-    }
-
-Contrary to these toy examples, in real world usage, you would not simply return the content of the response. Rather, you'd extract out whatever information you need and transform it into the desired value.
+Contrary to these toy examples, in real world usage, you would not simply get the content of the response. Rather, you'd extract out whatever information you need and transform it into the desired value.
 
 ### Testing
 
@@ -275,14 +241,18 @@ BlueEyes is built from the ground up to support automated, comprehensive, fast-r
 
 The testing framework is currently compatible with *Specs*, and extends the *Specification* trait to make testing services easy.
 
-To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a variety of helper methods, including client transformer combinators.
+To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a helper "service" method to create service client.
 
-    class EmailServicesSpec extends BlueEyesServiceSpecification[Array[Byte]] with EmailServices {
-      path$("/emails/") {
-        get$ { response =>
+    class EmailServicesSpec extends BlueEyesServiceSpecification[ChunkReader] with EmailServices {
+      "EmailService" should {
+        "get emails" in {
+          val f = service.contentType[JValue](application/json).get("/emails")
+          f.value must eventually(beSomething)
+
+          val response = f.value.get
           response.status mustEqual(HttpStatus(OK))
         }
-      } should "return OK status"
+      }
     }
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
@@ -456,12 +426,8 @@ If you have multiple services, and one service needs to consume another, you can
               path("/foo") {
                 get { request: HttpRequest[String] =>
                   // Locate foo/v1 service and perform HTTP GET on /bar path
-                  val content = locator("foo", "1.02.32") {
-                    path$("/bar") {
-                      get$ { response =>
-                        response.content.get
-                      }
-                    }
+                  val content = locator("foo", "1.02.32") { client =>
+                    client.get("/bar").map(response => response.content)
                   }
 
                   // Do something with content

@@ -5,40 +5,32 @@ import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
-import blueeyes.BlueEyesServiceBuilderString
+import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
+import blueeyes.core.data.{Chunk, BijectionsChunkReaderString}
 import TestService._
+import org.specs.util._
 import org.specs.util.TimeConversions._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification[String] with TestService {
-
-  path$("/bar/id/bar.html"){
-    contentType$[String, String, Unit](text/html){
-      get${ response: HttpResponse[String] =>
-        response mustEqual(serviceResponse)
-      }
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkReaderString{
+  "Service Specification" should {
+    def client = service.contentType[String](text/html)
+    "support get by valid URL" in {
+      val f = client.get("/bar/id/bar.html")
+      f.value must eventually (beSome(serviceResponse))
     }
-  } should "calls test function"
-
-  path$("/asynch/future"){
-    contentType$[String, String, Unit](text/html){
-      get${ response: HttpResponse[String] =>
-        response mustEqual(serviceResponse)
-      }
+    "support asynch get by valid URL" in {
+      val f = client.get("/asynch/future")
+      f.value must eventually(5, new Duration(10000)) (beSome(serviceResponse))
     }
-  } should eventually (40, 1000.milliseconds)("gets response when future is set asynchronously")
-
-  path$("/asynch/eventually"){
-    contentType$[String, String, Unit](text/html){
-      get${ response: HttpResponse[String] =>
-        response mustEqual(serviceResponse)
-      }
+    "support eventually asynch get by valid URL" in { client: HttpClient[String] =>
+      client.get("/asynch/eventually").value must eventually (beSome(serviceResponse))
     }
-  } should eventually (10, 1000.milliseconds)("retry requests")
+  }
 }
 
-trait TestService extends BlueEyesServiceBuilderString {
+trait TestService extends BlueEyesServiceBuilder with BijectionsChunkReaderString{
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {

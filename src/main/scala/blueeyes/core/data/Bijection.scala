@@ -7,6 +7,7 @@ import blueeyes.json.JsonAST.JValue
 
 import scala.xml.NodeSeq
 import scala.xml.XML
+import blueeyes.concurrent.FutureDeliveryStrategySequential
 
 trait Bijection[T, S] { self =>
   def isDefinedAt(t: T): Boolean = {
@@ -46,32 +47,17 @@ object Bijection {
   }
 }
 
-trait BijectionsString {
-  implicit val ByteArrayToString = new Bijection[Array[Byte], String] {
-    def apply(t: Array[Byte]): String   = new String(t)
-    def unapply(s: String): Array[Byte] = s.getBytes
-  }
-  implicit val JValueToString = new Bijection[JValue, String] {
-    def apply(s: JValue)   = compact(render(s))
-    def unapply(t: String) = JsonParser.parse(t)
-  }
-  implicit val XMLToString = new Bijection[NodeSeq, String] {
-    def apply(s: NodeSeq)  = s.toString
-    def unapply(t: String) = XML.loadString(t)
-  }
-  
-  implicit val StringToByteArray = ByteArrayToString.inverse
-  implicit val StringToJValue    = JValueToString.inverse
-  implicit val StringToXML       = XMLToString.inverse
-  
-  implicit val StringToString    = Bijection.identity[String]
+trait BijectionsIdentity{
+  implicit val JValueToJValue         = Bijection.identity[JValue]
+  implicit val StringToString         = Bijection.identity[String]
+  implicit val ArrayByteToArrayByte   = Bijection.identity[Array[Byte]]
+  implicit val XMLToXML               = Bijection.identity[NodeSeq]
 }
-object BijectionsString extends BijectionsString
+object BijectionsIdentity extends BijectionsIdentity
 
 trait BijectionsByteArray {
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
 
-  implicit val StringToByteArray    = BijectionsString.StringToByteArray
   implicit val JValueToByteArray    = new Bijection[JValue, Array[Byte]]{
     def unapply(s: Array[Byte])  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s)))
     def apply(t: JValue)         = {
@@ -86,11 +72,61 @@ trait BijectionsByteArray {
     def apply(s: NodeSeq)       = s.toString.getBytes
     def unapply(t: Array[Byte]) = XML.load(new ByteArrayInputStream(t))
   }
-  
-  implicit val ByteArrayToString    = BijectionsString.ByteArrayToString
+  implicit val ByteArrayToString    = new Bijection[Array[Byte], String] {
+    def apply(t: Array[Byte]): String   = new String(t)
+    def unapply(s: String): Array[Byte] = s.getBytes
+  }
   implicit val ByteArrayToJValue    = JValueToByteArray.inverse
   implicit val ByteArrayToXML       = XMLToByteArray.inverse
-  
-  implicit val ByteArrayToByteArray = Bijection.identity[Array[Byte]]
+  implicit val StringToByteArray    = ByteArrayToString.inverse
 }
 object BijectionsByteArray extends BijectionsByteArray
+
+trait BijectionsChunkReaderJson{
+  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
+
+  implicit val JValueToChunkReader      = new Bijection[JValue, Chunk]{
+    def apply(t: JValue)         = {
+      val stream = new ByteArrayOutputStream()
+
+      compact(render(t), new OutputStreamWriter(stream))
+
+      new MemoryChunk(stream.toByteArray())
+    }
+    def unapply(s: Chunk)  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
+  }
+
+  implicit val ChunkReaderToJValue    = JValueToChunkReader.inverse
+}
+object BijectionsChunkReaderJson extends BijectionsChunkReaderJson
+
+trait BijectionsChunkReaderString {
+  implicit val StringToChunkReader = new Bijection[String, Chunk] {
+    def apply(s: String): Chunk   = new MemoryChunk(s.getBytes("UTF-8"))
+    def unapply(t: Chunk): String = new String(t.data, "UTF-8")
+  }
+
+  implicit val ChunkReaderToString    = StringToChunkReader.inverse
+}
+object BijectionsChunkReaderString extends BijectionsChunkReaderString
+
+trait BijectionsChunkReaderByteArray {
+  implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], Chunk] {
+    def apply(t: Array[Byte]): Chunk    = new MemoryChunk(t)
+    def unapply(s: Chunk): Array[Byte]  = s.data
+  }
+
+  implicit val ChunkReaderToArrayByte = ArrayByteToChunkReader.inverse
+}
+object BijectionsChunkReaderByteArray extends BijectionsChunkReaderByteArray
+
+trait BijectionsXML {
+  import java.io.{ByteArrayInputStream}
+  implicit val XMLToChunkReader   = new Bijection[NodeSeq, Chunk] {
+    def apply(s: NodeSeq)          = new MemoryChunk(s.toString.getBytes)
+    def unapply(t: Chunk)    = XML.load(new ByteArrayInputStream(t.data))
+  }
+
+  implicit val ChunkReaderToXML = XMLToChunkReader.inverse
+}
+object BijectionsXML extends BijectionsByteArray

@@ -2,27 +2,23 @@ package blueeyes.core.service
 
 import blueeyes.json.JsonAST._
 import blueeyes.core.data._
-import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder, BlueEyesServiceBuilderString}
+import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder}
 import blueeyes.core.http.HttpResponse
+import blueeyes.core.data.BijectionsChunkReaderJson
+import blueeyes.core.http.MimeTypes._
 
-trait ServerHealthMonitorServiceBase[T] extends BlueEyesServiceBuilderBase[T] with ServerHealthMonitor {
-  def createService(implicit jValueBijection: Bijection[JValue, T], m: Manifest[T]) = service("serverhealth", "1.0.0"){ context =>
+trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkReaderJson{
+  def createService = service("serverhealth", "1.0.0"){ context =>
     request{
       path("/blueeyes/server/health") {
-        get { request =>
-          HttpResponse[T](content=Some(jValueBijection(toJValue(context))))
+        produce(application/json){
+          get { request =>
+            HttpResponse[JValue](content=Some(toJValue(context)))
+          }
         }
       }
     }
   }
-}
-
-trait ServerHealthMonitorService extends ServerHealthMonitorServiceBase[Array[Byte]] with BlueEyesServiceBuilder{
-  def serverHealthMonitorService = createService
-}
-
-trait ServerHealthMonitorServiceString extends ServerHealthMonitorServiceBase[String] with BlueEyesServiceBuilderString{
-  def serverHealthMonitorService = createService
 }
 
 trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{

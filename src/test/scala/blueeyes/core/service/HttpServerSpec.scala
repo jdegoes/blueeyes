@@ -1,14 +1,15 @@
 package blueeyes.core.service
 
 import org.specs.Specification
-import blueeyes.BlueEyesServiceBuilderString
+import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.data.{Chunk, BijectionsChunkReaderString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
-class HttpServerSpec extends Specification{
+class HttpServerSpec extends Specification with BijectionsChunkReaderString{
 
   private val server = new TestServer()
 
@@ -26,23 +27,23 @@ class HttpServerSpec extends Specification{
   
   "HttpServer.apply" should {
     "be always defined" in {
-      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/blahblah")) must be (true)
-      server.isDefinedAt(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must be (true)
+      server.isDefinedAt(HttpRequest[Chunk](HttpMethods.GET, "/blahblah")) must be (true)
+      server.isDefinedAt(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar")) must be (true)
     }
     
     "delegate to service request handler" in {
-      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar")).value must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkReaderToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
     "produce NotFount response when service is not defined for request" in {
-      server.apply(HttpRequest[String](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)))
+      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[Chunk](HttpStatus(HttpStatusCodes.NotFound)))
     }
 
     "gracefully handle error-producing service handler" in {
-      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
     "gracefully handle dead-future-producing service handler" in {
-      server.apply(HttpRequest[String](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 
@@ -61,9 +62,9 @@ class HttpServerSpec extends Specification{
   }  
 }
 
-class TestServer extends TestService with HttpReflectiveServiceList[String]
+class TestServer extends TestService with HttpReflectiveServiceList[Chunk]
 
-trait TestService extends HttpServer[String] with BlueEyesServiceBuilderString with HttpRequestCombinators{
+trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
   var startupCalled   = false
   var shutdownCalled  = false
   lazy val testService = service("test", "1.0.7") {
@@ -76,15 +77,15 @@ trait TestService extends HttpServer[String] with BlueEyesServiceBuilderString w
         path("/foo/bar") {
           produce(text/plain) {
             get {
-              request: HttpRequest[String] => Future(HttpResponse[String](content=Some(value)))
+              request: HttpRequest[Chunk] => Future(HttpResponse[String](content=Some(value)))
             } ~
             path("/error") { 
-              get { request =>
+              get { request: HttpRequest[Chunk] =>
                 error("He's dead, Jim.")
               }
             } ~
             path("/dead") {
-              get { request =>
+              get { request: HttpRequest[Chunk] =>
                 Future.dead[HttpResponse[String]](new RuntimeException())
               }
             }

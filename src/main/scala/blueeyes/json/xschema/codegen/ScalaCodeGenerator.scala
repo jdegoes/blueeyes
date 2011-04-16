@@ -104,7 +104,6 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.add("package " + namespace + " ").block {
         code.add("""
           import _root_.org.specs.Specification
-          import _root_.org.specs.runner.{Runner, JUnit}
 
           import blueeyes.json.JsonParser._
           import blueeyes.json.JsonAST._
@@ -147,7 +146,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     // For every product, we test both serialization & deserialization (in basic ways):
-    code.add("object DataProductSerializationExamples extends Specification ").block {
+    code.newline.add("object DataProductSerializationExamples extends Specification ").block {
       code.join(database.productsIn(namespace), code.newline.newline) { defn =>
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
           code.add("""

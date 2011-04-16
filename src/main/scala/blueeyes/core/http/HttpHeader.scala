@@ -11,7 +11,7 @@ sealed trait HttpHeader extends Product2[String, String] with ProductPrefixUnman
 
   def value: String
 
-  def header = _1 + ": " + _2
+  def header = name + ": " + _2
 
   def canEqual(any: Any) = any match {
     case header: HttpHeader => true
@@ -697,7 +697,8 @@ object HttpHeaders {
       Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl")) else None
   }
 
-  class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
+  case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
+    override def _1 = name
   }
 }
 

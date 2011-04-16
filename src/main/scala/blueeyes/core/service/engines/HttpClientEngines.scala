@@ -116,6 +116,11 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
     xlRequest
   }
 
+  def isDefinedAt(request: HttpRequest[T]) = request.method match{
+    case HttpMethods.DELETE | HttpMethods.GET | HttpMethods.HEAD | HttpMethods.OPTIONS | HttpMethods.POST | HttpMethods.PUT => true
+    case _ => false
+  }
+
   private def createXLRequest(request: HttpRequest[T], url: String): XLHttpRequest = {
     request.method match {
       case HttpMethods.DELETE     => new DeleteRequest(url)

@@ -4,19 +4,21 @@ import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
-import blueeyes.BlueEyesClientTransformerBuilder
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
+import blueeyes.core.data.{BijectionsChunkReaderJson, BijectionsByteArray, Bijection}
 
-object BlueEyesClientDemo extends BlueEyesDemoFacade with HttpClientXLightWebEnginesArrayByte with Data{
+object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
   Configgy.configure("/etc/default/blueeyes.conf")
 
   val port = Configgy.config.configMap("server").getInt("port", 8888)
+
+  val httpClient = new HttpClientXLightWebEnginesArrayByte{}
 
   def main(args: Array[String]){
 
@@ -33,9 +35,8 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade with HttpClientXLightWebEng
     ->?(list) foreach println
   }
 
-  private def ->?[T](f: HttpClient[Array[Byte]] => Future[T]) = {
+  private def ->?[T](future: Future[T]) = {
 
-    val future    = apply(f) 
     val counDown  = new CountDownLatch(1)
 
     future.deliverTo(response =>{
@@ -46,93 +47,32 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade with HttpClientXLightWebEng
   }
 }
 
-trait BlueEyesDemoFacade extends BlueEyesClientTransformerBuilder{
+trait BlueEyesDemoFacade extends BijectionsByteArray{
+
+  private implicit val jvalaueToJValue = Bijection.identity[JValue]
+
+  def httpClient: HttpClient[Array[Byte]]
 
   def port: Int
 
-  def create(contact: Contact)  = protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/contacts"){
-          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
-            post$[JValue, Option[JValue]](contact.serialize){response: HttpResponse[JValue] =>
-              response.content
-            }
-          }
-        }
-      }
-    }
-  }
-  def health()  = protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/blueeyes/services/contactlist/v1/health"){
-          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
-            get$[JValue, Option[JValue]]{response: HttpResponse[JValue] =>
-              response.content
-            }
-          }
-        }
-      }
+  private def jsonHttpClient = httpClient.contentType[JValue](application/json).protocol("http").port(port)
+
+  def create(contact: Contact)  = jsonHttpClient.post("/contacts")(contact.serialize).map(_.content)
+
+  def health()  = jsonHttpClient.get("/blueeyes/services/contactlist/v1/health").map(_.content)
+
+  def list = jsonHttpClient.get("/contacts").map(response => namesFromJValue(response.content))
+
+  def search(filter: JValue) = jsonHttpClient.post("/contacts/search")(filter).map(response => namesFromJValue(response.content))
+
+  def contact(name: String) =  jsonHttpClient.get("/contacts/" + name).map[Option[Contact]] {response: HttpResponse[JValue] =>
+    response.content match{
+      case Some(x) => Some(x.deserialize[Contact])
+      case _ => None
     }
   }
 
-  def list =  protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/contacts"){
-          contentType$[JValue, Array[Byte], List[String]](application/json){
-            get$[JValue, List[String]]{response: HttpResponse[JValue] =>
-              namesFromJValue(response.content)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def search(filter: JValue) =  protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/contacts/search"){
-          contentType$[JValue, Array[Byte], List[String]](application/json){
-            post$[JValue, List[String]](filter){response: HttpResponse[JValue] =>
-              namesFromJValue(response.content)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def contact(name: String) =  protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/contacts/" + name){
-          contentType$[JValue, Array[Byte], Option[Contact]](application/json){
-            get$[JValue, Option[Contact]]{response: HttpResponse[JValue] =>
-              response.content match{
-                case Some(x) => Some(x.deserialize[Contact]) 
-                case _ => None
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def remove(name: String)  = protocol$("http"){
-    host$("localhost"){
-      port$(port){
-        path$("/contacts/" + name){
-          contentType$[JValue, Array[Byte], Option[JValue]](application/json){
-            delete$[JValue, Option[JValue]]{response: HttpResponse[JValue] => response.content}
-          }
-        }
-      }
-    }
-  }
+  def remove(name: String) = jsonHttpClient.delete("/contacts/" + name).map(_.content)
 
   private def namesFromJValue(jValue: Option[JValue]) = jValue match{
     case Some(e: JArray) => e.elements.map(v => {

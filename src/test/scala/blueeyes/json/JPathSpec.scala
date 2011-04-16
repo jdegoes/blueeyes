@@ -17,7 +17,6 @@
 package blueeyes.json
 
 import org.specs.{Specification, ScalaCheck}
-import org.specs.runner.{Runner, JUnit}
 import org.scalacheck.Prop.forAll
 
 import JsonAST._

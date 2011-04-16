@@ -20,7 +20,6 @@ package json {
 import _root_.org.scalacheck._
 import _root_.org.scalacheck.Prop.forAll
 import _root_.org.specs.Specification
-import _root_.org.specs.runner.{Runner, JUnit}
 import _root_.org.specs.ScalaCheck
 
 object PrintingSpec extends Specification with JValueGen with ScalaCheck {
