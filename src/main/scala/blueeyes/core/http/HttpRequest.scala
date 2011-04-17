@@ -18,15 +18,15 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parame
   def userInfo            = nonNull(new URI(uri).getUserInfo)
   def isUriAbsolute       = new URI(uri).isAbsolute
   def isUriOpaque         = new URI(uri).isOpaque
-  
+
   def withSubpath(p: String) = copy(subpath = p)
-  
+
   def withUriChanges(scheme: String = this.scheme, userInfo: String = this.userInfo, host: String = this.host, port: Int = this.port, path: String = this.path, query: String = this.query, fragment: String = this.fragment) = {
     val newUri = new URI(scheme, userInfo, host, port, path, query, fragment)
-    
+
     copy(uri = newUri.toString)
   }
-  
+
   private def nonNull(s: String, default: String = ""): String = s match {
     case null => default
     case s: String => s
@@ -36,11 +36,11 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parame
 object HttpRequest{
   def apply[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
     val subpath = new URI(uri).getPath
-    
-    val query = new URI(uri).getQuery match {
-      case null => ""
-      case string if (string.startsWith("?")) => string.substring(1)
-      case other => other
+
+    val query = uri.indexOf("?") match {
+      case -1 => ""
+
+      case idx => uri.substring(idx + 1)
     }
 
     HttpRequest[T](method, uri, parameters ++ blueeyes.util.QueryParser.parseQuery(query), headers, content, remoteHost, version, subpath)
