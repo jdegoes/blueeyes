@@ -3,9 +3,8 @@ package blueeyes.core.service.engines
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 
+import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.channel._
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
@@ -26,10 +25,15 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     def writeResponse(e: MessageEvent, response: HttpResponse[Chunk]) {
-      val request    = e.getMessage().asInstanceOf[NettyHttpRequest]
-      val message    = toNettyResponse(response)
-      val content    = response.content.map(content => new NettyChunkedInput(content, e.getChannel))
-      val keepAlive  = isKeepAlive(request)
+      val chunkedContent  = new ChunkedContent(response.content)
+      val request         = e.getMessage().asInstanceOf[NettyHttpRequest]
+      val keepAlive       = isKeepAlive(request)
+      val message         = toNettyResponse(response, chunkedContent.isChunked)
+      val content         = if (!chunkedContent.isChunked) {
+        chunkedContent.chunk.foreach(value => message.setContent(ChannelBuffers.copiedBuffer(value.data)))
+        None
+      }
+      else chunkedContent.chunk.map(content => new NettyChunkedInput(content, e.getChannel))
 
       if (e.getChannel().isConnected){
         val messageFuture = e.getChannel().write(message)
@@ -79,7 +83,6 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
 
 import NettyChunkedInput._
 import org.jboss.netty.handler.stream.ChunkedInput
-import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput with FutureDeliveryStrategySequential{
 
@@ -134,4 +137,14 @@ class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput wit
 }
 object NettyChunkedInput{
  val CRLF = List[Byte]('\r', '\n')
+}
+
+private[engines] class ChunkedContent(content: Option[Chunk]){
+  val (chunk, isChunked) = content map { value =>
+    val nextChunk = value.next
+    nextChunk match {
+      case Some(next) => (Some(new MemoryChunk(value.data, () => {nextChunk})), true)
+      case None       => (content, false)
+    }
+  } getOrElse ((None, false))
 }

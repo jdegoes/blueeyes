@@ -38,11 +38,12 @@ trait NettyConverters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNettyResponse(response: HttpResponse[Chunk]): NettyHttpResponse = {
+  implicit def toNettyResponse(response: HttpResponse[Chunk], chunked: Boolean): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
     response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
-    response.content.foreach(v => nettyResponse.setHeader(NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked"))
+    val (header, value) = if (chunked) (NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked") else (NettyHttpHeaders.Names.CONTENT_LENGTH, response.content.map(_.data.length.toString).getOrElse("0"))
+    nettyResponse.setHeader(header, value)
 
     nettyResponse
   }

@@ -30,7 +30,6 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
   private var port = 8585
   private var server: Option[NettyEngine] = None
   private var clientFacade: SampleClientFacade = _
-  private var client: LocalHttpsClient = _
 
   "HttpServer" should{
     doFirst{
@@ -59,15 +58,15 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
         doneSignal.await()
       }while(error != None)
 
-      clientFacade = new SampleClientFacade(port, port + 1, new LocalHttpsClient(server.get.config))
+      clientFacade = new SampleClientFacade(port, port + 1, server.get.config)
     }
 
-    "return html by correct URI by https" in{
-      val response = clientFacade.httpsRequest
+    "return empty response"in{
+      val response = clientFacade.emptyResponse
+
       response.value must eventually(retries, new Duration(duration))(beSomething)
-      response.value.get.content.get mustEqual(Context.context)
+      response.value.get.status.code must be (OK)
     }
-
     "return html by correct URI" in{
       val response =  clientFacade.httpRequest
 
@@ -116,6 +115,11 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
+    "return html by correct URI by https" in{
+      val response = clientFacade.httpsRequest
+      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value.get.content.get mustEqual(Context.context)
+    }
     "return huge content by htpps"in{
       val response = clientFacade.httpsHugeRequest
 
@@ -142,10 +146,10 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesStri
   }
 }
 
-class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]) extends BijectionsByteArray with BijectionsIdentity{
+class SampleClientFacade(port: Int, sslPort: Int, config: ConfigMap) extends BijectionsByteArray with BijectionsIdentity{
 
-  def client    = httpClient.protocol("http").host("localhost").port(port)
-  def sslClient = httpClient.protocol("https").host("localhost").port(sslPort)
+  def client    = new LocalHttpsClient(config).protocol("http").host("localhost").port(port)
+  def sslClient = new LocalHttpsClient(config).protocol("https").host("localhost").port(sslPort)
 
   def httpsRequest          = sslClient.get("/bar/foo/adCode.html")
 
@@ -164,6 +168,8 @@ class SampleClientFacade(port: Int, sslPort: Int, httpClient: HttpClient[String]
   def hugeDelayedRequest    = client.get("/huge/delayed")
 
   def httpsHugeRequest      = sslClient.get("/huge")
+
+  def emptyResponse         = client.post("/empty/response")("")
 }
 
 trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
@@ -203,6 +209,11 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           Future.lift[HttpResponse[Chunk]](response)
         }
       } ~
+      path("/empty/response"){
+        post { request: HttpRequest[Chunk] =>
+          Future.lift[HttpResponse[Chunk]](HttpResponse[Chunk]())
+        }
+      } ~
       path("/huge/delayed"){
         get { request: HttpRequest[Chunk] =>
 
@@ -224,7 +235,15 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 }
 
 object Context{
-  val hugeContext = List[Array[Byte]]("1, 2".getBytes, "3, 4".getBytes)
+  val hugeContext = List[Array[Byte]]("""<html>
+<head>
+</head>
+
+""".getBytes, """<body>
+    <h1>Test</h1>
+    <h1>Test</h1>
+</body>
+</html>""".getBytes)
   val context = """<html>
 <head>
 </head>

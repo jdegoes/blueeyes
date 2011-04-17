@@ -35,7 +35,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Fu
     val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
     val request      = fromNettyRequest(nettyRequest, remoteAddress)
     val future       = new Future[HttpResponse[Chunk]]().deliver(response)
-    val nettyMessage = toNettyResponse(response)
+    val nettyMessage = toNettyResponse(response, true)
     val nettyContent = new NettyChunkedInput(new MemoryChunk(Array[Byte]()), channel)
 
     when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)

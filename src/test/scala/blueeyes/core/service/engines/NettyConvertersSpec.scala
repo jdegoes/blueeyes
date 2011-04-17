@@ -27,12 +27,20 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
   }
   "convert service HttpResponse to netty HttpResponse" in {
     val response = HttpResponse[Chunk](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), `HTTP/1.0`)
-    val message  = toNettyResponse(response)
+    val message  = toNettyResponse(response, true)
 
     message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
     Map(message.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("retry-after" -> "1", "Transfer-Encoding" -> "chunked"))
 
+  }
+  "convert service HttpResponse to netty HttpResponse with not chunked content" in {
+    val response = HttpResponse[Chunk](HttpStatus(HttpStatusCodes.NotFound), Map(), None, `HTTP/1.0`)
+    val message  = toNettyResponse(response, false)
+
+    message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
+    message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
+    Map(message.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("Content-Length" -> "0"))
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {
