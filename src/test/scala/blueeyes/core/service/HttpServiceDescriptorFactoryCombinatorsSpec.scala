@@ -23,8 +23,8 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
         v1 {
           requestLog {
             fields = "cs-method cs-uri"
-            roll = "never"
-            file = "%s"
+            roll   = "never"
+            file   = "%s"
           }
         }
       }
@@ -35,7 +35,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     def apply(r: HttpRequest[Chunk]): Future[HttpResponse[Chunk]] = {
       Future(HttpResponse[Chunk](content = Some(r.path match {
         case "/foo/v1/proxy"  => StringToChunkReader("it works!")
-        
+
         case _ => StringToChunkReader("it does not work!")
       })))
     }
@@ -92,7 +92,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
 trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkReaderJson{
   implicit def httpClient: HttpClient[Chunk]
-  
+
   val emailService = service ("email", "1.2.3") {
     requestLogging{
       logging { log =>
@@ -105,9 +105,9 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
                 } ~
                 path("/proxy") {
                   get { request: HttpRequest[Chunk] =>
-                    locator("foo", "1.02.32") { client =>
-                      client(request)
-                    }.flatten
+                    val foo = locator("foo", "1.02.32")
+
+                    foo(request)
                   }
                 } ~
                 remainingPath{ path =>

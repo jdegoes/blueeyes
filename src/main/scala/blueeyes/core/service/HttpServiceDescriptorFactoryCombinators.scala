@@ -18,7 +18,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 //  private[this] object TransformerCombinators
 //  import TransformerCombinators.{path$}
 
-  /** Augments the service with health monitoring. By default, various metrics 
+  /** Augments the service with health monitoring. By default, various metrics
    * relating to request type, request timing, and request fulfillment are
    * exported to the health monitor.
    *
@@ -29,7 +29,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    *   }
    * }
    * }}}
-   */  
+   */
   def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
       val monitor = new HealthMonitor()
@@ -70,7 +70,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       f(logger)(context)
     }
   }
-  
+
   /** Augments the service with request/response logging.
    *
    * {{{
@@ -131,7 +131,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   /** Augments the service with a configurable root path. If this combinator
    * is used, the config for the service may contain a "rootPath" setting,
    * which is used as the root path for the service.
-   * 
+   *
    * {{{
    * configurableRoot {
    *   request { state =>
@@ -143,54 +143,46 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
   def configurableRoot[T, S](f: HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
       val underlying = f(context)
-      
+
       underlying.copy(
         request = (state: S) => {
           val handler = underlying.request(state)
 
           context.config.getString("rootPath") match {
             case None => handler
-            
+
             case Some(rootPath) => path(rootPath) { handler }
           }
         }
       )
     }
   }
-  
-  type ServiceLocator[T] = (String, HttpServiceVersion) => ServiceInvoker[T]
 
-  case class ServiceInvoker[T](serviceRootUrl: String)(implicit client: HttpClient[T]) {
-    def apply[X](transformer: HttpClient[T] => X): Future[X] = {
-      transformer(client.path(serviceRootUrl))
-    }
-  }
-  
+  type ServiceLocator[T] = (String, HttpServiceVersion) => HttpClient[T]
+
   /**
    * Augments the service with a locator, which is capable of creating HTTP
    * clients that connect to other BlueEyes services based on settings
    * in the config file.
-   * 
+   *
    * To locate foo/v1, the locator will look at the config setting:
    * services.foo.v1.serviceRootUrl
    * {{{
    * serviceLocator { locator =>
    *   ...
-   *   val content = locator("email", "1.01") { client =>
-   *     client.get("").map{ response => response.content.get }
-   *   }
+   *   val email = locator("email", "1.01")
    * }
    * }}}
    */
-  def serviceLocator[T, S](f: ServiceLocator[T] => HttpServiceDescriptorFactory[T, S])(implicit client: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
+  def serviceLocator[T, S](f: ServiceLocator[T] => HttpServiceDescriptorFactory[T, S])(implicit httpClient: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
     implicit def hack[X1, X2](f: Future[X1]): Future[X2] = f.asInstanceOf[Future[X2]]
-    
+
     (context: HttpServiceContext) => {
       f {
         (serviceName: String, serviceVersion: HttpServiceVersion) => {
           val serviceRootUrl = Configgy.config("services." + serviceName + ".v" + serviceVersion.majorVersion.toString + ".serviceRootUrl")
-          
-          ServiceInvoker(serviceRootUrl)
+
+          httpClient.path(serviceRootUrl)
         }
       } (context)
     }
@@ -230,7 +222,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         healthMonitor.trapFuture(errorPath)(response)
 
         response.deliverTo{v =>
-          healthMonitor.trackTime(timePath)(System.nanoTime - startTime)                      
+          healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
           healthMonitor.count(JPath(List(JPathField("requests"), JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
         }
 
