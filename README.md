@@ -638,7 +638,7 @@ BlueEyes provides support for both pillars:
       <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
     </tr>
     <tr>
-      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for BlueEyes Services (unreleased)</td>         <td><a href="http://twitter.com/jdegoes">@mconigliaro</a></td>
+      <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for BlueEyes Services (unreleased)</td>         <td><a href="http://twitter.com/mconigliaro">@mconigliaro</a></td>
     </tr>
   </tbody>
 </table>
