@@ -21,20 +21,6 @@ class URISpec extends Specification with URIGen with ScalaCheck{
     }
   }
 
-  "URI.parseEmails" should{
-    "return the correct email name with a well-formed email and parse to None otherwise" in {
-      URI.parseEmails("johnsmith@socialmedia.com ").get.toString mustEqual "johnsmith@socialmedia.com"
-    }
-
-    "return the correct (although weird) email" in {
-      URI.parseEmails(" j.o.n.Sm.ith@so.cia.lmedia.com ").get.toString mustEqual "j.o.n.Sm.ith@so.cia.lmedia.com"
-    }
-
-    "parse non-email to None" in {
-      URI.parseEmails("209h3094)(it092jom") mustEqual None
-    }
-  }
-
   private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => URI(n).toString == n) must pass
 }
 

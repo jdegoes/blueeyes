@@ -58,16 +58,4 @@ object URI extends URIGrammar{
   private def parseFailure(msg: String, s: String) = error("The pattern " + this.toString + " does not match " + s + ": " + msg)
 
   private def parseError(msg: String, s: String)   = error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
-
-  def parseEmails(s: String): Option[URI] = {
-    def emailParser = (regex("""([a-zA-Z\d_-]|\.)+@([a-zA-Z\d_-]|\.)+""".r)?) ^^ {case email => email.map(v => URI(v))}
-
-    emailParser(new CharSequenceReader(s.trim)) match {
-      case Success(result, _) => result
-
-      case Failure(msg, _) => parseFailure(msg, s)
-
-      case Error(msg, _) => parseFailure(msg, s)
-    }
-  }
 }

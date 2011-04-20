@@ -248,13 +248,13 @@ object HttpHeaders {
       Expectations.parseExpectations(keyValue._2) else None
   }
 
-  class From(val email: URI) extends HttpHeaderRequest {
+  class From(val email: Email) extends HttpHeaderRequest {
     def value = email.toString
   }
   object From {
-    def apply(email: URI) = new From(email)
+    def apply(email: Email) = new From(email)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from")
-      URI.parseEmails(keyValue._2) else None
+      Emails(keyValue._2) else None
   }
 
   class Host(val domain: URI) extends HttpHeaderRequest {
