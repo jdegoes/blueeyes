@@ -26,15 +26,19 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
   def custom(custom: HttpMethod, path: String) = method(custom, path)
 
-  def protocol(protocol: String) = path(protocol + "://")
+  def protocol(protocol: String) = buildClient { request => request.withUriChanges(scheme = Some(protocol)) }
 
   def secure = protocol("https")
 
-  def host(host: String) = path(host)
+  def host(host: String) = buildClient { request => request.withUriChanges(host = Some(host)) }
 
-  def port(port: Int) = buildClient { request => request.copy(uri = ":" + port.toString + request.uri) }
+  def port(port: Int) = buildClient { request => request.withUriChanges(port = Some(port)) }
 
-  def path(path: String) = buildClient { request => HttpRequest(request.method, path + request.uri, request.parameters, request.headers, request.content, request.remoteHost, request.version) }
+  def path(path: String) = buildClient { request =>
+    val originalURI = URI(request.uri)
+    val uri         = URI(originalURI.scheme, originalURI.userInfo, originalURI.host, originalURI.port, originalURI.path.map(path + _).orElse(Some(path)), originalURI.query, originalURI.fragment)
+    HttpRequest(request.method, uri.toString, request.parameters, request.headers, request.content, request.remoteHost, request.version)
+  }
 
   def parameters(parameters: (Symbol, String)*) = buildClient { request => request.copy(parameters = Map[Symbol, String](parameters: _*))}
 

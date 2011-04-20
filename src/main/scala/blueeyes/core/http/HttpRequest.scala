@@ -2,47 +2,38 @@ package blueeyes.core.http
 
 import blueeyes.core.http.HttpVersions._
 import java.net.InetAddress
-import java.net.URI
 
 //import HttpVersions._
 sealed case class HttpRequest[T] private(method: HttpMethod, uri: String, parameters: Map[Symbol, String], headers: HttpHeaders, content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
 
-  def path                = nonNull(new URI(uri).getPath)
-  def host                = nonNull(new URI(uri).getHost)
-  def port                = new URI(uri).getPort
-  def query               = nonNull(new URI(uri).getQuery)
-  def fragment            = nonNull(new URI(uri).getFragment)
-  def authority           = nonNull(new URI(uri).getAuthority)
-  def scheme              = nonNull(new URI(uri).getScheme)
-  def schemeSpecificPart  = nonNull(new URI(uri).getSchemeSpecificPart)
-  def userInfo            = nonNull(new URI(uri).getUserInfo)
-  def isUriAbsolute       = new URI(uri).isAbsolute
-  def isUriOpaque         = new URI(uri).isOpaque
+  private lazy val _uri = URI(uri) 
+
+  def path                = _uri.path
+  def host                = _uri.host
+  def port                = _uri.port
+  def query               = _uri.query
+  def fragment            = _uri.fragment
+  def authority           = _uri.authority
+  def scheme              = _uri.scheme
+  def userInfo            = _uri.userInfo
+  def isUriAbsolute       = _uri.isAbsolute
 
   def withSubpath(p: String) = copy(subpath = p)
 
-  def withUriChanges(scheme: String = this.scheme, userInfo: String = this.userInfo, host: String = this.host, port: Int = this.port, path: String = this.path, query: String = this.query, fragment: String = this.fragment) = {
-    val newUri = new URI(scheme, userInfo, host, port, path, query, fragment)
+  def withUriChanges(scheme: Option[String] = this.scheme, userInfo: Option[String] = this.userInfo, host: Option[String] = this.host, port: Option[Int] = this.port, path: Option[String] = this.path, query: Option[String] = this.query, fragment: Option[String] = this.fragment) = {
+    val newUri = URI(scheme, userInfo, host, port, path, query, fragment)
 
     copy(uri = newUri.toString)
-  }
-
-  private def nonNull(s: String, default: String = ""): String = s match {
-    case null => default
-    case s: String => s
   }
 }
 
 object HttpRequest{
   def apply[T](method: HttpMethod, uri: String, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
-    val subpath = new URI(uri).getPath
+    val parsedURI = URI(uri)
+    val subpath   = parsedURI.path.getOrElse("")
+    val query     = parsedURI.query
+    val allParameters = parameters ++ query.map(v => blueeyes.util.QueryParser.parseQuery(v)).getOrElse(Map[Symbol, String]())
 
-    val query = uri.indexOf("?") match {
-      case -1 => ""
-
-      case idx => uri.substring(idx + 1)
-    }
-
-    HttpRequest[T](method, uri, parameters ++ blueeyes.util.QueryParser.parseQuery(query), headers, content, remoteHost, version, subpath)
+    HttpRequest[T](method, uri, allParameters, headers, content, remoteHost, version, subpath)
   }
 }

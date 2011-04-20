@@ -248,22 +248,22 @@ object HttpHeaders {
       Expectations.parseExpectations(keyValue._2) else None
   }
 
-  class From(val email: HttpUri) extends HttpHeaderRequest {
+  class From(val email: URI) extends HttpHeaderRequest {
     def value = email.toString
   }
   object From {
-    def apply(email: HttpUri) = new From(email)
+    def apply(email: URI) = new From(email)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from")
-      HttpUris.parseEmails(keyValue._2) else None
+      URI.parseEmails(keyValue._2) else None
   }
 
-  class Host(val domain: HttpUri) extends HttpHeaderRequest {
-    def value = domain.host
+  class Host(val domain: URI) extends HttpHeaderRequest {
+    def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
   }
   object Host {
-    def apply(domain: HttpUri) = new Host(domain)
+    def apply(domain: URI) = new Host(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host")
-      HttpUris.parseHttpUris(keyValue._2) else None
+      URI.opt(keyValue._2) else None
   }
 
   /* Need to add parsing to array */
@@ -351,13 +351,13 @@ object HttpHeaders {
       ByteRanges.parseByteRanges(keyValue._2) else None
   }
 
-  class Referer(val domain: HttpUri) extends HttpHeaderRequest {
-    def value = domain.absoluteUri
+  class Referer(val domain: URI) extends HttpHeaderRequest {
+    def value = domain.toString
   }
   object Referer {
-    def apply(domain: HttpUri) = new Referer(domain)
+    def apply(domain: URI) = new Referer(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer")
-      HttpUris.parseHttpUris(keyValue._2) else None
+      URI.opt(keyValue._2) else None
   }
 
   class TE(val tcodings: TCoding*) extends HttpHeaderRequest {
@@ -514,13 +514,13 @@ object HttpHeaders {
       HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
   }
 
-  class Location(val domain: HttpUri) extends HttpHeaderResponse {
-    def value = domain.absoluteUri
+  class Location(val domain: URI) extends HttpHeaderResponse {
+    def value = domain.toString
   }
   object Location {
-    def apply(domain: HttpUri) = new Location(domain)
+    def apply(domain: URI) = new Location(domain)
     def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location")
-      HttpUris.parseHttpUris(keyValue._2) else None
+      URI.opt(keyValue._2) else None
   }
 
   class `Proxy-Authenticate`(val challenge: String) extends HttpHeaderResponse {

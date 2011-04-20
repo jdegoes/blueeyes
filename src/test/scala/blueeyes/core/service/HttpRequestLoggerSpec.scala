@@ -61,10 +61,10 @@ class HttpRequestLoggerSpec extends Specification with ClockMock with FutureDeli
     log(UriIdentifier(ClientToServerPrefix)).value must eventually (beSome(request.uri))
   }
   "HttpRequestLogger: logs uri-stem" in {
-    log(UriStemIdentifier(ClientToServerPrefix)).value must eventually (beSome(request.path))
+    log(UriStemIdentifier(ClientToServerPrefix)).value must eventually (beEqualTo(request.path))
   }
   "HttpRequestLogger: logs uri-query" in {
-    log(UriQueryIdentifier(ClientToServerPrefix)).value must eventually (beSome(request.query))
+    log(UriQueryIdentifier(ClientToServerPrefix)).value must eventually (beEqualTo(request.query))
   }
   "HttpRequestLogger: logs request header" in {
     log(HeaderIdentifier(ClientToServerPrefix, "content-language")).value must eventually (beSome("en"))

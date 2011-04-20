@@ -71,7 +71,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
       f.error.isInstanceOf[Option[HttpException]] must  beTrue
       f.error.get.asInstanceOf[HttpException].failure must be(NotFound)
     }
-    
+
     "Support GET requests with status OK" in {
       val f = httpClient.get(uri)
       f.value must eventually(retries, new Duration(duration))(beSomething)

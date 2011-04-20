@@ -132,11 +132,11 @@ object HttpRequestLogger extends FutureDeliveryStrategySequential{
               case _   => Future.lift("")
             }
             case UriStemIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.path)
+              case ClientToServerPrefix => Future.lift(request.path.getOrElse(""))
               case _   => Future.lift("")
             }
             case UriQueryIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.query)
+              case ClientToServerPrefix => Future.lift(request.query.getOrElse(""))
               case _   => Future.lift("")
             }
             case HeaderIdentifier(prefix, header) =>

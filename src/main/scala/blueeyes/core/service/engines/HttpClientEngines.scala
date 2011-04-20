@@ -50,7 +50,10 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
 
   private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
     val httpClientInstance = httpClient(() => {
-      if (request.scheme == "https") new XLHttpClient(createSSLContext) else new XLHttpClient()
+      request.scheme match{
+        case Some("https") => new XLHttpClient(createSSLContext)
+        case _ => new XLHttpClient()
+      }
     })
     httpClientInstance.setAutoHandleCookies(false)
 
