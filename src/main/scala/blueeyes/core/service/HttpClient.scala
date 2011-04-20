@@ -35,9 +35,9 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
   def port(port: Int) = buildClient { request => request.withUriChanges(port = Some(port)) }
 
   def path(path: String) = buildClient { request =>
-    val originalURI = URI(request.uri)
+    val originalURI = request.uri
     val uri         = URI(originalURI.scheme, originalURI.userInfo, originalURI.host, originalURI.port, originalURI.path.map(path + _).orElse(Some(path)), originalURI.query, originalURI.fragment)
-    HttpRequest(request.method, uri.toString, request.parameters, request.headers, request.content, request.remoteHost, request.version)
+    HttpRequest(request.method, URI(uri.toString), request.parameters, request.headers, request.content, request.remoteHost, request.version)
   }
 
   def parameters(parameters: (Symbol, String)*) = buildClient { request => request.copy(parameters = Map[Symbol, String](parameters: _*))}
@@ -81,7 +81,7 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
   private def addQueries(request: HttpRequest[A])(queries: Iterable[(String, String)]): HttpRequest[A] = {
     import java.net.URLEncoder
 
-    val url = request.uri
+    val url = request.uri.toString
     val qs  = queries.map(t => t._1 + "=" + URLEncoder.encode(t._2, "UTF-8")).mkString("&")
 
     val index = url.indexOf('?')
@@ -92,7 +92,7 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
     }
     else url + "?" + qs)
 
-    HttpRequest(request.method, newUrl, request.parameters, request.headers, request.content, request.remoteHost, request.version)
+    HttpRequest(request.method, URI(newUrl), request.parameters, request.headers, request.content, request.remoteHost, request.version)
   }
 
   private def method(method: HttpMethod, path: String, content: Option[A] = None) = self.apply(HttpRequest(method, path,  Map(),  Map(), content))

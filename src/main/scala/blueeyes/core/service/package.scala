@@ -2,8 +2,6 @@ package blueeyes.core
 
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
-import data.Chunk
-
 
 package object service{
   type HttpRequestHandler[T]     = PartialFunction[HttpRequest[T], Future[HttpResponse[T]]]

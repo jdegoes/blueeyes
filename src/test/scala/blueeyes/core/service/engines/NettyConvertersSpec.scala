@@ -4,11 +4,12 @@ import org.specs.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import org.jboss.netty.util.CharsetUtil
-import java.net.InetSocketAddress;
+import java.net.InetSocketAddress
+import blueeyes.core.http._
+;
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.http.{HttpMethods, HttpResponse, HttpStatus, HttpStatusCodes}
 import blueeyes.core.data.{Chunk, BijectionsChunkReaderString, MemoryChunk}
 import blueeyes.core.http.MimeTypes._
 
@@ -51,12 +52,12 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
     val address = new InetSocketAddress("127.0.0.0", 8080)
     val request = fromNettyRequest(nettyRequest, address)
 
-    request.method      mustEqual(HttpMethods.GET)
-    request.uri         mustEqual("http://foo/bar?param1=value1")
-    request.parameters  mustEqual(Map('param1 -> "value1"))
-    request.headers     mustEqual(Map("retry-after" -> "1"))
-    request.version     mustEqual(`HTTP/1.0`)
-    request.remoteHost  mustEqual(Some(address.getAddress()))
+    request.method       mustEqual(HttpMethods.GET)
+    request.uri          mustEqual(URI("http://foo/bar?param1=value1"))
+    request.parameters   mustEqual(Map('param1 -> "value1"))
+    request.headers      mustEqual(Map("retry-after" -> "1"))
+    request.version      mustEqual(`HTTP/1.0`)
+    request.remoteHost   mustEqual(Some(address.getAddress()))
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest, modifying ip if X-Forwarded-For header present" in {
@@ -70,7 +71,7 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
     val request = fromNettyRequest(nettyRequest, address)
 
     request.method      mustEqual(HttpMethods.GET)
-    request.uri         mustEqual("http://foo/bar?param1=value1")
+    request.uri         mustEqual(URI("http://foo/bar?param1=value1"))
     request.parameters  mustEqual(Map('param1 -> "value1"))
     request.headers     mustEqual(Map("retry-after" -> "1", "X-Forwarded-For" -> "111.11.11.1, 121.21.2.2"))
     request.version     mustEqual(`HTTP/1.0`)

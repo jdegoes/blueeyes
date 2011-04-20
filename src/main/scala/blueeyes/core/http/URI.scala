@@ -36,6 +36,7 @@ trait URIGrammar extends RegexParsers{
 
 import scala.util.parsing.input._
 object URI extends URIGrammar{
+  implicit def stringToUri(uri: String) = URI(uri)
   def apply(s: String): URI = parser.apply(new CharSequenceReader(s.trim)) match {
     case Success(result, _) => result
 

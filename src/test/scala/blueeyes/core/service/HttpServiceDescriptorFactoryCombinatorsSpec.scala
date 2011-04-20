@@ -33,7 +33,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   implicit val httpClient: HttpClient[Chunk] = new HttpClient[Chunk] {
     def apply(r: HttpRequest[Chunk]): Future[HttpResponse[Chunk]] = {
-      Future(HttpResponse[Chunk](content = Some(r.path match {
+      Future(HttpResponse[Chunk](content = Some(r.uri.path match {
         case Some("/foo/v1/proxy")  => StringToChunkReader("it works!")
 
         case _ => StringToChunkReader("it does not work!")
