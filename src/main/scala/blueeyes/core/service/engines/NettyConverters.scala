@@ -7,10 +7,10 @@ import scala.collection.JavaConversions._
 import java.io.ByteArrayOutputStream
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
-import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
+import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
-import blueeyes.concurrent.FutureDeliveryStrategySequential
 import blueeyes.core.data.{Chunk, MemoryChunk}
+import blueeyes.concurrent.Future
 
 trait NettyConverters{
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -51,14 +51,15 @@ trait NettyConverters{
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[Chunk] = {
     val parameters          = getParameters(request.getUri())
     val headers             = buildHeaders(request.getHeaders())
-    val nettyContent        = request.getContent()
-    val content             = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent))) else None
-  
+    val content             = fromNettyContent(request.getContent(), () => None)
+
     val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
     val remoteHost = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }
+
+  def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[Chunk]]): Option[Chunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
 
   private def extractContent(content: ChannelBuffer) = {
     val stream = new ByteArrayOutputStream()

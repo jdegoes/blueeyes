@@ -26,8 +26,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     def writeResponse(e: MessageEvent, response: HttpResponse[Chunk]) {
       val chunkedContent  = new ChunkedContent(response.content)
-      val request         = e.getMessage().asInstanceOf[NettyHttpRequest]
-      val keepAlive       = isKeepAlive(request)
+      val keepAlive       = isKeepAlive(e.getMessage.asInstanceOf[HttpRequest[Chunk]])
       val message         = toNettyResponse(response, chunkedContent.isChunked)
       val content         = if (!chunkedContent.isChunked) {
         chunkedContent.chunk.foreach(value => message.setContent(ChannelBuffers.copiedBuffer(value.data)))
@@ -43,8 +42,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }
     }
-    val request        = fromNettyRequest(event.getMessage.asInstanceOf[NettyHttpRequest], event.getRemoteAddress)
-    val responseFuture = requestHandler(request)
+    val responseFuture = requestHandler(event.getMessage.asInstanceOf[HttpRequest[Chunk]])
 
     pendingResponses += responseFuture
 
@@ -52,6 +50,17 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
       pendingResponses -= responseFuture
       
       writeResponse(event, response)
+    }
+  }
+
+  private def isKeepAlive(message: HttpRequest[Chunk] ): Boolean = {
+    val connection = message.headers.get(Names.CONNECTION).getOrElse("")
+    if (connection.equalsIgnoreCase(Values.CLOSE)) false
+    else {
+      message.version match {
+        case HttpVersions.`HTTP/1.0` => Values.KEEP_ALIVE.equalsIgnoreCase(connection)
+        case HttpVersions.`HTTP/1.1` => !Values.CLOSE.equalsIgnoreCase(connection)
+      }
     }
   }
 

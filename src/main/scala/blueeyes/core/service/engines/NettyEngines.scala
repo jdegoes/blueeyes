@@ -1,7 +1,6 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.service._
-import blueeyes.core.data.Chunk
 import blueeyes.concurrent.Future
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
@@ -10,7 +9,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
-import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpChunkAggregator, HttpResponseEncoder, HttpRequestDecoder}
+import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpResponseEncoder, HttpRequestDecoder}
 import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
@@ -30,7 +29,7 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
       try {
         try {
-          val servers = Tuple2(port, new HttpServerPipelineFactory("http", host, port)) :: (if (sslEnable) Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort)) :: Nil else Nil)
+          val servers = Tuple2(port, new HttpServerPipelineFactory("http", host, port, chunkSize)) :: (if (sslEnable) Tuple2(sslPort, new HttpsServerPipelineFactory("https", host, sslPort, chunkSize)) :: Nil else Nil)
 
           startServers(servers)
 
@@ -88,22 +87,22 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
     })
   }
 
-  class HttpServerPipelineFactory(val protocol: String, host: String, port: Int) extends ChannelPipelineFactory {
+  class HttpServerPipelineFactory(val protocol: String, host: String, port: Int, chunkSize: Int) extends ChannelPipelineFactory {
     def getPipeline(): ChannelPipeline = {
       val pipeline = Channels.pipeline()
 
-      pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port))
-      pipeline.addLast("aggregator",    new HttpChunkAggregator(1048576));
+      pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
       pipeline.addLast("encoder",       new HttpResponseEncoder())
       pipeline.addLast("deflater",      new HttpContentCompressor())
       pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
+      pipeline.addLast("aggregator",    new NettyChunkedRequestHandler(chunkSize))
       pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))
 
       pipeline
     }
   }
 
-  class HttpsServerPipelineFactory(protocol: String, host: String, port: Int) extends HttpServerPipelineFactory(protocol: String, host, port) {
+  class HttpsServerPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int) extends HttpServerPipelineFactory(protocol: String, host, port, chunkSize) {
     private val keyStore = BlueEyesKeyStoreFactory(config)
 
     override def getPipeline(): ChannelPipeline = {
@@ -133,7 +132,7 @@ private[engines] object InetInterfaceLookup {
   def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
 }
 
-private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int) extends HttpRequestDecoder{
+private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int, chunkSize: Int) extends HttpRequestDecoder(4096, 8192, 2){
   private val baseUri = """%s://%s:%d""".format(protocol, host, port)
   private val fullUriRegexp = new Regex("""(https|http)://.+/(:\d+/)?.+""")
   override def createMessage(initialLine: Array[String]) = {

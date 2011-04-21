@@ -198,6 +198,10 @@ trait HttpServer extends HttpRequestHandler[Chunk] with FutureDeliveryStrategySe
    */
   lazy val host = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
 
+  /** Retrieves the host the server should be running at.
+   */
+  lazy val chunkSize = config.getInt("chunkSize", 1048576)
+
   /** Retrieves if the ssl should be running, which defaults to
    * true.
    */
