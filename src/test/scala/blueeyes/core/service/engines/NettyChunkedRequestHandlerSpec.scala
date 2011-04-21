@@ -10,8 +10,8 @@ import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.http.HttpRequest
 import org.jboss.netty.channel._
 import blueeyes.core.data.{MemoryChunk, Chunk}
-import java.io.ByteArrayOutputStream
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import collection.mutable.ArrayBuilder.ofByte
 
 class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation with NettyConverters with FutureDeliveryStrategySequential{
 
@@ -84,9 +84,9 @@ class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation wi
       message.content.map(readContent(_)) == anotherMessage.content.map(readContent(_)) && anotherEvent.getRemoteAddress == remoteAddress
     }
 
-    private def readContent(chunk: Chunk): String = new String(readContent(chunk, new ByteArrayOutputStream()).toByteArray)
-    private def readContent(chunk: Chunk, buffer: ByteArrayOutputStream): ByteArrayOutputStream = {
-      buffer.write(chunk.data)
+    private def readContent(chunk: Chunk): String = new String(readContent(chunk, new ofByte()).result)
+    private def readContent(chunk: Chunk, buffer: ofByte): ofByte = {
+      buffer ++= chunk.data
 
       val next = chunk.next
       next match{

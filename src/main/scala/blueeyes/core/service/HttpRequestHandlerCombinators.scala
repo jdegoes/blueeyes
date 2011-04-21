@@ -3,11 +3,12 @@ package blueeyes.core.service
 import scala.xml.NodeSeq
 
 import blueeyes.json.JsonAST._
-import blueeyes.core.data.Bijection
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.core.data.{MemoryChunk, Chunk, Bijection}
+import java.io.ByteArrayOutputStream
 
 trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
   /** The path combinator creates a handler that is defined only for suffixes
@@ -364,6 +365,45 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
     accept(mimeType) {
       produce(mimeType) {
         h
+      }
+    }
+  }
+
+  /** The aggregate combinator creates a handler that stitches together chunks
+   * to make a bigger chunk, up to the specified size.
+   */
+  def aggregate(chunkSize: Option[Int])(h: HttpRequestHandler[Chunk]): HttpRequestHandler[Chunk] = new HttpRequestHandler[Chunk] {
+    def isDefinedAt(r: HttpRequest[Chunk]) = h.isDefinedAt(r)
+
+    def apply(r: HttpRequest[Chunk]) = {
+      def aggregateContent(chunk: Chunk, buffer: ByteArrayOutputStream, result: Future[HttpResponse[Chunk]]) {
+        def done = {
+          val content = new MemoryChunk(buffer.toByteArray){
+            override def next = chunk.next
+          }
+          val f = h(r.copy(content = Some(content)))
+
+          f.deliverTo(response => result.deliver(response))
+          f.ifCanceled(th => result.cancel(th))
+          result.ifCanceled(th => f.cancel(th))
+        }
+
+        buffer.write(chunk.data)
+        chunkSize match {
+          case Some(size) if (buffer.size >= size) => done
+          case _ => chunk.next match{
+            case None    => done
+            case Some(e) => e.deliverTo(nextChunk => aggregateContent(nextChunk, buffer, result))
+          }
+        }
+      }
+
+      r.content match {
+        case Some(chunk) =>
+          val response = new Future[HttpResponse[Chunk]]()
+          aggregateContent(chunk, new ByteArrayOutputStream(), response)
+          response
+        case None        => h(r)
       }
     }
   }

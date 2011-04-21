@@ -12,7 +12,7 @@ import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
-import java.io.ByteArrayOutputStream
+import collection.mutable.ArrayBuilder.ofByte
 
 class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential with BijectionsIdentity{
   import HttpHeaderImplicits._
@@ -243,7 +243,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
     }.getOrElse("")
     val content: Future[String] = request.content.map{v =>
       val result = new Future[String]()
-      readContent(v, new ByteArrayOutputStream(), result)
+      readContent(v, new ofByte(), result)
       result
     }.getOrElse(Future.lift[String](""))
     val result = new Future[HttpResponse[String]]()
@@ -252,12 +252,12 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
     result
   }
 
-  private def readContent(chunk: Chunk, buffer: ByteArrayOutputStream, result: Future[String]) {
-    buffer.write(chunk.data)
+  private def readContent(chunk: Chunk, buffer: ofByte, result: Future[String]) {
+    buffer ++= chunk.data
 
     chunk.next match{
       case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, buffer, result))
-      case None => result.deliver(new String(buffer.toByteArray, "UTF-8"))
+      case None => result.deliver(new String(buffer.result, "UTF-8"))
     }
   }
 
