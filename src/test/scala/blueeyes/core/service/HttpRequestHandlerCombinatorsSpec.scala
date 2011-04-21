@@ -232,7 +232,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries"))
       f.value must eventually(beSomething)
-      f.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
+      f.value.get.content.map(JString(_)) must beSome(JString("""" """"))
     }
   }
 

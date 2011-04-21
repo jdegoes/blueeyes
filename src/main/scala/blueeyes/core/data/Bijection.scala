@@ -3,11 +3,10 @@ package blueeyes.core.data
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
-import blueeyes.json.JsonAST.JValue
 
 import scala.xml.NodeSeq
 import scala.xml.XML
-import blueeyes.concurrent.FutureDeliveryStrategySequential
+import blueeyes.json.JsonParser.ParseException
 
 trait Bijection[T, S] { self =>
   def isDefinedAt(t: T): Boolean = {
@@ -93,7 +92,12 @@ trait BijectionsChunkReaderJson{
 
       new MemoryChunk(stream.toByteArray())
     }
-    def unapply(s: Chunk)  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
+    def unapply(s: Chunk)  = try {
+      JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
+    }
+    catch {
+      case e: ParseException => error("Data is too big, use big data handler.")
+    }
   }
 
   implicit val ChunkReaderToJValue    = JValueToChunkReader.inverse
@@ -120,13 +124,18 @@ trait BijectionsChunkReaderByteArray {
 }
 object BijectionsChunkReaderByteArray extends BijectionsChunkReaderByteArray
 
-trait BijectionsXML {
+trait BijectionsChunkReaderXML {
   import java.io.{ByteArrayInputStream}
   implicit val XMLToChunkReader   = new Bijection[NodeSeq, Chunk] {
-    def apply(s: NodeSeq)          = new MemoryChunk(s.toString.getBytes)
-    def unapply(t: Chunk)    = XML.load(new ByteArrayInputStream(t.data))
+    def apply(s: NodeSeq)    = new MemoryChunk(s.toString.getBytes)
+    def unapply(t: Chunk)    = try{
+      XML.load(new ByteArrayInputStream(t.data))
+    }
+    catch {
+      case e: org.xml.sax.SAXParseException => error("Data is too big, use big data handler.")
+    }
   }
 
   implicit val ChunkReaderToXML = XMLToChunkReader.inverse
 }
-object BijectionsXML extends BijectionsByteArray
+object BijectionsChunkReaderXML extends BijectionsChunkReaderXML
