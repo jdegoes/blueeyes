@@ -1,6 +1,5 @@
 package blueeyes.concurrent
 
-import scalaz.{Success, Failure, Validation}
 import collection.mutable.ListBuffer
 
 trait FutureDeliveryStrategy {

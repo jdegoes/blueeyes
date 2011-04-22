@@ -32,7 +32,6 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
-  private var clientFacade: SampleClientFacade = _
   private var uri = ""
 
   "HttpClientXLightWeb" should {

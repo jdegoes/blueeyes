@@ -6,15 +6,17 @@ import org.jboss.netty.handler.codec.http.HttpHeaders._
 
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.util.CharsetUtil
-import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpMessage, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
 import NettyChunkedRequestHandler._
-import blueeyes.core.http.HttpRequest
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
+import blueeyes.core.http.HttpRequest
+import net.lag.logging.Logger
 
 class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with NettyConverters with FutureDeliveryStrategySequential{
 
+  private val log = Logger.get
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
@@ -38,7 +40,6 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
         }
       }
       case chunk: HttpChunk =>  {
-        current.orElse(throw new IllegalStateException("received " + classOf[HttpChunk].getSimpleName() + " without " + classOf[HttpMessage].getSimpleName()))
         current.foreach{ value =>
           val (nextDelivery, content) = value
           content.writeBytes(chunk.getContent())
@@ -66,11 +67,21 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
 
   override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelClosed(ctx, e)
-    delivery = None
+    killPending
   }
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelDisconnected(ctx, e)
+    killPending
+  }
+
+  private def killPending = {
+    delivery.foreach{ value =>
+      value._1 match {
+        case Right(x) => x.cancel
+        case Left(x)  =>
+      }
+    }
     delivery = None
   }
 }
