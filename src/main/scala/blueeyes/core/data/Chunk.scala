@@ -2,13 +2,13 @@ package blueeyes.core.data
 
 import blueeyes.concurrent.Future
 
-trait Chunk{
-  def data: Array[Byte]
+trait Chunk[T]{
+  def data: T
 
-  def next: Option[Future[Chunk]]
+  def next: Option[Future[Chunk[T]]]
 }
 
-class MemoryChunk(val data: Array[Byte], f:() => Option[Future[Chunk]])extends Chunk{
-  def this(data: Array[Byte]) = this(data, () => None)
+class MemoryChunk[T](val data: T, f:() => Option[Future[Chunk[T]]]) extends Chunk[T]{
+  def this(data: T) = this(data, () => None)
   def next = f()
 }

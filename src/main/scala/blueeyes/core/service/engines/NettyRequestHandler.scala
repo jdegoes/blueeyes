@@ -8,7 +8,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
-import blueeyes.core.data.{Chunk, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.concurrent.Future._
@@ -20,13 +20,13 @@ import net.lag.logging.Logger
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Chunk], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
-  private val pendingResponses = new HashSet[Future[HttpResponse[Chunk]]] with SynchronizedSet[Future[HttpResponse[Chunk]]]
+private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
+  private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
-    def writeResponse(e: MessageEvent, response: HttpResponse[Chunk]) {
+    def writeResponse(e: MessageEvent, response: HttpResponse[ByteChunk]) {
       val chunkedContent  = new ChunkedContent(response.content)
-      val keepAlive       = isKeepAlive(e.getMessage.asInstanceOf[HttpRequest[Chunk]])
+      val keepAlive       = isKeepAlive(e.getMessage.asInstanceOf[HttpRequest[ByteChunk]])
       val message         = toNettyResponse(response, chunkedContent.isChunked)
       val content         = if (!chunkedContent.isChunked) {
         chunkedContent.chunk.foreach(value => message.setContent(ChannelBuffers.copiedBuffer(value.data)))
@@ -42,7 +42,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }
     }
-    val responseFuture = requestHandler(event.getMessage.asInstanceOf[HttpRequest[Chunk]])
+    val responseFuture = requestHandler(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]])
 
     pendingResponses += responseFuture
 
@@ -53,7 +53,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
     }
   }
 
-  private def isKeepAlive(message: HttpRequest[Chunk] ): Boolean = {
+  private def isKeepAlive(message: HttpRequest[ByteChunk] ): Boolean = {
     val connection = message.headers.get(Names.CONNECTION).getOrElse("")
     if (connection.equalsIgnoreCase(Values.CLOSE)) false
     else {
@@ -93,11 +93,11 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[Ch
 import NettyChunkedInput._
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput with FutureDeliveryStrategySequential{
+class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with FutureDeliveryStrategySequential{
 
   private val log   = Logger.get
   private var done  = false
-  private var nextChunkFuture: Future[Chunk] = _
+  private var nextChunkFuture: Future[ByteChunk] = _
 
   setNextChunkFuture(Future.lift(chunk))
 
@@ -124,7 +124,7 @@ class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput wit
         case Some(future)     => setNextChunkFuture(future)
           true
         case None if (!done)  => {
-          setNextChunkFuture(Future.lift[Chunk](new MemoryChunk(Array[Byte]())))
+          setNextChunkFuture(Future.lift[ByteChunk](new MemoryChunk(Array[Byte]())))
           done = true
           true
         }
@@ -133,7 +133,7 @@ class NettyChunkedInput(chunk: Chunk, channel: Channel) extends ChunkedInput wit
     }.getOrElse(true)
   }
 
-  private def setNextChunkFuture(future: Future[Chunk]){
+  private def setNextChunkFuture(future: Future[ByteChunk]){
     future.trap{errors: List[Throwable] =>
       errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput"))
       errors match{
@@ -148,7 +148,7 @@ object NettyChunkedInput{
  val CRLF = List[Byte]('\r', '\n')
 }
 
-private[engines] class ChunkedContent(content: Option[Chunk]){
+private[engines] class ChunkedContent(content: Option[ByteChunk]){
   val (chunk, isChunked) = content map { value =>
     val nextChunk = value.next
     nextChunk match {

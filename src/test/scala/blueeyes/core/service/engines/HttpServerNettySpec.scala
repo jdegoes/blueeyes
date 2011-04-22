@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{MemoryChunk, Chunk, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -134,7 +134,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
   }
 }
 
-class SampleServer extends SampleService with HttpReflectiveServiceList[Chunk] with NettyEngine { }
+class SampleServer extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
 
 class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesString{
   override protected def createSSLContext = {
@@ -177,57 +177,57 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
 
-  val sampleService: HttpService[Chunk] = service("sample", "1.32") { context =>
+  val sampleService: HttpService[ByteChunk] = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
-          get { request: HttpRequest[Chunk] =>
+          get { request: HttpRequest[ByteChunk] =>
             Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/foo") {
-          get { request: HttpRequest[Chunk] =>
+          get { request: HttpRequest[ByteChunk] =>
             Future.lift[HttpResponse[String]](response)
           }
         } ~
         path("/error") {
-          get { request: HttpRequest[Chunk] =>
+          get { request: HttpRequest[ByteChunk] =>
             throw new RuntimeException("Unexecpcted Error.")
           }
         } ~
         path("/http/error") {
-          get { request: HttpRequest[Chunk] =>
+          get { request: HttpRequest[ByteChunk] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }
       } ~
       path("/huge"){
-        get { request: HttpRequest[Chunk] =>
-          val chunk  = new MemoryChunk(Context.hugeContext.head, () => Some(Future.lift(new MemoryChunk(Context.hugeContext.tail.head))))
+        get { request: HttpRequest[ByteChunk] =>
+          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future.lift(new ByteMemoryChunk(Context.hugeContext.tail.head))))
 
-          val response     = HttpResponse[Chunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.lift[HttpResponse[Chunk]](response)
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future.lift[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/empty/response"){
-        post { request: HttpRequest[Chunk] =>
-          Future.lift[HttpResponse[Chunk]](HttpResponse[Chunk]())
+        post { request: HttpRequest[ByteChunk] =>
+          Future.lift[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
         }
       } ~
       path("/huge/delayed"){
-        get { request: HttpRequest[Chunk] =>
+        get { request: HttpRequest[ByteChunk] =>
 
-          val nextChunkFuture = new Future[Chunk]()
+          val nextChunkFuture = new Future[ByteChunk]()
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            nextChunkFuture.deliver(new MemoryChunk(Context.hugeContext.tail.head))
+            nextChunkFuture.deliver(new ByteMemoryChunk(Context.hugeContext.tail.head))
           }
 
-          val chunk  = new MemoryChunk(Context.hugeContext.head, () => Some(nextChunkFuture))
+          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(nextChunkFuture))
 
-          val response     = HttpResponse[Chunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.lift[HttpResponse[Chunk]](response)
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future.lift[HttpResponse[ByteChunk]](response)
         }
       }
     }

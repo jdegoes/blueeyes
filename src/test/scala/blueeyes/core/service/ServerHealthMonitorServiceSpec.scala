@@ -3,7 +3,7 @@ package blueeyes.core.service
 import test.BlueEyesServiceSpecification
 import blueeyes.json.JsonAST._
 import blueeyes.core.http.{HttpResponse, HttpStatus}
-import blueeyes.core.data.Chunk
+import blueeyes.core.data.ByteChunk
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 

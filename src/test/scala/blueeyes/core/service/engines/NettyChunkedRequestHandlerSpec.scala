@@ -9,7 +9,7 @@ import org.specs.mock.MocksCreation
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.http.HttpRequest
 import org.jboss.netty.channel._
-import blueeyes.core.data.{MemoryChunk, Chunk}
+import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 import collection.mutable.ArrayBuilder.ofByte
 
@@ -54,7 +54,7 @@ class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation wi
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[Chunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData)))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData)))
       Mockito.verify(context, times(1)).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
     "sends request and chunk when request is chunked and there is only more ther one chunk" in {
@@ -69,23 +69,23 @@ class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation wi
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Future.lift[Chunk](new MemoryChunk(chunkData))
-      val request: HttpRequest[Chunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData, () => Some(nextChunk))))
+      val nextChunk = Future.lift[ByteChunk](new MemoryChunk(chunkData))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData, () => Some(nextChunk))))
       Mockito.verify(context, times(1)).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
   }
 
-  class UpstreamMessageEventImpl(channel: Channel, message: HttpRequest[Chunk], remoteAddress: SocketAddress) extends UpstreamMessageEvent(channel, message, remoteAddress){
+  class UpstreamMessageEventImpl(channel: Channel, message: HttpRequest[ByteChunk], remoteAddress: SocketAddress) extends UpstreamMessageEvent(channel, message, remoteAddress){
     override def equals(p1: Any) = {
       val anotherEvent    = p1.asInstanceOf[UpstreamMessageEvent]
-      val anotherMessage  = anotherEvent.getMessage.asInstanceOf[HttpRequest[Chunk]]
+      val anotherMessage  = anotherEvent.getMessage.asInstanceOf[HttpRequest[ByteChunk]]
 
       anotherEvent.getChannel == channel && anotherMessage.copy(content = None) == message.copy(content = None) &&
       message.content.map(readContent(_)) == anotherMessage.content.map(readContent(_)) && anotherEvent.getRemoteAddress == remoteAddress
     }
 
-    private def readContent(chunk: Chunk): String = new String(readContent(chunk, new ofByte()).result)
-    private def readContent(chunk: Chunk, buffer: ofByte): ofByte = {
+    private def readContent(chunk: ByteChunk): String = new String(readContent(chunk, new ofByte()).result)
+    private def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
       buffer ++= chunk.data
 
       val next = chunk.next

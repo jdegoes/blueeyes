@@ -4,7 +4,7 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.{Chunk, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
@@ -27,23 +27,23 @@ class HttpServerSpec extends Specification with BijectionsChunkReaderString{
   
   "HttpServer.apply" should {
     "be always defined" in {
-      server.isDefinedAt(HttpRequest[Chunk](HttpMethods.GET, "/blahblah")) must be (true)
-      server.isDefinedAt(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar")) must be (true)
+      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")) must be (true)
+      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")) must be (true)
     }
     
     "delegate to service request handler" in {
-      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkReaderToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkReaderToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
     "produce NotFount response when service is not defined for request" in {
-      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[Chunk](HttpStatus(HttpStatusCodes.NotFound)))
+      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
     }
 
     "gracefully handle error-producing service handler" in {
-      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
     "gracefully handle dead-future-producing service handler" in {
-      server.apply(HttpRequest[Chunk](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 
@@ -62,7 +62,7 @@ class HttpServerSpec extends Specification with BijectionsChunkReaderString{
   }  
 }
 
-class TestServer extends TestService with HttpReflectiveServiceList[Chunk]
+class TestServer extends TestService with HttpReflectiveServiceList[ByteChunk]
 
 trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
   var startupCalled   = false
@@ -77,15 +77,15 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
         path("/foo/bar") {
           produce(text/plain) {
             get {
-              request: HttpRequest[Chunk] => Future(HttpResponse[String](content=Some(value)))
+              request: HttpRequest[ByteChunk] => Future(HttpResponse[String](content=Some(value)))
             } ~
             path("/error") { 
-              get { request: HttpRequest[Chunk] =>
+              get { request: HttpRequest[ByteChunk] =>
                 error("He's dead, Jim.")
               }
             } ~
             path("/dead") {
-              get { request: HttpRequest[Chunk] =>
+              get { request: HttpRequest[ByteChunk] =>
                 Future.dead[HttpResponse[String]](new RuntimeException())
               }
             }

@@ -84,7 +84,7 @@ object BijectionsByteArray extends BijectionsByteArray
 trait BijectionsChunkReaderJson{
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
 
-  implicit val JValueToChunkReader      = new Bijection[JValue, Chunk]{
+  implicit val JValueToChunkReader      = new Bijection[JValue, ByteChunk]{
     def apply(t: JValue)         = {
       val stream = new ByteArrayOutputStream()
 
@@ -92,7 +92,7 @@ trait BijectionsChunkReaderJson{
 
       new MemoryChunk(stream.toByteArray())
     }
-    def unapply(s: Chunk)  = try {
+    def unapply(s: ByteChunk)  = try {
       JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
     }
     catch {
@@ -105,9 +105,9 @@ trait BijectionsChunkReaderJson{
 object BijectionsChunkReaderJson extends BijectionsChunkReaderJson
 
 trait BijectionsChunkReaderString {
-  implicit val StringToChunkReader = new Bijection[String, Chunk] {
-    def apply(s: String): Chunk   = new MemoryChunk(s.getBytes("UTF-8"))
-    def unapply(t: Chunk): String = new String(t.data, "UTF-8")
+  implicit val StringToChunkReader = new Bijection[String, ByteChunk] {
+    def apply(s: String): ByteChunk   = new MemoryChunk(s.getBytes("UTF-8"))
+    def unapply(t: ByteChunk): String = new String(t.data, "UTF-8")
   }
 
   implicit val ChunkReaderToString    = StringToChunkReader.inverse
@@ -115,9 +115,9 @@ trait BijectionsChunkReaderString {
 object BijectionsChunkReaderString extends BijectionsChunkReaderString
 
 trait BijectionsChunkReaderByteArray {
-  implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], Chunk] {
-    def apply(t: Array[Byte]): Chunk    = new MemoryChunk(t)
-    def unapply(s: Chunk): Array[Byte]  = s.data
+  implicit val ArrayByteToChunkReader = new Bijection[Array[Byte], ByteChunk] {
+    def apply(t: Array[Byte]): ByteChunk    = new MemoryChunk(t)
+    def unapply(s: ByteChunk): Array[Byte]  = s.data
   }
 
   implicit val ChunkReaderToArrayByte = ArrayByteToChunkReader.inverse
@@ -126,9 +126,9 @@ object BijectionsChunkReaderByteArray extends BijectionsChunkReaderByteArray
 
 trait BijectionsChunkReaderXML {
   import java.io.{ByteArrayInputStream}
-  implicit val XMLToChunkReader   = new Bijection[NodeSeq, Chunk] {
+  implicit val XMLToChunkReader   = new Bijection[NodeSeq, ByteChunk] {
     def apply(s: NodeSeq)    = new MemoryChunk(s.toString.getBytes)
-    def unapply(t: Chunk)    = try{
+    def unapply(t: ByteChunk)    = try{
       XML.load(new ByteArrayInputStream(t.data))
     }
     catch {

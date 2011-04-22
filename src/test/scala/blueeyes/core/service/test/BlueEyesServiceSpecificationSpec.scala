@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
-import blueeyes.core.data.{Chunk, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString}
 import TestService._
 import org.specs.util._
 import org.specs.util.TimeConversions._

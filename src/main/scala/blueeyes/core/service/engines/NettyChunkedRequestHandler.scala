@@ -11,11 +11,11 @@ import org.jboss.netty.channel._
 import NettyChunkedRequestHandler._
 import blueeyes.core.http.HttpRequest
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
-import blueeyes.core.data.{MemoryChunk, Chunk}
+import blueeyes.core.data.{MemoryChunk, ByteChunk}
 
 class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with NettyConverters with FutureDeliveryStrategySequential{
 
-  private var delivery: Option[(Either[HttpRequest[Chunk], Future[Chunk]], ChannelBuffer)] = None
+  private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     def buffer  = ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory())
@@ -44,7 +44,7 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
           content.writeBytes(chunk.getContent())
           if (chunk.isLast || content.capacity >= chunkSize) {
             val nextChunkFuture = if (!chunk.isLast){
-              val future = new Future[Chunk]()
+              val future = new Future[ByteChunk]()
               delivery   = Some(Right(future), buffer)
               Some(future)
             }
