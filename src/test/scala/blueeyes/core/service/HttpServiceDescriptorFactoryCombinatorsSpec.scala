@@ -11,7 +11,6 @@ import blueeyes.concurrent.Future
 import java.io.File
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkReaderJson{
-  import BijectionsChunkReaderString._
   override def configuration = """
     services {
       foo {
@@ -34,9 +33,9 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
       Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
-        case Some("/foo/v1/proxy")  => StringToChunkReader("it works!")
+        case Some("/foo/v1/proxy")  => BijectionsChunkReaderString.StringToChunkReader("it works!")
 
-        case _ => StringToChunkReader("it does not work!")
+        case _ => BijectionsChunkReaderString.StringToChunkReader("it does not work!")
       })))
     }
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
@@ -59,7 +58,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "support health monitor statistics" in {
-      val f = service.contentType[JValue](application/json).get("/blueeyes/services/email/v1/health")
+      val f = service.get[JValue]("/blueeyes/services/email/v1/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get
@@ -76,12 +75,13 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "add service locator" in {
-      val f = service.get("/proxy")
+      import BijectionsChunkReaderString._
+      val f = service.get[String]("/proxy")
       f.value must eventually(beSomething)
 
       val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
-      response.content.map(v => ChunkReaderToString(v)) must beSome("it works!")
+      response.content must beSome("it works!")
     }
   }
 

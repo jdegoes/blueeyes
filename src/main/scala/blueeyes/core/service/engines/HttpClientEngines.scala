@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.data.Bijection
+import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
 import blueeyes.core.service.HttpClient
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
@@ -12,13 +12,13 @@ import javax.net.ssl.SSLContext
 import net.lag.logging.Logger
 import org.xlightweb.client.{HttpClient => XLHttpClient}
 import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
-                      OptionsRequest, PostRequest, PutRequest, BodyDataSource}
+                      OptionsRequest, PostRequest, PutRequest}
 import scala.collection.JavaConversions._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import collection.mutable.ArrayBuilder.ofByte
 
 
-sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeliveryStrategySequential{
-  def contentBijection: Bijection[BodyDataSource, Option[T]]
+trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
@@ -42,13 +42,13 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
     case Some(client) => client
   }
 
-  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = {
-    val result = new Future[HttpResponse[T]]()
+  def apply(request: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
+    val result = new Future[HttpResponse[ByteChunk]]()
     executeRequest(request, result)
     result
   }
 
-  private def executeRequest(request: HttpRequest[T], resultFuture: Future[HttpResponse[T]]) {
+  private def executeRequest(request: HttpRequest[ByteChunk], resultFuture: Future[HttpResponse[ByteChunk]]) {
     val httpClientInstance = httpClient(() => {
       request.uri.scheme match{
         case Some("https") => new XLHttpClient(createSSLContext)
@@ -70,7 +70,8 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
         } else {
 
           val data = try {
-            contentBijection(response.getBody)
+            val bytes = response.getBody.readBytes
+            if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
           } catch {
             case e: Throwable => {
               Logger.get.error(e, "Failed to transcode response body")
@@ -82,7 +83,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
             acc + (name -> response.getHeader(name))
           }
 
-          resultFuture.deliver(HttpResponse[T](status = HttpStatus(response.getStatus), content = data, headers = headers))
+          resultFuture.deliver(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
         }
       }
 
@@ -98,7 +99,7 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
     })
   }
 
-  private def createXLRequest(request: HttpRequest[T]): XLHttpRequest =  {
+  private def createXLRequest(request: HttpRequest[ByteChunk]): XLHttpRequest =  {
     import blueeyes.util.QueryParser
     import java.net.URI
 
@@ -110,8 +111,9 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
                       if(newQueryParams.length == 0) null else newQueryParams,
                       origURI.getFragment).toString
 
-    val newHeaders         = request.headers + requestContentLength(request)
-    val xlRequest          = createXLRequest(request, uri)
+    val byteContent = request.content.map(readContent(_))
+    val newHeaders  = request.headers + requestContentLength(byteContent)
+    val xlRequest   = createXLRequest(request, byteContent, uri)
 
     for (pair <- newHeaders)
       yield xlRequest.addHeader(pair._1, pair._2)
@@ -119,19 +121,19 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
     xlRequest
   }
 
-  def isDefinedAt(request: HttpRequest[T]) = request.method match{
+  def isDefinedAt(request: HttpRequest[ByteChunk]) = request.method match{
     case HttpMethods.DELETE | HttpMethods.GET | HttpMethods.HEAD | HttpMethods.OPTIONS | HttpMethods.POST | HttpMethods.PUT => true
     case _ => false
   }
 
-  private def createXLRequest(request: HttpRequest[T], url: String): XLHttpRequest = {
+  private def createXLRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String): XLHttpRequest = {
     request.method match {
       case HttpMethods.DELETE     => new DeleteRequest(url)
       case HttpMethods.GET        => new GetRequest(url)
       case HttpMethods.HEAD       => new HeadRequest(url)
       case HttpMethods.OPTIONS    => new OptionsRequest(url)
-      case HttpMethods.POST       => postRequest(request, url)
-      case HttpMethods.PUT        => putRequest(request, url)
+      case HttpMethods.POST       => postRequest(request, content, url)
+      case HttpMethods.PUT        => putRequest(request, content, url)
       case HttpMethods.CONNECT    => error("CONNECT is not implemented.")
       case HttpMethods.TRACE      => error("TRACE is not implemented.")
       case HttpMethods.PATCH      => error("PATCH is not implemented.")
@@ -139,55 +141,27 @@ sealed trait HttpClientXLightWebEngines[T] extends HttpClient[T] with FutureDeli
     }
   }
 
-  private def postRequest(request: HttpRequest[T], url: String) = {
-    request.content.map(v => {
-      val contentType = requestContentType(request).value
-      if (v.isInstanceOf[String])       new PostRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else if (v.isInstanceOf[Array[Byte]])  new PostRequest(url, requestContentType(request).value, v.asInstanceOf[Array[Byte]])
-      else error("Unsupported body type. Content type can be either String or Array[Byte].")
-    }).getOrElse[XLHttpRequest](new PostRequest(url))
+  private def postRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String) = {
+    content.map(v => new PostRequest(url, requestContentType(request).value, v)).getOrElse[XLHttpRequest](new PostRequest(url))
   }
-  private def putRequest(request: HttpRequest[T], url: String) = {
-    request.content.map(v => {
-      val contentType = requestContentType(request).value
-      if (v.isInstanceOf[String])       new PutRequest(url, requestContentType(request).value, v.asInstanceOf[String])
-      else if (v.isInstanceOf[Array[Byte]])  new PutRequest(url, requestContentType(request).value, v.asInstanceOf[Array[Byte]])
-      else error("Unsupported content type. Content type can be either String or Array[Byte].")
-    }).getOrElse[XLHttpRequest](new PutRequest(url))
+  private def putRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String) = {
+    content.map(v => new PutRequest(url, requestContentType(request).value, v)).getOrElse[XLHttpRequest](new PutRequest(url))
   }
 
-  private def requestContentType(request: HttpRequest[T]) = {
+  private def requestContentType(request: HttpRequest[ByteChunk]) = {
     val mimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- request.headers) yield mimeTypes.toList).toList.flatten
     `Content-Type`(mimeType : _*)
   }
-  private def requestContentLength(request: HttpRequest[T]) = {
-    `Content-Length`(request.content.map(v => {
-      if (v.isInstanceOf[String]) v.asInstanceOf[String].length
-      else if (v.isInstanceOf[Array[Byte]]) v.asInstanceOf[Array[Byte]].size
-      else error("Unsupported content type. Content type can be either String or Array[Byte].")
-    }).getOrElse[Int](0))
-  }
-}
+  private def requestContentLength(content: Option[Array[Byte]]) = `Content-Length`(content.map(_.size).getOrElse[Int](0))
 
-trait HttpClientXLightWebEnginesArrayByte extends HttpClientXLightWebEngines[Array[Byte]]{
-  val contentBijection = XLightWebRequestBijections.BodyDataSourceToByteArray
-}
+  private def readContent(chunk: ByteChunk): Array[Byte] = readContent(chunk, new ofByte()).result
+  private def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
+    buffer ++= chunk.data
 
-trait HttpClientXLightWebEnginesString extends HttpClientXLightWebEngines[String]{
-  val contentBijection = XLightWebRequestBijections.BodyDataSourceToString
-}
-
-object XLightWebRequestBijections{
-  val BodyDataSourceToByteArray = new Bijection[BodyDataSource, Option[Array[Byte]]]{
-    def apply(content: BodyDataSource) = {
-      val bytes = content.readBytes
-      if (!bytes.isEmpty) Some(bytes) else None
-  }
-    def unapply(content: Option[Array[Byte]])  = error("Not imlemented")
-  }
-
-  val BodyDataSourceToString = new Bijection[BodyDataSource, Option[String]]{
-    def apply(content: BodyDataSource)    = Some(content.readString)
-    def unapply(content: Option[String])  = error("Not imlemented")
+    val next = chunk.next
+    next match{
+      case None =>  buffer
+      case Some(x) => readContent(x.value.get, buffer)
+    }
   }
 }

@@ -15,17 +15,16 @@ import org.specs.util.TimeConversions._
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkReaderString{
   "Service Specification" should {
-    def client = service.contentType[String](text/html)
     "support get by valid URL" in {
-      val f = client.get("/bar/id/bar.html")
+      val f = service.get[String]("/bar/id/bar.html")
       f.value must eventually (beSome(serviceResponse))
     }
     "support asynch get by valid URL" in {
-      val f = client.get("/asynch/future")
+      val f = service.get[String]("/asynch/future")
       f.value must eventually(5, new Duration(10000)) (beSome(serviceResponse))
     }
-    "support eventually asynch get by valid URL" in { client: HttpClient[String] =>
-      client.get("/asynch/eventually").value must eventually (beSome(serviceResponse))
+    "support eventually asynch get by valid URL" in {
+      service.get[String]("/asynch/eventually").value must eventually (beSome(serviceResponse))
     }
   }
 }
@@ -34,21 +33,21 @@ trait TestService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {
-      contentType(text/html) {
+      produce(text/html) {
         path("/bar/'foo/bar.html") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ByteChunk] =>
             serviceResponse
           }
         }~
         path("/asynch/future") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ByteChunk] =>
             async {
               serviceResponse
             }
           }
         }~
         path("/asynch/eventually") {
-          get { request: HttpRequest[String] =>
+          get { request: HttpRequest[ByteChunk] =>
             if (eventuallyCondition) {
               serviceResponse
             } else {

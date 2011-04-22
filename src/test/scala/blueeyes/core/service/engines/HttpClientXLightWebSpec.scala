@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.data.BijectionsByteArray._
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString, BijectionsIdentity}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString, BijectionsChunkReaderByteArray}
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
@@ -14,14 +14,13 @@ import org.specs.util._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
 import collection.mutable.ArrayBuilder.ofByte
 
-class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential with BijectionsIdentity{
+class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential with BijectionsChunkReaderString{
   import HttpHeaderImplicits._
 
   val duration = 250
   val retries = 30
 
-  private val httpClient = new HttpClientXLightWebEnginesString { }
-  private val httpClientArrayByte = new HttpClientXLightWebEnginesArrayByte { }
+  private val httpClient = new HttpClientXLightWebEngines { }
 
   private val configPattern = """server {
     port = %d
@@ -61,7 +60,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
     }
 
     "Support GET to invalid server should return http error" in {
-      val f = httpClient.get("http://127.0.0.1:666/foo")
+      val f = httpClient.get[String]("http://127.0.0.1:666/foo")
       f.error must eventually(retries, new Duration(duration))(beNone)
     }
 
@@ -189,16 +188,17 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
       responses must beEqual(total)
     }
 
-    "Support GET requests with query params with Array[Byte]" in {
-      val f = httpClientArrayByte.get(uri + "?param1=a&param2=b")
+    "Support GET requests with query params" in {
+      val f = httpClient.get[String](uri + "?param1=a&param2=b")
       f.value must eventually(retries, new Duration(duration))(beSomething)
-      f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
+      f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=a&param2=b"))
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
     "Support POST requests with body with Array[Byte]" in {
+      import BijectionsChunkReaderByteArray._
       val content = "Hello, world"
-      val f = httpClientArrayByte.post(uri)(StringToByteArray(content))
+      val f = httpClient.post(uri)(StringToByteArray(content))
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace(content))
       f.value.get.status.code must be(HttpStatusCodes.OK)
@@ -206,10 +206,10 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
 
     "Support POST requests with encoded URL should be preserved" in {
       val content = "Hello, world"
-      val f = httpClientArrayByte.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(StringToByteArray(content))
+      val f = httpClient.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.status.code must be(HttpStatusCodes.OK)
-      f.value.get.content.map(ByteArrayToString(_)).get.contains("plckForumId=Cat:Wedding BoardsForum:238") must beTrue
+      f.value.get.content.get.contains("plckForumId=Cat:Wedding BoardsForum:238") must beTrue
     }
   }
 }

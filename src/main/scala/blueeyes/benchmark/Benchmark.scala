@@ -1,6 +1,6 @@
 package blueeyes.benchmark
 
-import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
+import blueeyes.core.service.engines.HttpClientXLightWebEngines
 import blueeyes.core.service.HttpClient
 import blueeyes.demo.{BlueEyesDemo, Contact, BlueEyesDemoFacade}
 import blueeyes.concurrent.Future
@@ -13,7 +13,7 @@ object Benchmark extends ServerStart{ self =>
 
   class BlueEyesDemoFacadeImpl extends BlueEyesDemoFacade{
     def port = self.port
-    val httpClient = new HttpClientXLightWebEnginesArrayByte{}
+    val httpClient = new HttpClientXLightWebEngines{}
   }
 
   def main(args: Array[String]){
@@ -83,7 +83,7 @@ object Benchmark extends ServerStart{ self =>
   }
 }
 
-class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, val timer: Timer, durationInSecs: Int) extends Runnable with HttpClientXLightWebEnginesArrayByte{
+class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, val timer: Timer, durationInSecs: Int) extends Runnable with HttpClientXLightWebEngines{
   val taskCounDown  = new CountDownLatch(1)
   def run = {
     val start = System.currentTimeMillis

@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsIdentity, BijectionsChunkReaderString}
+import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkReaderString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -16,7 +16,7 @@ import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 import java.io.File
 
-class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray with BijectionsIdentity{
+class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray with BijectionsChunkReaderString{
 
   private val configPattern = """server{
   port = %d
@@ -161,7 +161,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
 
 class SampleServer extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
 
-class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEnginesString{
+class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEngines{
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())

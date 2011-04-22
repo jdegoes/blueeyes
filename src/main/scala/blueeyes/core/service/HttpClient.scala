@@ -8,23 +8,23 @@ import org.jboss.netty.handler.codec.http.CookieEncoder
 
 trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
-  def get(path: String) = method(HttpMethods.GET, path)
+  def get[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.GET, path)
 
   def post[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.POST, path, Some(transcoder.apply(content)))
 
   def put[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.PUT, path, Some(transcoder.apply(content)))
 
-  def delete(path: String) = method(HttpMethods.DELETE, path)
+  def delete[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.DELETE, path)
 
-  def options(path: String) = method(HttpMethods.OPTIONS, path)
+  def options[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.OPTIONS, path)
 
-  def head(path: String) = method(HttpMethods.HEAD, path)
+  def head[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.HEAD, path)
 
-  def connect(path: String) = method(HttpMethods.CONNECT, path)
+  def connect[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.CONNECT, path)
 
-  def trace(path: String) = method(HttpMethods.TRACE, path)
+  def trace[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.TRACE, path)
 
-  def custom(custom: HttpMethod, path: String) = method(custom, path)
+  def custom[B](custom: HttpMethod, path: String)(implicit transcoder: Bijection[B, A]) = method(custom, path)
 
   def protocol(protocol: String) = buildClient { request => request.withUriChanges(scheme = Some(protocol)) }
 
@@ -95,7 +95,11 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
     HttpRequest(request.method, URI(newUrl), request.parameters, request.headers, request.content, request.remoteHost, request.version)
   }
 
-  private def method(method: HttpMethod, path: String, content: Option[A] = None) = self.apply(HttpRequest(method, path,  Map(),  Map(), content))
+  private def method[B](method: HttpMethod, path: String, content: Option[A] = None)(implicit transcoder: Bijection[B, A]): Future[HttpResponse[B]] =
+    self.apply(HttpRequest(method, path,  Map(),  Map(), content)).map{response => {
+      val newC = response.content.map(transcoder.unapply(_))
+      response.copy(content = response.content.map(transcoder.unapply(_)))
+    }}
 
   private def buildClient(copy: (HttpRequest[A]) => HttpRequest[A]) = new HttpClient[A] {
     def isDefinedAt(request: HttpRequest[A]): Boolean = self.isDefinedAt(request)

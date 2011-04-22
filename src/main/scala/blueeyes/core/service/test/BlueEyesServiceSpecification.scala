@@ -9,7 +9,7 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
-class BlueEyesServiceSpecification extends Specification with HttpServer with HttpReflectiveServiceList[ByteChunk] with BijectionsIdentity{ self: HttpServer =>
+class BlueEyesServiceSpecification extends Specification with HttpServer with HttpReflectiveServiceList[ByteChunk]{ self: HttpServer =>
   shareVariables()
 
   doBeforeSpec {
