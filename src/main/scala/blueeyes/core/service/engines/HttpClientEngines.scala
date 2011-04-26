@@ -11,11 +11,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
 import net.lag.logging.Logger
 import org.xlightweb.client.{HttpClient => XLHttpClient}
-import org.xlightweb.{HttpRequest => XLHttpRequest, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest,
-                      OptionsRequest, PostRequest, PutRequest}
 import scala.collection.JavaConversions._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 import collection.mutable.ArrayBuilder.ofByte
+import java.nio.ByteBuffer
+import java.nio.channels.WritableByteChannel
+import org.xlightweb.{IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
 
 trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{
@@ -69,21 +70,14 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
           }
         } else {
 
-          val data = try {
-            val bytes = response.getBody.readBytes
-            if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
-          } catch {
-            case e: Throwable => {
-              Logger.get.error(e, "Failed to transcode response body")
-              None
-            }
-          }
-
           val headers = response.getHeaderNameSet.toList.asInstanceOf[List[String]].foldLeft(Map[String, String]()) { (acc: Map[String, String], name: String) =>
             acc + (name -> response.getHeader(name))
           }
 
-          resultFuture.deliver(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
+          val isChunked = headers.find((keyValue) => keyValue._1.equalsIgnoreCase("Transfer-Encoding") && keyValue._2.equalsIgnoreCase("chunked")).map(v => true).getOrElse(false)
+
+          if (isChunked) readChunked(response, headers, resultFuture)
+          else readNotChunked(response, headers, resultFuture)
         }
       }
 
@@ -95,6 +89,59 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
         }
 
         resultFuture.cancel(HttpException(httpStatus, e))
+      }
+    })
+  }
+
+  private def readNotChunked(response: IHttpResponse, headers: Map[String, String], resultFuture: Future[HttpResponse[ByteChunk]]){
+    val data = try {
+      val bytes = response.getBody.readBytes
+      if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
+    } catch {
+      case e: Throwable => {
+        Logger.get.error(e, "Failed to transcode response body")
+        None
+      }
+    }
+    resultFuture.deliver(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
+  }
+
+  private def readChunked(response: IHttpResponse, headers: Map[String, String], resultFuture: Future[HttpResponse[ByteChunk]]){
+    val dataSource = response.getNonBlockingBody()
+    dataSource.setDataHandler(new IBodyDataHandler{
+      var delivery: Either[HttpResponse[ByteChunk], Future[ByteChunk]] = Left(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = None, headers = headers))
+
+      def onData(source: NonBlockingBodyDataSource) = {
+        try {
+          val available = source.available()
+          if (available > 0) {
+            val data        = org.xsocket.DataConverter.toBytes(source.readByteBufferByLength(available))
+            val nextFuture  = new Future[ByteChunk]()
+            val content     = new ByteMemoryChunk(data, () => Some(nextFuture))
+            delivery match {
+              case Left(x) =>
+                delivery        = Right(nextFuture)
+                resultFuture.deliver(x.copy(content = Some(content)))
+              case Right(x) =>
+                delivery        = Right(nextFuture)
+                x.deliver(content)
+            }
+          }
+          else if (available == -1){
+            delivery match {
+              case Left(x) => resultFuture.deliver(x)
+              case Right(x) => x.deliver(new ByteMemoryChunk(Array[Byte]()))
+            }
+          }
+        }
+        catch {
+          case e: Throwable =>
+            delivery match {
+              case Left(x) => resultFuture.cancel(e)
+              case Right(x) => x.cancel(e)
+            }
+        }
+        true
       }
     })
   }

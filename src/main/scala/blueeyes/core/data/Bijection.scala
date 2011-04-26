@@ -51,6 +51,7 @@ trait BijectionsIdentity{
   implicit val StringToString         = Bijection.identity[String]
   implicit val ArrayByteToArrayByte   = Bijection.identity[Array[Byte]]
   implicit val XMLToXML               = Bijection.identity[NodeSeq]
+  implicit val ByteChunkToByteChunk   = Bijection.identity[ByteChunk]
 }
 object BijectionsIdentity extends BijectionsIdentity
 

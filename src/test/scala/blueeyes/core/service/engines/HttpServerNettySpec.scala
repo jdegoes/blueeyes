@@ -1,6 +1,7 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.service._
+import collection.mutable.ArrayBuilder.ofByte
 import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
@@ -8,7 +9,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkReaderString}
+import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkReaderString, BijectionsIdentity}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -64,6 +65,7 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
       response.value.get.status.code must be (OK)
+      response.value.get.content must beNone
     }
     "write file"in{
       Context.dataFile.delete
@@ -123,18 +125,20 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
       response.value.get.content must beSome(Context.context)
     }
     "return huge content"in{
-      val response = client.get("/huge")
+      import BijectionsIdentity._
+      val response = client.get[ByteChunk]("/huge")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
       response.value.get.status.code must be (OK)
-      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
     "return huge delayed content"in{
-      val response = client.get("/huge/delayed")
+      import BijectionsIdentity._
+      val response = client.get[ByteChunk]("/huge/delayed")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
       response.value.get.status.code must be (OK)
-      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
     "return html by correct URI by https" in{
       val response = sslClient.get("/bar/foo/adCode.html")
@@ -142,11 +146,12 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
       response.value.get.content.get mustEqual(Context.context)
     }
     "return huge content by htpps"in{
-      val response = sslClient.get("/huge")
+      import BijectionsIdentity._
+      val response = sslClient.get[ByteChunk]("/huge")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
       response.value.get.status.code must be (OK)
-      response.value.get.content must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
 
     doLast{
@@ -155,6 +160,21 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
     }
   }
 
+  private def readContent(chunk: ByteChunk): String = {
+    val result = new Future[String]()
+    readContent(chunk, new ofByte(), result)
+
+    result.value must eventually(retries, new Duration(duration)) (beSomething)
+    result.value.get
+  }
+  private def readContent(chunk: ByteChunk, buffer: ofByte, result: Future[String]) {
+    buffer ++= chunk.data
+
+    chunk.next match{
+      case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, buffer, result))
+      case None => result.deliver(new String(buffer.result, "UTF-8"))
+    }
+  }
   private def client    = new LocalHttpsClient(server.get.config).protocol("http").host("localhost").port(port)
   private def sslClient = new LocalHttpsClient(server.get.config).protocol("https").host("localhost").port(port + 1)
 }
@@ -252,15 +272,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 object Context{
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
 
-  val hugeContext = List[Array[Byte]]("""<html>
-<head>
-</head>
-
-""".getBytes, """<body>
-    <h1>Test</h1>
-    <h1>Test</h1>
-</body>
-</html>""".getBytes)
+  val hugeContext = List[Array[Byte]]("first-".getBytes ++ Array.fill[Byte](2048*1000)('0'), "second-".getBytes ++ Array.fill[Byte](2048*1000)('0'))
   val context = """<html>
 <head>
 </head>
