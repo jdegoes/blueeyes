@@ -9,7 +9,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkReaderString, BijectionsIdentity}
+import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkString, BijectionsIdentity}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -17,7 +17,7 @@ import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 import java.io.File
 
-class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray with BijectionsChunkReaderString{
+class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray with BijectionsChunkString{
 
   private val configPattern = """server{
   port = %d
@@ -191,7 +191,7 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEngines{
   }
 }
 
-trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
+trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString{
   import blueeyes.core.http.MimeTypes._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))

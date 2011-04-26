@@ -8,12 +8,12 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import TestService._
 import org.specs.util._
 import org.specs.util.TimeConversions._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkReaderString{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString{
   "Service Specification" should {
     "support get by valid URL" in {
       val f = service.get[String]("/bar/id/bar.html")
@@ -29,7 +29,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
   }
 }
 
-trait TestService extends BlueEyesServiceBuilder with BijectionsChunkReaderString{
+trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {

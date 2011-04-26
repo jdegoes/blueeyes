@@ -10,21 +10,21 @@ import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
-import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkString}
 import java.net.InetSocketAddress
 import net.lag.logging.Logger
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkReaderString{
+class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkString{
   private val handler       = mock[HttpRequestHandler[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
   private val request       = HttpRequest[ByteChunk](HttpMethods.GET, URI("/bar/1/adCode.html"), Map[Symbol, String](), HttpHeaders(), None, None, HttpVersions.`HTTP/1.0`)
-  private val response      = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), HttpVersions.`HTTP/1.1`)
+  private val response      = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunk("12")), HttpVersions.`HTTP/1.1`)
   private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
 
   "write OK response service when path is match" in {

@@ -1,8 +1,7 @@
 package blueeyes.core.service.engines
 
-import blueeyes.core.data.BijectionsByteArray._
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, ByteMemoryChunk, BijectionsChunkReaderString, BijectionsIdentity, BijectionsChunkReaderByteArray}
+import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
@@ -13,8 +12,9 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
 import collection.mutable.ArrayBuilder.ofByte
+import blueeyes.json.JsonAST._
 
-class HttpClientXLightWebSpec extends Specification with FutureImplicits with FutureDeliveryStrategySequential with BijectionsChunkReaderString{
+class HttpClientXLightWebSpec extends Specification with FutureImplicits with BijectionsChunkString with ContentReader{
   import HttpHeaderImplicits._
 
   val duration = 250
@@ -205,11 +205,25 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
     }
 
     "Support POST requests with body with Array[Byte]" in {
-      import BijectionsChunkReaderByteArray._
+      import BijectionsChunkByteArray._
+      import BijectionsByteArray._
       val content = "Hello, world"
       val f = httpClient.post(uri)(StringToByteArray(content))
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(equalIgnoreSpace(content))
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+    }
+    "Support POST requests with body several chunks and transcoding" in {
+      import BijectionsChunkByteArray._
+      import BijectionsByteArray._
+      implicit val bijection = chunksToChunksArrayByte[String]
+
+      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future[Chunk[String]](new MemoryChunk[String]("bar"))))
+
+      val f = httpClient.post(uri)(chunks)(bijection)
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      val content = readContent(f.value.get.content.get).map(_.mkString(""))
+      content.value must eventually(retries, new Duration(duration))(beSome("foobar"))
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
@@ -228,7 +242,23 @@ import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
 
 object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
 
-trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderString{
+trait ContentReader extends FutureDeliveryStrategySequential{
+  def readContent[T](chunk: Chunk[T]): Future[List[T]] = {
+    val result = new Future[List[T]]()
+    readContent[T](chunk, List[T](), result)
+    result
+  }
+  def readContent[T](chunk: Chunk[T], chunks: List[T], result: Future[List[T]]) {
+    val newChunks = chunks ::: List(chunk.data)
+
+    chunk.next match{
+      case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, newChunks, result))
+      case None => result.deliver(newChunks)
+    }
+  }
+}
+
+trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with ContentReader{
   import blueeyes.core.http.MimeTypes._
 
   private implicit val ordering = new Ordering[Symbol] {
@@ -250,16 +280,18 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
       }.mkString("&")
     }.getOrElse("")
     val content: Future[String] = request.content.map{v =>
-      val result = new Future[String]()
-      readContent(v, new ofByte(), result)
-      result
+      readStringContent(v)
     }.getOrElse(Future.lift[String](""))
     val result = new Future[HttpResponse[String]]()
-    content.deliverTo(v => result.deliver(response(content = Some(params + v + headers))))
+    content.deliverTo{v => result.deliver(response(content = Some(params + v + headers)))}
     content.ifCanceled(th => result.cancel(th))
     result
   }
 
+  private def readStringContent(chunk: ByteChunk) = {
+    val result = readContent(chunk)
+    result.map(_.map(v => new String(v, "UTF-8")).mkString(""))
+  }
   private def readContent(chunk: ByteChunk, buffer: ofByte, result: Future[String]) {
     buffer ++= chunk.data
 
@@ -271,8 +303,8 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkReaderStrin
 
   val echoService: HttpService[ByteChunk] = service("echo", "1.0.0") { context =>
     request {
-      produce(text/html) {
-        path("/echo") {
+      path("/echo") {
+        produce(text/html) {
           get(handler) ~
 	        post(handler) ~
 	        put(handler) ~

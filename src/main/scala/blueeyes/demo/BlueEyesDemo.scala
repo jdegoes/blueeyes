@@ -10,7 +10,7 @@ import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderJson}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkJson}
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.json.{JPathField, JPath}
 import blueeyes.persistence.mongo.MockMongo
@@ -20,7 +20,7 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderJson{
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson{
   def mongo: Mongo
 
   val contactListService = service("contactlist", "1.0.0") {

@@ -4,12 +4,12 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
-class HttpServerSpec extends Specification with BijectionsChunkReaderString{
+class HttpServerSpec extends Specification with BijectionsChunkString{
 
   private val server = new TestServer()
 
@@ -32,7 +32,7 @@ class HttpServerSpec extends Specification with BijectionsChunkReaderString{
     }
     
     "delegate to service request handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkReaderToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
     "produce NotFount response when service is not defined for request" in {
@@ -64,7 +64,7 @@ class HttpServerSpec extends Specification with BijectionsChunkReaderString{
 
 class TestServer extends TestService with HttpReflectiveServiceList[ByteChunk]
 
-trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderString{
+trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString{
   var startupCalled   = false
   var shutdownCalled  = false
   lazy val testService = service("test", "1.0.7") {

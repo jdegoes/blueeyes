@@ -10,10 +10,10 @@ import blueeyes.core.http._
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkString, MemoryChunk}
 import blueeyes.core.http.MimeTypes._
 
-class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkReaderString{
+class NettyConvertersSpec extends Specification with NettyConverters with BijectionsChunkString{
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
@@ -27,7 +27,7 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
     toNettyStatus(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
   }
   "convert service HttpResponse to netty HttpResponse" in {
-    val response = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunkReader("12")), `HTTP/1.0`)
+    val response = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound), Map("retry-after" -> "1"), Some(StringToChunk("12")), `HTTP/1.0`)
     val message  = toNettyResponse(response, true)
 
     message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))

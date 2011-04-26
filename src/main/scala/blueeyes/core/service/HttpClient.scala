@@ -8,23 +8,23 @@ import org.jboss.netty.handler.codec.http.CookieEncoder
 
 trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
-  def get[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.GET, path)
+  def get[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.GET, path)
 
-  def post[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.POST, path, Some(transcoder.apply(content)))
+  def post[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.POST, path, Some(transcoder(content)))
 
-  def put[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.PUT, path, Some(transcoder.apply(content)))
+  def put[B](path: String)(content: B)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.PUT, path, Some(transcoder(content)))
 
-  def delete[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.DELETE, path)
+  def delete[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.DELETE, path)
 
-  def options[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.OPTIONS, path)
+  def options[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.OPTIONS, path)
 
-  def head[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.HEAD, path)
+  def head[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.HEAD, path)
 
-  def connect[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.CONNECT, path)
+  def connect[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.CONNECT, path)
 
-  def trace[B](path: String)(implicit transcoder: Bijection[B, A]) = method(HttpMethods.TRACE, path)
+  def trace[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.TRACE, path)
 
-  def custom[B](custom: HttpMethod, path: String)(implicit transcoder: Bijection[B, A]) = method(custom, path)
+  def custom[B](custom: HttpMethod, path: String)(implicit transcoder: Bijection[B, A]) = method[B](custom, path)
 
   def protocol(protocol: String) = buildClient { request => request.withUriChanges(scheme = Some(protocol)) }
 

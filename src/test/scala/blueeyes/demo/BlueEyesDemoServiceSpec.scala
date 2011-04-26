@@ -11,10 +11,10 @@ import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
-import blueeyes.core.data.{BijectionsChunkReaderJson, BijectionsIdentity}
+import blueeyes.core.data.{BijectionsChunkJson, BijectionsIdentity}
 import blueeyes.core.service.HttpClient
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkReaderJson{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   private val databaseName   = "mydb"

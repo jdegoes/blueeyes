@@ -10,7 +10,7 @@ import blueeyes.concurrent.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
-import blueeyes.core.data.{BijectionsChunkReaderJson, ByteChunk, Bijection}
+import blueeyes.core.data.{BijectionsChunkJson, ByteChunk, Bijection}
 
 object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
@@ -47,7 +47,7 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
   }
 }
 
-trait BlueEyesDemoFacade extends BijectionsChunkReaderJson{
+trait BlueEyesDemoFacade extends BijectionsChunkJson{
 
   private implicit val jvalaueToJValue = Bijection.identity[JValue]
 
