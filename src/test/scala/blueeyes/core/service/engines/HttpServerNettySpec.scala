@@ -26,13 +26,13 @@ class HttpServerNettySpec extends Specification with FutureDeliveryStrategySeque
 
   shareVariables()
 
-  val duration = 250
-  val retries = 30
+  val duration = 350
+  val retries = 50
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
 
-  "HttpServer" should{
+  "HttpServer" should {
     doFirst{
       var error: Option[Throwable] = None
       do{

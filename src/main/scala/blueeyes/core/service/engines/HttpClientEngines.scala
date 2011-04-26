@@ -13,13 +13,11 @@ import net.lag.logging.Logger
 import org.xlightweb.client.{HttpClient => XLHttpClient}
 import scala.collection.JavaConversions._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
-import collection.mutable.ArrayBuilder.ofByte
-import java.nio.ByteBuffer
-import java.nio.channels.WritableByteChannel
-import org.xlightweb.{IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
-
+import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
 trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{
+
+  private val logger = Logger.get
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
@@ -45,20 +43,23 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
 
   def apply(request: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
     val result = new Future[HttpResponse[ByteChunk]]()
-    executeRequest(request, result)
+    executeRequest(request, createXLRequest(request), result)
     result
   }
 
-  private def executeRequest(request: HttpRequest[ByteChunk], resultFuture: Future[HttpResponse[ByteChunk]]) {
-    val httpClientInstance = httpClient(() => {
-      request.uri.scheme match{
+  private def httpClientInstance(scheme: Option[String]) = {
+    httpClient(() => {
+      scheme match{
         case Some("https") => new XLHttpClient(createSSLContext)
         case _ => new XLHttpClient()
       }
     })
-    httpClientInstance.setAutoHandleCookies(false)
+  }
 
-    httpClientInstance.send(createXLRequest(request), new IHttpResponseHandler() {
+  private def executeRequest(request: HttpRequest[ByteChunk], xlrequest: IHeader, resultFuture: Future[HttpResponse[ByteChunk]]) = {
+    val clientInstance = httpClientInstance(request.uri.scheme)
+    clientInstance.setAutoHandleCookies(false)
+    val handler = new IHttpResponseHandler() {
       def onResponse(response: IHttpResponse) {
         if(response.getStatus >= 400) {
           val statusCode: HttpStatusCode = response.getStatus
@@ -90,7 +91,32 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
 
         resultFuture.cancel(HttpException(httpStatus, e))
       }
-    })
+    }
+
+    xlrequest match {
+      case e: IHttpRequest => clientInstance.send(e, handler)
+      case e: IHttpRequestHeader =>
+        val bodyDataSink = clientInstance.send(e, handler)
+        request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
+      case _ => error("wrong request type")
+    }
+  }
+
+  private def sendData(chunk: ByteChunk, bodyDataSink: BodyDataSink) {
+    try {
+      bodyDataSink.write(chunk.data, 0, chunk.data.length)
+
+      chunk.next match {
+        case Some(x) => x.deliverTo(nextChunk => sendData(nextChunk, bodyDataSink))
+        case None =>
+          bodyDataSink.close
+      }
+    }
+    catch {
+      case e: Throwable =>
+        logger.error(e, "Failed to send content")
+        bodyDataSink.close
+    }
   }
 
   private def readNotChunked(response: IHttpResponse, headers: Map[String, String], resultFuture: Future[HttpResponse[ByteChunk]]){
@@ -99,7 +125,7 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
       if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
     } catch {
       case e: Throwable => {
-        Logger.get.error(e, "Failed to transcode response body")
+        logger.error(e, "Failed to transcode response body")
         None
       }
     }
@@ -146,7 +172,7 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
     })
   }
 
-  private def createXLRequest(request: HttpRequest[ByteChunk]): XLHttpRequest =  {
+  private def createXLRequest(request: HttpRequest[ByteChunk]): IHeader =  {
     import blueeyes.util.QueryParser
     import java.net.URI
 
@@ -158,9 +184,8 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
                       if(newQueryParams.length == 0) null else newQueryParams,
                       origURI.getFragment).toString
 
-    val byteContent = request.content.map(readContent(_))
-    val newHeaders  = request.headers + requestContentLength(byteContent)
-    val xlRequest   = createXLRequest(request, byteContent, uri)
+    val newHeaders  = requestContentLength(request).foldLeft(request.headers){(headers, contentLength) => headers + contentLength}
+    val xlRequest   = createXLRequest(request, uri)
 
     for (pair <- newHeaders)
       yield xlRequest.addHeader(pair._1, pair._2)
@@ -173,14 +198,14 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
     case _ => false
   }
 
-  private def createXLRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String): XLHttpRequest = {
+  private def createXLRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
     request.method match {
       case HttpMethods.DELETE     => new DeleteRequest(url)
       case HttpMethods.GET        => new GetRequest(url)
       case HttpMethods.HEAD       => new HeadRequest(url)
       case HttpMethods.OPTIONS    => new OptionsRequest(url)
-      case HttpMethods.POST       => postRequest(request, content, url)
-      case HttpMethods.PUT        => putRequest(request, content, url)
+      case HttpMethods.POST       => postRequest(request, url)
+      case HttpMethods.PUT        => putRequest(request, url)
       case HttpMethods.CONNECT    => error("CONNECT is not implemented.")
       case HttpMethods.TRACE      => error("TRACE is not implemented.")
       case HttpMethods.PATCH      => error("PATCH is not implemented.")
@@ -188,27 +213,32 @@ trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDelive
     }
   }
 
-  private def postRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String) = {
-    content.map(v => new PostRequest(url, requestContentType(request).value, v)).getOrElse[XLHttpRequest](new PostRequest(url))
+  private def postRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
+    request.content match{
+      case None => new PostRequest(url)
+      case Some(x) if (x.next == None) => new PostRequest(url, requestContentType(request).value, x.data)
+      case Some(x) => new HttpRequestHeader("POST", url, requestContentType(request).value)
+    }
   }
-  private def putRequest(request: HttpRequest[ByteChunk], content: Option[Array[Byte]], url: String) = {
-    content.map(v => new PutRequest(url, requestContentType(request).value, v)).getOrElse[XLHttpRequest](new PutRequest(url))
+  private def putRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
+    request.content match{
+      case None => new PutRequest(url)
+      case Some(x) if (x.next == None) => new PutRequest(url, requestContentType(request).value, x.data)
+      case Some(x) => new HttpRequestHeader("PUT", url, requestContentType(request).value)
+    }
   }
 
   private def requestContentType(request: HttpRequest[ByteChunk]) = {
     val mimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- request.headers) yield mimeTypes.toList).toList.flatten
     `Content-Type`(mimeType : _*)
   }
-  private def requestContentLength(content: Option[Array[Byte]]) = `Content-Length`(content.map(_.size).getOrElse[Int](0))
+  private def requestContentLength(request: HttpRequest[ByteChunk]) = notChunkedContent(request.content).map(v => `Content-Length`(v.size))
 
-  private def readContent(chunk: ByteChunk): Array[Byte] = readContent(chunk, new ofByte()).result
-  private def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
-    buffer ++= chunk.data
-
-    val next = chunk.next
-    next match{
-      case None =>  buffer
-      case Some(x) => readContent(x.value.get, buffer)
+  private def notChunkedContent(chunk: Option[ByteChunk]): Option[Array[Byte]] = {
+    chunk.flatMap{value => value.next match {
+        case Some(x) => None
+        case None    => Some(value.data)
+      }
     }
   }
 }

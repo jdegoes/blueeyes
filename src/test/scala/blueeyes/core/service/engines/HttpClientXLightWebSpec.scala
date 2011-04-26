@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.data.BijectionsByteArray._
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkReaderString, BijectionsChunkReaderByteArray}
+import blueeyes.core.data.{ByteChunk, ByteMemoryChunk, BijectionsChunkReaderString, BijectionsIdentity, BijectionsChunkReaderByteArray}
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
@@ -155,6 +155,15 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Fu
       val f = httpClient.post(uri)(content)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.content.get.trim must beEqual(content)
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+    }
+    "Support POST requests with large payload with several chunks" in {
+      import BijectionsIdentity._
+      val content = Array.fill[Byte](2048*100)('0')
+      val chunk   = new ByteMemoryChunk(content, () => Some(Future(new ByteMemoryChunk(content))))
+      val f = httpClient.post[ByteChunk](uri)(chunk)
+      f.value must eventually(retries * 3, new Duration(duration))(beSomething)
+      (new String(f.value.get.content.get.data).length) must beEqual(new String(content ++ content).length)
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
