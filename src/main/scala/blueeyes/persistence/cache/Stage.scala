@@ -1,129 +1,145 @@
 package blueeyes.persistence.cache
 
-import scala.collection.mutable.Map
-import scala.actors.Actor
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
-import util.control.ControlThrowable
+import scalaz.Semigroup
 
-/** A stage is a particular kind of cache that is used for staging IO updates.
- * Many kinds of IO updates can be combined (e.g. instead of writing a single
- * log line to a file, you can collect ten lines and write them all at once).
- * This has the capacity to greatly improve performance when IO is a limiting
- * factor.
- * <p>
- * Built on a cache, stage supports standards eviction, settings such as time
- * to idle, time to live, and maximum weighted capacity.
- * <p>
- * Stopping a stage evicts all entries from the stage. As part of shutdown, in
- * order to avoid data loss, every stage should be stopped.
- */
-trait Stage[K, V] extends Map[K, V] with FutureDeliveryStrategySequential{
-  def settings: CacheSettings[K, V]
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential, Actor, Duration, SchedulableActor}
 
-  def coalesce: (K, V, V) => V
-
-  private type This = this.type
-
+trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private sealed trait Request
+  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends Request
+  private case object FlushExpired extends Request
+  private case object FlushAll extends Request
+
   private sealed trait Response
+  private case object Done extends Response
 
-  private case class  Get(k: K) extends Request
-  private case class  Add(k: K, v: V) extends Request
-  private case class  Remove(k: K) extends Request
-  private case object GetAll extends Request
-  private case object Stop extends Request
+  def flush(k: K, v: V): Unit
 
-  private case class  Got(v: Option[V]) extends Response
-  private case class  GotAll(list: List[(K, V)]) extends Response
-  private case object Stopped extends Response
+  def expirationPolicy: ExpirationPolicy
 
-  private lazy val actor: Actor = new Actor { self =>
-    lazy val accumulator: Map[K, V] = Cache.concurrent(settings)
+  def maximumCapacity: Int
 
-    def act = {
-      loop {
-        try receive {
-          case Get(k) =>
-            reply(Got(accumulator.get(k)))
+  class Cache[A, B](flush: (A, B) => Unit) extends scala.collection.mutable.Map[A, B] { self =>
+    private val impl = new java.util.LinkedHashMap[A, B]
 
-          case Add(k, v2) =>
-            accumulator.put(k,
-              accumulator.get(k) match {
-                case None     => v2
-                case Some(v1) => coalesce(k, v1, v2)
-              }
-            )
+    def get(key: A): Option[B] = Option(impl.get(key))
 
-          case Remove(k) =>
-            accumulator.remove(k)
+    def iterator: Iterator[(A, B)] = {
+      val it = impl.entrySet.iterator
 
-          case Stop =>
-            accumulator.foreach { entry =>
-              settings.evict(entry._1, entry._2)
-            }
+      new Iterator[(A, B)] {
+        def hasNext = it.hasNext
 
-            accumulator.clear()
+        def next: (A, B) = {
+          val n = it.next
 
-            reply(Stopped)
-
-            exit()
-
-          case GetAll =>
-            reply(GotAll(accumulator.toList))
+          (n.getKey, n.getValue)
         }
-        catch {
-          case e: ControlThrowable =>
-          case e => e.printStackTrace
-        }
+      }
+    }
+
+    def += (kv: (A, B)): this.type = {
+      impl.put(kv._1, kv._2)
+
+      this
+    }
+
+    def -= (k: A): this.type = {
+      Option(impl.get(k)) foreach { v =>
+        flush(k, v)
+
+        impl.remove(k)
+      }
+
+      this
+    }
+
+    def removeEldestEntries(n: Int): this.type = {
+      keys.take(n).foreach { key =>
+        self -= key
+      }
+
+      this
+    }
+
+    override def size = impl.size
+
+    override def foreach[U](f: ((A, B)) => U): Unit = {
+      val it = impl.entrySet.iterator()
+
+      while (it.hasNext) {
+        val entry = it.next
+
+        f((entry.getKey, entry.getValue))
       }
     }
   }
 
-  def get(key: K): Option[V] = actor !? Get(key) match {
-    case Got(v) => v
+  private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
+
+  private val worker = Actor.actor[Request, Response, Cache[K, ExpirableValue[V]]](new Cache[K, ExpirableValue[V]](flusher)) { cache =>
+
+    {
+      case request @ PutAll(pairs) =>
+        cache ++= pairs.map { tuple =>
+          val (key, value2) = tuple
+
+          val newValue = cache.get(key).map { expirableValue1 =>
+            val value1 = expirableValue1.value
+
+            expirableValue1.withValue(request.semigroup.append(value1, value2))
+          }.getOrElse(ExpirableValue(value2))
+
+          (tuple._1, newValue)
+        }
+
+        val overflowCount = 0.max(cache.size - maximumCapacity)
+
+        cache.removeEldestEntries(overflowCount)
+
+        Done
+
+      case FlushExpired =>
+        val currentTime = System.nanoTime()
+
+        val keysToRemove = cache.foldLeft[List[K]](Nil) { (keysToRemove, tuple) =>
+          val (key, value) = tuple
+
+          val isExpired = expirationPolicy.isExpired(value, currentTime)
+
+          if (isExpired) key :: keysToRemove else keysToRemove
+        }
+
+        cache --= keysToRemove
+
+        Done
+
+      case FlushAll =>
+        cache.clear()
+
+        Done
+
+    }
   }
 
-  /** Asynchronously retrieves the value for the specified key.
-   */
-  def getLater(key: K): Future[Option[V]] = (actor !! (Get(key), {case Got(v) => v}))
+  def += (k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = put(k, v)
 
-  def iterator: Iterator[(K, V)] = actor !? GetAll match {
-    case GotAll(all) => all.iterator
-  }
+  def += (tuple: (K, V))(implicit sg: Semigroup[V]): Future[Unit] = put(tuple._1, tuple._2)
 
-  /** Removes an entry from the stage. Note: this does not call the evicter on
-   * the entry.
-   */
-  def -= (key: K): This = {
-    actor ! Remove(key)
+  def put(k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = putAll((k, v) :: Nil)
 
-    this
-  }
+  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]): Future[Unit] = (worker ! PutAll(pairs)).toUnit
 
-  def += (kv: (K, V)): This = {
-    actor ! Add(kv._1, kv._2)
+  def flushAll(): Future[Unit] = (worker ! FlushAll).toUnit
 
-    this
-  }
-
-  /** Starts the stage. This function is called automatically when the stage
-   * is created.
-   */
-  def start = actor.start
-
-  /** Stops the stage and evicts all entries.
-   */
-  def stop = actor !? Stop match {
-    case Stopped =>
-  }
 }
 
 object Stage {
-  def apply[K, V](settings_ : CacheSettings[K, V], coalesce_ : (K, V, V) => V) = new Stage[K, V] {
-    def settings = settings_
+  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit) = new Stage[K, V] {
+    def expirationPolicy = policy
 
-    def coalesce = coalesce_
+    def maximumCapacity = capacity
 
-    start
+    def flush(k: K, v: V): Unit = evict(k, v)
   }
 }

@@ -8,6 +8,8 @@ import blueeyes.util.RichThrowableImplicits
 import java.util.{GregorianCalendar, Calendar, Date}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 
+import scalaz.Semigroup
+
 object RollPolicies{
   sealed abstract class Policy
   case object Never extends Policy
@@ -35,18 +37,17 @@ object W3ExtendedLogger{
 class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
 
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
-  private val logStage    = Stage[String, String](CacheSettings[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write, 1), coalesce)
+  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write)
 
-  def apply(logEntry: String){
-    logStage.stop
-    logStage += (("log", logEntry))
+  implicit val LogLineSemigroup = new Semigroup[String] {
+    def append(l1: String, l2: => String): String = l1 + "\n" + l2
   }
 
-  def close    = fileHandler.close
+  def apply(logEntry: String) = logStage += ("log", logEntry)
+
+  def close = fileHandler.close
 
   def fileName: Option[String] = fileHandler.fileName
-
-  private def coalesce(key: String, value1: String, value2: String) = value1 + "\n" + value2
 
   private def write(key: String, record: String) = fileHandler.publish(record)
 }
