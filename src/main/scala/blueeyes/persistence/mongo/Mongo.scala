@@ -4,7 +4,7 @@ import scala.collection.IterableView
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
-import blueeyes.concurrent.{ActorImplementation, ActorExecutionStrategy, Actor, Future}
+import blueeyes.concurrent._
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -40,11 +40,13 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
 trait MongoDatabase{
-  private lazy val mongoActor = actorImplementation.actor[Tuple2[MongoQuery[_], DatabaseCollection], Any]{
-    case v: Tuple2[MongoQuery[_], DatabaseCollection] => {
-      val (query, collection) = v
-      query(collection)
-    }
+  private lazy val mongoActor = new Actor{
+
+    val query = lift2((query: MongoQuery[_], collection: DatabaseCollection) => query(collection))
+
+    implicit def futureDeliveryStrategy = actorStrategy.futureDeliveryStrategy
+
+    implicit def actorExecutionStrategy = actorStrategy.actorExecutionStrategy
   }
 
   def apply[T](query: MongoQuery[T]): Future[T]  = {
@@ -52,10 +54,10 @@ trait MongoDatabase{
       case MongoCollectionReference(name)         => collection(name)
       case MongoCollectionHolder(realCollection)  => realCollection
     }
-    mongoActor(Tuple2[MongoQuery[_], DatabaseCollection](query, databaseCollection)).asInstanceOf[Future[T]]
+    mongoActor.query(query, databaseCollection).asInstanceOf[Future[T]]
   }
 
-  protected def actorImplementation: ActorImplementation
+  protected def actorStrategy: ActorStrategy
 
   protected def collection(collectionName: String): DatabaseCollection
 }

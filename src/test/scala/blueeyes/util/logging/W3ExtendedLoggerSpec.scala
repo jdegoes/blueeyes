@@ -58,11 +58,11 @@ class W3ExtendedLoggerSpec extends Specification{
       while (bytesRead != -1) {
         bytesRead = inputStream.read(buffer)
         if (bytesRead != -1) {
-          byteContents.write(buffer, 0, bytesRead);
+          byteContents.write(buffer, 0, bytesRead)
         }
       }
 
-      byteContents.flush();
+      byteContents.flush()
 
       new String(byteContents.toByteArray(), "UTF-8")
     }

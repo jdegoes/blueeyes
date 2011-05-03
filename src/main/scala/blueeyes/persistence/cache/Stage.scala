@@ -1,14 +1,11 @@
 package blueeyes.persistence.cache
 
 import scalaz.Semigroup
-
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential, Actor, Duration, SchedulableActor}
+import blueeyes.concurrent._
 
 trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private sealed trait Request
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends Request
-  private case object FlushExpired extends Request
-  private case object FlushAll extends Request
 
   private sealed trait Response
   private case object Done extends Response
@@ -77,48 +74,49 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
 
-  private val worker = Actor.actor[Request, Response, Cache[K, ExpirableValue[V]]](new Cache[K, ExpirableValue[V]](flusher)) { cache =>
+  private val worker = new Actor with ActorStrategyMultiThreaded{
+    private val cache = new Cache[K, ExpirableValue[V]](flusher)
 
-    {
-      case request @ PutAll(pairs) =>
-        cache ++= pairs.map { tuple =>
-          val (key, value2) = tuple
+    val putAll = lift1{ request: PutAll =>
+      cache ++= request.pairs.map { tuple =>
+        val (key, value2) = tuple
 
-          val newValue = cache.get(key).map { expirableValue1 =>
-            val value1 = expirableValue1.value
+        val newValue = cache.get(key).map { expirableValue1 =>
+          val value1 = expirableValue1.value
 
-            expirableValue1.withValue(request.semigroup.append(value1, value2))
-          }.getOrElse(ExpirableValue(value2))
+          expirableValue1.withValue(request.semigroup.append(value1, value2))
+        }.getOrElse(ExpirableValue(value2))
 
-          (tuple._1, newValue)
-        }
+        (tuple._1, newValue)
+      }
 
-        val overflowCount = 0.max(cache.size - maximumCapacity)
+      val overflowCount = 0.max(cache.size - maximumCapacity)
 
-        cache.removeEldestEntries(overflowCount)
+      cache.removeEldestEntries(overflowCount)
 
-        Done
+      Done
+    }
 
-      case FlushExpired =>
-        val currentTime = System.nanoTime()
+    val flushExpired = lift{ () =>
+      val currentTime = System.nanoTime()
 
-        val keysToRemove = cache.foldLeft[List[K]](Nil) { (keysToRemove, tuple) =>
-          val (key, value) = tuple
+      val keysToRemove = cache.foldLeft[List[K]](Nil) { (keysToRemove, tuple) =>
+        val (key, value) = tuple
 
-          val isExpired = expirationPolicy.isExpired(value, currentTime)
+        val isExpired = expirationPolicy.isExpired(value, currentTime)
 
-          if (isExpired) key :: keysToRemove else keysToRemove
-        }
+        if (isExpired) key :: keysToRemove else keysToRemove
+      }
 
-        cache --= keysToRemove
+      cache --= keysToRemove
 
-        Done
+      Done
+    }
 
-      case FlushAll =>
-        cache.clear()
+    val flushAll = lift{ () =>
+      cache.clear()
 
-        Done
-
+      Done
     }
   }
 
@@ -128,9 +126,9 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   def put(k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = putAll((k, v) :: Nil)
 
-  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]): Future[Unit] = (worker ! PutAll(pairs)).toUnit
+  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]): Future[Unit] = (worker putAll(PutAll(pairs))).toUnit
 
-  def flushAll(): Future[Unit] = (worker ! FlushAll).toUnit
+  def flushAll(): Future[Unit] = (worker flushAll()).toUnit
 
 }
 

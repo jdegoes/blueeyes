@@ -6,16 +6,13 @@ import Duration._
 
 class SchedulableActorSpec extends Specification with FutureDeliveryStrategySequential{
 
-  private val actorImplementation = new ActorImplementationSequential{}
-
   "SchedulableActor.once" should {
     "execute function" in{
-      import actorImplementation._
-      val messageProcessor = actor[String, String] {
-        case message: String => message + "_done"
+      val messageProcessor = new Actor with ActorStrategySequential {
+        val func = lift1{message: String => message + "_done"}
       }
 
-      val f = messageProcessor !@ ("foo", 10.milliseconds)
+      val f = messageProcessor.func !@ ("foo", 10.milliseconds)
 
       f.value must eventually (beSome("foo_done"))
     }

@@ -4,16 +4,14 @@ import org.specs.Specification
 import java.util.concurrent.{CountDownLatch, Executors}
 import util.Random
 
-class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySequential{
+class StrategyThreadedNSpec extends Specification with ActorStrategyMultiThreaded{
 
   private val random = new Random()
-
-  private val strategy = Actor.actorExecutionStrategy
 
   "StrategyThreadedN: handle one request" in{
     val future = new Future[Int]()
 
-    strategy.submit(f _, (1, future))
+    actorExecutionStrategy.execute1(f _)(1)(future)
 
     awaitFuture(future)
 
@@ -26,7 +24,7 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
     val fun = f _
 
     futures foreach { future =>
-      strategy.submit(fun, (1, future))
+      actorExecutionStrategy.execute1(fun)(1)(future)
     }
 
     awaitFuture(Future(futures: _*))
@@ -48,9 +46,9 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
         def run = {
           Thread.sleep(random.nextInt(150))
 
-          strategy.submit(f._1, (1, f._2))
+          actorExecutionStrategy.execute1(f._1)(1)(f._2)
 
-          strategy.assignments.size must beLessThan (functions.size + 1)
+          actorExecutionStrategy.assignments.size must beLessThan (functions.size + 1)
         }
       })
     }
@@ -61,7 +59,7 @@ class StrategyThreadedNSpec extends Specification with FutureDeliveryStrategySeq
       future.value mustEqual(Some(3))
     }
 
-    strategy.assignments.size must be (0)
+    actorExecutionStrategy.assignments.size must be (0)
   }
 
   private def awaitFuture(future: Future[_]) = {

@@ -1,24 +1,25 @@
 package blueeyes.concurrent.benchmark
 
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent._
-import actors.Scheduler
 
-object BenchmarkBlueeyes extends BenchmarkScenario[Actor[String, Unit]]{
+object BenchmarkBlueeyes extends BenchmarkScenario[BenchmarkActor]{
 
-  def sendMessage(actor: Actor[String, Unit], message: String) = actor ! message
+  def sendMessage(actor: BenchmarkActor, message: String) = actor.processor(message)
 
   def shutdown = {}
 
-  def createActor(index: Int, actors: Array[Actor[String, Unit]], cdl: CountDownLatch) = actor(index, actors, cdl)
+  def createActor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) = actor(index, actors, cdl)
 
-  def array(count: Int) = new Array[Actor[String, Unit]](count)
+  def array(count: Int) = new Array[BenchmarkActor](count)
 
-  private def actor(index: Int, actors: Array[Actor[String, Unit]], cdl: CountDownLatch) = Actor.actor[String, Unit, Tuple3[Int, Array[Actor[String, Unit]], CountDownLatch]]((index, actors, cdl)){ state => {
-    case x: String =>
-      val (index, actors, cdl) = state
-      if (index < actors.length - 1)
-        actors(index + 1) ! x
-      cdl.countDown()
-  }}
+  private def actor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) = new BenchmarkActor(index, actors, cdl)
+}
+
+class BenchmarkActor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) extends Actor with ActorStrategyMultiThreaded{
+  val processor: (String) => Future[Unit] = lift1({x: String =>
+    if (index < actors.length - 1)
+      actors(index + 1).processor(x)
+    cdl.countDown()
+  })
 }

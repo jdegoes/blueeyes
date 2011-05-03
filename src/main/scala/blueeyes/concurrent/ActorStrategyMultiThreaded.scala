@@ -8,7 +8,7 @@ object ActorStrategyMultiThreaded{
 
 trait ActorStrategyMultiThreaded extends ActorStrategy{
 
-  private val executionSequential = new ActorExecutionStrategySequential2 { }
+  private val executionSequential = new ActorExecutionStrategySequential { }
 
   private val futureSequential = new FutureDeliveryStrategySequential{}
 
@@ -16,13 +16,55 @@ trait ActorStrategyMultiThreaded extends ActorStrategy{
 
   implicit lazy val actorExecutionStrategy = new MultiThreadedExecutionStrategy()
 
-  private[ActorStrategyMultiThreaded] class MultiThreadedExecutionStrategy extends ActorExecutionStrategy2{
+  private[ActorStrategyMultiThreaded] class MultiThreadedExecutionStrategy extends ActorExecutionStrategy{
 
     val assignments = new ConcurrentHashMap[AnyRef, StrategyWorker]
+
+    def execute[R](f: () => R)(response: Future[R]) = submit0(f, Work(f, response))
 
     def execute1[T1, R](f: (T1) => R)(v1: T1)(response: Future[R]) = submit0(f, Work1(f, v1, response))
 
     def execute2[T1, T2, R](f: (T1, T2) => R)(v1: T1, v2: T2)(response: Future[R]) = submit0(f, Work2(f, v1, v2, response))
+
+    def execute3[T1, T2, T3, R](f: (T1, T2, T3) => R)(v1: T1, v2: T2, v3: T3)(response: Future[R]) = submit0(f, Work3(f, v1, v2, v3, response))
+
+    def execute4[T1, T2, T3, T4, R](f: (T1, T2, T3, T4) => R)(v1: T1, v2: T2, v3: T3, v4: T4)(response: Future[R]) = submit0(f, Work4(f, v1, v2, v3, v4, response))
+
+    def execute5[T1, T2, T3, T4, T5, R](f: (T1, T2, T3, T4, T5) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5)(response: Future[R]) = submit0(f, Work5(f, v1, v2, v3, v4, v5, response))
+
+    def execute6[T1, T2, T3, T4, T5, T6, R](f: (T1, T2, T3, T4, T5, T6) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6)(response: Future[R]) = submit0(f, Work6(f, v1, v2, v3, v4, v5, v6, response))
+
+    def execute7[T1, T2, T3, T4, T5, T6, T7, R](f: (T1, T2, T3, T4, T5, T6, T7) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7)(response: Future[R]) = submit0(f, Work7(f, v1, v2, v3, v4, v5, v6, v7, response))
+
+    def execute8[T1, T2, T3, T4, T5, T6, T7, T8, R](f: (T1, T2, T3, T4, T5, T6, T7, T8) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8)(response: Future[R]) = submit0(f, Work8(f, v1, v2, v3, v4, v5, v6, v7, v8, response))
+
+    def execute9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9)(response: Future[R]) = submit0(f, Work9(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, response))
+
+    def execute10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10)(response: Future[R]) = submit0(f, Work10(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, response))
+
+    def execute11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11)(response: Future[R]) = submit0(f, Work11(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, response))
+
+    def execute12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12)(response: Future[R]) = submit0(f, Work12(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, response))
+
+    def execute13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13)(response: Future[R]) = submit0(f, Work13(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, response))
+
+    def execute14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14)(response: Future[R]) = submit0(f, Work14(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, response))
+
+    def execute15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15)(response: Future[R]) = submit0(f, Work15(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, response))
+
+    def execute16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16)(response: Future[R]) = submit0(f, Work16(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, response))
+
+    def execute17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17)(response: Future[R]) = submit0(f, Work17(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, response))
+
+    def execute18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18)(response: Future[R]) = submit0(f, Work18(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, response))
+
+    def execute19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19)(response: Future[R]) = submit0(f, Work19(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, response))
+
+    def execute20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20)(response: Future[R]) = submit0(f, Work20(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, response))
+
+    def execute21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21)(response: Future[R]) = submit0(f, Work21(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, (v20, v21), response))
+
+    def execute22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21, v22: T22)(response: Future[R]) = submit0(f, Work22(f, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, (v20, v21, v22), response))
 
     def submit0(actorFn: AnyRef, strategyTask: StrategyWorkerTask): Unit = {
       var exit = false
@@ -87,40 +129,146 @@ trait ActorStrategyMultiThreaded extends ActorStrategy{
    }
   }
 
-  object ActorContext{
-    private val tl = new ThreadLocal[AnyRef]
-
-    def get : Option[AnyRef] = {
-      if (tl.get() != null) Some(tl.get()) else None
-    }
-
-    def withActorFn(actorFn: AnyRef)(f : => Unit) = {
-      val old = get
-      try {
-        tl.set(actorFn)
-        f
-      } finally {
-        tl.set(old.getOrElse(null))
-      }
+  private[ActorStrategyMultiThreaded] sealed trait StrategyWorkerTask extends Function0[Unit]
+  private[ActorStrategyMultiThreaded] case class Work[R](f: () => R, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute(f)(response)
     }
   }
-
-  private[ActorStrategyMultiThreaded] sealed trait StrategyWorkerTask extends Function0[Unit]
   private[ActorStrategyMultiThreaded] case class Work1[T1, R](f: T1 => R, v1: T1, response: Future[R]) extends StrategyWorkerTask{
     def apply() {
       executionSequential.actorExecutionStrategy.execute1(f)(v1)(response)
     }
   }
-
   private[ActorStrategyMultiThreaded] case class Work2[T1, T2, R](f: (T1, T2) => R, v1: T1, v2: T2, response: Future[R]) extends StrategyWorkerTask{
     def apply() {
       executionSequential.actorExecutionStrategy.execute2(f)(v1, v2)(response)
     }
   }
+  private[ActorStrategyMultiThreaded] case class Work3[T1, T2, T3, R](f: (T1, T2, T3) => R, v1: T1, v2: T2, v3: T3, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute3(f)(v1, v2, v3)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work4[T1, T2, T3, T4, R](f: (T1, T2, T3, T4) => R, v1: T1, v2: T2, v3: T3, v4: T4, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute4(f)(v1, v2, v3, v4)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work5[T1, T2, T3, T4, T5, R](f: (T1, T2, T3, T4, T5) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute5(f)(v1, v2, v3, v4, v5)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work6[T1, T2, T3, T4, T5, T6, R](f: (T1, T2, T3, T4, T5, T6) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute6(f)(v1, v2, v3, v4, v5, v6)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work7[T1, T2, T3, T4, T5, T6, T7, R](f: (T1, T2, T3, T4, T5, T6, T7) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute7(f)(v1, v2, v3, v4, v5, v6, v7)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work8[T1, T2, T3, T4, T5, T6, T7, T8, R](f: (T1, T2, T3, T4, T5, T6, T7, T8) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute8(f)(v1, v2, v3, v4, v5, v6, v7, v8)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute9(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute10(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute11(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute12(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute13(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute14(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute15(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute16(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute17(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute18(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute19(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute20(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20_21: (T20,T21), response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute21(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20_21._1, v20_21._2)(response)
+    }
+  }
+  private[ActorStrategyMultiThreaded] case class Work22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R, v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20_21_22: (T20, T21, T22), response: Future[R]) extends StrategyWorkerTask{
+    def apply() {
+      executionSequential.actorExecutionStrategy.execute22(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20_21_22._1, v20_21_22._2, v20_21_22._3)(response)
+    }
+  }
+
   private[ActorStrategyMultiThreaded] case class Deliver[R](value: R, listeners: Iterable[R => Unit], errorHandler: List[Throwable] => Unit) extends StrategyWorkerTask{
     def apply() {
       futureSequential.futureDeliveryStrategy.deliver(value, listeners, errorHandler)
     }
   }
 }
+
+object ActorContext{
+  private val tl = new ThreadLocal[AnyRef]
+
+  def get : Option[AnyRef] = {
+    if (tl.get() != null) Some(tl.get()) else None
+  }
+
+  def withActorFn(actorFn: AnyRef)(f : => Unit) = {
+    val old = get
+    try {
+      tl.set(actorFn)
+      f
+    } finally {
+      tl.set(old.getOrElse(null))
+    }
+  }
+}
+
 
