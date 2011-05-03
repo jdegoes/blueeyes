@@ -1,6 +1,6 @@
 package blueeyes.demo
 
-import blueeyes.core.service.engines.HttpClientXLightWebEnginesArrayByte
+import blueeyes.core.service.engines.HttpClientXLightWebEngines
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
@@ -10,7 +10,7 @@ import blueeyes.concurrent.Future
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
-import blueeyes.core.data.{BijectionsChunkReaderJson, BijectionsByteArray, Bijection}
+import blueeyes.core.data.{BijectionsChunkJson, ByteChunk, Bijection}
 
 object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
@@ -18,7 +18,7 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
   val port = Configgy.config.configMap("server").getInt("port", 8888)
 
-  val httpClient = new HttpClientXLightWebEnginesArrayByte{}
+  val httpClient = new HttpClientXLightWebEngines{}
 
   def main(args: Array[String]){
 
@@ -47,11 +47,11 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
   }
 }
 
-trait BlueEyesDemoFacade extends BijectionsByteArray{
+trait BlueEyesDemoFacade extends BijectionsChunkJson{
 
   private implicit val jvalaueToJValue = Bijection.identity[JValue]
 
-  def httpClient: HttpClient[Array[Byte]]
+  def httpClient: HttpClient[ByteChunk]
 
   def port: Int
 

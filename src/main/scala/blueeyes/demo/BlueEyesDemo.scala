@@ -10,7 +10,7 @@ import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.{Chunk, BijectionsChunkReaderJson}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkJson}
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.json.{JPathField, JPath}
 import blueeyes.persistence.mongo.MockMongo
@@ -20,7 +20,7 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkReaderJson{
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson{
   def mongo: Mongo
 
   val contactListService = service("contactlist", "1.0.0") {
@@ -37,7 +37,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
 
         path("/contacts"){
           produce(application/json) {
-            get { request: HttpRequest[Chunk] =>
+            get { request: HttpRequest[ByteChunk] =>
               val contacts = database(select(".name").from(collection)) map {records =>
                 JArray(records.flatMap(row => (row \\ "name").value).toList)
               }
@@ -56,12 +56,12 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
           } ~
           path("/'name") {
             produce(application/json) {
-              get { request: HttpRequest[Chunk] =>
+              get { request: HttpRequest[ByteChunk] =>
                 val contact = database(selectOne().from(collection).where("name" === request.parameters('name)))
 
                 contact.map(v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound))
               } ~
-              delete { request: HttpRequest[Chunk] =>
+              delete { request: HttpRequest[ByteChunk] =>
                 database[JNothing.type](remove.from(collection).where("name" === request.parameters('name)))
 
                 HttpResponse[JValue]()

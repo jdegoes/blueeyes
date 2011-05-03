@@ -9,7 +9,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
-import blueeyes.core.data.{Chunk, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.concurrent.Future
 
 trait NettyConverters{
@@ -38,7 +38,7 @@ trait NettyConverters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  implicit def toNettyResponse(response: HttpResponse[Chunk], chunked: Boolean): NettyHttpResponse = {
+  implicit def toNettyResponse(response: HttpResponse[ByteChunk], chunked: Boolean): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
     response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
@@ -48,7 +48,7 @@ trait NettyConverters{
     nettyResponse
   }
 
-  implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[Chunk] = {
+  implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {
     val parameters          = getParameters(request.getUri())
     val headers             = buildHeaders(request.getHeaders())
     val content             = fromNettyContent(request.getContent(), () => None)
@@ -59,7 +59,7 @@ trait NettyConverters{
     HttpRequest(request.getMethod, request.getUri(), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }
 
-  def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[Chunk]]): Option[Chunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
+  def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[ByteChunk]]): Option[ByteChunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
 
   private def extractContent(content: ChannelBuffer) = {
     val stream = new ByteArrayOutputStream()

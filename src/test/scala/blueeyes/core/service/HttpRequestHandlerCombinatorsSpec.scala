@@ -17,7 +17,7 @@ import blueeyes.concurrent.FutureImplicits
 
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
-import blueeyes.core.data.{MemoryChunk, Chunk, BijectionsIdentity, Bijection}
+import blueeyes.core.data.{ByteMemoryChunk, MemoryChunk, ByteChunk, BijectionsIdentity, Bijection}
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity{
   implicit val JValueToString = new Bijection[JValue, String] {
@@ -232,7 +232,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries"))
       f.value must eventually(beSomething)
-      f.value.get.content.map(JString(_)) must beSome(JString("""" """"))
+      f.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
     }
   }
 
@@ -240,20 +240,20 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "aggregate full content when size is not specified" in{
       (aggregate(None){
         path("/foo"){
-          get { (request: HttpRequest[Chunk]) =>
-            Future(HttpResponse[Chunk](content=request.content))
+          get { (request: HttpRequest[ByteChunk]) =>
+            Future(HttpResponse[ByteChunk](content=request.content))
           }
         }
-      }).apply(HttpRequest[Chunk](method = HttpMethods.GET, uri = "/foo", content = Some(new MemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new MemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
     }
     "aggregate content up to the specified size" in{
       (aggregate(Some(2)){
         path("/foo"){
-          get { (request: HttpRequest[Chunk]) =>
-            Future(HttpResponse[Chunk](content=request.content))
+          get { (request: HttpRequest[ByteChunk]) =>
+            Future(HttpResponse[ByteChunk](content=request.content))
           }
         }
-      }).apply(HttpRequest[Chunk](method = HttpMethods.GET, uri = "/foo", content = Some(new MemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new MemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("12")
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("12")
     }
   }
 }

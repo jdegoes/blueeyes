@@ -13,7 +13,7 @@ class BijectionSpec extends Specification{
     inversed("foo").toList                        mustEqual(List[Byte]('f', 'o', 'o'))
   }
   "Bijection.compose: creates composed Bijection" in{
-    val composed = BijectionsChunkReaderString.StringToChunkReader.andThen(BijectionsChunkReaderByteArray.ChunkReaderToArrayByte)
+    val composed = BijectionsChunkString.StringToChunk.andThen(BijectionsChunkByteArray.ChunkToArrayByte)
     composed("foo").toList mustEqual(List[Byte]('f', 'o', 'o'))
   }
 }

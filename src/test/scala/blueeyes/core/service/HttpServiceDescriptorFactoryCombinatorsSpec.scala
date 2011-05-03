@@ -4,14 +4,13 @@ import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
-import blueeyes.core.data.{Chunk, BijectionsChunkReaderJson, BijectionsChunkReaderString}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
 import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import java.io.File
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkReaderJson{
-  import BijectionsChunkReaderString._
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
   override def configuration = """
     services {
       foo {
@@ -31,15 +30,15 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
   """.format(System.getProperty("java.io.tmpdir") + File.separator + "w3log.log")
 
-  implicit val httpClient: HttpClient[Chunk] = new HttpClient[Chunk] {
-    def apply(r: HttpRequest[Chunk]): Future[HttpResponse[Chunk]] = {
-      Future(HttpResponse[Chunk](content = Some(r.uri.path match {
-        case Some("/foo/v1/proxy")  => StringToChunkReader("it works!")
+  implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
+    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
+      Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
+        case Some("/foo/v1/proxy")  => BijectionsChunkString.StringToChunk("it works!")
 
-        case _ => StringToChunkReader("it does not work!")
+        case _ => BijectionsChunkString.StringToChunk("it does not work!")
       })))
     }
-    def isDefinedAt(x: HttpRequest[Chunk]) = true
+    def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
   doAfterSpec {
@@ -59,7 +58,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "support health monitor statistics" in {
-      val f = service.contentType[JValue](application/json).get("/blueeyes/services/email/v1/health")
+      val f = service.get[JValue]("/blueeyes/services/email/v1/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get
@@ -76,12 +75,13 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "add service locator" in {
-      val f = service.get("/proxy")
+      import BijectionsChunkString._
+      val f = service.get[String]("/proxy")
       f.value must eventually(beSomething)
 
       val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
-      response.content.map(v => ChunkReaderToString(v)) must beSome("it works!")
+      response.content must beSome("it works!")
     }
   }
 
@@ -90,21 +90,21 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkReaderJson{
-  implicit def httpClient: HttpClient[Chunk]
+trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkJson{
+  implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {
     requestLogging{
       logging { log =>
         healthMonitor { monitor =>
-          serviceLocator { locator: ServiceLocator[Chunk] =>
+          serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {
                 path("/foo") {
-                  get  { request: HttpRequest[Chunk] => Future(HttpResponse[Chunk]()) }
+                  get  { request: HttpRequest[ByteChunk] => Future(HttpResponse[ByteChunk]()) }
                 } ~
                 path("/proxy") {
-                  get { request: HttpRequest[Chunk] =>
+                  get { request: HttpRequest[ByteChunk] =>
                     val foo = locator("foo", "1.02.32")
 
                     foo(request)
@@ -112,7 +112,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
                 } ~
                 remainingPath{ path =>
                   get{
-                    request: HttpRequest[Chunk] => HttpResponse[Chunk]()
+                    request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]()
                   }
                 }
               }

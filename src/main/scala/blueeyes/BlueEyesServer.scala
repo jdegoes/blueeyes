@@ -3,7 +3,7 @@ package blueeyes
 import blueeyes.core.http._
 import blueeyes.core.service._
 import blueeyes.core.service.engines._
-import core.data.Chunk
+import core.data.ByteChunk
 
 /** Convenience trait for building a server. This server uses reflection to mix
  * in any services defined as fields.
@@ -18,6 +18,6 @@ import core.data.Chunk
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServer extends HttpServer with HttpReflectiveServiceList[Chunk] with NettyEngine {
+trait BlueEyesServer extends HttpServer with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
 
 }

@@ -1,40 +1,6 @@
 package blueeyes.concurrent
 
-import scalaz.{Success, Validation}
-import java.util.concurrent.{Executors, ConcurrentHashMap, ConcurrentMap, ThreadPoolExecutor, BlockingQueue, SynchronousQueue, LinkedBlockingQueue, TimeUnit}
-import java.util.concurrent.atomic.AtomicLong
-
-trait ActorExecutionStrategy {
-  def submit[A, B](f: A => B, work: (A, Future[B])): Unit
-}
-
-trait ActorExecutionStrategySequential {
-  implicit val actorExecutionStrategy = new ActorExecutionStrategy {
-    def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
-      val (request, response) = work
-
-      try {
-        response.deliver(f(request))
-      }
-      catch {
-        case e => response.cancel(e)
-      }
-    }
-  }
-}
-
-trait ActorExecutionStrategySingleThreaded {
-  private val sequential = new ActorExecutionStrategySequential { }
-  private val executor = Executors.newSingleThreadExecutor
-
-  implicit val actorExecutionStrategy = new ActorExecutionStrategy {
-    def submit[A, B](f: A => B, work: (A, Future[B])): Unit = {
-      executor.execute(new Runnable {
-        def run = sequential.actorExecutionStrategy.submit(f, work)
-      })
-    }
-  }
-}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, ThreadPoolExecutor, BlockingQueue, SynchronousQueue, LinkedBlockingQueue, TimeUnit}
 
 sealed trait Actor[A, B] extends PartialFunction[A, Future[B]] { self =>
   def ! (message: A): Future[B] = self.apply(message)
@@ -242,3 +208,4 @@ trait ActorImplementationMultiThreaded extends ActorImplementation{
 object Actor extends ActorImplementationMultiThreaded{
   implicit def actorOfFutureToFlattenedActor[A, B](a: Actor[A, Future[B]]): Actor[A, B] = a.flatten
 }
+

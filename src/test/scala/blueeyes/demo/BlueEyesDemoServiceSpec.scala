@@ -11,10 +11,10 @@ import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
+import blueeyes.core.data.{BijectionsChunkJson, BijectionsIdentity}
 import blueeyes.core.service.HttpClient
-import blueeyes.core.data.{Chunk, BijectionsChunkReaderJson, Bijection}
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkReaderJson{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   private val databaseName   = "mydb"
@@ -68,9 +68,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
      val removed  = awaitResult[JNothing.type](database[JNothing.type](remove.from(collectionName)))
      val inserted = awaitResult[JNothing.type](database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName)))
 
-     def client = service.contentType[JValue](application/MimeTypes.json)
      "return contact list" in {
-        val f = client.get("/contacts")
+        val f = service.get("/contacts")
         f.value must eventually(beSomething)
 
         val response = f.value.get
@@ -78,8 +77,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
         response.status  mustEqual(HttpStatus(OK))
         response.content must beSome(JArray(List(contact \\ "name")))
      }
-     "return contact list" in {
-        val f = client.get("/contacts/Sherlock")
+     "return contact" in {
+        val f = service.get("/contacts/Sherlock")
         f.value must eventually(beSomething)
 
         val response = f.value.get
@@ -88,7 +87,8 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
         response.content must beSome(contact.serialize)
      }
      "search contact" in {
-        val f = client.post("/contacts/search")(filter)
+       import BijectionsIdentity._
+        val f = service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter)
         f.value must eventually(beSomething)
 
         val response = f.value.get

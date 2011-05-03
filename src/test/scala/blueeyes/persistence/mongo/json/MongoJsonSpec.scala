@@ -6,7 +6,7 @@ import MongoJson._
 import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
 import org.specs.Specification
 
-class MongoJsonTester extends Specification {
+class MongoJsonSpec extends Specification {
   "MongoToJValue" should{
     "convert string type" in {
       toJson("string", "foo") mustEqual (JString("foo"))

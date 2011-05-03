@@ -3,14 +3,14 @@ package blueeyes.core.service
 import test.BlueEyesServiceSpecification
 import blueeyes.json.JsonAST._
 import blueeyes.core.http.{HttpResponse, HttpStatus}
-import blueeyes.core.data.Chunk
+import blueeyes.core.data.ByteChunk
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 
 class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService{
    "Server Health Monitor Service" should{
     "get server health" in {
-      val f = service.contentType[JValue](application/json).get("/blueeyes/server/health")
+      val f = service.get[JValue]("/blueeyes/server/health")
       f.value must eventually(beSomething)
 
       val response = f.value.get

@@ -1,0 +1,3 @@
+package blueeyes.concurrent
+
+class ActorStrategySequential

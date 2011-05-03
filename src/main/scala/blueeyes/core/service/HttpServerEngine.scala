@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.core.data.Chunk
+import blueeyes.core.data.ByteChunk
 
-trait HttpServerEngine { self: HttpRequestHandler[Chunk] =>
+trait HttpServerEngine { self: HttpRequestHandler[ByteChunk] =>
 }
