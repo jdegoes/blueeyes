@@ -9,6 +9,7 @@ import java.util.{GregorianCalendar, Calendar, Date}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 
 import scalaz.Semigroup
+import blueeyes.concurrent.Future
 
 object RollPolicies{
   sealed abstract class Policy
@@ -45,7 +46,10 @@ class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: Fi
 
   def apply(logEntry: String) = logStage += ("log", logEntry)
 
-  def close = fileHandler.close
+  def close: Future[Unit] = {
+    val flushFuture = logStage.flushAll
+    flushFuture.map((v: Unit) => fileHandler.close)
+  }
 
   def fileName: Option[String] = fileHandler.fileName
 

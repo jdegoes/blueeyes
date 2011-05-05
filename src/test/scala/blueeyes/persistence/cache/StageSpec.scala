@@ -2,7 +2,6 @@ package blueeyes.persistence.cache
 
 import org.specs.Specification
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
-import java.util.concurrent.CountDownLatch
 
 import scalaz.Semigroup
 
@@ -15,11 +14,30 @@ class StageSpec extends Specification{
     "evict when entry is expired" in{
       var evicted = false
 
-      newStage(None, Some(1000), {(key: String, value: String) => evicted = key == "foo" && value == "bar"}) { stage =>
-        Thread.sleep(2000)
+      val stage = newStage(None, Some(200), {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      stage.put("foo", "bar")
+      Thread.sleep(400)
+      stage.put("bar", "baz")
 
-        evicted must be (true)
-      }
+      evicted must eventually (be (true))
+    }
+    "evict when stage is over capacity" in{
+      var evicted = false
+
+      val stage = newStage(None, None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"}, 1)
+      stage.put("foo", "bar")
+      stage.put("bar", "baz")
+
+      evicted must eventually (be (true))
+    }
+    "evict when stage is flushed" in{
+      var evicted = false
+
+      val stage = newStage(Some(1), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      stage.put("foo", "bar")
+      stage.flushAll
+
+      evicted must eventually (be (true))
     }
   }
 
@@ -27,18 +45,8 @@ class StageSpec extends Specification{
     timeToIdle: Option[Long] = None,
     timeToLive: Option[Long] = None,
     evict:      (String, String) => Unit = {(key: String, value: String) => () },
-    capacity:   Int = 100)
-    (f: Stage[String, String] => T): T = {
+    capacity:   Int = 100) = {
 
-    val stage = Stage[String, String](ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, evict)
-
-    stage += ("foo", "bar")
-
-    try {
-      f(stage)
-    }
-    catch {
-      case e: Throwable => e.printStackTrace; throw e;
-    }
+    Stage[String, String](ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, evict)
   }
 }

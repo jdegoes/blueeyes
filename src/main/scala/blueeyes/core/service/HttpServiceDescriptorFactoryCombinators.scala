@@ -120,8 +120,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
         underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, log, underlying.request(state))},
                         shutdown = (state: S) => {
-                          log.close
-                          underlying.shutdown(state)
+                          log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
                         })
       }
       else underlying

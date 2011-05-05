@@ -74,7 +74,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
 
-  private val worker = new Actor with ActorStrategyMultiThreaded{
+  private val worker = new Actor with ActorStrategySingleThreaded{
     private val cache = new Cache[K, ExpirableValue[V]](flusher)
 
     val putAll = lift1{ request: PutAll =>
@@ -90,14 +90,19 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
         (tuple._1, newValue)
       }
 
-      val overflowCount = 0.max(cache.size - maximumCapacity)
-
-      cache.removeEldestEntries(overflowCount)
+      removeEldestEntries
+      removeExpiredEntries
 
       Done
     }
 
-    val flushExpired = lift{ () =>
+    private def removeEldestEntries{
+      val overflowCount = 0.max(cache.size - maximumCapacity)
+
+      cache.removeEldestEntries(overflowCount)
+    }
+
+    private def removeExpiredEntries{
       val currentTime = System.nanoTime()
 
       val keysToRemove = cache.foldLeft[List[K]](Nil) { (keysToRemove, tuple) =>
@@ -109,8 +114,6 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
       }
 
       cache --= keysToRemove
-
-      Done
     }
 
     val flushAll = lift{ () =>

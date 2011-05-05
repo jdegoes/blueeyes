@@ -10,40 +10,63 @@ class W3ExtendedLoggerSpec extends Specification{
 
   private var w3Logger: W3ExtendedLogger = _
   "W3ExtendedLogger" should {
-    doLast {
-      w3Logger.close
-
-      new File(w3Logger.fileName.get).delete
-    }
     "creates log file" in {
       w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
 
       new File(w3Logger.fileName.get).exists must be (true)
+      cleanUp()
     }
     "init log file" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_1.log", Never, directives, 1)
 
       val content = getContents(new File(w3Logger.fileName.get))
+      cleanUp()
 
       content.indexOf("#Version: 1.0")      must notEq (-1)
       content.indexOf("#Date: ")            must notEq (-1)
       content.indexOf(directives.toString)  must notEq (-1)
     }
 
-    "write log entries" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
+    "flush entries while closing" in{
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_2.log", Never, directives, 1)
 
       w3Logger("foo")
       w3Logger("bar")
 
-      Thread.sleep(2000)
-
-      w3Logger("baz")
+      val future = w3Logger.close
+      future.value must eventually (beSomething)
 
       val content = getContents(new File(w3Logger.fileName.get))
+      cleanUp()
 
       content.indexOf("foo") must notEq (-1)
       content.indexOf("bar") must notEq (-1)
+    }
+
+    "write log entries" in {
+      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_3.log", Never, directives, 1)
+
+      w3Logger("foo")
+      w3Logger("bar")
+
+      Thread.sleep(3000)
+
+      w3Logger("baz")
+
+      Thread.sleep(1000)
+
+      val content = getContents(new File(w3Logger.fileName.get))
+      cleanUp()
+
+      content.indexOf("foo") must notEq (-1)
+      content.indexOf("bar") must notEq (-1)
+    }
+
+    def cleanUp(){
+      val future = w3Logger.close
+      future.value must eventually (beSomething)
+
+      new File(w3Logger.fileName.get).delete
     }
   }
 
