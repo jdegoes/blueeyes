@@ -71,12 +71,25 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
 
   private val worker = new Actor with ActorStrategySingleThreaded{
-    private val cache = new Cache[K, ExpirableValue[V]](flusher)
+    import scala.math._
+    import java.util.concurrent.TimeUnit
+
+    private val cache           = new Cache[K, ExpirableValue[V]](flusher)
+    private var flushScheduled  = false
+    private val duration        = Duration(min(expirationPolicy.timeToIdleNanos.getOrElse(2000000000l), expirationPolicy.timeToLiveNanos.getOrElse(2000000000l)) / 2, TimeUnit.NANOSECONDS)
 
     val putAll = lift1 { request: PutAll =>
       putToCache(request)
       removeEldestEntries
       removeExpiredEntries
+      scheduleFlush
+    }
+
+    private def scheduleFlush{
+      if (!flushScheduled){
+        ScheduledExecutor.once(flushAllBySchedule, duration)
+        flushScheduled = true
+      }
     }
 
     private def putToCache(request: PutAll){
@@ -111,6 +124,11 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
       }
 
       cache --= keysToRemove
+    }
+
+    val flushAllBySchedule = lift {
+      () => cache.clear()
+      flushScheduled = false
     }
 
     val flushAll = lift { () => cache.clear() }

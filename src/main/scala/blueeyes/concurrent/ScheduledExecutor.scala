@@ -8,6 +8,8 @@ trait ScheduledExecutor{
 
   def scheduledExecutor: ScheduledExecutorService
 
+  def once[B](f: Function0[Future[B]], duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[B] = once(toScheduledFunction(f), (), duration)
+
   def once[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[B] = {
     val future = new Future[B]()
 
@@ -27,8 +29,12 @@ trait ScheduledExecutor{
     future
   }
 
+  def forever[B](f: Function0[Future[B]], duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = forever(toScheduledFunction(f), (), duration)
+
   def forever[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] =
     unfold[A, B, Unit](f, message, duration)(())((z: Unit, b: B) => ((), Some(message)))
+
+  def repeat[B, Z](f: Function0[Future[B]], duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = repeat(toScheduledFunction(f), (), duration, times)(seed)(fold)(deliveryStrategy)
 
   def repeat[A, B, Z](f: ScheduledFunction[A, B], message: => A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
     class Folder{
@@ -44,6 +50,8 @@ trait ScheduledExecutor{
     val folder = new Folder()
     repeatWhile(f, message, duration, folder.pred _)(seed)(folder.countedFold _)
   }
+
+  def repeatWhile[B, Z](f: Function0[Future[B]], duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = repeatWhile(toScheduledFunction(f), (), duration, pred)(seed)(fold)(deliveryStrategy)
 
   def repeatWhile[A, B, Z](f: ScheduledFunction[A, B], message: => A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = {
     if (pred(seed)){
@@ -99,6 +107,8 @@ trait ScheduledExecutor{
   def !@ [A, B, Z](f: ScheduledFunction[A, B], msg: A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = repeat(f, msg , duration, times)(seed)(fold)
 
   def !@ [A, B, Z](f: ScheduledFunction[A, B], msg: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A]))(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Z] = unfold(f, msg , duration)(seed)(generator)
+
+  private def toScheduledFunction[B](f: Function0[Future[B]]) = { v: Unit => f()}
 }
 
 trait ScheduledExecutorMultiThreaded extends ScheduledExecutor{

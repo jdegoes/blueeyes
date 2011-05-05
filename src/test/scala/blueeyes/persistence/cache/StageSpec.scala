@@ -39,6 +39,28 @@ class StageSpec extends Specification{
 
       evicted must eventually (be (true))
     }
+    "evict automatically" in{
+      var evicted = false
+
+      val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      stage.put("foo", "bar")
+
+      Thread.sleep(1000)
+
+      evicted must eventually (be (true))
+    }
+    "evict once even more then element is added" in{
+      var evicted = 0
+
+      val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = evicted + 1})
+      stage.put("foo", "bar")
+      stage.put("baz", "foo")
+      stage.put("bar", "baz")
+
+      Thread.sleep(1000)
+
+      evicted must eventually (be (1))
+    }
   }
 
   private def newStage[T](
