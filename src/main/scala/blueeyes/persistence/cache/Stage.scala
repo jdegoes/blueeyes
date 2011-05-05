@@ -4,11 +4,7 @@ import scalaz.Semigroup
 import blueeyes.concurrent._
 
 trait Stage[K, V] extends FutureDeliveryStrategySequential {
-  private sealed trait Request
-  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends Request
-
-  private sealed trait Response
-  private case object Done extends Response
+  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V])
 
   def flush(k: K, v: V): Unit
 
@@ -77,7 +73,13 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private val worker = new Actor with ActorStrategySingleThreaded{
     private val cache = new Cache[K, ExpirableValue[V]](flusher)
 
-    val putAll = lift1{ request: PutAll =>
+    val putAll = lift1 { request: PutAll =>
+      putToCache(request)
+      removeEldestEntries
+      removeExpiredEntries
+    }
+
+    private def putToCache(request: PutAll){
       cache ++= request.pairs.map { tuple =>
         val (key, value2) = tuple
 
@@ -89,11 +91,6 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
         (tuple._1, newValue)
       }
-
-      removeEldestEntries
-      removeExpiredEntries
-
-      Done
     }
 
     private def removeEldestEntries{
@@ -116,11 +113,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
       cache --= keysToRemove
     }
 
-    val flushAll = lift{ () =>
-      cache.clear()
-
-      Done
-    }
+    val flushAll = lift { () => cache.clear() }
   }
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = put(k, v)
