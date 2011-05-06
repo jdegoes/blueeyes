@@ -70,7 +70,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
 
-  private val worker = new Actor with ActorStrategySingleThreaded{
+  private val worker = new Actor with ActorStrategyMultiThreaded{
     import scala.math._
     import java.util.concurrent.TimeUnit
 
