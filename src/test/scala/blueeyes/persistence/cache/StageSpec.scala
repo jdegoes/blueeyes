@@ -49,7 +49,20 @@ class StageSpec extends Specification{
 
       evicted must eventually (be (true))
     }
-    "evict once even more then element is added" in{
+    "evict automatically more then one time" in{
+      var evicted = false
+
+      val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      stage.put("foo", "bar")
+      Thread.sleep(1000)
+      evicted = false
+
+      stage.put("foo", "bar")
+      Thread.sleep(1000)
+
+      evicted must eventually (be (true))
+    }
+    "evict once even more then one element is added" in{
       var evicted = 0
 
       val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = evicted + 1})
