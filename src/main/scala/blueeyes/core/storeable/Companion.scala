@@ -2,15 +2,15 @@ package blueeyes.core.storeable
 
 import scalaz.{Validation, Success}
 
-trait Companion[R <: Product] extends Equals{
+trait Companion[R <: Product] extends Equals{ self =>
   def canEqual(that: Any) = that match{
     case x: AnyRef => this.getClass == x.getClass
     case _ => false
   }
 
-  def _typename = example.getClass.getName
+  def _typename = _example.getClass.getName
 
-  def example: R
+  def _example: R
 
   implicit def valueToValidation[T](v: T) = Success(v)
 }
