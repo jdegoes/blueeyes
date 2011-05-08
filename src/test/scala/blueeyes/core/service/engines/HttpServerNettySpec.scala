@@ -211,7 +211,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
         } ~
         path("/error") {
           get { request: HttpRequest[ByteChunk] =>
-            throw new RuntimeException("Unexecpcted Error.")
+            throw new RuntimeException("Unexpected error (GET /error)")
           }
         } ~
         path("/http/error") {
