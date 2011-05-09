@@ -1,6 +1,6 @@
 package blueeyes.core.storeable
 
-sealed trait Record5[T1, T2, T3, T4, T5] extends Product with Storeable{ self =>
+sealed trait Record5[T1, T2, T3, T4, T5] extends Product with Record{ self =>
   def companion: Record5Companion[_ <: Record5[T1, T2, T3, T4, T5], T1, T2, T3, T4, T5]
 }
 

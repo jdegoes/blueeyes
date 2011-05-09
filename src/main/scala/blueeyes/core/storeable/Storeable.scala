@@ -1,3 +1,6 @@
 package blueeyes.core.storeable
 
-trait Storeable
+sealed trait Storeable
+
+trait Record extends Storeable
+trait Value extends Storeable
