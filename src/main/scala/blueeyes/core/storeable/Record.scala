@@ -1,7 +1,7 @@
 package blueeyes.core.storeable
 
-sealed trait Record extends Product with Storeable{
-  def companion: RecordCompanion[_ <: Record]
+sealed trait Record0 extends Product with Record{
+  def companion: RecordCompanion0[_ <: Record0]
 }
 
-trait RecordCompanion[R <: Record] extends Product with Companion[R]
+trait RecordCompanion0[R <: Record0] extends Product with Companion[R]

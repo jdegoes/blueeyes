@@ -1,13 +1,13 @@
 package blueeyes.core.storeable
 
-sealed trait Record2[T1, T2] extends Product with Storeable{ self =>
+sealed trait Record2[T1, T2] extends Product with Record{ self =>
   def companion: Record2Companion[_ <: Record2[T1, T2], T1, T2]
 }
 
 trait Record2Companion[R <: Record2[T1, T2], T1, T2] extends Product2[Field[R, T1], Field[R, T2]] with Companion[R]
 
 //import scalaz.Failure
-//case class Person(name: String, age: Int) extends Record2[String, Int] {
+//case class Person(name: ValueString, age: ValueInt) extends Record2[ValueString, ValueInt] {
 //  def companion = Person
 //}
 
