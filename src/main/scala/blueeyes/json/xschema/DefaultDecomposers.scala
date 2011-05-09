@@ -2,6 +2,7 @@ package blueeyes.json.xschema {
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
+import scala.math.BigDecimal
 
 /** Decomposers for all basic types.
  */
@@ -32,6 +33,10 @@ trait DefaultDecomposers {
 
   implicit val DoubleDecomposer: Decomposer[Double] = new Decomposer[Double] {
     def decompose(tvalue: Double): JValue = JDouble(tvalue)
+  }
+  
+  implicit val BigDecimalDecomposer: Decomposer[BigDecimal] = new Decomposer[BigDecimal] {
+    def decompose(tvalue: BigDecimal): JValue = JString(tvalue.toString)
   }
   
   implicit val DateDecomposer: Decomposer[JDate] = new Decomposer[JDate] {

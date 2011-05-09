@@ -2,6 +2,7 @@ package blueeyes.json.xschema {
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
+import scala.math.BigDecimal
 
 /** Extractors for all basic types.
  */
@@ -83,6 +84,17 @@ trait DefaultExtractors {
     }
   }
   
+  implicit val BigDecimalExtractor: Extractor[BigDecimal] = new Extractor[BigDecimal] {
+    def extract(jvalue: JValue): BigDecimal = jvalue match {
+      case JInt(i)    => BigDecimal(i)
+      case JDouble(d) => BigDecimal(d)
+      
+      case JString(s) => BigDecimal(s)
+      
+      case _ => error("Expected BigDecimal but found: " + jvalue)
+    }
+  }
+
   implicit val DateExtractor: Extractor[JDate] = new Extractor[JDate] {
     def extract(jvalue: JValue): JDate = new JDate(LongExtractor.extract(jvalue))
   }
