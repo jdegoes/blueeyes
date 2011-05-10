@@ -3,7 +3,7 @@ package blueeyes.concurrent
 import org.specs.Specification
 import org.specs.util.TimeConversions._
 
-class ActorSpec extends Specification with ActorImplicit{
+class ActorSpec extends Specification with ActorImplicits{
 
   "Actor" should {
     "process message" in {
