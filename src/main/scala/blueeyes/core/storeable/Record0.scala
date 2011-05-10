@@ -1,0 +1,7 @@
+package blueeyes.core.storeable
+
+trait Record0 extends Product with Record{
+  def companion: RecordCompanion0[_ <: Record0]
+}
+
+trait RecordCompanion0[R <: Record0] extends Product with Companion[R] with ValueImplicits

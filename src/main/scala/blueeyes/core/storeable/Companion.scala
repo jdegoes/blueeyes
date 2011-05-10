@@ -15,4 +15,4 @@ trait Companion[R <: Product] extends Equals{ self =>
   implicit def valueToValidation[T](v: T) = Success(v)
 }
 
-case class Field[R, T](name: String, getter: R => T, setter: (R, T) => Validation[String, R], default: Validation[String, T])
+case class Field[R, T] (name: String, getter: R => T, setter: (R, T) => Validation[String, R], default: Validation[String, T])(implicit fieldToStoreable: T => Storeable)
