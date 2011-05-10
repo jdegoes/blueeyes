@@ -20,7 +20,7 @@ trait ValueImplicits{
   implicit def optionToValue[T](value: Option[T])(implicit valueToStoreable: T => Storeable)  = ValueOption(value)
   implicit def seqToValue[T](value: Seq[T])(implicit valueToStoreable: T => Storeable)        = ValueSeq(value)
   implicit def setToValue[T](value: Set[T])(implicit valueToStoreable: T => Storeable)        = ValueSet(value)
-  implicit def setToMap[K, V](value: Map[K, V])(implicit keyToStoreable: K => Storeable, valueToStoreable: V => Storeable)     = ValueMap(value)
+  implicit def mapToValue[K, V](value: Map[K, V])(implicit keyToStoreable: K => Storeable, valueToStoreable: V => Storeable)     = ValueMap(value)
 }
 
 object ValueImplicits extends ValueImplicits
