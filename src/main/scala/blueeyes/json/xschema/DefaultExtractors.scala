@@ -4,6 +4,8 @@ import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
 import scala.math.BigDecimal
 
+import org.joda.time.{DateTime, DateTimeZone}
+
 /** Extractors for all basic types.
  */
 trait DefaultExtractors {
@@ -172,6 +174,10 @@ trait DefaultExtractors {
       
       case _ => Map(ListExtractor(Tuple2Extractor(StringExtractor, valueExtractor)).extract(jvalue): _*)
     }
+  }
+
+  implicit val DateTimeExtractor = new Extractor[DateTime] {
+    def extract(jvalue: JValue): DateTime = new DateTime(LongExtractor.extract(jvalue), DateTimeZone.UTC)
   }
 }
 object DefaultExtractors extends DefaultExtractors

@@ -4,6 +4,8 @@ import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
 import scala.math.BigDecimal
 
+import org.joda.time.{DateTime, DateTimeZone}
+
 /** Decomposers for all basic types.
  */
 trait DefaultDecomposers {
@@ -86,6 +88,10 @@ trait DefaultDecomposers {
     def decompose(tvalue: Map[String, V]): JValue = JObject(tvalue.keys.toList.map { key =>
       JField(key, valueDecomposer(tvalue.apply(key)))
     })
+  }
+
+  implicit val DateTimeDecomposer = new Decomposer[DateTime] {
+    def decompose(dateTime: DateTime): JValue = JInt(dateTime.getMillis)
   }
 }
 object DefaultDecomposers extends DefaultDecomposers
