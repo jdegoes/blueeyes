@@ -68,6 +68,6 @@ trait ChecksumPlugin extends BasicManagedProject with GpgPlugin {
     }
   }
 
-  override def deliverLocalAction = super.deliverLocalAction dependsOn(checksum)
+  //override def deliverLocalAction = super.deliverLocalAction dependsOn(checksum)
   override def deliverAction = super.deliverAction dependsOn(checksum)
 }

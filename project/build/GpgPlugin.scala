@@ -41,7 +41,7 @@ trait GpgPlugin extends BasicManagedProject {
     outputPath / filename
   }
 
-  override def deliverLocalAction = super.deliverLocalAction dependsOn(sign)
+  //override def deliverLocalAction = super.deliverLocalAction dependsOn(sign)
   override def deliverAction = super.deliverAction dependsOn(sign)
 
   override def pomPostProcess(pom: Node): Node =
