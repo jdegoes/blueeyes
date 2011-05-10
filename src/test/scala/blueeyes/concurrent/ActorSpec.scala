@@ -23,7 +23,7 @@ class ActorSpec extends Specification with ActorImplicit{
       }
 
       val actor2 = new Actor with ActorStrategySequential{
-        val messageProcessor: (String) => Future[String] = lift1[String, Future[String]]{ message: String => actor1.messageProcessor(message)}
+        val messageProcessor: (String) => Future[String] = flatLift1{ message: String => actor1.messageProcessor(message)}
       }
 
       val future = actor2.messageProcessor("foo")
@@ -48,7 +48,7 @@ class ActorSpec extends Specification with ActorImplicit{
         val pow4AsStringA = pow4A.map(_.toString)
 
         // Safe actor-to-actor communication:
-        val doublePow4A: (Int) => Future[Int]  = lift1[Int, Future[Int]]{ x: Int =>
+        val doublePow4A: (Int) => Future[Int]  = flatLift1{ x: Int =>
           for (xTo4 <- (pow4A(x))) yield xTo4 * 2
         }
       }

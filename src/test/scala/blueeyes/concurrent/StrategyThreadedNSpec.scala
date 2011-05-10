@@ -19,7 +19,7 @@ class StrategyThreadedNSpec extends Specification with ActorStrategyMultiThreade
     future.value mustEqual(Some(3))
   }
 
-  "StrategyThreadedN: handle musltiple requests" in{
+  "StrategyThreadedN: handle multiple requests" in{
     val futures = List.fill(100) {new Future[Int]()}
 
     val fun = actor.f _

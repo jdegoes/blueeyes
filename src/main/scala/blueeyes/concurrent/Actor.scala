@@ -14,49 +14,95 @@ trait Actor extends ActorStrategy{ self =>
 
   def lift[R] (f: () => R): () => Future[R] = () => lift(actorExecutionStrategy.execute(self)(f) _)
 
+  def flatLift[R](f: () => Future[R]): () => Future[R] = () => lift(f)().flatten
+
   def lift1[T1, R](f: T1 => R): T1 => Future[R] = (v1: T1) => lift(actorExecutionStrategy.execute1(self)(f)(v1) _)
+
+  def flatLift1[T1, R](f: T1 => Future[R]): T1 => Future[R] = (v1: T1) => lift1(f)(v1).flatten
 
   def lift2[T1, T2, R](f: (T1, T2) => R): (T1, T2) => Future[R] = (v1: T1, v2: T2) => lift(actorExecutionStrategy.execute2(self)(f)(v1, v2) _)
 
+  def flatLift2[T1, T2, R](f: (T1, T2) => Future[R]): (T1, T2) => Future[R] = (v1: T1, v2: T2) => lift2(f)(v1, v2).flatten
+
   def lift3[T1, T2, T3, R](f: (T1, T2, T3) => R): (T1, T2, T3) => Future[R] = (v1: T1, v2: T2, v3: T3) => lift(actorExecutionStrategy.execute3(self)(f)(v1, v2, v3) _)
+
+  def flatLift3[T1, T2, T3, R](f: (T1, T2, T3) => Future[R]): (T1, T2, T3) => Future[R] = (v1: T1, v2: T2, v3: T3) => lift3(f)(v1, v2, v3).flatten
 
   def lift4[T1, T2, T3, T4, R](f: (T1, T2, T3, T4) => R): (T1, T2, T3, T4) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4) => lift(actorExecutionStrategy.execute4(self)(f)(v1, v2, v3, v4) _)
 
+  def flatLift4[T1, T2, T3, T4, R](f: (T1, T2, T3, T4) => Future[R]): (T1, T2, T3, T4) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4) => lift4(f)(v1, v2, v3, v4).flatten
+
   def lift5[T1, T2, T3, T4, T5, R](f: (T1, T2, T3, T4, T5) => R): (T1, T2, T3, T4, T5) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5) => lift(actorExecutionStrategy.execute5(self)(f)(v1, v2, v3, v4, v5) _)
+
+  def flatLift5[T1, T2, T3, T4, T5, R](f: (T1, T2, T3, T4, T5) => Future[R]): (T1, T2, T3, T4, T5) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5) => lift5(f)(v1, v2, v3, v4, v5).flatten
 
   def lift6[T1, T2, T3, T4, T5, T6, R](f: (T1, T2, T3, T4, T5, T6) => R): (T1, T2, T3, T4, T5, T6) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6) => lift(actorExecutionStrategy.execute6(self)(f)(v1, v2, v3, v4, v5, v6) _)
 
+  def flatLift6[T1, T2, T3, T4, T5, T6, R](f: (T1, T2, T3, T4, T5, T6) => Future[R]): (T1, T2, T3, T4, T5, T6) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6) => lift6(f)(v1, v2, v3, v4, v5, v6).flatten
+
   def lift7[T1, T2, T3, T4, T5, T6, T7, R](f: (T1, T2, T3, T4, T5, T6, T7) => R): (T1, T2, T3, T4, T5, T6, T7) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7) => lift(actorExecutionStrategy.execute7(self)(f)(v1, v2, v3, v4, v5, v6, v7) _)
+
+  def flatLift7[T1, T2, T3, T4, T5, T6, T7, R](f: (T1, T2, T3, T4, T5, T6, T7) => Future[R]): (T1, T2, T3, T4, T5, T6, T7) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7) => lift7(f)(v1, v2, v3, v4, v5, v6, v7).flatten
 
   def lift8[T1, T2, T3, T4, T5, T6, T7, T8, R](f: (T1, T2, T3, T4, T5, T6, T7, T8) => R): (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8) => lift(actorExecutionStrategy.execute8(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8) _)
 
+  def flatLift8[T1, T2, T3, T4, T5, T6, T7, T8, R](f: (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8) => lift8(f)(v1, v2, v3, v4, v5, v6, v7, v8).flatten
+
   def lift9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9) => lift(actorExecutionStrategy.execute9(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9) _)
+
+  def flatLift9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9) => lift9(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9).flatten
 
   def lift10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10) => lift(actorExecutionStrategy.execute10(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) _)
 
+  def flatLift10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10) => lift10(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10).flatten
+
   def lift11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11) => lift(actorExecutionStrategy.execute11(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) _)
+
+  def flatLift11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11) => lift11(f)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11).flatten
 
   def lift12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12) => lift(actorExecutionStrategy.execute12(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) _)
 
+  def flatLift12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12) => lift12(f)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12).flatten
+
   def lift13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13) => lift(actorExecutionStrategy.execute13(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) _)
+
+  def flatLift13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13) => lift13(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13).flatten
 
   def lift14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14) => lift(actorExecutionStrategy.execute14(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14) _)
 
+  def flatLift14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14) => lift14(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14).flatten
+
   def lift15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15) => lift(actorExecutionStrategy.execute15(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) _)
+
+  def flatLift15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15) => lift15(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15).flatten
 
   def lift16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16) => lift(actorExecutionStrategy.execute16(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) _)
 
+  def flatLift16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16) => lift16(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16).flatten
+
   def lift17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17) => lift(actorExecutionStrategy.execute17(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17) _)
+
+  def flatLift17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17) => lift17(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17).flatten
 
   def lift18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18) => lift(actorExecutionStrategy.execute18(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) _)
 
+  def flatLift18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18) => lift18(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18).flatten
+
   def lift19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19) => lift(actorExecutionStrategy.execute19(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) _)
+
+  def flatLift19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19) => lift19(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19).flatten
 
   def lift20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20) => lift(actorExecutionStrategy.execute20(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20) _)
 
+  def flatLift20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20) => lift20(f)(v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20).flatten
+
   def lift21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21) => lift(actorExecutionStrategy.execute21(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21) _)
 
+  def flatLift21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21) => lift21(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21).flatten
+
   def lift22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21, v22: T22) => lift(actorExecutionStrategy.execute22(self)(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22) _)
+
+  def flatLift22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21, v22: T22) => lift22(f)(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22).flatten
 
   private def lift[R](f: Future[R] => Unit): Future[R] = {
     val response = new Future[R]
@@ -114,27 +160,14 @@ trait ActorExecutionStrategy{
 }
 
 trait ActorImplicit{
-  implicit def richActor[T1, T2](actor: T1 => Future[T2]) = new  {
-    /** Actor composition.
-     *
-     * {{{
-     * val aToC = aToB >>> bToC
-     * }}}
-     */
+  implicit def richActor1[T1, T2](actor: T1 => Future[T2]) = new  {
     def >>>[T3](that: T2 => Future[T3]): T1 => Future[T3] = { v1: T1 =>
-      actor(v1).flatMap[T3](that)
-    }
-    def flatMap[T3](that: T2 => Future[T3]): T1 => Future[T3] = { v1: T1 =>
       actor(v1).flatMap[T3](that)
     }
     def map[T3](f: T2 => T3): T1 => Future[T3] = { v1: T1 =>
       actor(v1).map[T3](f)
     }
-    def flatten[T3](implicit witness: T2 => Future[T3]): T1 => Future[T3] = { v1: T1 =>
-      actor(v1).flatMap[T3](witness)
-    }
   }
-  implicit def actorOfFutureToFlattenedActor[A, B](a: A => Future[Future[B]]): A => Future[B] = a.flatten
 }
 
 object ActorImplicit extends ActorImplicit
