@@ -1,12 +1,10 @@
 package blueeyes.concurrent
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, ThreadPoolExecutor, BlockingQueue, SynchronousQueue, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent._
 
-object ActorStrategyMultiThreaded{
-  private lazy val executorService = new ThreadPoolExecutor(2, 1000, 10*60, TimeUnit.SECONDS, new SynchronousQueue())
-}
+trait ActorStrategyMultiThreaded{
 
-trait ActorStrategyMultiThreaded extends ActorStrategy{
+  def executorService: ExecutorService
 
   private val executionSequential = new ActorExecutionStrategySequential { }
 
@@ -73,7 +71,7 @@ trait ActorStrategyMultiThreaded extends ActorStrategy{
         val newWorker = new StrategyWorker(actor, assignments)
 
         if (assignments.putIfAbsent(actor, newWorker) == null) {
-          ActorStrategyMultiThreaded.executorService.execute(newWorker)
+          executorService.execute(newWorker)
         }
 
         try {
@@ -119,6 +117,24 @@ trait ActorStrategyMultiThreaded extends ActorStrategy{
             }
           }
         }
+      }
+    }
+  }
+
+  object ActorContext{
+    private val tl = new ThreadLocal[Actor]
+
+    def get : Option[Actor] = {
+      if (tl.get() != null) Some(tl.get()) else None
+    }
+
+    def withActorFn(actor: Actor)(f : => Unit) = {
+      val old = get
+      try {
+        tl.set(actor)
+        f
+      } finally {
+        tl.set(old.getOrElse(null))
       }
     }
   }
@@ -253,22 +269,10 @@ trait ActorStrategyMultiThreaded extends ActorStrategy{
   }
 }
 
-object ActorContext{
-  private val tl = new ThreadLocal[Actor]
+trait ActorExecutionStrategyFixedPool extends ActorStrategyMultiThreaded {
+  def actorExecutionStrategyThreadPoolSize: Int
 
-  def get : Option[Actor] = {
-    if (tl.get() != null) Some(tl.get()) else None
-  }
-
-  def withActorFn(actor: Actor)(f : => Unit) = {
-    val old = get
-    try {
-      tl.set(actor)
-      f
-    } finally {
-      tl.set(old.getOrElse(null))
-    }
-  }
+  lazy val executorService = Executors.newFixedThreadPool(actorExecutionStrategyThreadPoolSize)
 }
 
 

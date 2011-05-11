@@ -2,9 +2,10 @@ package blueeyes.concurrent
 
 import org.specs.Specification
 import java.util.concurrent.{CountDownLatch, Executors}
+import ActorStrategy._
 import util.Random
 
-class StrategyThreadedNSpec extends Specification with ActorStrategyMultiThreaded{
+class StrategyThreadedNSpec extends Specification{
 
   private val random = new Random()
   private val actor  = new ActorImpl()
@@ -71,7 +72,7 @@ class StrategyThreadedNSpec extends Specification with ActorStrategyMultiThreade
     countDownLatch.await
   }
 
-  class ActorImpl extends Actor with ActorStrategyMultiThreaded{
+  class ActorImpl extends Actor{
     def f(a: Int):  Int = {
       Thread.sleep(random.nextInt(20))
       a + 2

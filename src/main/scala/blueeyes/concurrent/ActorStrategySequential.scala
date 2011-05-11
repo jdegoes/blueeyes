@@ -58,7 +58,7 @@ trait ActorExecutionStrategySequential{
   }
 }
 
-trait ActorStrategySequential extends ActorStrategy{
+object ActorStrategySequential{
   private lazy val futureDeliverySequential = new FutureDeliveryStrategySequential{}
   private lazy val actorExecutionSequential = new ActorExecutionStrategySequential{}
 

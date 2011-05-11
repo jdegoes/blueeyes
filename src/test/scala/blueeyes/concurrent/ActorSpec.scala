@@ -7,7 +7,8 @@ class ActorSpec extends Specification with ActorImplicits{
 
   "Actor" should {
     "process message" in {
-      val actor = new Actor with ActorStrategySequential{
+      import ActorStrategySequential._
+      val actor = new Actor{
         val messageProcessor = lift1{ message: String => message + "_done"}
       }
 
@@ -17,12 +18,12 @@ class ActorSpec extends Specification with ActorImplicits{
 
   "Actor of future" should {
     "flatten implicitly" in {
-
-      val actor1 = new Actor with ActorStrategySequential{
+      import ActorStrategySequential._
+      val actor1 = new Actor{
         val messageProcessor = lift1{ message: String => message + "_done"}
       }
 
-      val actor2 = new Actor with ActorStrategySequential{
+      val actor2 = new Actor{
         val messageProcessor: (String) => Future[String] = flatLift1{ message: String => actor1.messageProcessor(message)}
       }
 
@@ -33,8 +34,9 @@ class ActorSpec extends Specification with ActorImplicits{
 
   "Actor examples" should {
     "compile" in {
+      import ActorStrategy._
       // Easy actor definition:
-      val actor = new Actor with ActorStrategyMultiThreaded{
+      val actor = new Actor{
         val squarePositiveA = lift1 { x: Int => x * x }
 
         val squareNegativeA = lift1 { x: Int => x * x }
