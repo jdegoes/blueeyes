@@ -4,7 +4,7 @@ import scalaz.{Validation, Success, Failure}
 
 sealed trait Storeable
 
-sealed trait Value extends Storeable
+ trait Value extends Storeable
 
 trait Record[C <: Companion[_, _]] extends Storeable {
   def companion: C
