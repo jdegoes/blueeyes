@@ -19,7 +19,87 @@
 			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
 			"settings":
 			{
-				"buffer_size": 16208,
+				"buffer_size": 40085,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
+			"settings":
+			{
+				"buffer_size": 286,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
+			"settings":
+			{
+				"buffer_size": 19061,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
+			"settings":
+			{
+				"buffer_size": 5757,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
+			"settings":
+			{
+				"buffer_size": 9961,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
+			"settings":
+			{
+				"buffer_size": 4833,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
+			"settings":
+			{
+				"buffer_size": 7332,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Library/Application Support/Sublime Text 2/Packages/Scala/Scala.tmLanguage",
+			"settings":
+			{
+				"buffer_size": 11696,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
+			"settings":
+			{
+				"buffer_size": 22611,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JPath.scala",
+			"settings":
+			{
+				"buffer_size": 3629,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
+			"settings":
+			{
+				"buffer_size": 25773,
 				"line_ending": "Unix"
 			}
 		}
@@ -27,6 +107,8 @@
 	"build_system": "",
 	"file_history":
 	[
+		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/data/BijectionsChunkJson.scala",
+		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/data/BijectionsIdentity.scala",
 		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableValue.scala",
 		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirationPolicy.scala",
 		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/Stage.scala",
@@ -199,7 +281,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 10,
 			"sheets":
 			[
 				{
@@ -207,15 +289,15 @@
 					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
 					"settings":
 					{
-						"buffer_size": 16208,
+						"buffer_size": 40085,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								221,
-								221
+								550,
+								550
 							]
 						],
 						"settings":
@@ -226,6 +308,283 @@
 						},
 						"translation.x": 0,
 						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
+					"settings":
+					{
+						"buffer_size": 286,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage"
+						},
+						"translation.x": 0,
+						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
+					"settings":
+					{
+						"buffer_size": 19061,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								14380,
+								14380
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 4826,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
+					"settings":
+					{
+						"buffer_size": 5757,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								509,
+								509
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
+					"settings":
+					{
+						"buffer_size": 9961,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								898,
+								898
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
+					"settings":
+					{
+						"buffer_size": 4833,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4637,
+								4637
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 707,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
+					"settings":
+					{
+						"buffer_size": 7332,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7252,
+								7252
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 1925,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "/Users/John/Library/Application Support/Sublime Text 2/Packages/Scala/Scala.tmLanguage",
+					"settings":
+					{
+						"buffer_size": 11696,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								11016,
+								11016
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/XML/XML.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0,
+						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
+					"settings":
+					{
+						"buffer_size": 22611,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1203,
+								1203
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 0,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JPath.scala",
+					"settings":
+					{
+						"buffer_size": 3629,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								610,
+								610
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 60,
+						"zoom_level": 1
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
+					"settings":
+					{
+						"buffer_size": 25773,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5368,
+								5368
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0,
+						"translation.y": 2060,
 						"zoom_level": 1
 					},
 					"type": "text"
@@ -262,6 +621,38 @@
 		"height": 0,
 		"selected_items":
 		[
+			[
+				"jsonast",
+				"src/main/scala/blueeyes/json/JsonAST.scala"
+			],
+			[
+				"jpath",
+				"src/main/scala/blueeyes/json/JPath.scala"
+			],
+			[
+				"bije",
+				"src/main/scala/blueeyes/core/data/BijectionsIdentity.scala"
+			],
+			[
+				"defaultext",
+				"src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala"
+			],
+			[
+				"defaultser",
+				"src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala"
+			],
+			[
+				"httpclient",
+				"src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala"
+			],
+			[
+				"httprhcom",
+				"src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala"
+			],
+			[
+				"httpresponse",
+				"src/main/scala/blueeyes/core/http/HttpResponse.scala"
+			],
 			[
 				"actor",
 				"src/main/scala/blueeyes/concurrent/Actor.scala"
@@ -319,10 +710,6 @@
 				"src/main/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinators.scala"
 			],
 			[
-				"bije",
-				"src/main/scala/blueeyes/core/data/Bijection.scala"
-			],
-			[
 				"bij",
 				"src/main/scala/blueeyes/core/data/Bijection.scala"
 			],
@@ -371,10 +758,6 @@
 				"src/main/scala/blueeyes/json/Merge.scala"
 			],
 			[
-				"jsonast",
-				"src/main/scala/blueeyes/json/JsonAST.scala"
-			],
-			[
 				"hcdc",
 				"src/main/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinators.scala"
 			],
@@ -393,10 +776,6 @@
 			[
 				"httpheaders",
 				"src/main/scala/blueeyes/core/http/HttpHeader.scala"
-			],
-			[
-				"httpclient",
-				"src/main/scala/blueeyes/core/service/HttpClient.scala"
 			],
 			[
 				"build.",
@@ -517,10 +896,6 @@
 			[
 				"mongoupdat",
 				"src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala"
-			],
-			[
-				"jpath",
-				"src/main/scala/blueeyes/json/JPath.scala"
 			],
 			[
 				"mongoupda",
