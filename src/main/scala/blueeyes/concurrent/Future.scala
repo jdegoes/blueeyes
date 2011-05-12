@@ -493,11 +493,9 @@ object Future {
     if (!futures.isEmpty){
       val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
 
-      futures.zipWithIndex.foreach { pair =>
-        val (future, index) = pair
-
-        future.deliverTo { result =>
-          resultsMap.put(index, result)
+      futures.zipWithIndex.foreach {
+        case (future, index) => future.deliverTo { 
+          result => resultsMap.put(index, result)
         }
       }
 
@@ -547,6 +545,17 @@ object Future {
 
     newF
   }
+
+  implicit def futureMonad(implicit deliveryStrategy: FutureDeliveryStrategy): scalaz.Monad[Future] = new scalaz.Monad[Future] {
+    def pure[A](a: => A) = Future.async(a)
+    def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
+  }
+
+  //implicit val FutureTraverse extends scalaz.Traverse[Future] {
+  //  override def traverse[F[_]: Applicative, A, B](f: A => F[B], t: Future[A]): F[Future[B]] = {
+  //    val ap = implicitly[Applicative[F]]
+  //  }
+  //}
 }
 
 trait FutureImplicits {
