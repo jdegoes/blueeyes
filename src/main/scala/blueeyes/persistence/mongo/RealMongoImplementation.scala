@@ -6,7 +6,7 @@ import blueeyes.json.JsonAST._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import blueeyes.json.{JPath}
-import blueeyes.concurrent.ActorStrategyMultiThreaded
+import blueeyes.concurrent.ActorStrategy._
 
 class RealMongo(config: ConfigMap) extends Mongo{
   val ServerAndPortPattern = "(.+):(.+)".r
@@ -36,8 +36,6 @@ class RealMongo(config: ConfigMap) extends Mongo{
 
 private[mongo] class RealMongoDatabase(database: DB) extends MongoDatabase{
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
-
-  protected val actorStrategy = new ActorStrategyMultiThreaded{}
 }
 
 private[mongo] class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{

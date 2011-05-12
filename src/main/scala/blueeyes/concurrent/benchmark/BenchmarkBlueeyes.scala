@@ -2,6 +2,7 @@ package blueeyes.concurrent.benchmark
 
 import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent._
+import blueeyes.concurrent.ActorStrategy._
 
 object BenchmarkBlueeyes extends BenchmarkScenario[BenchmarkActor]{
 
@@ -16,7 +17,7 @@ object BenchmarkBlueeyes extends BenchmarkScenario[BenchmarkActor]{
   private def actor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) = new BenchmarkActor(index, actors, cdl)
 }
 
-class BenchmarkActor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) extends Actor with ActorStrategyMultiThreaded{
+class BenchmarkActor(index: Int, actors: Array[BenchmarkActor], cdl: CountDownLatch) extends Actor{
   val processor: (String) => Future[Unit] = lift1({x: String =>
     if (index < actors.length - 1)
       actors(index + 1).processor(x)

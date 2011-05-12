@@ -63,7 +63,7 @@ trait ActorExecutionStrategySingleThreaded {
   }
 }
 
-trait ActorStrategySingleThreaded extends ActorStrategy{
+object ActorStrategySingleThreaded{
   private lazy val futureDeliverySequential = new FutureDeliveryStrategySequential{}
   private lazy val actorExecutionSequential = new ActorExecutionStrategySingleThreaded{}
 
