@@ -16,7 +16,7 @@
 	"buffers":
 	[
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
 			"settings":
 			{
 				"buffer_size": 40085,
@@ -24,7 +24,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
 			"settings":
 			{
 				"buffer_size": 286,
@@ -32,7 +32,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
 			"settings":
 			{
 				"buffer_size": 19061,
@@ -40,7 +40,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
 			"settings":
 			{
 				"buffer_size": 5757,
@@ -48,7 +48,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
 			"settings":
 			{
 				"buffer_size": 9961,
@@ -56,7 +56,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
 			"settings":
 			{
 				"buffer_size": 4833,
@@ -64,7 +64,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
 			"settings":
 			{
 				"buffer_size": 7332,
@@ -80,7 +80,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
 			"settings":
 			{
 				"buffer_size": 22611,
@@ -88,7 +88,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JPath.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/json/JPath.scala",
 			"settings":
 			{
 				"buffer_size": 3629,
@@ -96,7 +96,7 @@
 			}
 		},
 		{
-			"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
+			"file": "./blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
 			"settings":
 			{
 				"buffer_size": 25773,
@@ -107,92 +107,84 @@
 	"build_system": "",
 	"file_history":
 	[
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/data/BijectionsChunkJson.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/data/BijectionsIdentity.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableValue.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirationPolicy.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/Stage.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/persistence/cache/StageSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoStage.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/package.scala",
-		"/Users/John/Documents/github/blueeyes/project/build/BlueEyesProject.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/util/logging/W3ExtendedLogger.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/parsers/W3ExtendedLog.scala",
-		"/Users/John/Documents/github/blueeyes/README.md",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/NewStage.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/Expirable.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableValue",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/FutureDeliveryStrategy.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinators.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/NettyEngines.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/NettyConverters.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/NettyRequestHandler.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/http/HttpIpSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/http/HttpRequestSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/demo/BlueEyesDemo.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/data/Bijection.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpRequest.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/demo/BlueEyesDemoServiceSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/util/QueryParser.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoPatches.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/concurrent/ActorSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/io/iteratee/Experiment.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpServerEngine.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/combinators/HttpRequestCombinators.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/Merge.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpHeader.scala",
-		"/Users/John/Documents/github/blueeyes/project/build.properties",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/service/engines/HttpServerNettySpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/parsers/RegexpGen.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoFilter.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/io/iteratee/Enumeratee.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/json/ExtractionExamples.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirationTask.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/util/ActorSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/json/JsonASTTest.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/json/JPathSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JPath.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/QueryBehaviours.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/parsers/RegularExpressionGrammarSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/parsers/RegularExpression.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableMap.scala",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/Color Scheme - Default/Monokai Bright.tmTheme",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/Cache.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/RestPathPattern.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Future.scala",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/Default/Global.sublime-settings",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/User/Global.sublime-settings",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/User/Base File.sublime-settings",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/cache/CacheSettings.scala",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/Default/Base File.sublime-settings",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/util/Actor.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/util/Future.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/util/SpecialCharTranscoder.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/util/StrategyThreadedNSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/json/Examples.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoQuery.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/persistence/mongo/Mongo.scala",
-		"/Applications/Sublime Text 2.app/Contents/MacOS/Pristine Packages/Scala.sublime-package",
-		"/Users/John/Desktop/scala-tm/scala.tmbundle",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/persistence/cache/CacheSpec.scala",
-		"/Users/John/Documents/github/blueeyes/target/scala_2.8.0/test-classes/blueeyes/persistence/cache/CacheSpec$$anonfun$1$$anonfun$apply$15.class",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/persistence/cache/ExpirableMapSpec.scala",
-		"/Users/John/Library/Application Support/Sublime Text 2/Packages/Scala/Scala.tmLanguage",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/json/ArbitraryJPath.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestLogger.scala",
-		"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/util/FutureSpec.scala",
-		"/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpResponseHelpers.scala",
-		"/Users/John/Documents/github/blueeyes/blueeyes.tmproj",
-		"/Users/John/Documents/github/blueeyes/sbt"
+		"./blueeyes/src/main/scala/blueeyes/core/data/BijectionsChunkJson.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/data/BijectionsIdentity.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableValue.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirationPolicy.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/Stage.scala",
+		"./blueeyes/src/test/scala/blueeyes/persistence/cache/StageSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoStage.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/package.scala",
+		"./blueeyes/project/build/BlueEyesProject.scala",
+		"./blueeyes/src/main/scala/blueeyes/util/logging/W3ExtendedLogger.scala",
+		"./blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
+		"./blueeyes/src/main/scala/blueeyes/parsers/W3ExtendedLog.scala",
+		"./blueeyes/README.md",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoUpdate.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/NewStage.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/Expirable.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableValue",
+		"./blueeyes/src/main/scala/blueeyes/concurrent/FutureDeliveryStrategy.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinators.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
+		"./blueeyes/src/test/scala/blueeyes/core/service/HttpServiceDescriptorFactoryCombinatorsSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/engines/NettyEngines.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/engines/NettyConverters.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/engines/NettyRequestHandler.scala",
+		"./blueeyes/src/test/scala/blueeyes/core/http/HttpIpSpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/core/http/HttpRequestSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/demo/BlueEyesDemo.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/data/Bijection.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/http/HttpRequest.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
+		"./blueeyes/src/test/scala/blueeyes/demo/BlueEyesDemoServiceSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/util/QueryParser.scala",
+		"./blueeyes/src/test/scala/blueeyes/core/service/HttpRequestHandlerCombinatorsSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoPatches.scala",
+		"./blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
+		"./blueeyes/src/test/scala/blueeyes/concurrent/ActorSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/io/iteratee/Experiment.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpServerEngine.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerImplicits.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/http/combinators/HttpRequestCombinators.scala",
+		"./blueeyes/src/main/scala/blueeyes/json/Merge.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/http/HttpHeader.scala",
+		"./blueeyes/project/build.properties",
+		"./blueeyes/src/test/scala/blueeyes/core/service/engines/HttpServerNettySpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/parsers/RegexpGen.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoFilter.scala",
+		"./blueeyes/src/main/scala/blueeyes/io/iteratee/Enumeratee.scala",
+		"./blueeyes/src/test/scala/blueeyes/json/ExtractionExamples.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirationTask.scala",
+		"./blueeyes/src/test/scala/blueeyes/util/ActorSpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/json/JsonASTTest.scala",
+		"./blueeyes/src/test/scala/blueeyes/json/JPathSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/json/JPath.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/QueryBehaviours.scala",
+		"./blueeyes/src/test/scala/blueeyes/core/service/RestPathPatternSpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/parsers/RegularExpressionGrammarSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/parsers/RegularExpression.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/ExpirableMap.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/Cache.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/RestPathPattern.scala",
+		"./blueeyes/src/main/scala/blueeyes/concurrent/Future.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/cache/CacheSettings.scala",
+		"./blueeyes/src/main/scala/blueeyes/util/Actor.scala",
+		"./blueeyes/src/main/scala/blueeyes/util/Future.scala",
+		"./blueeyes/src/main/scala/blueeyes/util/SpecialCharTranscoder.scala",
+		"./blueeyes/src/test/scala/blueeyes/util/StrategyThreadedNSpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/json/Examples.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/MongoQuery.scala",
+		"./blueeyes/src/main/scala/blueeyes/persistence/mongo/Mongo.scala",
+		"./blueeyes/src/test/scala/blueeyes/persistence/cache/CacheSpec.scala",
+		"./blueeyes/target/scala_2.8.0/test-classes/blueeyes/persistence/cache/CacheSpec$$anonfun$1$$anonfun$apply$15.class",
+		"./blueeyes/src/test/scala/blueeyes/persistence/cache/ExpirableMapSpec.scala",
+		"./blueeyes/src/test/scala/blueeyes/json/ArbitraryJPath.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpRequestLogger.scala",
+		"./blueeyes/src/test/scala/blueeyes/util/FutureSpec.scala",
+		"./blueeyes/src/main/scala/blueeyes/core/service/HttpResponseHelpers.scala",
+		"./blueeyes/blueeyes.tmproj",
+		"./blueeyes/sbt"
 	],
 	"find_in_files":
 	{
@@ -275,7 +267,7 @@
 	{
 		"mount_points":
 		[
-			"/Users/John/Documents/github/blueeyes"
+			"./blueeyes"
 		]
 	},
 	"groups":
@@ -286,7 +278,7 @@
 			[
 				{
 					"buffer": 0,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/concurrent/Actor.scala",
 					"settings":
 					{
 						"buffer_size": 40085,
@@ -314,7 +306,7 @@
 				},
 				{
 					"buffer": 1,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/core/http/HttpResponse.scala",
 					"settings":
 					{
 						"buffer_size": 286,
@@ -340,7 +332,7 @@
 				},
 				{
 					"buffer": 2,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/core/service/HttpRequestHandlerCombinators.scala",
 					"settings":
 					{
 						"buffer_size": 19061,
@@ -368,7 +360,7 @@
 				},
 				{
 					"buffer": 3,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/core/service/HttpClient.scala",
 					"settings":
 					{
 						"buffer_size": 5757,
@@ -396,7 +388,7 @@
 				},
 				{
 					"buffer": 4,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/core/service/engines/HttpClientEngines.scala",
 					"settings":
 					{
 						"buffer_size": 9961,
@@ -424,7 +416,7 @@
 				},
 				{
 					"buffer": 5,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/json/xschema/DefaultDecomposers.scala",
 					"settings":
 					{
 						"buffer_size": 4833,
@@ -452,7 +444,7 @@
 				},
 				{
 					"buffer": 6,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/json/xschema/DefaultExtractors.scala",
 					"settings":
 					{
 						"buffer_size": 7332,
@@ -507,7 +499,7 @@
 				},
 				{
 					"buffer": 8,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/concurrent/ActorStrategyMultiThreaded.scala",
 					"settings":
 					{
 						"buffer_size": 22611,
@@ -535,7 +527,7 @@
 				},
 				{
 					"buffer": 9,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JPath.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/json/JPath.scala",
 					"settings":
 					{
 						"buffer_size": 3629,
@@ -563,7 +555,7 @@
 				},
 				{
 					"buffer": 10,
-					"file": "/Users/John/Documents/github/blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
+					"file": "./blueeyes/src/main/scala/blueeyes/json/JsonAST.scala",
 					"settings":
 					{
 						"buffer_size": 25773,
@@ -799,7 +791,7 @@
 			],
 			[
 				"actorspec",
-				"/Users/John/Documents/github/blueeyes/src/test/scala/blueeyes/util/ActorSpec.scala"
+				"./blueeyes/src/test/scala/blueeyes/util/ActorSpec.scala"
 			],
 			[
 				"expirationtask",
