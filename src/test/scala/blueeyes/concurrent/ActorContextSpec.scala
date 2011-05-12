@@ -1,16 +1,17 @@
 package blueeyes.concurrent
 
 import org.specs.Specification
+import ActorStrategy._
 
 class ActorContextSpec extends Specification{
   private var contextIsSet = false
 
-  val actor1 = new Actor with ActorStrategyMultiThreaded  {
+  val actor1 = new Actor{
     val func = lift1{ v: String =>
       contextIsSet = ActorContext.get != None
     }
   }
-  val actor2 = new Actor with ActorStrategyMultiThreaded  {
+  val actor2 = new Actor{
     val func = lift1{ v: String =>
       contextIsSet = ActorContext.get != None
     }

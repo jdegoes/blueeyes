@@ -39,14 +39,10 @@ trait Mongo{
  *
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
  */
-trait MongoDatabase{
+abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
   private lazy val mongoActor = new Actor{
 
     val query = lift2((query: MongoQuery[_], collection: DatabaseCollection) => query(collection))
-
-    implicit def futureDeliveryStrategy = actorStrategy.futureDeliveryStrategy
-
-    implicit def actorExecutionStrategy = actorStrategy.actorExecutionStrategy
   }
 
   def apply[T](query: MongoQuery[T]): Future[T]  = {
@@ -56,8 +52,6 @@ trait MongoDatabase{
     }
     mongoActor.query(query, databaseCollection).asInstanceOf[Future[T]]
   }
-
-  protected def actorStrategy: ActorStrategy
 
   protected def collection(collectionName: String): DatabaseCollection
 }

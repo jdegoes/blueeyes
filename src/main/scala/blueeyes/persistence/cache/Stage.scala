@@ -2,6 +2,7 @@ package blueeyes.persistence.cache
 
 import scalaz.Semigroup
 import blueeyes.concurrent._
+import blueeyes.concurrent.ActorStrategy._
 
 trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V])
@@ -70,7 +71,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
 
-  private val worker = new Actor with ActorStrategyMultiThreaded{
+  private val worker = new Actor{
     import scala.math._
     import java.util.concurrent.TimeUnit
 
