@@ -124,7 +124,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject1 :: Nil)
     collection.update(None, "name" set ("foo"), false, false)
 
-    collection.select(MongoSelection(Nil), None, None, None, None).toList mustEqual((jObject1.merge(JObject(JField("name", JString("foo")) :: Nil)) :: Nil).toStream)
+    collection.select(MongoSelection(Nil), None, None, None, None).toList mustEqual(jObject1.merge(JObject(JField("name", JString("foo")) :: Nil)) :: Nil)
   }
   "update jobject fields" in{
     val collection = newCollection

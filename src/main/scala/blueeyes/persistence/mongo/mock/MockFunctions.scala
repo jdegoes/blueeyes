@@ -103,7 +103,7 @@ private[mock] object UpdateFunction extends JObjectFields{
     case x: MongoUpdateField   => {
       def updateValue(value: JValue) = Some(MockMongoUpdateEvaluators.UpdateFiledEvaluatorFactory(x.operator)(value, x.filter))
       val (mergeOperation, pathRestorer) = jobject.get(x.path) match {
-        case List(JNothing) => (true, jvalueToJObject _)
+        case JNothing => (true, jvalueToJObject _)
         case _   => (false, (p: JPath, v: JValue) => {v})
       }
 
