@@ -541,10 +541,16 @@ object JsonAST {
       case _ => false
     }
   }
+  object JObject {
+    lazy val empty = JObject(Nil)
+  }
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
     def values = elements.map(_.values)
     override def apply(i: Int): JValue = elements(i)
+  }
+  object JArray {
+    lazy val empty = JArray(Nil)
   }
 
   /** Renders JSON.
