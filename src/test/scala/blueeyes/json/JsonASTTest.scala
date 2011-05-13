@@ -21,8 +21,10 @@ import org.scalacheck.Prop.forAll
 import org.specs.Specification
 import org.specs.ScalaCheck
 
-object JsonASTSpec extends Specification with ArbitraryJValue with ScalaCheck {
+object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   import JsonAST._
+
+  override val defaultPrettyParams = Pretty.Params(2)
 
   "Functor identity" in {
     val identityProp = (json: JValue) => json == (json mapUp identity)
@@ -100,6 +102,56 @@ object JsonASTSpec extends Specification with ArbitraryJValue with ScalaCheck {
       removed.flatten.forall(_.getClass != x)
     }
     forAll(removeProp) must pass
+  }
+
+  "Set and retrieve an arbitrary jvalue at an arbitrary path" in {
+    runArbitraryPathSpec
+  }
+
+  def runArbitraryPathSpec = {
+    import org.scalacheck.Prop._
+
+    implicit val arbJPath: Arbitrary[JPath] = Arbitrary {
+      import Gen._
+
+      val genIndex = for {
+        index <- choose(0, 10)
+      } yield JPathIndex(index)
+
+      val genField = for {
+        name <- identifier
+      } yield JPathField(name)
+
+      val genIndexOrField = Gen.frequency((1, genIndex), (9, genField))
+
+      for {
+        length      <- choose(0, 10)
+        listOfNodes <- listOfN(length, genIndexOrField)
+      } yield JPath(listOfNodes)
+    }
+
+    def badPath(jv: JValue, p: JPath): Boolean = p.nodes match {
+      case JPathIndex(index) :: xs => jv match {
+        case JArray(nodes) => index > nodes.length || 
+                              (index < nodes.length && badPath(nodes(index), JPath(xs))) ||
+                              badPath(JArray(Nil), JPath(xs))
+
+        case JObject(_) => true
+        case _ => index != 0 || badPath(JArray(Nil), JPath(xs))
+      }
+
+      case JPathField(name)  :: xs => jv match {
+        case JArray(_) => true
+        case _ => badPath(jv \ name, JPath(xs))
+      }
+      case Nil => false
+    }
+
+    val setProp = (jv: JValue, p: JPath, toSet: JValue) => {
+      (!badPath(jv, p)) ==> (jv.set(p, toSet).get(p) must_== toSet)
+    }
+
+    forAll(setProp) must pass
   }
 
   private def reorderFields(json: JValue) = json mapUp {

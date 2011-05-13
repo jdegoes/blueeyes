@@ -166,6 +166,40 @@ object JsonAST {
 
     def get(path: JPath): JValue = path.extract(this)
 
+    def set(path: JPath, value: JValue): JValue = if (path == JPath.Identity) value else {
+      def up(l: List[JValue], i: Int, v: JValue) = l.length match {
+          case len if len == i =>  l :+ v 
+          case len if i < 0 || i > len =>
+            error("Attempt to create a new element out of JArray bounds at " + i) 
+
+          case _ => l.updated(i, v) 
+      }
+
+      this match {
+        case obj @ JObject(fields) => path.nodes match {
+          case JPathField(name) :: Nil => JObject(JField(name, value) :: fields.filterNot(_.name == name))
+
+          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
+          
+          case _ => error("Objects are not indexed")
+        }
+
+        case arr @ JArray(elements) => path.nodes match {
+          case JPathIndex(index) :: Nil => JArray(up(elements, index, value))
+          case JPathIndex(index) :: nodes => JArray(up(elements, index, elements.lift(index).getOrElse(JNothing).set(JPath(nodes), value)))
+          case _ => error("Arrays have no fields")
+        }
+
+        case _ => path.nodes match {
+          case Nil => value
+
+          case JPathIndex(_) :: _ => JArray(Nil).set(path, value)
+
+          case JPathField(_) :: _ => JObject(Nil).set(path, value)
+        }
+      }
+    }
+
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
      * <p>
@@ -544,7 +578,7 @@ object JsonAST {
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
     def values = elements.map(_.values)
-    override def apply(i: Int): JValue = elements(i)
+    override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
 
   /** Renders JSON.

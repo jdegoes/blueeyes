@@ -20,6 +20,10 @@ import org.scalacheck.{Gen, Arbitrary}
 import Arbitrary.arbitrary
 
 trait ArbitraryJPath {
+  def trace[A](a: => A): A = try { a } catch {
+    case ex => { ex.printStackTrace; throw ex }
+  }
+
   implicit val arbJPath: Arbitrary[JPath] = Arbitrary {
     import Gen._
 
