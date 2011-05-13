@@ -5,10 +5,10 @@ import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.JPathExtension._
 
 private[mock] trait JObjectFields{
-  def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = jobject.get(selectionPath) match{
-    case Nil             => None
-    case x :: Nil        => transformer(x).map(jobjectRestorer(selectionPath, _))
-    case _        => error("jpath which is select more then one value is not supported")
+  def selectByPath(selectionPath: JPath, jobject: JObject, transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = {
+    val x = jobject.get(selectionPath)
+    
+    transformer(x).map(jobjectRestorer(selectionPath, _))
   }
 
   def selectFields(jobjects: List[JObject], selection : List[JPath], transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = {
@@ -37,22 +37,18 @@ private[mock] trait JObjectFields{
 
 private[mongo] class JObjectOrdering(path: JPath, weight: Int) extends Ordering[JObject]{
   def compare(o1: JObject, o2: JObject) = (o1.get(path), o2.get(path)) match {
-    case (v1 :: Nil, v2 :: Nil) =>
-      (v1, v2) match {
-        case (JString(x1),  JString(x2)) => x1.compare(x2) * weight
-        case (JInt(x1),     JInt(x2))    => x1.compare(x2) * weight
-        case (JDouble(x1),  JDouble(x2)) => x1.compare(x2) * weight
-        case (JDouble(x1),  JInt(x2))    => x1.compare(x2.doubleValue) * weight
-        case (JInt(x1),     JDouble(x2)) => x1.doubleValue.compare(x2) * weight
-        case (JBool(x1),    JBool(x2))   => x1.compare(x2) * weight
-        case (JNull,        JNull)       => 0
-        case (v,            JNull)       => 1
-        case (JNull,        v)           => -1
-        case (JNothing,     JNothing)    => 0
-        case (v,            JNothing)       => 1
-        case (JNothing,     v)           => -1
-        case _ => error("differents elements cannot be ordered")
-      }
-    case _ => error("lists cannot be ordered")
+    case (JString(x1),  JString(x2)) => x1.compare(x2) * weight
+    case (JInt(x1),     JInt(x2))    => x1.compare(x2) * weight
+    case (JDouble(x1),  JDouble(x2)) => x1.compare(x2) * weight
+    case (JDouble(x1),  JInt(x2))    => x1.compare(x2.doubleValue) * weight
+    case (JInt(x1),     JDouble(x2)) => x1.doubleValue.compare(x2) * weight
+    case (JBool(x1),    JBool(x2))   => x1.compare(x2) * weight
+    case (JNull,        JNull)       => 0
+    case (v,            JNull)       => 1
+    case (JNull,        v)           => -1
+    case (JNothing,     JNothing)    => 0
+    case (v,            JNothing)       => 1
+    case (JNothing,     v)           => -1
+    case _ => error("differents elements cannot be ordered")
   }
 }

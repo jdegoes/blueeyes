@@ -17,21 +17,29 @@
 package blueeyes.json
 
 import org.scalacheck._
-import org.scalacheck.Prop.forAll
-import org.specs.Specification
-import org.specs.ScalaCheck
+import Gen._
+import Arbitrary.arbitrary
 
-object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
-  import JsonAST._
-  import scala.text.Document
+trait ArbitraryXml {
+  import Xml.{XmlNode, XmlElem}
+  import scala.xml.{Node, NodeSeq, Text}
 
-  "rendering does not change semantics" in {
-    val rendering = (json: Document) => parse(Printer.pretty(json)) == parse(Printer.compact(json))
+  def genXml: Gen[Node] = frequency((2, wrap(genNode)), (3, genElem))
+  
+  def genNode = for {
+    name <- genName
+    node <- Gen.containerOfN[List, Node](children, genXml) map { seq => new XmlNode(name, seq) }
+  } yield node
 
-    forAll(rendering) must pass
-  }
+  def genElem = for {
+    name <- genName
+    value <- arbitrary[String]
+  } yield new XmlElem(name, value)
 
-  private def parse(json: String) = scala.util.parsing.json.JSON.parse(json)
+  def genName = frequency((2, identifier), (1, value("const")))
+  private def children = choose(1, 3).sample.get
 
-  implicit def arbDoc: Arbitrary[Document] = Arbitrary(genJValue.map(render(_)))
+
+
+  implicit def arbXml: Arbitrary[Node] = Arbitrary(genXml)
 }

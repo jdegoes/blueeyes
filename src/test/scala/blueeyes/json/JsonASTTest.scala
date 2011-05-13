@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
-import _root_.org.scalacheck._
-import _root_.org.scalacheck.Prop.forAll
-import _root_.org.specs.Specification
-import _root_.org.specs.ScalaCheck
+import org.scalacheck._
+import org.scalacheck.Prop.forAll
+import org.specs.Specification
+import org.specs.ScalaCheck
 
-object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
+object JsonASTSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
 
   "Functor identity" in {
@@ -100,7 +99,6 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
 
       removed.flatten.forall(_.getClass != x)
     }
-    implicit val arbJValueClass1 = arbJValueClass
     forAll(removeProp) must pass
   }
 
@@ -113,12 +111,4 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
     case x if x.getClass == clazz => true
     case _ => false
   }
-
-  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
-  implicit def arbJObject: Arbitrary[JObject] = Arbitrary(genObject)
-  implicit def arbJValueClass: Arbitrary[Class[_ <: JValue]] = Arbitrary(genJValueClass)
-  implicit def shrinkJValueClass[T]: Shrink[T] = Shrink(x => Stream.empty)
-}
-
-}
 }

@@ -17,13 +17,15 @@
 package blueeyes.json
 
 import org.specs.{Specification, ScalaCheck}
-import org.scalacheck.Prop.forAll
+import org.scalacheck.{Gen, Arbitrary, Prop}
+import Prop.forAll
+import Arbitrary._
 
 import JsonAST._
 
 import scala.util.matching.Regex
 
-object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath {
+object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   "Parser" should {
     "parse all valid JPath strings" in {
       forAll { (jpath: JPath) =>
@@ -38,10 +40,28 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath {
   }
 
   "Extractor" should {
+    "extract all existing paths" in {
+
+      implicit val arb: Arbitrary[(JValue, List[(JPath, JValue)])] = Arbitrary {
+        for (jv <- arbitrary[JObject]) yield (jv, jv.flattenWithPath)
+      }
+
+      forAll { (testData: (JValue, List[(JPath, JValue)])) => 
+        testData match {
+          case (obj, allPathValues) => 
+            val allProps = allPathValues.map {
+              case (path, pathValue) => path.extract(obj) mustEqual pathValue
+            }
+
+            allProps.foldLeft[Prop](true)(_ && _)
+        }
+      } must pass
+    }
+
     "extract a second level node" in {
       val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
 
-      JPath("address.city").extract(j) mustEqual(JString("B") :: Nil)
+      JPath("address.city").extract(j) mustEqual(JString("B"))
     }
   }
 

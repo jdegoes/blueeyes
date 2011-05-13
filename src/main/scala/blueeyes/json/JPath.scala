@@ -4,7 +4,7 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
+sealed trait JPath { self =>
   def nodes: List[JPathNode]
 
   def parent: Option[JPath] = if (nodes.length == 0) None else Some(JPath(nodes.take(nodes.length - 1): _*))
@@ -29,21 +29,17 @@ sealed trait JPath extends Function1[JValue, List[JValue]] { self =>
 
   def apply(index: Int): JPath = this \ JPathIndex(index)
 
-  def apply(jvalue: JValue): List[JValue] = extract(jvalue)
-
-  def extract(jvalue: JValue): List[JValue] = {
+  def extract(jvalue: JValue): JValue = {
     def extract0(path: List[JPathNode], d: JValue): JValue = path match {
       case Nil => d
 
       case head :: tail => head match {
         case JPathField(name)  => extract0(tail, d \ name)
-        case JPathIndex(index) => extract0(tail, jvalue(index))
+        case JPathIndex(index) => extract0(tail, d(index))
       }
     }
 
-    expand(jvalue).map { jpath =>
-      extract0(jpath.nodes, jvalue)
-    }
+    extract0(nodes, jvalue)
   }
 
   def expand(jvalue: JValue): List[JPath] = {

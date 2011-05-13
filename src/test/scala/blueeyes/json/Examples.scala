@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
-import _root_.org.specs.Specification
+import org.specs.Specification
 
 object Examples extends Specification {
   import JsonAST._
@@ -132,7 +131,7 @@ object Examples extends Specification {
     val json = parse(person)
 
     def form(list: JPath*): List[(JPath, JValue)] = list.toList.map { path =>
-      (path, json(path).head)
+      (path, json(path))
     }
 
     val folded = (json.foldUpWithPath[List[(JPath, JValue)]](Nil) { (list, path, json) =>
@@ -225,7 +224,4 @@ object Examples extends Specification {
   val nulls = ("f1" -> null) ~ ("f2" -> List(null, "s"))
   val quoted = """["foo \" \n \t \r bar"]"""
   val symbols = ("f1" -> 'foo) ~ ("f2" -> 'bar)
-}
-
-}
 }

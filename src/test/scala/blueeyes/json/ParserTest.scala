@@ -22,7 +22,7 @@ import _root_.org.scalacheck.Prop._
 import _root_.org.specs.Specification
 import _root_.org.specs.ScalaCheck
 
-object ParserSpec extends Specification with JValueGen with ScalaCheck {
+object ParserSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
   import JsonParser._
   import Printer._
@@ -51,8 +51,6 @@ object ParserSpec extends Specification with JValueGen with ScalaCheck {
   "All valid string escape characters can be parsed" in {
     parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
   }
-
-  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
 
   private def parseVal(json: JValue, bufSize: Int) = {
     val existingSize = JsonParser.Segments.segmentSize

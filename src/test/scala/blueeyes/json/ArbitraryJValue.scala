@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
 
-trait JValueGen {
+trait ArbitraryJValue {
   import JsonAST._
 
   def genJValue:  Gen[JValue]  = frequency((5, genSimple), (1, wrap(genArray)), (1, wrap(genObject)))
@@ -49,27 +48,9 @@ trait JValueGen {
     classOf[JDouble], classOf[JBool], classOf[JString], classOf[JField], classOf[JArray], classOf[JObject])
 
   def listSize = choose(0, 5).sample.get
-}
 
-trait NodeGen {
-  import Xml.{XmlNode, XmlElem}
-  import scala.xml.{Node, NodeSeq, Text}
-
-  def genXml: Gen[Node] = frequency((2, wrap(genNode)), (3, genElem))
-  
-  def genNode = for {
-    name <- genName
-    node <- Gen.containerOfN[List, Node](children, genXml) map { seq => new XmlNode(name, seq) }
-  } yield node
-
-  def genElem = for {
-    name <- genName
-    value <- arbitrary[String]
-  } yield new XmlElem(name, value)
-
-  def genName = frequency((2, identifier), (1, value("const")))
-  private def children = choose(1, 3).sample.get
-}
-
-}
+  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
+  implicit def arbJObject: Arbitrary[JObject] = Arbitrary(genObject)
+  implicit def arbJValueClass: Arbitrary[Class[_ <: JValue]] = Arbitrary(genJValueClass)
+  implicit def shrinkJValueClass[T]: Shrink[T] = Shrink(x => Stream.empty)
 }

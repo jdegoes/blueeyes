@@ -162,9 +162,9 @@ object JsonAST {
      * json(".foo[0].bar.baz[123]")
      * </pre>
      */
-    def apply(path: JPath): List[JValue] = path.extract(this)
+    def apply(path: JPath): JValue = get(path)
 
-    def get(path: JPath): List[JValue] = apply(path)
+    def get(path: JPath): JValue = path.extract(this)
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.

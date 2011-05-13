@@ -23,7 +23,7 @@ private[mongo] object Evaluators{
 
   object MongoElementsMatchFilterEvaluator{
     def apply(values: List[JValue], filter: MongoElementsMatchFilter) = {
-      values.filter(value => !searchElements(value.get(filter.lhs), filter).isEmpty)
+      values.filter(value => !searchElements(value.get(filter.lhs) :: Nil, filter).isEmpty)
     }
     private def searchElements(elements: List[JValue], filter: MongoElementsMatchFilter) = {
       elements.filter(v => v match {

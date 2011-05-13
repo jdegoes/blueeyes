@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
-import _root_.org.scalacheck._
-import _root_.org.scalacheck.Prop.forAll
-import _root_.org.specs.Specification
-import _root_.org.specs.ScalaCheck
+import org.scalacheck._
+import org.scalacheck.Prop.forAll
+import org.specs.Specification
+import org.specs.ScalaCheck
 
-object XmlSpec extends Specification with NodeGen with JValueGen with ScalaCheck {
+object XmlSpec extends Specification with ArbitraryXml with ArbitraryJValue with ScalaCheck {
   import Xml._
   import JsonAST._
   import Printer.compact
@@ -38,10 +37,4 @@ object XmlSpec extends Specification with NodeGen with JValueGen with ScalaCheck
     val conversion = (json: JValue) => { parse(compact(render(toJson(toXml(json))))); true }
     forAll(conversion) must pass
   }
-
-  implicit def arbXml: Arbitrary[Node] = Arbitrary(genXml)
-  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)
-}
-
-}
 }
