@@ -14,23 +14,11 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
   def maximumCapacity: Int
 
   class Cache[A, B](flush: (A, B) => Unit) extends scala.collection.mutable.Map[A, B] { self =>
-    private val impl = new java.util.LinkedHashMap[A, B]
+    private val impl = new scala.collection.mutable.LinkedHashMap[A, B]
 
-    def get(key: A): Option[B] = Option(impl.get(key))
+    def get(key: A): Option[B] = impl.get(key)
 
-    def iterator: Iterator[(A, B)] = {
-      val it = impl.entrySet.iterator
-
-      new Iterator[(A, B)] {
-        def hasNext = it.hasNext
-
-        def next: (A, B) = {
-          val n = it.next
-
-          (n.getKey, n.getValue)
-        }
-      }
-    }
+    def iterator: Iterator[(A, B)] = impl.iterator
 
     def += (kv: (A, B)): this.type = {
       impl.put(kv._1, kv._2)
@@ -39,7 +27,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
     }
 
     def -= (k: A): this.type = {
-      Option(impl.get(k)) foreach { v =>
+      impl.get(k) foreach { v =>
         flush(k, v)
 
         impl.remove(k)
@@ -59,12 +47,12 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
     override def size = impl.size
 
     override def foreach[U](f: ((A, B)) => U): Unit = {
-      val it = impl.entrySet.iterator()
+      val it = impl.iterator
 
       while (it.hasNext) {
         val entry = it.next
 
-        f((entry.getKey, entry.getValue))
+        f((entry._1, entry._2))
       }
     }
   }
@@ -127,8 +115,8 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
       cache --= keysToRemove
     }
 
-    val flushAllBySchedule = lift {
-      () => cache.clear()
+    val flushAllBySchedule = lift { () =>
+      cache.clear()
       flushScheduled = false
     }
 
