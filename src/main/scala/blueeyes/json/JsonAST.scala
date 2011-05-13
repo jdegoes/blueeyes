@@ -570,6 +570,8 @@ object JsonAST {
     type Values = Map[String, Any]
     def values = Map() ++ fields.map(_.values : (String, Any))
 
+    override def set(path: JPath, value: JValue): JObject = super.set(path, value).asInstanceOf[JObject]
+
     override def equals(that: Any): Boolean = that match {
       case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
       case _ => false
@@ -581,6 +583,9 @@ object JsonAST {
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
     def values = elements.map(_.values)
+
+    override def set(path: JPath, value: JValue): JArray = super.set(path, value).asInstanceOf[JArray]
+
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
   object JArray {
