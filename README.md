@@ -30,14 +30,14 @@ Repositories:
  * http://oss.sonatype.org/content/repositories/releases/
  * http://scala-tools.org/repo-snapshots/
  * http://repository.jboss.org/nexus/content/groups/public/
- * http://scalablesolutions.se/akka/repository/
+ * http://akka.io/repository/
 
 Library dependency:
 
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.3.11</version>
+      <version>0.3.12</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -47,9 +47,9 @@ Library dependency:
     val sonatype_repo     = MavenRepository("Sonatype",     "http://oss.sonatype.org/content/repositories/releases/")
     val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
-    val akka_repo         = MavenRepository("Akka",         "http://scalablesolutions.se/akka/repository/")
+    val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.11" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.12" % "compile"
 
 ## Origins
 
