@@ -30,8 +30,8 @@ trait Bijection[T, S] { self =>
   def andThen[R](that: Bijection[S, R]): Bijection[T, R] = that.compose(self)
 }
 
-object Bijection {
-  def identity[T]: Bijection[T, T] = new Bijection[T, T] {
+object Bijection extends BijectionsIdentity {
+  implicit def identity[T]: Bijection[T, T] = new Bijection[T, T] {
     def apply(t: T): T = t
     
     def unapply(t: T): T = t

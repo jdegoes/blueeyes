@@ -6,7 +6,8 @@ case class Duration(time: Long, unit: TimeUnit)
 
 object Duration {
   // So user can write: 23.milliseconds, 92.seconds, etc.
-  implicit def longToDuration(value: Long) = new {
+  implicit def longToDurationn[N: Numeric](numeric: N) = new {
+    val value = implicitly[Numeric[N]].toLong(numeric)
     def milliseconds = Duration(value, TimeUnit.MILLISECONDS)
     def nanoseconds  = Duration(value, TimeUnit.NANOSECONDS)
     def microseconds = Duration(value, TimeUnit.MICROSECONDS)
