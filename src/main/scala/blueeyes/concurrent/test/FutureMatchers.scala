@@ -9,6 +9,9 @@ import java.util.concurrent.{TimeoutException,  TimeUnit, CountDownLatch}
 import blueeyes.concurrent.Duration
 import blueeyes.concurrent.Duration._
 
+import scalaz.Scalaz._
+import scalaz.{Validation, Success, Failure}
+
 trait FutureMatchers {
   case class FutureTimeouts(retries: Int, timeout: Duration)
 
@@ -34,15 +37,21 @@ trait FutureMatchers {
 
       val result = try {
         latch.await(timeouts.timeout.time, timeouts.timeout.unit)
-        Right(inner(delivered.value))
+
+        inner(delivered.value) |> { result =>
+          if (result.success || retries <= 0) success(result)
+          else failure(result.koMessage)
+        }
       } catch {        
-        case (_ : TimeoutException | _ : InterruptedException) => Left(retries - 1)
+        case (_ : TimeoutException | _ : InterruptedException) => failure("Delivery of future timed out")
       }  
 
       result match {
-        case Right(result) if (result.success || retries <= 0) => result
-        case Left(toRetry) if (toRetry > 0) => retry(future, toRetry)        
-        case _ => (false, "Too many timeout exceptions.", "Not enough timeout exceptions.")
+        case Success(result) => result
+
+        case Failure(_) if (retries > 0) => retry(future, retries - 1)
+
+        case Failure(message) => (false, "Enough timeout exceptions.", message)
       }
     }
   }
