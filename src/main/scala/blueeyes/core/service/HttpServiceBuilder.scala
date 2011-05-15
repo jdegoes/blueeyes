@@ -22,7 +22,8 @@ val emailService = {
 */
 trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits with FutureDeliveryStrategySequential{
   protected case class StartupDescriptor[S](startup: () => Future[S]) {
-    def -> (request: RequestDescriptor[S]) = new {
+    def -> (request: RequestDescriptor[S]) = new StartupAndShutdownDescriptor(request)
+    class StartupAndShutdownDescriptor(request: RequestDescriptor[S]){
       def -> (shutdown: ShutdownDescriptor[S]) = HttpServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
     }
   }

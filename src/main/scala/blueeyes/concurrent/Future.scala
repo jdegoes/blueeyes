@@ -561,7 +561,8 @@ object Future {
 trait FutureImplicits {
   implicit def any2Future[T, S >: T](any: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[S] = Future(any: S)
 
-  implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = new {
+  implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = TupleOfFuturesJoiner(tuple)
+  case class TupleOfFuturesJoiner[U, V](tuple: (Future[U], Future[V])){
     def join: Future[(U, V)] = tuple._1.zip(tuple._2)
   }
 }

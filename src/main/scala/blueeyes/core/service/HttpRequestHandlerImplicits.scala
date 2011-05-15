@@ -6,7 +6,8 @@ import blueeyes.util.PartialFunctionCombinators
 import blueeyes.core.data._
 
 trait HttpRequestHandlerImplicits extends PartialFunctionCombinators {
-  implicit def identifierToIdentifierWithDefault[S](default: => S) = new {
+  implicit def identifierToIdentifierWithDefault[S](default: => S) = new ToIdentifierWithDefault(default)
+  class ToIdentifierWithDefault[S](default: => S){
     def ?: [T](identifier: T) = {
       IdentifierWithDefault[T, S](identifier, () => default)
     }
