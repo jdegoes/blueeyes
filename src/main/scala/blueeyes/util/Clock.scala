@@ -45,7 +45,7 @@ trait ClockSystem {
 object ClockSystem extends ClockSystem
 
 trait ClockMock {
-  implicit val clockMock = new Clock {
+  protected class MockClock extends Clock {
     private var _now: DateTime = new DateTime(0, DateTimeZone.UTC)
     private var _nanoTime: Long = 0
     
@@ -58,8 +58,8 @@ trait ClockMock {
     def now_=(millis: Long): DateTime = new DateTime(millis, DateTimeZone.UTC)
 
     def nanoTime_=(time: Long): Long = { _nanoTime = time; _nanoTime }
-
-
   }
+
+  implicit val clockMock: MockClock = new MockClock
 }
 object ClockMock extends ClockMock
