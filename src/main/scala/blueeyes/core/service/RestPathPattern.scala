@@ -236,7 +236,8 @@ trait RestPathPatternImplicits {
    *      New Regex("""(a|z)(b+)""", "id1", "id2")
    *    id1 referss to the capture group a|z, whereas id2 refers to b+.
    */
-  implicit def regexToRestPathPatternBuilder(regex: Regex) = new {
+  implicit def regexToRestPathPatternBuilder(regex: Regex) = new ToIdentifierWithDefault(regex)
+  class ToIdentifierWithDefault(regex: Regex){
     def ~ (names: List[Symbol]) = RestPathPatternParsers.RegexPathPattern(regex, names.map(_.name))
   }
 }

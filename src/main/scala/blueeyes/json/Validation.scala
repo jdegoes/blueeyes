@@ -111,7 +111,8 @@ object Validation {
   /**
    * Utility operator to convert a JValue into a validated JPathValue.
    */
-  implicit def jvalueToValidator(j: JValue) = new {
+  implicit def jvalueToValidator(j: JValue) = new ToValidator(j)
+  class ToValidator(j: JValue) {
     def unary_! = JPathValue("", j)
   }
 }

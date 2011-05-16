@@ -154,95 +154,118 @@ trait ActorExecutionStrategy{
 }
 
 trait ActorImplicits{
-  implicit def richActor[R](actor: () => Future[R]) = new  {
+  implicit def richActor[R](actor: () => Future[R]) = RichActor[R](actor)
+  case class RichActor[R](actor: () => Future[R]){
     def >>>[R1](that: R => Future[R1]): () => Future[R1] = () => actor().flatMap[R1](that)
     def map[R1](f: R => R1): () => Future[R1] = () => actor().map[R1](f)
   }
-  implicit def richActor1[T1, R](actor: T1 => Future[R]) = new  {
+  implicit def richActor1[T1, R](actor: T1 => Future[R]) = RichActor1(actor)
+  case class RichActor1[T1, R](actor: T1 => Future[R]){
     def >>>[R1](that: R => Future[R1]): T1 => Future[R1] = (v1: T1) => actor(v1).flatMap[R1](that)
     def map[R1](f: R => R1): T1 => Future[R1] = (v1: T1) => actor(v1).map[R1](f)
   }
-  implicit def richActor2[T1, T2, R](actor: (T1, T2) => Future[R]) = new  {
+  implicit def richActor2[T1, T2, R](actor: (T1, T2) => Future[R]) = RichActor2(actor)
+  case class RichActor2[T1, T2, R](actor: (T1, T2) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2) => Future[R1] = (v1: T1, v2: T2) => actor(v1, v2).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2) => Future[R1] = (v1: T1, v2: T2) => actor(v1, v2).map[R1](f)
   }
-  implicit def richActor3[T1, T2, T3, R](actor: (T1, T2, T3) => Future[R]) = new  {
+  implicit def richActor3[T1, T2, T3, R](actor: (T1, T2, T3) => Future[R]) = RichActor3(actor)
+  case class RichActor3[T1, T2, T3, R](actor: (T1, T2, T3) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3) => Future[R1] = (v1: T1, v2: T2, v3: T3) => actor(v1, v2, v3).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3) => Future[R1] = (v1: T1, v2: T2, v3: T3) => actor(v1, v2, v3).map[R1](f)
   }
-  implicit def richActor4[T1, T2, T3, T4, R](actor: (T1, T2, T3, T4) => Future[R]) = new  {
+  implicit def richActor4[T1, T2, T3, T4, R](actor: (T1, T2, T3, T4) => Future[R]) = RichActor4(actor)
+  case class RichActor4[T1, T2, T3, T4, R](actor: (T1, T2, T3, T4) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4) => actor(v1, v2, v3, v4).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4) => actor(v1, v2, v3, v4).map[R1](f)
   }
-  implicit def richActor5[T1, T2, T3, T4, T5, R](actor: (T1, T2, T3, T4, T5) => Future[R]) = new  {
+  implicit def richActor5[T1, T2, T3, T4, T5, R](actor: (T1, T2, T3, T4, T5) => Future[R]) = RichActor5(actor)
+  case class RichActor5[T1, T2, T3, T4, T5, R](actor: (T1, T2, T3, T4, T5) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5) => actor(v1, v2, v3, v4, v5).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5) => actor(v1, v2, v3, v4, v5).map[R1](f)
   }
-  implicit def richActor6[T1, T2, T3, T4, T5, T6, R](actor: (T1, T2, T3, T4, T5, T6) => Future[R]) = new  {
+  implicit def richActor6[T1, T2, T3, T4, T5, T6, R](actor: (T1, T2, T3, T4, T5, T6) => Future[R]) = RichActor6(actor)
+  case class RichActor6[T1, T2, T3, T4, T5, T6, R](actor: (T1, T2, T3, T4, T5, T6) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6) => actor(v1, v2, v3, v4, v5, v6).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6) => actor(v1, v2, v3, v4, v5, v6).map[R1](f)
   }
-  implicit def richActor7[T1, T2, T3, T4, T5, T6, T7, R](actor: (T1, T2, T3, T4, T5, T6, T7) => Future[R]) = new  {
+  implicit def richActor7[T1, T2, T3, T4, T5, T6, T7, R](actor: (T1, T2, T3, T4, T5, T6, T7) => Future[R]) = RichActor7(actor)
+  case class RichActor7[T1, T2, T3, T4, T5, T6, T7, R](actor: (T1, T2, T3, T4, T5, T6, T7) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7) => actor(v1, v2, v3, v4, v5, v6, v7).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7) => actor(v1, v2, v3, v4, v5, v6, v7).map[R1](f)
   }
-  implicit def richActor8[T1, T2, T3, T4, T5, T6, T7, T8, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R]) = new  {
+  implicit def richActor8[T1, T2, T3, T4, T5, T6, T7, T8, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R]) = RichActor8(actor)
+  case class RichActor8[T1, T2, T3, T4, T5, T6, T7, T8, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8) => actor(v1, v2, v3, v4, v5, v6, v7, v8).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8) => actor(v1, v2, v3, v4, v5, v6, v7, v8).map[R1](f)
   }
-  implicit def richActor9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R]) = new  {
+  implicit def richActor9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R]) = RichActor9(actor)
+  case class RichActor9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9).map[R1](f)
   }
-  implicit def richActor10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R]) = new  {
+  implicit def richActor10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R]) = RichActor10(actor)
+  case class RichActor10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10).map[R1](f)
   }
-  implicit def richActor11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R]) = new  {
+  implicit def richActor11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R]) = RichActor11(actor)
+  case class RichActor11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11).map[R1](f)
   }
-  implicit def richActor12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R]) = new  {
+  implicit def richActor12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R]) = RichActor12(actor)
+  case class RichActor12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12).map[R1](f)
   }
-  implicit def richActor13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R]) = new  {
+  implicit def richActor13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R]) = RichActor13(actor)
+  case class RichActor13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13).map[R1](f)
   }
-  implicit def richActor14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R]) = new  {
+  implicit def richActor14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R]) = RichActor14(actor)
+  case class RichActor14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14).map[R1](f)
   }
-  implicit def richActor15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R]) = new  {
+  implicit def richActor15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R]) = RichActor15(actor)
+  case class RichActor15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15).map[R1](f)
   }
-  implicit def richActor16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R]) = new  {
+  implicit def richActor16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R]) = RichActor16(actor)
+  case class RichActor16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16).map[R1](f)
   }
-  implicit def richActor17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R]) = new  {
+  implicit def richActor17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R]) = RichActor17(actor)
+  case class RichActor17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17).map[R1](f)
   }
-  implicit def richActor18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R]) = new  {
+  implicit def richActor18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R]) = RichActor18(actor)
+  case class RichActor18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18).map[R1](f)
   }
-  implicit def richActor19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R]) = new  {
+  implicit def richActor19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R]) = RichActor19(actor)
+  case class RichActor19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R]){
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19).map[R1](f)
   }
-  implicit def richActor20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R]) = new  {
+  implicit def richActor20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R]) = RichActor20(actor)
+  case class RichActor20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20).map[R1](f)
   }
-  implicit def richActor21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R]) = new  {
+  implicit def richActor21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R]) = RichActor21(actor)
+  case class RichActor21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21).map[R1](f)
   }
-  implicit def richActor22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R]) = new  {
+  implicit def richActor22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R]) = RichActor22(actor)
+  case class RichActor22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R](actor: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R]) {
     def >>>[R1](that: R => Future[R1]): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21, v22: T22) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22).flatMap[R1](that)
     def map[R1](f: R => R1): (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => Future[R1] = (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5, v6: T6, v7: T7, v8: T8, v9: T9, v10: T10, v11: T11, v12: T12, v13: T13, v14: T14, v15: T15, v16: T16, v17: T17, v18: T18, v19: T19, v20: T20, v21: T21, v22: T22) => actor(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22).map[R1](f)
   }
