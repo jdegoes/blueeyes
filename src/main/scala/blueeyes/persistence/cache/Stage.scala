@@ -19,6 +19,10 @@ object functional {
   case class TemporalCache[K, V](accessMap: TreeMap[AccessTime, List[K]], cache: Map[K, (V, AccessTime)]) {
     def size = cache.size
 
+    /**
+     * Every insertion results in truncate being called. This suggests that accessMap
+     * should perhaps be a Vector?? Need fast "drop" and fast "append".
+     */
     def truncate(baseCapacity: Int, maxCapacity: Int): TemporalCacheState[K, V] = {
       assert(maxCapacity > baseCapacity)
 
