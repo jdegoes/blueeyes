@@ -8,6 +8,7 @@ import blueeyes.util.ClockSystem._
 
 import scalaz.Scalaz._
 
+// MISHA: Do not touch this purely functional version!
 object functional {
   import scala.collection.immutable.TreeMap
 
