@@ -40,7 +40,12 @@ trait CoverageProject extends BasicManagedProject{
       ExternalProcess(sbt ::: List("*" + processor), None, Some(repository.getAbsolutePath), log)    
   }
 
-  private def sbt = List("java", "-jar", System.getProperty("user.dir") + "/project/sbt-launch-0.7.7.jar")
+  private def sbt = List("java", "-jar", sbtLaunchFile.getAbsolutePath)
+  private def sbtLaunchFile = {
+    val projectDir = new File(System.getProperty("user.dir"), "project")
+    val sbtLaunch  = projectDir.list.filter(_.startsWith("sbt-launch")).toList.head
+    new File(projectDir, sbtLaunch)
+  }
 
   private def checkout(repository: File) = 
     ExternalProcess(List("git", "clone", "https://github.com/sroebuck/sbt-coverage.git"), None, Some(repository.getAbsolutePath), log)
