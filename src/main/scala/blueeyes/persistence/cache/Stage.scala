@@ -31,7 +31,6 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
     def -= (k: K): this.type = {
       impl.get(k) foreach { v =>
-        println("About to evict " + k + ": " + v.value)
         flush(k, v.value) 
         impl.remove(k)
       }
@@ -60,8 +59,6 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
     private var flushScheduled  = false
     private val duration        = Duration(min(expirationPolicy.timeToIdleNanos.getOrElse(2000000000l), expirationPolicy.timeToLiveNanos.getOrElse(2000000000l)) / 2, TimeUnit.NANOSECONDS)
 
-    println("Duration = " + duration)
-
     val putAll = lift1 { request: PutAll =>
       putToCache(request)
       removeEldestEntries
@@ -69,11 +66,9 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
     }
 
     private def scheduleFlush: Unit = if (!flushScheduled) {
-      println("Scheduling flush")
       ScheduledExecutor.once(flushAllBySchedule, duration)
       flushScheduled = true
     }
-    else println("Flush already scheduled")
 
     private def putToCache(request: PutAll) {
       cache ++= request.pairs.map {
@@ -89,8 +84,6 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
     }
 
     val flushAllBySchedule = lift { () =>
-      println("Flushing all by schedule")
-
       val currentTime = System.nanoTime()
 
       val keysToRemove = cache.foldLeft[List[K]](Nil) { 
@@ -99,11 +92,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
           else keysToRemove
       }
 
-      println("Removing keys: " + keysToRemove)
-
       cache --= keysToRemove
-
-      println("Not removing keys: " + cache.keys)
 
       flushScheduled = false
 
