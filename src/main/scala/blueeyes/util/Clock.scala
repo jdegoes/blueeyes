@@ -7,6 +7,8 @@ trait Clock {
   /** Returns the current time.
    */
   def now(): DateTime
+
+  def nanoTime(): Long
   
   /** Times how long the specified future takes to be delivered.
    */
@@ -36,6 +38,8 @@ trait Clock {
 trait ClockSystem {
   implicit val clockSystem = new Clock {
     def now(): DateTime = new DateTime(DateTimeZone.UTC)
+
+    def nanoTime(): Long = System.nanoTime()
   }
 }
 object ClockSystem extends ClockSystem
@@ -43,12 +47,19 @@ object ClockSystem extends ClockSystem
 trait ClockMock {
   implicit val clockMock = new Clock {
     private var _now: DateTime = new DateTime(0, DateTimeZone.UTC)
+    private var _nanoTime: Long = 0
     
     def now() = _now 
+
+    def nanoTime() = _nanoTime
     
     def now_=(dateTime: DateTime): DateTime = { _now = dateTime; _now }
     
     def now_=(millis: Long): DateTime = new DateTime(millis, DateTimeZone.UTC)
+
+    def nanoTime_=(time: Long): Long = { _nanoTime = time; _nanoTime }
+
+
   }
 }
 object ClockMock extends ClockMock
