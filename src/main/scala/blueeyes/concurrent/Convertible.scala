@@ -1,17 +1,12 @@
-package blueeyes.health.time
+package blueeyes.concurrent
 
 import java.util.concurrent.TimeUnit
 
-/**
- * A convertable amount of time.
- *
- * @author coda
- */
 trait Convertible[A] {
   /**
    * Returns the amount of time without units.
    */
-  def value: Double
+  def time: Double
 
   /**
    * Returns the unit of the value.
@@ -80,7 +75,7 @@ trait Convertible[A] {
     }
   }
 
-  protected def ratio(u: TimeUnit) = {
+  protected def ratio(unit: TimeUnit, u: TimeUnit) = {
     val r = unit.convert(1, u)
     if (r > 0) {
       r.toDouble
@@ -88,4 +83,6 @@ trait Convertible[A] {
       1.0 / u.convert(1, unit)
     }
   }
+
+  override def toString = "%2.2f%s".format(time, abbreviate(unit))
 }

@@ -2,7 +2,9 @@ package blueeyes.concurrent
 
 import java.util.concurrent.TimeUnit
 
-case class Duration(time: Long, unit: TimeUnit)
+case class Duration(time: Double, unit: TimeUnit) extends Convertible[Duration]{
+  def convert(u: TimeUnit) = Duration((time / ratio(unit, u)), u)
+}
 
 object Duration {
   // So user can write: 23.milliseconds, 92.seconds, etc.

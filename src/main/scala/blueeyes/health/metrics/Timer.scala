@@ -2,12 +2,12 @@ package blueeyes.health.metrics
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.TimeUnit
-import blueeyes.health.time.{Duration, Clock}
-import collection.generic.Growable
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
-import blueeyes.concurrent.Future
+import blueeyes.concurrent.{Future, Duration}
+import Duration._
 import blueeyes.json.JsonAST._
+import blueeyes.util.ClockSystem
 
 /**
  * A class which tracks the amount of time it takes to perform a particular
@@ -15,7 +15,7 @@ import blueeyes.json.JsonAST._
  *
  * @author coda
  */
-class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duration, Duration]]{
+class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duration, Duration]] with ClockSystem{
   private val count_ = new AtomicLong(0)
   private val min_ = new AtomicLong(Long.MaxValue)
   private val max_ = new AtomicLong(Long.MinValue)
@@ -29,16 +29,16 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
    * @return the result of T
    */
   def time[T](f: => T): T = {
-    val startTime = Clock.nanoTime
+    val startTime = clockSystem.nanoTime
     val t = f
-    this += Duration.nanoseconds(Clock.nanoTime - startTime)
+    this += (clockSystem.nanoTime - startTime).nanoseconds
     return t
   }
 
   def time[T](f: Future[T]): Future[T] = {
-    val startTime = Clock.nanoTime
+    val startTime = clockSystem.nanoTime
     f.deliverTo(v => {
-      this += Duration.nanoseconds(Clock.nanoTime - startTime)      
+      this += (clockSystem.nanoTime - startTime).nanoseconds
     })
   }
 
@@ -93,12 +93,12 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
    * Adds a duration recorded elsewhere.
    */
   def +=(duration: Duration): this.type = {
-    this += duration.ns.value.toLong
+    this += duration.ns.time.toLong
 
     this
   }
 
-  def toJValue: JValue = JObject(JField("perSecond", JDouble((count / total.convert(TimeUnit.SECONDS).value))) :: JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).value)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).value)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).value)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).value)) :: Nil)
+  def toJValue: JValue = JObject(JField("perSecond", JDouble((count / total.convert(TimeUnit.SECONDS).time))) :: JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).time)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).time)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).time)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).time)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank
@@ -141,9 +141,9 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
 
   private def safeNS(f: => Double) = {
     if (count > 0) {
-      Duration.nanoseconds(f)
+      f.nanoseconds
     } else {
-      Duration.nanoseconds(0)
+      0.nanoseconds
     }
   }
 }

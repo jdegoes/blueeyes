@@ -34,10 +34,10 @@ object Benchmark extends ServerStart{ self =>
     println("********************************")
     println("*     Client Health report     *")
     println("********************************")
-    println("test time:            " + timer.total.convert(TimeUnit.SECONDS).value + " seconds")
+    println("test time:            " + timer.total.convert(TimeUnit.SECONDS).time + " seconds")
     println("requests count:       " + timer.count)
-    println("request average time: " + timer.mean.convert(TimeUnit.MILLISECONDS).value + " milliseconds")
-    println("requests per second:  " + (timer.count / timer.total.convert(TimeUnit.SECONDS).value))
+    println("request average time: " + timer.mean.convert(TimeUnit.MILLISECONDS).time + " milliseconds")
+    println("requests per second:  " + (timer.count / timer.total.convert(TimeUnit.SECONDS).time))
   }
 
   private def healthReport{

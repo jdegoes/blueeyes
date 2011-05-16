@@ -22,7 +22,7 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits with 
   "records the duration of the event" in {
     montor.time("foo")({ Thread.sleep(10) })
     montor.timerStats.size must be (1)
-    montor.timerStats.get(JPath("foo")).get.mean.ms.value must notBe(0.0)
+    montor.timerStats.get(JPath("foo")).get.mean.ms.time must notBe(0.0)
   }
   "records errors" in {
     montor.error("foo")(new NullPointerException())
@@ -33,7 +33,7 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits with 
     montor.monitor("foo")(Future.async({ Thread.sleep(10) }))
 
     montor.timerStats.size must be (1)
-    montor.timerStats.get(JPath("foo")).get.mean.ms.value must notBe(0.0)
+    montor.timerStats.get(JPath("foo")).get.mean.ms.time must notBe(0.0)
   }
   "moniors future error" in {
     val future = new Future[Unit]()
@@ -47,7 +47,7 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits with 
   "does not monior future time when exception is thrown" in {
     montor.monitor("foo")(Future.async({ throw new NullPointerException() }))
 
-    montor.timerStats.get(JPath("foo")).get.mean.ms.value mustEqual(0)
+    montor.timerStats.get(JPath("foo")).get.mean.ms.time mustEqual(0)
   }
 
   "records sample event" in {
