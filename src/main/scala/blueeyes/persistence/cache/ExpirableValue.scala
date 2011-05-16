@@ -2,10 +2,11 @@ package blueeyes.persistence.cache
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.NANOSECONDS
-import java.lang.System.{nanoTime}
 
-case class ExpirableValue[V] private (_value: V, creationTimeNanos: Long) {
-  private var _accessTimeNanos = nanoTime()
+import blueeyes.util.Clock
+
+case class ExpirableValue[V] private (_value: V, creationTimeNanos: Long)(implicit clock: Clock) {
+  @volatile private var _accessTimeNanos = clock.nanoTime()
 
   /** The access time in nanosecons. */
   def accessTimeNanos: Long = _accessTimeNanos
@@ -22,7 +23,7 @@ case class ExpirableValue[V] private (_value: V, creationTimeNanos: Long) {
    * without updating the access time.
    */
   def value = {
-    _accessTimeNanos = nanoTime()
+    _accessTimeNanos = clock.nanoTime()
 
     _value
   }
@@ -30,10 +31,10 @@ case class ExpirableValue[V] private (_value: V, creationTimeNanos: Long) {
 
 object ExpirableValue {
   /** Creates a new expirable entry given the specified creatione time and time unit. */
-  def apply[V](value: V, creationTime: Long, unit: TimeUnit): ExpirableValue[V] = {
+  def apply[V](value: V, creationTime: Long, unit: TimeUnit)(implicit clock: Clock): ExpirableValue[V] = {
     new ExpirableValue[V](value, unit.toNanos(creationTime))
   }
 
   /** Creates a new expirable entry using the current time as the creation time. */
-  def apply[V](value: V): ExpirableValue[V] = apply(value, nanoTime(), NANOSECONDS)
+  def apply[V](value: V)(implicit clock: Clock): ExpirableValue[V] = apply(value, clock.nanoTime(), NANOSECONDS)
 }

@@ -550,12 +550,6 @@ object Future {
     def pure[A](a: => A) = Future.async(a)
     def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
   }
-
-  //implicit val FutureTraverse extends scalaz.Traverse[Future] {
-  //  override def traverse[F[_]: Applicative, A, B](f: A => F[B], t: Future[A]): F[Future[B]] = {
-  //    val ap = implicitly[Applicative[F]]
-  //  }
-  //}
 }
 
 trait FutureImplicits {
