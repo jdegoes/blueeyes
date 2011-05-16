@@ -36,7 +36,7 @@ trait FutureMatchers {
       delivered.deliverTo(_ => latch.countDown())
 
       val result = try {
-        latch.await(timeouts.timeout.time, timeouts.timeout.unit)
+        latch.await(timeouts.timeout.time.toLong, timeouts.timeout.unit)
 
         inner(delivered.value) |> { result =>
           if (result.success || retries <= 0) success(result)

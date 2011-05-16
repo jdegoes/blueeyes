@@ -3,7 +3,7 @@ package blueeyes.health.metrics
 import blueeyes.json.JsonAST.JInt
 import org.specs.Specification
 
-class CounterTest extends Specification {
+class CounterSpec extends Specification {
   "a counter of zero" should {
     def makeCounter = new Counter(0)
 

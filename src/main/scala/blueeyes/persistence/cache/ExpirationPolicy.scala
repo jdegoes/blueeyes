@@ -20,16 +20,14 @@ case class ExpirationPolicy private (timeToIdleNanos: Option[Long], timeToLiveNa
 
   def isExpired[V](expirable: ExpirableValue[V], currentTime: Long = System.nanoTime()): Boolean = {
     def isPastTime(policyTime: Option[Long], baseTime: Long, currentTime: Long) = policyTime match {
-      case Some(policyTime) => (currentTime ->- lp("current")) > ((policyTime + baseTime) ->- lp("p + b"))
+      case Some(policyTime) => currentTime > (policyTime + baseTime)
 
       case None => false
     }
 
-    (!eternal ->- lp("eternal")) &&
-    (
-      (isPastTime(timeToIdle(NANOSECONDS), expirable.accessTime(NANOSECONDS),   currentTime) ->- lp("access")) ||
-      (isPastTime(timeToLive(NANOSECONDS), expirable.creationTime(NANOSECONDS), currentTime) ->- lp("create"))
-    )   
+    !eternal &&
+    (isPastTime(timeToIdle(NANOSECONDS), expirable.accessTime(NANOSECONDS),   currentTime) ||
+     isPastTime(timeToLive(NANOSECONDS), expirable.creationTime(NANOSECONDS), currentTime))
   }
 }
 

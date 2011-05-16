@@ -22,7 +22,7 @@ trait ScheduledExecutor{
 
         future.ifCanceled(error => actorFuture.cancel(error) )
       }
-    }, duration.time, duration.unit)
+    }, duration.time.toLong, duration.unit)
 
     future.ifCanceled(error => executorFuture.cancel(true) )
 
@@ -72,7 +72,7 @@ trait ScheduledExecutor{
     def now(message: A)     = f(message)
 
     def schedule(scheduleActor: A => Future[B], message: A, scheduleSeed: Z, nextSchedule: Long){
-      val nextScheduleTime   = System.currentTimeMillis + duration.unit.convert(duration.time * nextSchedule, TimeUnit.MILLISECONDS)
+      val nextScheduleTime   = System.currentTimeMillis + duration.unit.convert(duration.time.toLong * nextSchedule, TimeUnit.MILLISECONDS)
 
       val actorFuture    = scheduleActor(message)
       future.ifCanceled(error => actorFuture.cancel(error))

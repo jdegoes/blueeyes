@@ -2,7 +2,6 @@ package blueeyes
 package persistence.cache
 
 import org.specs.Specification
-import org.specs.util.{Duration => SpecsDuration}
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 
@@ -34,7 +33,7 @@ class StageSpec extends Specification{
       stage.put("foo", "bar")
       stage.put("bar", "baz")
 
-      evicted must eventually (be (true)) ->- { _ => println("Finishing") }
+      evicted must eventually (be (true))// ->- { _ => println("Finishing") }
 
       stage.flushAll
     }
