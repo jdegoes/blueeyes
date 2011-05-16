@@ -34,6 +34,7 @@ object JsonAST {
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product {
     type Values
+    type Self <: JValue
 
     /** Sorts the JValue according to natural ordering. This can be considered a
      * form of "normalization" to aid comparisons between different JValues.
@@ -42,7 +43,7 @@ object JsonAST {
      * json.sort
      * }}}
      */
-    def sort: this.type = {
+    def sort: Self = {
       import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
 
       (this match {
@@ -51,7 +52,7 @@ object JsonAST {
         case JField(name, value)  => JField(name, value.sort)
 
         case _ => this
-      }).asInstanceOf[this.type]
+      }).asInstanceOf[Self]
     }
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
@@ -539,35 +540,51 @@ object JsonAST {
 
   case object JNothing extends JValue {
     type Values = None.type
+    type Self = JValue
+
     def values = None
   }
   case object JNull extends JValue {
     type Values = Null
+    type Self = JValue
+    
     def values = null
   }
   case class JBool(value: Boolean) extends JValue {
     type Values = Boolean
+    type Self = JValue
+    
     def values = value
   }
   case class JInt(value: BigInt) extends JValue {
     type Values = BigInt
+    type Self = JValue
+    
     def values = value
   }
   case class JDouble(value: Double) extends JValue {
     type Values = Double
+    type Self = JValue
+    
     def values = value
   }
   case class JString(value: String) extends JValue {
     type Values = String
+    type Self = JValue
+    
     def values = value
   }
   case class JField(name: String, value: JValue) extends JValue {
     type Values = (String, value.Values)
+    type Self = JField
+    
     def values = (name, value.values)
     override def apply(i: Int): JValue = value(i)
   }
   case class JObject(fields: List[JField]) extends JValue {
     type Values = Map[String, Any]
+    type Self = JObject
+    
     def values = Map() ++ fields.map(_.values : (String, Any))
 
     override def set(path: JPath, value: JValue): JObject = super.set(path, value).asInstanceOf[JObject]
@@ -582,6 +599,8 @@ object JsonAST {
   }
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
+    type Self = JArray
+    
     def values = elements.map(_.values)
 
     override def set(path: JPath, value: JValue): JArray = super.set(path, value).asInstanceOf[JArray]

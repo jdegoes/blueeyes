@@ -148,7 +148,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }
 
     val setProp = (jv: JValue, p: JPath, toSet: JValue) => {
-      (!badPath(jv, p)) ==> (jv.set(p, toSet).get(p) must_== toSet)
+      (!badPath(jv, p)) ==> (p == JPath.Identity && jv.set(p, toSet) == toSet) || (jv.set(p, toSet).get(p) == toSet)
     }
 
     forAll(setProp) must pass
