@@ -1,11 +1,12 @@
-package blueeyes.persistence.cache
+package blueeyes
+package persistence.cache
 
 import org.specs.Specification
 import org.specs.util.{Duration => SpecsDuration}
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 
-import util.Random
+import scala.util.Random
 import scalaz.Semigroup
 import blueeyes.concurrent.{ActorStrategy, Actor, Future}
 import scala.collection.mutable.ArrayBuilder.ofRef
@@ -18,60 +19,77 @@ class StageSpec extends Specification{
   }
 
   "Stage" should {
-    "evict when entry is expired" in{
-      var evicted = false
+    "evict when entry is expired" in {
+      @volatile var evicted = false
 
-      val stage = newStage(None, Some(200), {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      println("Starting")
+
+      val stage = newStage(None, Some(20), 
+        (key: String, value: String) => {
+          println("Evicting " + key + " : " + value)
+          evicted = (key == "foo" && value == "bar")
+        }
+      )
+
       stage.put("foo", "bar")
-      Thread.sleep(400)
       stage.put("bar", "baz")
 
-      evicted must eventually (be (true))
+      evicted must eventually (be (true)) ->- { _ => println("Finishing") }
+
+      stage.flushAll
     }
+
     "evict when stage is over capacity" in{
-      var evicted = false
+      @volatile var evicted = false
 
-      val stage = newStage(None, None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"}, 1)
-      stage.put("foo", "bar")
-      stage.put("bar", "baz")
+      val stage = newStage(None, None, {(key: String, value: String) => evicted = key == "foo2" && value == "bar2"}, 1)
+      stage.put("foo2", "bar2")
+      stage.put("bar2", "baz2")
 
       evicted must eventually (be (true))
+      
+      stage.flushAll
     }
-    "evict when stage is flushed" in{
-      var evicted = false
 
-      val stage = newStage(Some(1), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
-      stage.put("foo", "bar")
+    "evict when stage is flushed" in{
+      @volatile var evicted = false
+
+      val stage = newStage(Some(1), None, {(key: String, value: String) => evicted = key == "foo3" && value == "bar3"})
+      stage.put("foo3", "bar3")
       stage.flushAll
 
       evicted must eventually (be (true))
     }
+
     "evict automatically" in{
-      var evicted = false
+      @volatile var evicted = false
 
-      val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
-      stage.put("foo", "bar")
-
-      Thread.sleep(1000)
+      val stage = newStage(Some(10), None, {(key: String, value: String) => evicted = key == "foo4" && value == "bar4"})
+      stage.put("foo4", "bar4")
 
       evicted must eventually (be (true))
+
+      stage.flushAll
     }
+
     "evict automatically more then one time" in{
-      var evicted = false
+      @volatile var evictCount = 0
 
-      val stage = newStage(Some(1000), None, {(key: String, value: String) => evicted = key == "foo" && value == "bar"})
+      val stage = newStage(Some(10), None, {(key: String, value: String) => if (key == "foo" && value == "bar") evictCount += 1 })
+      
       stage.put("foo", "bar")
-      Thread.sleep(1000)
-      evicted = false
+
+      evictCount must eventually (beEqualTo(1))
 
       stage.put("foo", "bar")
-      Thread.sleep(1000)
 
-      evicted must eventually (be (true))
+      evictCount must eventually (beEqualTo(2))
+
+      stage.flushAll
     }
 
     "evict all messages when multiple threads send messages" in{
-      val messagesCount = 100
+      val messagesCount = 10
       val threadsCount  = 20
 
       val messages  = Array.fill(messagesCount)("1")
@@ -87,7 +105,7 @@ class StageSpec extends Specification{
       collected.result.mkString("") mustEqual(Array.fill(threadsCount)(messages).flatten).mkString("")
     }
     "evict all messages when multiple threads send messages with different keys" in{
-      val messagesCount = 100
+      val messagesCount = 10
       val threadsCount  = 20
 
       val messages  = List.range(0, threadsCount) map {i => Array.fill(messagesCount)(i.toString) }
@@ -124,16 +142,19 @@ class StageSpec extends Specification{
   private def newStage[T](
     timeToIdle: Option[Long] = None,
     timeToLive: Option[Long] = None,
-    evict:      (String, String) => Unit = {(key: String, value: String) => () },
-    capacity:   Int = 100) = {
+    evict:      (String, String) => Unit,
+    capacity:   Int = 10) = {
 
-    Stage[String, String](ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, evict)
+    Stage[String, String](
+      ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, 
+      (s1: String, s2: String) => { evict(s1, s2) ; println("Evicted!") }
+    )
   }
 
   class MessageActor(key: String, messages: Array[String], stage: Stage[String, String]) extends Actor{
     def send = lift{ () =>
       messages foreach { message =>
-        Thread.sleep(random.nextInt(100))
+        Thread.sleep(random.nextInt(10))
         stage.put(key, message)
       }
     }

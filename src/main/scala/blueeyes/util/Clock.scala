@@ -53,12 +53,14 @@ trait ClockMock {
 
     def nanoTime() = _nanoTime
     
-    def now_=(dateTime: DateTime): DateTime = { _now = dateTime; _now }
+    def setNow(dateTime: DateTime): DateTime = { _now = dateTime; _now }
     
-    def now_=(millis: Long): DateTime = new DateTime(millis, DateTimeZone.UTC)
+    def setNow(millis: Long): DateTime = new DateTime(millis, DateTimeZone.UTC)
 
-    def nanoTime_=(time: Long): Long = { _nanoTime = time; _nanoTime }
+    def setNanoTime(time: Long): Long = { _nanoTime = time; _nanoTime }
   }
+
+  def newMockClock = new MockClock
 
   implicit val clockMock: MockClock = new MockClock
 }

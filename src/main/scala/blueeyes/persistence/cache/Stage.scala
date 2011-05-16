@@ -1,8 +1,10 @@
-package blueeyes.persistence.cache
+package blueeyes
+package persistence.cache
 
 import scalaz.Semigroup
 import blueeyes.concurrent._
 import blueeyes.concurrent.ActorStrategy._
+import blueeyes.util.ClockSystem._
 
 trait Stage[K, V] extends FutureDeliveryStrategySequential {
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V])
@@ -13,23 +15,24 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
   def maximumCapacity: Int
 
-  class Cache[A, B](flush: (A, B) => Unit) extends scala.collection.mutable.Map[A, B] { self =>
-    private val impl = new scala.collection.mutable.LinkedHashMap[A, B]
+  private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
+    private val impl = new scala.collection.mutable.LinkedHashMap[K, ExpirableValue[V]]
 
-    def get(key: A): Option[B] = impl.get(key)
+    def get(key: K): Option[ExpirableValue[V]] = impl.get(key)
 
-    def iterator: Iterator[(A, B)] = impl.iterator
+    def iterator: Iterator[(K, ExpirableValue[V])] = impl.iterator
 
-    def += (kv: (A, B)): this.type = {
+    def += (kv: (K, ExpirableValue[V])): this.type = {
+      impl.remove(kv._1)
       impl.put(kv._1, kv._2)
 
       this
     }
 
-    def -= (k: A): this.type = {
+    def -= (k: K): this.type = {
       impl.get(k) foreach { v =>
-        flush(k, v)
-
+        println("About to evict " + k + ": " + v.value)
+        flush(k, v.value) 
         impl.remove(k)
       }
 
@@ -46,78 +49,65 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 
     override def size = impl.size
 
-    override def foreach[U](f: ((A, B)) => U): Unit = {
-      val it = impl.iterator
-
-      while (it.hasNext) {
-        val entry = it.next
-
-        f((entry._1, entry._2))
-      }
-    }
+    override def foreach[U](f: ((K, ExpirableValue[V])) => U): Unit = impl.foreach(f)
   }
 
-  private val flusher = (k: K, v: ExpirableValue[V]) => flush(k, v._value)
-
-  private val worker = new Actor{
+  private val worker = new Actor {
     import scala.math._
     import java.util.concurrent.TimeUnit
 
-    private val cache           = new Cache[K, ExpirableValue[V]](flusher)
+    private val cache           = new Cache
     private var flushScheduled  = false
     private val duration        = Duration(min(expirationPolicy.timeToIdleNanos.getOrElse(2000000000l), expirationPolicy.timeToLiveNanos.getOrElse(2000000000l)) / 2, TimeUnit.NANOSECONDS)
+
+    println("Duration = " + duration)
 
     val putAll = lift1 { request: PutAll =>
       putToCache(request)
       removeEldestEntries
-      removeExpiredEntries
       scheduleFlush
     }
 
-    private def scheduleFlush{
-      if (!flushScheduled){
-        ScheduledExecutor.once(flushAllBySchedule, duration)
-        flushScheduled = true
+    private def scheduleFlush: Unit = if (!flushScheduled) {
+      println("Scheduling flush")
+      ScheduledExecutor.once(flushAllBySchedule, duration)
+      flushScheduled = true
+    }
+    else println("Flush already scheduled")
+
+    private def putToCache(request: PutAll) {
+      cache ++= request.pairs.map {
+        case (key, value) => (
+          key,
+          cache.get(key).map{ current => current.withValue(request.semigroup.append(current.value, value)) }.getOrElse(ExpirableValue(value))
+        )
       }
     }
 
-    private def putToCache(request: PutAll){
-      cache ++= request.pairs.map { tuple =>
-        val (key, value2) = tuple
-
-        val newValue = cache.get(key).map { expirableValue1 =>
-          val value1 = expirableValue1.value
-
-          expirableValue1.withValue(request.semigroup.append(value1, value2))
-        }.getOrElse(ExpirableValue(value2))
-
-        (tuple._1, newValue)
-      }
-    }
-
-    private def removeEldestEntries{
-      val overflowCount = 0.max(cache.size - maximumCapacity)
-
-      cache.removeEldestEntries(overflowCount)
-    }
-
-    private def removeExpiredEntries{
-      val currentTime = System.nanoTime()
-
-      val keysToRemove = cache.foldLeft[List[K]](Nil) { (keysToRemove, tuple) =>
-        val (key, value) = tuple
-
-        val isExpired = expirationPolicy.isExpired(value, currentTime)
-
-        if (isExpired) key :: keysToRemove else keysToRemove
-      }
-
-      cache --= keysToRemove
+    private def removeEldestEntries {
+      cache.removeEldestEntries(0.max(cache.size - maximumCapacity))
     }
 
     val flushAllBySchedule = lift { () =>
-      cache.clear()
+      println("Flushing all by schedule")
+
+      val currentTime = System.nanoTime()
+
+      val keysToRemove = cache.foldLeft[List[K]](Nil) { 
+        case (keysToRemove, (key, value)) =>
+          if(expirationPolicy.isExpired(value, currentTime)) key :: keysToRemove 
+          else keysToRemove
+      }
+
+      println("Removing keys: " + keysToRemove)
+
+      cache --= keysToRemove
+
+      println("Not removing keys: " + cache.keys)
+
       flushScheduled = false
+
+      if (cache.size > 0) scheduleFlush
     }
 
     val flushAll = lift { () => cache.clear() }
