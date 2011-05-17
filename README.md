@@ -648,3 +648,9 @@ BlueEyes provides support for both pillars:
 Copyright (c) 2010-2011
 
 Published under The MIT License
+
+## Sponsors
+
+A big round of thanks to the sponsors of BlueEyes.
+
+<a href="http://www.ej-technologies.com/products/jprofiler/overview.html">EJ Technologies</a> - JProfiler
