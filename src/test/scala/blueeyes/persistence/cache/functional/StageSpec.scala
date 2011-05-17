@@ -75,8 +75,15 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
           case (result, _) => result
         })
 
-        print(".")
-        MapMonoid[Int, String].append(discarded, finalFlushed) must_== expectedDiscarded
+        val totalPuts = operations.collect { 
+          case PutAll(iter: Iterable[(Int, String)], _) => iter.size
+        }.sum
+
+        val actualDiscarded = MapMonoid[Int, String].append(discarded, finalFlushed)
+
+        println("Discarded: " + actualDiscarded.size + ", Total Puts: " + totalPuts + ", Operations: " + operations.length)
+
+        actualDiscarded must_== expectedDiscarded
       } must pass
     }
   }
