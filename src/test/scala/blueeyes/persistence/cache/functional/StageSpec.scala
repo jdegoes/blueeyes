@@ -21,7 +21,7 @@ import org.scalacheck.Gen._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Shrink
 
-class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
+class StageSpec extends Specification with ScalaCheck with org.specs.runner.ScalaTest {
   val BigStage = Stage.empty[Int, String](Int.MaxValue / 10)
   val SmallStage = Stage.empty[Int, String](2, 4)
 
@@ -30,9 +30,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
   implicit val arbStageIn = Arbitrary[StageIn[Int, String]] {
     val genPutAll: Gen[StageIn[Int, String]] = {
       for {
-        // TODO: Delete the following two lines!!!!
-        size <- choose(0, 3)
-        iter <- listOfN[(Int, String)](size, arbitrary[(Int, String)])
+        iter <- arbitrary[List[(Int, String)]] 
         time <- choose(100, 200)
       } yield PutAll(iter, time)
     }
@@ -85,9 +83,9 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
 
         val actualDiscarded = MapMonoid[Int, String].append(discarded, finalFlushed)
 
-        println("Discarded: " + actualDiscarded.size + ", Total Puts: " + totalPuts + ", Operations: " + operations.length)
+        //println("Discarded: " + actualDiscarded.size + ", Total Puts: " + totalPuts + ", Operations: " + operations.length)
 
-        actualDiscarded must_== expectedDiscarded
+        actualDiscarded == expectedDiscarded
       } must pass
     }
   }
@@ -102,7 +100,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
     }
 
     "when adding to a stage over capacity" >> {
-      "evict" in pendingUntilFixed {
+      "evict" in {
         import scala.collection.immutable.ListMap
 
         def reduceMap[K, V](m: Iterable[(K, V)])(implicit semigroup: Semigroup[V]): ListMap[K, V] = m.foldLeft(ListMap.empty[K, V]) {
@@ -114,7 +112,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
 
           val (expired, nextStage) = SmallStage.putAll(toAdd, 100)
 
-          println("maxCapacity = " + SmallStage.maxCapacity + ", baseCapacity = " + SmallStage.baseCapacity + ", size = " + nextStage.expireAll._1.size)
+          //println("maxCapacity = " + SmallStage.maxCapacity + ", baseCapacity = " + SmallStage.baseCapacity + ", size = " + nextStage.expireAll._1.size)
 
           if (toAdd.size > SmallStage.maxCapacity) {
             expired must haveSameElementsAs(toAdd.take(toAdd.size - SmallStage.baseCapacity))
@@ -133,7 +131,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
 
         val (expired, _) = nextStage.expireAll
 
-        expired must_== toAdd
+        expired == toAdd
       } must pass
     }
   }
