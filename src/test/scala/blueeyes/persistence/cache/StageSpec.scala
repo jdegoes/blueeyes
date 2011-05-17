@@ -21,19 +21,16 @@ class StageSpec extends Specification{
     "evict when entry is expired" in {
       @volatile var evicted = false
 
-      println("Starting")
-
-      val stage = newStage(None, Some(20), 
+      val stage = newStage(None, Some(20),
         (key: String, value: String) => {
-          println("Evicting " + key + " : " + value)
-          evicted = (key == "foo" && value == "bar")
+          evicted = evicted || (key == "foo" && value == "bar")
         }
       )
 
       stage.put("foo", "bar")
       stage.put("bar", "baz")
 
-      evicted must eventually (be (true))// ->- { _ => println("Finishing") }
+      evicted must eventually (be (true))
 
       stage.flushAll
     }
@@ -146,7 +143,7 @@ class StageSpec extends Specification{
 
     Stage[String, String](
       ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, 
-      (s1: String, s2: String) => { evict(s1, s2) ; println("Evicted!") }
+      (s1: String, s2: String) => { evict(s1, s2) }
     )
   }
 
