@@ -3,12 +3,11 @@ package persistence.cache
 
 import org.specs.Specification
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
-import java.util.concurrent.CountDownLatch
 
 import scala.util.Random
 import scalaz.Semigroup
 import blueeyes.concurrent.{ActorStrategy, Actor, Future}
-import scala.collection.mutable.ArrayBuilder.ofRef
+import org.specs.util.TimeConversions._
 import ActorStrategy._
 
 class StageSpec extends Specification{
@@ -85,54 +84,47 @@ class StageSpec extends Specification{
     }
 
     "evict all messages when multiple threads send messages" in{
-      val messagesCount = 10
+      val messagesCount = 100
       val threadsCount  = 20
 
-      val messages  = Array.fill(messagesCount)("1")
-      val collected = new ofRef[String]()
-      val stage     = newStage(Some(500), None, {(key: String, value: String) => collected += value})
-      val actors    = List.range(0, threadsCount) map {i => new MessageActor("key", messages, stage) }
-      val futures   = actors map {actor => actor.send()}
+      @volatile var collected = 0
+      val stage     = newStage(Some(10), None, {(key: String, value: String) => collected = collected + (value.length / key.length)})
+      val actors    = List.range(0, threadsCount) map {i => new MessageActor("1", "1", messagesCount, stage) }
 
-      awaitFuture(Future(futures: _*))
+      val futures   = Future((actors map {actor => actor.send()}): _*)
+      futures.value must eventually(200, 300.milliseconds) (beSomething)
+
       val flushFuture = stage.flushAll
-
       flushFuture.value must eventually (beSomething)
-      collected.result.mkString("") mustEqual(Array.fill(threadsCount)(messages).flatten).mkString("")
+
+      collected mustEqual(messagesCount * threadsCount)
     }
+
     "evict all messages when multiple threads send messages with different keys" in{
-      val messagesCount = 10
-      val threadsCount  = 20
+      val messagesCount           = 50
+      val threadsPerMessagesType  = 10
+      val threadsCount            = 20
 
-      val messages  = List.range(0, threadsCount) map {i => Array.fill(messagesCount)(i.toString) }
-      val collected = new scala.collection.mutable.HashMap[String, ofRef[String]]()
-      val stage     = newStage(Some(500), None, {(key: String, value: String) =>
-        val ofRef = collected.get(key) match {
+      val messages: List[List[String]]  = List.range(0, threadsCount) map {i => for (j <- 0 until threadsPerMessagesType) yield (List(i.toString)) } flatten
+
+      val collected = new scala.collection.mutable.HashMap[String, Int]()
+      val stage     = newStage(Some(10), None, {(key: String, value: String) =>
+        val count = collected.get(key) match {
           case Some(x) => x
-          case None => new ofRef[String]()
+          case None => 0
         }
-        ofRef += value
-        collected.put(key, ofRef)
+        collected.put(key, count + (value.length / key.length))
       })
-      val actors    = messages map {msgs => (new MessageActor(msgs(0), msgs, stage))}
+      val actors    = messages map {msgs => (new MessageActor(msgs(0), msgs(0), messagesCount, stage))}
 
-      val futures = actors map {actor => actor.send()}
-      awaitFuture(Future(futures: _*))
+      val futures = Future((actors map {actor => actor.send()}): _*)
+      futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
       flushFuture.value must eventually (beSomething)
 
-      collected.size mustEqual(threadsCount)
-      collected.mapValues(value => value.result.mkString("")) mustEqual(Map[String, String](messages.map(v => (v(0), v.mkString(""))): _*))
+      collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
     }
-  }
-
-  private def awaitFuture(future: Future[_]) = {
-    val countDownLatch = new CountDownLatch(1)
-    future deliverTo { v =>
-      countDownLatch.countDown
-    }
-    countDownLatch.await
   }
 
   private def newStage[T](
@@ -147,10 +139,10 @@ class StageSpec extends Specification{
     )
   }
 
-  class MessageActor(key: String, messages: Array[String], stage: Stage[String, String]) extends Actor{
+  class MessageActor(key: String, message: String, size: Int, stage: Stage[String, String]) extends Actor{
     def send = lift{ () =>
-      messages foreach { message =>
-        Thread.sleep(random.nextInt(10))
+      for (j <- 0 until size){
+        Thread.sleep(random.nextInt(100))
         stage.put(key, message)
       }
     }
