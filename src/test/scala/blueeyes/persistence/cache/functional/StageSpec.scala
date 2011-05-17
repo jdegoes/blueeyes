@@ -29,8 +29,12 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
 
   implicit val arbStageIn = Arbitrary[StageIn[Int, String]] {
     val genPutAll: Gen[StageIn[Int, String]] = {
-      for (iter <- arbitrary[List[(Int, String)]]; time <- choose(100, 200)) 
-        yield PutAll(iter, time)
+      for {
+        // TODO: Delete the following two lines!!!!
+        size <- choose(0, 3)
+        iter <- listOfN[(Int, String)](size, arbitrary[(Int, String)])
+        time <- choose(100, 200)
+      } yield PutAll(iter, time)
     }
 
     val genExpireAll: Gen[StageIn[Int, String]] = Gen.value(ExpireAll)
@@ -99,10 +103,21 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
 
     "when adding to a stage over capacity" >> {
       "evict" in pendingUntilFixed {
-        forAll { (toAdd: List[(Int, String)]) =>
+        import scala.collection.immutable.ListMap
+
+        def reduceMap[K, V](m: Iterable[(K, V)])(implicit semigroup: Semigroup[V]): ListMap[K, V] = m.foldLeft(ListMap.empty[K, V]) {
+          case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
+        }
+
+        forAll { (_toAdd: List[(Int, String)]) =>
+          val toAdd = reduceMap(_toAdd)
+
           val (expired, nextStage) = SmallStage.putAll(toAdd, 100)
+
+          println("maxCapacity = " + SmallStage.maxCapacity + ", baseCapacity = " + SmallStage.baseCapacity + ", size = " + nextStage.expireAll._1.size)
+
           if (toAdd.size > SmallStage.maxCapacity) {
-            expired must haveSameElementsAs(toAdd.drop(toAdd.size - SmallStage.baseCapacity))
+            expired must haveSameElementsAs(toAdd.take(toAdd.size - SmallStage.baseCapacity))
           } else {
             expired must beEmpty 
           }

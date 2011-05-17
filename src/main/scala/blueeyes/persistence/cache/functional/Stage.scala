@@ -24,10 +24,30 @@ case class TemporalCache[K, V](accessMap: TreeMap[NanoTime, List[K]], cache: Map
 
   def truncate(baseCapacity: Int, maxCapacity: Int): TemporalCacheState[K, V] = {
     assert(maxCapacity >= baseCapacity)
-    
 
-    if (cache.size > maxCapacity) split(accessMap.splitAt(cache.size - baseCapacity))
-    else TemporalCacheState(Map.empty, this)
+    if (cache.size > maxCapacity) {
+      val numTruncate = cache.size - baseCapacity
+
+      // TODO: CHeck logic
+      val (removedA, keptA, _) = accessMap.foldLeft((TreeMap.empty[NanoTime, List[K]], accessMap, 0)) {
+        case ((removedA, keptA, dropped), (accessTime, keys)) =>
+          if (dropped == numTruncate) 
+            (removedA, keptA, dropped)
+          else if (keys.length + dropped <= numTruncate) 
+            (removedA + (accessTime -> keys), keptA - accessTime, dropped + keys.length)
+          else {
+            val remaining = numTruncate - dropped
+
+            val (keeping, removing) = keys.splitAt(keys.length - remaining)
+
+            (removedA + (accessTime -> removing), 
+             keptA    + (accessTime -> keeping), 
+             dropped  + remaining)
+          }
+      }
+
+      split((removedA, keptA))
+    } else TemporalCacheState(Map.empty, this)
   }
 
   def expireByAccessTime(accessTime: NanoTime): TemporalCacheState[K, V] = 
@@ -112,10 +132,6 @@ object Stage {
   case class StageImpl[K, V: Semigroup](cache: TemporalCache[K, V], baseCapacity: Int, maxCapacity: Int) extends Stage[K, V] {
     lazy val semigroup = implicitly[Semigroup[V]]
 
-    private def reduceMap(m: Iterable[(K, V)]): Map[K, V] = m.foldLeft(Map.empty[K, V]) {
-      case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
-    }
-
     def putAll(values: Iterable[(K, V)], time: NanoTime) = split {
       def updated(k: K, v: V) = k -> cache.get(k).map(semigroup.append(_, v)).getOrElse(v)
 
@@ -143,6 +159,10 @@ object Stage {
     override def hashCode = this.expireAll.hashCode
 
     private def split(state: TemporalCacheState[K, V]) = (state.removed, copy(cache = state.retained))
+
+    private def reduceMap(m: Iterable[(K, V)]): Map[K, V] = m.foldLeft(Map.empty[K, V]) {
+      case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
+    }
   }
 
   def empty[K, V: Semigroup](baseCapacity: Int, maxCapacity: Int): StageImpl[K, V] = 
