@@ -83,8 +83,6 @@ class StageSpec extends Specification with ScalaCheck with org.specs.runner.Scal
 
         val actualDiscarded = MapMonoid[Int, String].append(discarded, finalFlushed)
 
-        //println("Discarded: " + actualDiscarded.size + ", Total Puts: " + totalPuts + ", Operations: " + operations.length)
-
         actualDiscarded == expectedDiscarded
       } must pass
     }
@@ -109,15 +107,12 @@ class StageSpec extends Specification with ScalaCheck with org.specs.runner.Scal
 
         forAll { (_toAdd: List[(Int, String)]) =>
           val toAdd = reduceMap(_toAdd)
-
           val (expired, nextStage) = SmallStage.putAll(toAdd, 100)
 
-          //println("maxCapacity = " + SmallStage.maxCapacity + ", baseCapacity = " + SmallStage.baseCapacity + ", size = " + nextStage.expireAll._1.size)
-
           if (toAdd.size > SmallStage.maxCapacity) {
-            expired must haveSameElementsAs(toAdd.take(toAdd.size - SmallStage.baseCapacity))
+            expired.size ==  toAdd.size - SmallStage.baseCapacity
           } else {
-            expired must beEmpty 
+            expired.isEmpty
           }
         } must pass
       }

@@ -34,7 +34,7 @@ case class CacheValue[V](value: V, creationTime: NanoTime, accessTime: NanoTime)
  *
  * Fastest strategy may just be immutable map implemented as mutable map with undo.
  */
-case class TemporalCache[K, V](accessMap: TreeMap[NanoTime, List[K]], cache: Map[K, CacheValue[V]]) {
+case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]) {
   import TemporalCacheState._
   def size = cache.size
 
@@ -43,84 +43,38 @@ case class TemporalCache[K, V](accessMap: TreeMap[NanoTime, List[K]], cache: Map
 
     if (cache.size > maxCapacity) {
       val numTruncate = cache.size - baseCapacity
-
-      // TODO: CHeck logic
-      val (removedA, keptA, _) = accessMap.foldLeft((TreeMap.empty[NanoTime, List[K]], accessMap, 0)) {
-        case ((removedA, keptA, dropped), (accessTime, keys)) =>
-          if (dropped == numTruncate) 
-            (removedA, keptA, dropped)
-          else if (keys.length + dropped <= numTruncate) 
-            (removedA + (accessTime -> keys), keptA - accessTime, dropped + keys.length)
-          else {
-            val remaining = numTruncate - dropped
-
-            val (keeping, removing) = keys.splitAt(keys.length - remaining)
-
-            (removedA + (accessTime -> removing), 
-             keptA    + (accessTime -> keeping), 
-             dropped  + remaining)
-          }
-      }
-
-      split((removedA, keptA))
-    } else TemporalCacheState(Map.empty, this)
+      val (removed, kept) = cache.toArray.sortBy(_._2.accessTime).splitAt(numTruncate)
+      TemporalCacheState(removed.view.map(t => (t._1, t._2.value)).toMap, TemporalCache(kept.toMap))
+    } else {
+      TemporalCacheState(Map.empty, this)
+    }
   }
 
-  def expireByAccessTime(accessTime: NanoTime): TemporalCacheState[K, V] = 
-    split(accessMap.span(_._1 < accessTime))
-
-  def expireByCreationTime(creationTime: NanoTime): TemporalCacheState[K, V] = {
-    val (removedC, keptC) = cache.partition(_._2.creationTime < creationTime)
-
-    val keptA = accessMap.foldLeft(accessMap) {
-      case (accessMap, (accessTime, keys)) => 
-        val keptK = keys.filter(keptC.contains)
-        if (keptK.isEmpty) accessMap - accessTime else accessMap + (accessTime -> keptK)
+  def expire(creationTime: NanoTime, accessTime: NanoTime): TemporalCacheState[K, V] = {
+    val (removed, kept) = cache.partition {
+      case (k, CacheValue(_, ct, at)) => ct < creationTime || at < accessTime
     }
-        
-    TemporalCacheState(
-      removedC.mapValues(_.value),
-      TemporalCache(keptA, keptC)
-    )
+
+    TemporalCacheState(removed.mapValues(_.value), TemporalCache(kept))
   }
 
   def expireAll = TemporalCacheState(cache.mapValues(_.value), TemporalCache.empty[K, V])
 
-  def put(kv: (K, V), time: NanoTime): TemporalCache[K, V] = {
+  def put(kv: (K, V), accessTime: NanoTime): TemporalCache[K, V] = {
     val (key, value) = kv
 
-    def removeAccess(t: NanoTime): TreeMap[NanoTime, List[K]] = accessMap(t) match {
-      case `key` :: Nil => accessMap - t
-      case xs => accessMap + (t -> xs.filterNot(_ == key))
-    }
-
-    val withoutOld = cache.get(key).map(v => removeAccess(v.accessTime)).getOrElse(accessMap)
-
     TemporalCache(
-      accessMap = withoutOld + (time -> (key :: withoutOld.getOrElse[List[K]](time, Nil))),
-      cache = cache + (key -> CacheValue(value, creationTime = cache.get(key).map(_.creationTime).getOrElse(time), accessTime = time))
+      cache + (key -> CacheValue(value, cache.get(key).map(_.creationTime).getOrElse(accessTime), accessTime))
     )
   }
 
-  def putAll(vs: Iterable[(K, V)], time: NanoTime) = vs.foldLeft(this)(_.put(_, time))
+  def putAll(vs: Iterable[(K, V)], accessTime: NanoTime) = vs.foldLeft(this)(_.put(_, accessTime))
 
   def get(k: K): Option[V] = cache.get(k).map(_.value)
-
-  private def split(t: (TreeMap[NanoTime, List[K]], TreeMap[NanoTime, List[K]])): TemporalCacheState[K, V] = {
-    val (removedA, keptA) = t
-
-    val keysToRemove = removedA.values.flatten.toSet
-
-    val (removedC, keptC) = cache.partition {
-      case (key, _) => keysToRemove.contains(key)
-    }
-
-    TemporalCacheState(removedC.mapValues(_.value), TemporalCache(keptA, keptC))
-  }
 }
 
 object TemporalCache {
-  def empty[K, V] = TemporalCache[K,V](TreeMap.empty, Map.empty)
+  def empty[K, V] = TemporalCache[K,V](Map.empty)
 }
 
 sealed trait StageIn[+K, +V]
@@ -155,12 +109,7 @@ object Stage {
     }
 
     def expire(creationTime: NanoTime, accessTime: NanoTime) = {
-      split(cache.expireByAccessTime(accessTime)) match {
-        case (removed1, kept1) =>
-          kept1.split(kept1.cache.expireByCreationTime(creationTime)) match {
-            case (removed2, kept2) => (removed1 ++ removed2, kept2)
-          }
-      }
+      split(cache.expire(creationTime, accessTime))
     }
 
     def expireAll = split(cache.expireAll)
