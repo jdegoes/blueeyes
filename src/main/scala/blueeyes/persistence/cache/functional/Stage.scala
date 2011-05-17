@@ -112,17 +112,14 @@ object Stage {
   case class StageImpl[K, V: Semigroup](cache: TemporalCache[K, V], baseCapacity: Int, maxCapacity: Int) extends Stage[K, V] {
     lazy val semigroup = implicitly[Semigroup[V]]
 
-    private def reduceMap[K, V](m: Iterable[(K, V)])(implicit semi: Semigroup[V]): Map[K, V] = {
-      m.foldLeft(Map.empty[K, V]) {
-        case (merged, (k, v)) => merged + (k -> merged.get(k).map(semi.append(_, v)).getOrElse(v))
-      }
+    private def reduceMap(m: Iterable[(K, V)]): Map[K, V] = m.foldLeft(Map.empty[K, V]) {
+      case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
     }
 
     def putAll(values: Iterable[(K, V)], time: NanoTime) = split {
-      val merged = reduceMap(values)
       def updated(k: K, v: V) = k -> cache.get(k).map(semigroup.append(_, v)).getOrElse(v)
 
-      cache.putAll(values.map((updated _).tupled), time).truncate(baseCapacity, maxCapacity)
+      cache.putAll(reduceMap(values).map((updated _).tupled), time).truncate(baseCapacity, maxCapacity)
     }
 
     def expire(creationTime: NanoTime, accessTime: NanoTime) = {

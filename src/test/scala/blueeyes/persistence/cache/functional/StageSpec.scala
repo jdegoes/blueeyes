@@ -51,7 +51,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
     case PutAll(iter, time) => 
       implicitly[Shrink[List[(Int, String)]]].shrink(iter.toList).map(PutAll(_, time))
 
-    case other => Stream.cons(other, Stream.empty)
+    case other => Stream.empty
   }
 
   "information content" should {
@@ -75,6 +75,7 @@ class StageSpec extends Specification with ScalaCheck with PendingUntilFixed {
           case (result, _) => result
         })
 
+        print(".")
         MapMonoid[Int, String].append(discarded, finalFlushed) must_== expectedDiscarded
       } must pass
     }

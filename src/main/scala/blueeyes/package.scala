@@ -15,8 +15,8 @@ package object blueeyes {
     override val zero = Map.empty[K, V]
     override def append(m1: Map[K, V], m2: => Map[K, V]) = {
       val (from, to, semigroup) = {
-        if (m1.size > m2.size) (m2, m1, (v1: V, v2: V) => valueMonoid.append(v2, v1))
-        else (m1, m2, (v1: V, v2: V) => valueMonoid.append(v1, v2))
+        if (m1.size > m2.size) (m2, m1, (v1: V, v2: V) => valueMonoid.append(v1, v2))
+        else (m1, m2, (v1: V, v2: V) => valueMonoid.append(v2, v1))
       }
 
       from.foldLeft(to) {
