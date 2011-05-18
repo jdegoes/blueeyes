@@ -22,7 +22,7 @@ trait FutureMatchers {
      beSome(2)
    }
    */
-  case class deliver[A](inner: Matcher[Option[A]])(implicit timeouts: FutureTimeouts) extends Matcher[Future[A]]() {
+  case class whenDelivered[A](inner: Matcher[Option[A]])(implicit timeouts: FutureTimeouts) extends Matcher[Future[A]]() {
     def apply(future: => Future[A]): (Boolean, String, String) = {
       retry(future, timeouts.retries)
     }

@@ -29,3 +29,13 @@ object MongoStage {
     new MongoStage(database, collection, mongoStageSettings)
   }
 }
+
+object functional {
+  import blueeyes.persistence.cache.functional.Stage
+
+  object MongoStage {
+    def apply(baseCapacity: Int, maxCapacity: Int) = Stage.empty[MongoFilter, MongoUpdate](baseCapacity, maxCapacity)
+
+    def apply(capacity: Int) = Stage.empty[MongoFilter, MongoUpdate](capacity)
+  }
+}

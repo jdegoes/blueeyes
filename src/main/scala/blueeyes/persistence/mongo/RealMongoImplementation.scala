@@ -117,10 +117,10 @@ private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput) extends M
   def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection))
 }
 
-class IterableViewImpl[+A](underluyingIterator: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{
-  def iterator: scala.collection.Iterator[A] = underluyingIterator
+class IterableViewImpl[+A](delegate: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{
+  def iterator: scala.collection.Iterator[A] = delegate
 
-  protected def underlying = underluyingIterator
+  protected def underlying = delegate
 }
 
 

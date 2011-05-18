@@ -31,13 +31,13 @@ trait Mongo{
  *
  * val database  = mongo.database( "mydb" )
  *
- * database(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
- * </pre
+ * database(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
+ * </pre>
  *
  * To to know whether or not operation succeeded, or if it did not succeed, what error it generated it is necessary
  * to create "verified" query:
  *
- * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" <<))
+ * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
 abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
   private lazy val mongoActor = new Actor{

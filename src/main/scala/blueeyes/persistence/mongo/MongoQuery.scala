@@ -20,10 +20,10 @@ case object MongoSortOrderDescending extends MongoSortOrder(-1)
  * import blueeyes.persistence.mongo.MongoImplicits._
  * import blueeyes.persistence.mongo.MongoQueryBuilder._
  *
- * val sortOrder = "foo.bar" <<
+ * val sortOrder = "foo.bar" &lt;&lt;
  *
  * val query  = selectOne().from("mycollection").sortBy(sortOrder)
- * val query2 = selectOne().from("mycollection").sortBy("foo.bar" <<)
+ * val query2 = selectOne().from("mycollection").sortBy("foo.bar" &lt;&lt;)
  * </pre>
  */
 case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
