@@ -130,7 +130,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
     }
   }
 
-  case class TimedInput(data: Map[Int, String], accessTime: Long)
+  case class TimedInput(data: Map[Int, String], time: Long)
 
   implicit val tiGen = Arbitrary[TimedInput] {
     for {
@@ -149,8 +149,8 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
   }
 
   implicit val TimedInputShrink= Shrink[TimedInput] {
-    case TimedInput(data, accessTime) =>
-      implicitly[Shrink[List[(Int, String)]]].shrink(data.toList).map(s => TimedInput(s.toMap, accessTime))
+    case TimedInput(data, time) =>
+      implicitly[Shrink[List[(Int, String)]]].shrink(data.toList).map(s => TimedInput(s.toMap, time))
   }
 
   implicit val AllTimedInputShrink = Shrink[AllTimedInput] {
@@ -179,13 +179,13 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
     "evict by access time" in {
       forAll { (input: AllTimedInput) => 
         val AllTimedInput(list, accessTimeCutoff) = input
-        val sortedList = list.sortBy(_.accessTime)
+        val sortedList = list.sortBy(_.time)
 
         val stage = sortedList.foldLeft(BigStage) {
           case (stage, TimedInput(toPut, time)) => stage.putAll(toPut, time)._2
         }
 
-        val (expectedRemoved, expectedRetained) = ToTuple2W(sortedList.partition(_.accessTime < accessTimeCutoff)).fold {
+        val (expectedRemoved, expectedRetained) = ToTuple2W(sortedList.partition(_.time < accessTimeCutoff)).fold {
           case (before, after) => 
             val retained = SeqMA(after.map(_.data)).sum
             val (removedRetained, removed) = SeqMA(before.map(_.data)).sum.partition {
@@ -196,6 +196,34 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
         }
 
         val (removed, nextStage) = stage.expire(0, accessTimeCutoff)
+
+        val retained = nextStage.expireAll._1
+
+        (removed  == expectedRemoved)  :| ("Expected removed: " + expectedRemoved  + " but found " + removed) && 
+        (retained == expectedRetained) :| ("Expected retained: " + expectedRetained + " but found " + retained)
+      } must pass
+    }
+
+    "evict by creation time" in {
+      forAll { (input: AllTimedInput) => 
+        val AllTimedInput(list, creationTimeCutoff) = input
+        val sortedList = list.sortBy(_.time)
+
+        val stage = sortedList.foldLeft(BigStage) {
+          case (stage, TimedInput(toPut, time)) => stage.putAll(toPut, time)._2
+        }
+
+        val (expectedRemoved, expectedRetained) = ToTuple2W(sortedList.partition(_.time < creationTimeCutoff)).fold {
+          case (before, after) => 
+            val removed = SeqMA(before.map(_.data)).sum
+            val (retainedRemoved, retained) = SeqMA(after.map(_.data)).sum.partition {
+              case (k, _) => removed.contains(k)
+            }
+
+            (MapMonoid[Int, String].append(removed, retainedRemoved), retained)
+        }
+
+        val (removed, nextStage) = stage.expire(creationTimeCutoff, 0)
 
         val retained = nextStage.expireAll._1
 
