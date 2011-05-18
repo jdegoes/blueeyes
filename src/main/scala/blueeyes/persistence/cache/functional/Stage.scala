@@ -18,22 +18,6 @@ object TemporalCacheState {
 
 case class CacheValue[V](value: V, creationTime: NanoTime, accessTime: NanoTime)
 
-/**
- * TODO: accessMap doesn't buy anything, delete it and just use cache. This will
- * recreate the whole map on every operation, which as bad as it is, is faster
- * than the current method. Will greatly simplify code.
- *
- * Fundamentally there are two conflicting operations that need to be optimized:
- *
- *   expireByAccessTime
- *   expireByCreationTime
- *
- * Attempts to optimize for one, make the other slower.
- *
- *   cache: Map[K, CacheValue[V]]
- *
- * Fastest strategy may just be immutable map implemented as mutable map with undo.
- */
 case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]) {
   import TemporalCacheState._
   def size = cache.size
@@ -52,7 +36,7 @@ case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]
 
   def expire(creationTime: NanoTime, accessTime: NanoTime): TemporalCacheState[K, V] = {
     val (removed, kept) = cache.partition {
-      case (k, CacheValue(_, ct, at)) => ct < creationTime || at < accessTime
+      case (_, CacheValue(_, ct, at)) => ct < creationTime || at < accessTime
     }
 
     TemporalCacheState(removed.mapValues(_.value), TemporalCache(kept))
@@ -62,9 +46,15 @@ case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]
 
   def put(kv: (K, V), accessTime: NanoTime): TemporalCache[K, V] = {
     val (key, value) = kv
+    val oldValue = cache.get(key)
 
     TemporalCache(
-      cache + (key -> CacheValue(value, cache.get(key).map(_.creationTime).getOrElse(accessTime), accessTime))
+      cache + (
+        key -> CacheValue(
+          value, oldValue.map(_.creationTime).getOrElse(accessTime), 
+          oldValue.cata(v => Math.max(v.accessTime, accessTime), accessTime)
+        )
+      )
     )
   }
 

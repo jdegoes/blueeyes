@@ -9,19 +9,19 @@ import java.util.concurrent.CountDownLatch
 
 import scala.util.Random
 import scala.collection.immutable.ListMap
-import scalaz.Semigroup
+import scalaz._
 import scalaz.Scalaz._
 import blueeyes.concurrent.{ActorStrategy, Actor, Future}
 import scala.collection.mutable.ArrayBuilder.ofRef
 import ActorStrategy._
 
-import org.scalacheck.Prop.{forAll}
+import org.scalacheck.Prop._
 import org.scalacheck._
 import org.scalacheck.Gen._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Shrink
 
-class StageSpec extends Specification with ScalaCheck with org.specs.runner.ScalaTest {
+class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.ScalaTest {
   val BigStage = Stage.empty[Int, String](Int.MaxValue / 10)
   val SmallStage = Stage.empty[Int, String](2, 4)
 
@@ -49,11 +49,15 @@ class StageSpec extends Specification with ScalaCheck with org.specs.runner.Scal
     for (base <- choose(2, 10); max <- choose(10, 18)) yield Stage.empty[Int, String](base, max)
   }
 
-  implicit val stageShrinker = Shrink[StageIn[Int, String]] {
+  implicit val stageShrink = Shrink[StageIn[Int, String]] {
     case PutAll(iter, time) => 
       implicitly[Shrink[List[(Int, String)]]].shrink(iter.toList).map(PutAll(_, time))
 
     case other => Stream.empty
+  }
+
+  def reduceMap[K, V](m: Iterable[(K, V)])(implicit semigroup: Semigroup[V]): ListMap[K, V] = m.foldLeft(ListMap.empty[K, V]) {
+    case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
   }
 
   "information content" should {
@@ -101,12 +105,7 @@ class StageSpec extends Specification with ScalaCheck with org.specs.runner.Scal
       "evict" in {
         import scala.collection.immutable.ListMap
 
-        def reduceMap[K, V](m: Iterable[(K, V)])(implicit semigroup: Semigroup[V]): ListMap[K, V] = m.foldLeft(ListMap.empty[K, V]) {
-          case (m, (k, v)) => m + (k -> m.get(k).map(semigroup.append(_, v)).getOrElse(v))
-        }
-
-        forAll { (_toAdd: List[(Int, String)]) =>
-          val toAdd = reduceMap(_toAdd)
+        forAll { (toAdd: Map[Int, String]) =>
           val (expired, nextStage) = SmallStage.putAll(toAdd, 100)
 
           if (toAdd.size > SmallStage.maxCapacity) {
@@ -127,6 +126,81 @@ class StageSpec extends Specification with ScalaCheck with org.specs.runner.Scal
         val (expired, _) = nextStage.expireAll
 
         expired == toAdd
+      } must pass
+    }
+  }
+
+  case class TimedInput(data: Map[Int, String], accessTime: Long)
+
+  implicit val tiGen = Arbitrary[TimedInput] {
+    for {
+      l <- arbitrary[Map[Int, String]] if !l.isEmpty
+      time <- choose(100L, 200L)
+    } yield TimedInput(l, time)
+  }
+  
+  case class AllTimedInput(list: List[TimedInput], cutoff: Long)
+
+  implicit val arbAllTimedInput = Arbitrary[AllTimedInput] {
+    for {
+      list   <- arbitrary[List[TimedInput]]
+      cutoff <- choose(100L, 201L)
+    } yield AllTimedInput(list, cutoff)
+  }
+
+  implicit val TimedInputShrink= Shrink[TimedInput] {
+    case TimedInput(data, accessTime) =>
+      implicitly[Shrink[List[(Int, String)]]].shrink(data.toList).map(s => TimedInput(s.toMap, accessTime))
+  }
+
+  implicit val AllTimedInputShrink = Shrink[AllTimedInput] {
+    case AllTimedInput(list, cutoff) =>
+      implicitly[Shrink[List[TimedInput]]].shrink(list).map(AllTimedInput(_, cutoff))
+  }
+
+  "expire" should {
+    "evict by a specific access time" in {
+      val input1 = PutAll(Map(0 -> ""), 145)
+      val input2 = PutAll(Map(0 -> ""), 102)
+
+      val (out1, stage1) = BigStage.putAll(input1.values, input1.time)
+      out1 must beEmpty
+
+      val (out2, stage2) = stage1.putAll(input2.values, input2.time)
+      out2 must beEmpty
+
+      val (out3, stage3) = stage2.expire(0, 110)
+      out3 must beEmpty
+
+      val (out4, stage4) = stage3.expireAll
+      out4 must_== Map(0 -> "")
+    }
+
+    "evict by access time" in {
+      forAll { (input: AllTimedInput) => 
+        val AllTimedInput(list, accessTimeCutoff) = input
+        val sortedList = list.sortBy(_.accessTime)
+
+        val stage = sortedList.foldLeft(BigStage) {
+          case (stage, TimedInput(toPut, time)) => stage.putAll(toPut, time)._2
+        }
+
+        val (expectedRemoved, expectedRetained) = ToTuple2W(sortedList.partition(_.accessTime < accessTimeCutoff)).fold {
+          case (before, after) => 
+            val retained = SeqMA(after.map(_.data)).sum
+            val (removedRetained, removed) = SeqMA(before.map(_.data)).sum.partition {
+              case (k, _) => retained.contains(k)
+            }
+
+            (removed, MapMonoid[Int, String].append(removedRetained, retained))
+        }
+
+        val (removed, nextStage) = stage.expire(0, accessTimeCutoff)
+
+        val retained = nextStage.expireAll._1
+
+        (removed  == expectedRemoved)  :| ("Expected removed: " + expectedRemoved  + " but found " + removed) && 
+        (retained == expectedRetained) :| ("Expected retained: " + expectedRetained + " but found " + retained)
       } must pass
     }
   }
