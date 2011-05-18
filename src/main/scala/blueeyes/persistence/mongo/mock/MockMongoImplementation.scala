@@ -21,14 +21,16 @@ class MockMongo() extends Mongo{
 }
 
 private[mongo] class MockMongoDatabase() extends MongoDatabase{
-  private val collections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
+  private val databaseCollections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
 
   def collection(collectionName: String) = {
-    collections.get(collectionName).getOrElse({
+    databaseCollections.get(collectionName).getOrElse({
       val collection  = new MockDatabaseCollection()
-      collections.putIfAbsent(collectionName, collection).getOrElse(collection)
+      databaseCollections.putIfAbsent(collectionName, collection).getOrElse(collection)
     })
   }
+
+  def collections = databaseCollections.keySet.map(MongoCollectionReference(_)).toSet
 }
 
 private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock{

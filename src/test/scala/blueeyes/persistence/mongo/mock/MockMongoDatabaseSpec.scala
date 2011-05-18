@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo.mock
 
 import org.specs.Specification
-import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
+import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoCollectionReference, MongoImplicits}
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent.Future
@@ -9,12 +9,17 @@ import blueeyes.concurrent.Future
 class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   private val mongo     = new MockMongo()
 
-//  "create collection" in{
-//    database.collection("bar") must notBeNull
-//  }
-//  "return the same collection for the same name" in{
-//    database.collection("bar") must be (database.collection("bar"))
-//  }
+  "create collection" in{
+    database.collection("bar") must notBeNull
+  }
+  "return the same collection for the same name" in{
+    database.collection("bar") must be (database.collection("bar"))
+  }
+
+  "return all collections" in{
+    database.collection("bar")
+    database.collections.toList mustEqual(List(MongoCollectionReference("bar")))
+  }
 
   "adToSet really adds to set for not existsing object" in{
     val future1 = database[JNothing.type](upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))

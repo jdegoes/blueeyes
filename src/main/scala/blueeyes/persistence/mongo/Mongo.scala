@@ -53,6 +53,8 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
     mongoActor.query(query, databaseCollection).asInstanceOf[Future[T]]
   }
 
+  def collections: Set[MongoCollectionReference]
+
   protected def collection(collectionName: String): DatabaseCollection
 }
 

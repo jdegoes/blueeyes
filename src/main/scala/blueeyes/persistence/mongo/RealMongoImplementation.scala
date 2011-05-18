@@ -36,6 +36,8 @@ class RealMongo(config: ConfigMap) extends Mongo{
 
 private[mongo] class RealMongoDatabase(database: DB) extends MongoDatabase{
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
+
+  def collections = database.getCollectionNames.map(MongoCollectionReference(_)).toSet
 }
 
 private[mongo] class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
