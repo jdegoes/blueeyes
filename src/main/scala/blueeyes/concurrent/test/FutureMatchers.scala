@@ -28,13 +28,11 @@ trait FutureMatchers {
    */
   case class whenDelivered[A](inner: Matcher[A])(implicit timeouts: FutureTimeouts) extends Matcher[Future[A]]() {
     def apply(future: => Future[A]): (Boolean, String, String) = {
-      println(timeouts)
       retry(future, timeouts.retries)
     }
 
     @tailrec
     private def retry(future: => Future[A], retries: Int): (Boolean, String, String) = {
-      println("retries: " + retries)
       val start = System.currentTimeMillis
 
       val delivered = future
@@ -60,9 +58,7 @@ trait FutureMatchers {
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
-        case ex: Throwable => 
-          //ex.printStackTrace
-          Retry("Got something weird: " + ex.getMessage)
+        case ex: Throwable => Retry("Caught exception in matching delivered value: " + ex.getMessage)
       }  
 
       result match {
