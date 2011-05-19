@@ -629,10 +629,10 @@ BlueEyes provides support for both pillars:
       <td>John A. De Goes</td>    <td>Author &amp; architect, core platform</td>                                    <td><a href="http://twitter.com/jdegoes">@jdegoes</a></td>
     </tr>
     <tr>
-      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td></td>
+      <td>Kris Nuttycome</td>    <td>Core platform</td>                                                             <td><a href="http://twitter.com/nuttycom">@nuttycom</a></td>
     </tr>
     <tr>
-      <td>Josh Hoak</td>          <td>HTTP headers</td>                                                             <td></td>
+      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td></td>
     </tr>
     <tr>
       <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
@@ -651,6 +651,6 @@ Published under The MIT License
 
 ## Sponsors
 
-A big round of thanks to the sponsors of BlueEyes.
+A big round of thanks to the sponsors of BlueEyes. 
 
-<a href="http://www.ej-technologies.com/products/jprofiler/overview.html">EJ Technologies</a> - JProfiler
+<a href="http://www.ej-technologies.com/products/jprofiler/overview.html">JProfiler</a> - Best-in-class profiler for Java and Scala developers
