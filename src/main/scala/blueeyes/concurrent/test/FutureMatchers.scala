@@ -13,7 +13,7 @@ import scalaz.Scalaz._
 import scalaz.{Validation, Success, Failure}
 
 trait FutureMatchers {
-  case class FutureTimeouts(retries: Int, timeout: Duration)
+  case class FutureTimeouts(retries: Int, duration: Duration)
 
   implicit val defaultFutureTimeouts: FutureTimeouts = FutureTimeouts(10, 100L.milliseconds)
 
@@ -35,6 +35,8 @@ trait FutureMatchers {
     @tailrec
     private def retry(future: => Future[A], retries: Int): (Boolean, String, String) = {
       println("retries: " + retries)
+      val start = System.currentTimeMillis
+
       val delivered = future
 
       val latch = new CountDownLatch(1)
@@ -43,8 +45,8 @@ trait FutureMatchers {
       delivered.ifCanceled(_ => latch.countDown())
 
       val result = try {
-        latch.await(timeouts.timeout.time.toLong, timeouts.timeout.unit)
-        
+        val countedDown = latch.await(timeouts.duration.length, timeouts.duration.unit)
+
         delivered.value match {
           case Some(value) => 
             val result = inner(value) 
@@ -53,19 +55,24 @@ trait FutureMatchers {
             else Retry(result.koMessage)
 
           case None => 
-            Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error)
+            if (countedDown) Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error)
+            else Retry("Retried after wait of " + timeouts.duration)
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
         case ex: Throwable => 
-          ex.printStackTrace
+          //ex.printStackTrace
           Retry("Got something weird: " + ex.getMessage)
       }  
 
       result match {
         case Done(result) => result
 
-        case Retry(_) if (retries > 0) => retry(future, retries - 1)
+        case Retry(_) if (retries > 0) => {
+          val end = System.currentTimeMillis
+          Thread.sleep(timeouts.duration.milliseconds.length - (end - start))
+          retry(future, retries - 1)
+        }
 
         case Retry(message) => (false, "Enough timeout exceptions.", message)
       }

@@ -3,6 +3,8 @@ package blueeyes.concurrent
 import java.util.concurrent.TimeUnit
 
 case class Duration(time: Double, unit: TimeUnit){
+  val length = time.toLong
+
   /**
    * Returns the value in nanoseconds.
    */
