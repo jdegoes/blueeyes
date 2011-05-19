@@ -66,7 +66,7 @@ trait FutureMatchers {
 
         case Retry(_) if (retries > 0) => {
           val end = System.currentTimeMillis
-          Thread.sleep(timeouts.duration.milliseconds.length - (end - start))
+          Thread.sleep(Math.max(0, timeouts.duration.milliseconds.length - (end - start)))
           retry(future, retries - 1)
         }
 
