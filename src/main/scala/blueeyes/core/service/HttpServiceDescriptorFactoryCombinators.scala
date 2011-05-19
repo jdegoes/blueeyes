@@ -87,7 +87,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       val underlying = f(context)
 
       val configMap = context.config.getConfigMap("requestLog").getOrElse(new Config())
-       val enabled   = configMap.getBool("enabled", true)
+      val enabled   = configMap.getBool("enabled", true)
 
       if (enabled){
         def fieldsDirective: FieldsDirective = {

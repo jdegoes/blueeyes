@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo.mock
 
 import org.specs.Specification
 import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoCollectionReference, MongoImplicits}
+import blueeyes.json.{Printer, JsonAST}
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
 import blueeyes.concurrent.Future
@@ -19,6 +20,26 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   "return all collections" in{
     database.collection("bar")
     database.collections.toList mustEqual(List(MongoCollectionReference("bar")))
+  }
+
+  "dump empty collections content" in{
+    database.collection("bar")
+    val b = new StringBuilder()
+
+    database.dump((v: String) => b.append(v))
+
+    b.toString mustEqual(Printer.pretty(JsonAST.render(JObject(List(JField("bar", JArray(Nil)))))))
+  }
+  "dump not empty collections content" in{
+    val jobject  = JObject(JField("foo", JArray(List(JString("1")))) :: JField("baz", JString("foo")) :: Nil)
+    val jobject2 = JObject(JField("bar", JArray(List(JString("1")))) :: JField("foo", JString("baz")) :: Nil)
+    val future1  = database[JNothing.type](insert(jobject, jobject2).into("bar"))
+    future1.value must eventually (beSomething)
+
+    val b = new StringBuilder()
+    database.dump((v: String) => b.append(v))
+
+    b.toString mustEqual(Printer.pretty(JsonAST.render(JObject(List(JField("bar", JArray(jobject :: jobject2 :: Nil)))))))
   }
 
   "adToSet really adds to set for not existsing object" in{

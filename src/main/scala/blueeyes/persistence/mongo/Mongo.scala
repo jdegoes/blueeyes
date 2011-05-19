@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import scala.collection.IterableView
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
-import com.mongodb.MongoException
+import blueeyes.json.{Printer, JsonAST}
 import blueeyes.concurrent._
 
 /** The Mongo creates a MongoDatabase by  database name.
@@ -54,6 +54,28 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
   }
 
   def collections: Set[MongoCollectionReference]
+
+  def dump(print: String => Unit = (value: String) => print(value))  = {
+    collections foreach { mongoCollection =>
+      print("""{
+  "%s":[""".format(mongoCollection.name))
+
+      val jobjects = collection(mongoCollection.name).select(MongoSelection(Nil), None, None, None, None)
+      var first    = true
+
+      jobjects foreach { jobject =>
+        val prefix = if (first) {
+          first = false
+          ""
+        } else ","
+
+        print(prefix + Printer.pretty(scala.text.DocNest(2, JsonAST.render(jobject))))
+      }
+
+      print("""]
+}""")
+    }
+  }
 
   protected def collection(collectionName: String): DatabaseCollection
 }
