@@ -159,7 +159,7 @@ private[mongo] object Evaluators{
     }
   }
   case object ExistsFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = true
+    def apply(v1: JValue, v2: JValue) = v1 != JNothing
   }
   case object TypeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v2 match {
