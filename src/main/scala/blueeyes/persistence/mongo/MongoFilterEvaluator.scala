@@ -45,7 +45,7 @@ private[mongo] object Evaluators{
 
   object MongoAndFilterEvaluator{
     def apply(values: List[JValue], filter: MongoAndFilter) = filter.queries match{
-      case x :: xs => xs.foldLeft(values.filter(x)){ (result, currentFilter) =>  result.intersect(values.filter(currentFilter)) }
+      case x :: xs => xs.foldLeft(values.filter(x)){ (result, currentFilter) => result.filter(currentFilter) }
       case Nil     => values
     }
   }
