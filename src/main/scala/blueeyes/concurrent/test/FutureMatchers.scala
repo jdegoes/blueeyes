@@ -8,6 +8,7 @@ import java.util.concurrent.{TimeoutException,  TimeUnit, CountDownLatch}
 
 import blueeyes.concurrent.Duration
 import blueeyes.concurrent.Duration._
+import blueeyes.util.RichThrowableImplicits._
 
 import scalaz.Scalaz._
 import scalaz.{Validation, Success, Failure}
@@ -53,12 +54,12 @@ trait FutureMatchers {
             else Retry(result.koMessage)
 
           case None => 
-            if (countedDown) Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error)
+            if (countedDown) Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error.map(_.fullStackTrace))
             else Retry("Retried after wait of " + timeouts.duration)
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
-        case ex: Throwable => Retry("Caught exception in matching delivered value: " + ex.getMessage)
+        case ex: Throwable => Retry("Caught exception in matching delivered value: " + ex.fullStackTrace)
       }  
 
       result match {
