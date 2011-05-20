@@ -14,13 +14,13 @@ class MockMongo() extends Mongo{
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
   def database(databaseName: String) = {
     databases.get(databaseName).getOrElse({
-      val mongoDatabase  = new MockMongoDatabase()
+      val mongoDatabase  = new MockMongoDatabase(this)
       databases.putIfAbsent(databaseName, mongoDatabase).getOrElse(mongoDatabase)
     })
   }
 }
 
-private[mongo] class MockMongoDatabase() extends MongoDatabase{
+private[mongo] class MockMongoDatabase(mongo: Mongo) extends MongoDatabase(mongo){
   private val databaseCollections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
 
   def collection(collectionName: String) = {
