@@ -31,10 +31,10 @@ class RealMongo(config: ConfigMap) extends Mongo{
     mongo
   }
 
-  def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))
+  def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
 }
 
-private[mongo] class RealMongoDatabase(database: DB) extends MongoDatabase{
+private[mongo] class RealMongoDatabase(mongo: Mongo, database: DB) extends MongoDatabase(mongo){
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
 
   def collections = database.getCollectionNames.map(MongoCollectionReference(_)).toSet
