@@ -14,7 +14,7 @@ class EnsureIndexQueryBehaviourSpec extends Specification with MocksCreation{
   "Call collection method" in{
     when(collection.getLastError).thenReturn(None)
 
-    val query  = ensureUniqueIndex("index").on("collection", "address.city", "address.street")
+    val query  = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")
     val result = query(collection)
 //    val countDown = new CountDownLatch(1)
 //
