@@ -19,7 +19,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
   "return all collections" in{
     database.collection("bar")
-    database.collections.toList mustEqual(List(MongoCollectionReference("bar")))
+    database.collections.toList.map(v => (v.name, v.database)) mustEqual(List(("bar", database)))
   }
 
   "dump empty collections content" in{

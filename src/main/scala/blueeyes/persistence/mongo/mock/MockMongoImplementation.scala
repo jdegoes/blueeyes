@@ -25,15 +25,15 @@ private[mongo] class MockMongoDatabase(mongo: Mongo) extends MongoDatabase(mongo
 
   def collection(collectionName: String) = {
     databaseCollections.get(collectionName).getOrElse({
-      val collection  = new MockDatabaseCollection()
+      val collection  = new MockDatabaseCollection(collectionName, this)
       databaseCollections.putIfAbsent(collectionName, collection).getOrElse(collection)
     })
   }
 
-  def collections = databaseCollections.keySet.map(MongoCollectionReference(_)).toSet
+  def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 }
 
-private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock{
+private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock{
   private var container = JArray(Nil)
 
   def insert(objects: List[JObject]): Unit = {
@@ -58,7 +58,7 @@ private[mongo] class MockDatabaseCollection() extends DatabaseCollection with JO
     safeProcess(filter, {found: List[JObject] => GroupFunction(selection, initial, reduce, found)})
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) =
-    safeProcess(filter, {found: List[JObject] => MapReduceFunction(map, reduce, outputCollection, found)})
+    safeProcess(filter, {found: List[JObject] => MapReduceFunction(map, reduce, outputCollection, found, database)})
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
     writeLock{
@@ -151,5 +151,5 @@ private[mock] object FilterToUpdateConvert{
 private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
   def drop = {}
 
-  def outpotCollection = MongoCollectionHolder(output)
+  def outpotCollection = MongoCollectionHolder(output, output.name, output.database)
 }

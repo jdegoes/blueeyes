@@ -410,5 +410,5 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(JPath("address.town") :: Nil), None, Some(sort), None, None).toList mustEqual(Nil)
   }
 
-  private def newCollection = new MockDatabaseCollection()
+  private def newCollection = new MockDatabaseCollection("foo", new MockMongoDatabase(new MockMongo()))
 }
