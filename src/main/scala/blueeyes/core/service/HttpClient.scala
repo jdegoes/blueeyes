@@ -72,10 +72,10 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
     def apply(request: HttpRequest[B]): Future[HttpResponse[B]] = self.apply {
       request.copy(content = request.content.map(transcoder.apply(_)), headers = request.headers + Tuple2("Content-Type", mimeType.value))
-    } map {response => {
+    } map {response =>
       val newC = response.content.map(transcoder.unapply(_))
       response.copy(content = response.content.map(transcoder.unapply(_)))
-    }}
+    }
   }
 
   private def addQueries(request: HttpRequest[A])(queries: Iterable[(String, String)]): HttpRequest[A] = {
