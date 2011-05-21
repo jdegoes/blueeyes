@@ -10,7 +10,7 @@ import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import blueeyes.concurrent.ReadWriteLock
 import blueeyes.concurrent.ActorStrategySequential._
 
-class MockMongo() extends Mongo{
+class MockMongo() extends Mongo {
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
   def database(databaseName: String) = {
     databases.get(databaseName).getOrElse({
@@ -20,7 +20,7 @@ class MockMongo() extends Mongo{
   }
 }
 
-private[mongo] class MockMongoDatabase(mongo: Mongo) extends MongoDatabase(mongo){
+private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase{
   private val databaseCollections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
 
   def collection(collectionName: String) = {

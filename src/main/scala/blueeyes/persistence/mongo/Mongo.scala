@@ -39,7 +39,9 @@ trait Mongo{
  *
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
-abstract class MongoDatabase(val mongo: Mongo)(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
+abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
+  def mongo: Mongo
+
   private lazy val mongoActor = new Actor{
 
     val query = lift2((query: MongoQuery[_], collection: DatabaseCollection) => query(collection))

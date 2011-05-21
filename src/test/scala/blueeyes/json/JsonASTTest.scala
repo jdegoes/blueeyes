@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package blueeyes.json
+package blueeyes
+package json
 
 import org.scalacheck._
 import org.scalacheck.Prop.forAll
@@ -130,25 +131,28 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       } yield JPath(listOfNodes)
     }
 
-    def badPath(jv: JValue, p: JPath): Boolean = p.nodes match {
-      case JPathIndex(index) :: xs => jv match {
-        case JArray(nodes) => index > nodes.length || 
-                              (index < nodes.length && badPath(nodes(index), JPath(xs))) ||
-                              badPath(JArray(Nil), JPath(xs))
+    def badPath(jv: JValue, p: JPath): Boolean = {
+      p.nodes match {
+        case JPathIndex(index) :: xs => jv match {
+          case JArray(nodes) => index > nodes.length || 
+                                (index < nodes.length && badPath(nodes(index), JPath(xs))) ||
+                                badPath(JArray(Nil), JPath(xs)) 
 
-        case JObject(_) => true
-        case _ => index != 0 || badPath(JArray(Nil), JPath(xs))
-      }
+          case JObject(_) => true
+          case _ => index != 0 || badPath(JArray(Nil), JPath(xs))
+        }
 
-      case JPathField(name)  :: xs => jv match {
-        case JArray(_) => true
-        case _ => badPath(jv \ name, JPath(xs))
+        case JPathField(name) :: xs => jv match {
+          case JArray(_) => true
+          case _ => badPath(jv \ name, JPath(xs))
+        }
+
+        case Nil => false
       }
-      case Nil => false
-    }
+    } 
 
     val setProp = (jv: JValue, p: JPath, toSet: JValue) => {
-      (!badPath(jv, p)) ==> (p == JPath.Identity && jv.set(p, toSet) == toSet) || (jv.set(p, toSet).get(p) == toSet)
+      (!badPath(jv, p)) ==> ((p == JPath.Identity && jv.set(p, toSet) == toSet) || (jv.set(p, toSet).get(p) == toSet))
     }
 
     forAll(setProp) must pass

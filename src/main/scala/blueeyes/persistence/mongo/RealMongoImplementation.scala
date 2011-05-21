@@ -8,7 +8,7 @@ import net.lag.configgy.ConfigMap
 import blueeyes.json.{JPath}
 import blueeyes.concurrent.ActorStrategy._
 
-class RealMongo(config: ConfigMap) extends Mongo{
+class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
   private lazy val mongo = {
@@ -34,7 +34,7 @@ class RealMongo(config: ConfigMap) extends Mongo{
   def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
 }
 
-private[mongo] class RealMongoDatabase(mongo: Mongo, database: DB) extends MongoDatabase(mongo){
+private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase{
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
   def collections = database.getCollectionNames.map{v =>

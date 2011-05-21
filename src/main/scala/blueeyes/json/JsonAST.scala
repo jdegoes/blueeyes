@@ -245,7 +245,7 @@ object JsonAST {
         val newAcc = f(acc, p, v)
         v match {
           case JObject(l)   => l.foldLeft(newAcc) { (a, f) => rec(a, p, f) }
-          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { (a, t) => val (e, idx) = t; rec(a, p(idx), e) }
+          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { (a, t) => val (e, idx) = t; rec(a, p \ idx, e) }
           case JField(n, v) => rec(newAcc, p \ n, v)
           case _ => newAcc
         }
@@ -267,7 +267,7 @@ object JsonAST {
       def rec(acc: A, p: JPath, v: JValue): A = {
         f(v match {
           case JObject(l)   => l.foldLeft(acc) { (a, f) => rec(a, p, f) }
-          case JArray(l)    => l.zipWithIndex.foldLeft(acc) { (a, t) => val (e, idx) = t; rec(a, p(idx), e) }
+          case JArray(l)    => l.zipWithIndex.foldLeft(acc) { (a, t) => val (e, idx) = t; rec(a, p \ idx, e) }
           case JField(n, v) => rec(acc, p \ n, v)
           case _ => acc
         }, p, v)
@@ -301,7 +301,7 @@ object JsonAST {
 
           case x => JField(f.name, x) :: Nil
         })))
-        case JArray(l) => f(p, JArray(l.zipWithIndex.flatMap(t => rec(p(t._2), t._1) match {
+        case JArray(l) => f(p, JArray(l.zipWithIndex.flatMap(t => rec(p \ t._2, t._1) match {
           case JNothing => Nil
           case x => x :: Nil
         })))
@@ -348,7 +348,7 @@ object JsonAST {
             JArray(l.zipWithIndex.flatMap { t =>
               val (e, idx) = t
 
-              rec(p(idx), e) match {
+              rec(p \ idx, e) match {
                 case JNothing => Nil
                 case x => x :: Nil
               }
@@ -471,7 +471,7 @@ object JsonAST {
         case JArray(elements) => elements.zipWithIndex.flatMap { tuple =>
           val (element, index) = tuple
 
-          flatten0(path(index))(element)
+          flatten0(path \ index)(element)
         }
 
         case JField(name, value) => flatten0(path \ name)(value)
@@ -587,8 +587,6 @@ object JsonAST {
     
     def values = Map() ++ fields.map(_.values : (String, Any))
 
-    override def set(path: JPath, value: JValue): JObject = super.set(path, value).asInstanceOf[JObject]
-
     override def equals(that: Any): Boolean = that match {
       case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
       case _ => false
@@ -602,8 +600,6 @@ object JsonAST {
     type Self = JArray
     
     def values = elements.map(_.values)
-
-    override def set(path: JPath, value: JValue): JArray = super.set(path, value).asInstanceOf[JArray]
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
