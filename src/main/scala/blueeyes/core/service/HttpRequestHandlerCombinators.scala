@@ -8,6 +8,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
+import blueeyes.util.metrics.DataSize
 import java.io.ByteArrayOutputStream
 
 trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
@@ -372,7 +373,8 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
-  def aggregate(chunkSize: Option[Int])(h: HttpRequestHandler[ByteChunk]): HttpRequestHandler[ByteChunk] = new HttpRequestHandler[ByteChunk] {
+  def aggregate(chunkSize: Option[DataSize])(h: HttpRequestHandler[ByteChunk]): HttpRequestHandler[ByteChunk] = new HttpRequestHandler[ByteChunk] {
+    val chunkSizeInBytes = chunkSize.map(_.bytes)
     def isDefinedAt(r: HttpRequest[ByteChunk]) = h.isDefinedAt(r)
 
     def apply(r: HttpRequest[ByteChunk]) = {
@@ -389,8 +391,8 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
         }
 
         buffer.write(chunk.data)
-        chunkSize match {
-          case Some(size) if (buffer.size >= size) => done
+        chunkSizeInBytes match {
+          case Some(x) if (buffer.size >= x.size) => done
           case _ => chunk.next match{
             case None    => done
             case Some(e) => e.deliverTo(nextChunk => aggregateContent(nextChunk, buffer, result))

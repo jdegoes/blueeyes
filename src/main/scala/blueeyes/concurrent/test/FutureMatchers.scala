@@ -6,8 +6,8 @@ import org.specs.matcher.{Matcher}
 
 import java.util.concurrent.{TimeoutException,  TimeUnit, CountDownLatch}
 
-import blueeyes.concurrent.Duration
-import blueeyes.concurrent.Duration._
+import blueeyes.util.metrics.Duration
+import blueeyes.util.metrics.Duration._
 import blueeyes.util.RichThrowableImplicits._
 
 import scalaz.Scalaz._

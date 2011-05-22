@@ -4,9 +4,11 @@ import java.io.ByteArrayOutputStream
 import blueeyes.core.http.{HttpResponse, HttpRequest}
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
+import blueeyes.util.metrics.DataSize
 
 trait HttpClientByteChunk extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{ self =>
-  def aggregate(chunkSize: Option[Int]) = new HttpClient[ByteChunk] {
+  def aggregate(chunkSize: Option[DataSize]) = new HttpClient[ByteChunk] {
+    val chunkSizeInBytes = chunkSize.map(_.bytes)
     def isDefinedAt(request: HttpRequest[ByteChunk]) = self.isDefinedAt(request)
 
     def apply(request: HttpRequest[ByteChunk]) = {
@@ -20,8 +22,8 @@ trait HttpClientByteChunk extends HttpClient[ByteChunk] with FutureDeliveryStrat
           }
 
           buffer.write(chunk.data)
-          chunkSize match {
-            case Some(size) if (buffer.size >= size) => done
+          chunkSizeInBytes match {
+            case Some(x) if (buffer.size >= x.size) => done
             case _ => chunk.next match{
               case None    => done
               case Some(e) => e.deliverTo(nextChunk => aggregateContent(nextChunk, buffer, result))

@@ -2,6 +2,7 @@ package blueeyes
 package persistence.cache
 
 import scalaz.Semigroup
+import blueeyes.util.metrics.Duration
 import blueeyes.concurrent._
 import blueeyes.concurrent.ActorStrategy._
 import blueeyes.util.ClockSystem._

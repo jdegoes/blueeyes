@@ -4,6 +4,8 @@ import org.specs.Specification
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
 import blueeyes.core.http._
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
+import blueeyes.util.metrics.DataSize
+import DataSize._
 
 class HttpClientByteChunkSpec extends Specification with FutureDeliveryStrategySequential{
   "HttpClientByteChunk" should {
@@ -13,7 +15,7 @@ class HttpClientByteChunkSpec extends Specification with FutureDeliveryStrategyS
       future.value.get.content.map(v => new String(v.data)) must eventually (beSome("1234"))
     }
     "aggregate content up to the specified size" in{
-      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(Some(2)).get("foo")
+      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(Some(2.bytes)).get("foo")
 
       future.value.get.content.map(v => new String(v.data)) must eventually (beSome("12"))
     }

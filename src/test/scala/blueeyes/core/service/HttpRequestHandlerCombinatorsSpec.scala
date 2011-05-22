@@ -14,6 +14,8 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits
+import blueeyes.util.metrics.DataSize
+import DataSize._
 
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
@@ -247,7 +249,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
     }
     "aggregate content up to the specified size" in{
-      (aggregate(Some(2)){
+      (aggregate(Some(2.bytes)){
         path("/foo"){
           get { (request: HttpRequest[ByteChunk]) =>
             Future(HttpResponse[ByteChunk](content=request.content))

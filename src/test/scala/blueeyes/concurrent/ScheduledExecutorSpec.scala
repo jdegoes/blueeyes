@@ -2,7 +2,7 @@ package blueeyes.concurrent
 
 import org.specs.Specification
 import org.specs.util.{Duration => SpecsDuration}
-import Duration._
+import blueeyes.util.metrics.Duration._
 
 class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySequential{
   "ScheduledExecutor.once" should {

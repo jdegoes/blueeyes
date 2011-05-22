@@ -4,7 +4,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.TimeUnit
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
-import blueeyes.concurrent.{Future, Duration}
+import blueeyes.util.metrics.Duration
+import blueeyes.concurrent.Future
 import Duration._
 import blueeyes.json.JsonAST._
 import blueeyes.util.ClockSystem
