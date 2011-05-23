@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import java.util.concurrent.CountDownLatch
 import org.specs.Specification
 import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
@@ -22,10 +21,6 @@ class SelectOneQueryBehaviourSpec extends Specification with MocksCreation{
 
     val query  = selectOne("foo", "bar").from("collection")
     val result = query(collection)
-//    val countDown = new CountDownLatch(1)
-//
-//    result.deliverTo{v => countDown.countDown()}
-//    countDown.await()
 
     Mockito.verify(collection, times(1)).select(keys, None, None, None, Some(1))
 

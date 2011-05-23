@@ -1,11 +1,12 @@
 package blueeyes.concurrent
 
 import org.specs.Specification
-import java.util.concurrent.{CountDownLatch, Executors}
+import java.util.concurrent.Executors
 import ActorStrategy._
+import test.FutureMatchers
 import util.Random
 
-class StrategyThreadedNSpec extends Specification{
+class StrategyThreadedNSpec extends Specification with FutureMatchers{
 
   private val random = new Random()
   private val actor  = new ActorImpl()
@@ -15,9 +16,7 @@ class StrategyThreadedNSpec extends Specification{
 
     actorExecutionStrategy.execute1(actor)(actor.f _)(1)(future)
 
-    awaitFuture(future)
-
-    future.value mustEqual(Some(3))
+    future.value must eventually (beSome(3))
   }
 
   "StrategyThreadedN: handle multiple requests" in{
@@ -29,10 +28,8 @@ class StrategyThreadedNSpec extends Specification{
       actorExecutionStrategy.execute1(actor)(fun)(1)(future)
     }
 
-    awaitFuture(Future(futures: _*))
-
     futures foreach { future =>
-      future.value mustEqual(Some(3))
+      future.value must eventually(beSome(3))
     }
   }
 
@@ -55,21 +52,11 @@ class StrategyThreadedNSpec extends Specification{
       })
     }
 
-    awaitFuture(Future(futures: _*))
-
     futures foreach { future =>
-      future.value mustEqual(Some(3))
+      future.value must eventually(beSome(3))
     }
 
     actorExecutionStrategy.assignments.size must be (0)
-  }
-
-  private def awaitFuture(future: Future[_]) = {
-    val countDownLatch = new CountDownLatch(1)
-    future deliverTo { v =>
-      countDownLatch.countDown
-    }
-    countDownLatch.await
   }
 
   class ActorImpl extends Actor{

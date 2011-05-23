@@ -5,7 +5,6 @@ import org.specs.Specification
 import org.specs.ScalaCheck
 import org.specs.specification.PendingUntilFixed
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
-import java.util.concurrent.CountDownLatch
 
 import scala.util.Random
 import scala.collection.immutable.ListMap
