@@ -113,7 +113,7 @@ trait ScheduledExecutor{
 }
 
 trait ScheduledExecutorMultiThreaded extends ScheduledExecutor{
-  def scheduledExecutor = Executors.newScheduledThreadPool(100)
+  lazy val scheduledExecutor = Executors.newScheduledThreadPool(100)
 }
 
 object ScheduledExecutor extends ScheduledExecutorMultiThreaded

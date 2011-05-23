@@ -134,7 +134,7 @@ trait ActorStrategyMultiThreaded{
         tl.set(actor)
         f
       } finally {
-        tl.set(old.getOrElse(null))
+        old.map(tl.set(_)).getOrElse(tl.remove())
       }
     }
   }
