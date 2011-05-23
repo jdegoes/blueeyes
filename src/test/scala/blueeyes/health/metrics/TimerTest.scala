@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
-import blueeyes.concurrent.Duration
+import blueeyes.util.metrics.Duration
 import Duration._
 import org.specs.Specification
 

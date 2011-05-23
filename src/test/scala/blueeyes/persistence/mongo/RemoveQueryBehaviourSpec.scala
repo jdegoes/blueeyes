@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import java.util.concurrent.CountDownLatch
 import org.specs.Specification
 import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
@@ -18,10 +17,6 @@ class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
 
     val query  = remove.from("collection").where("name" === "Joe")
     val result = query(collection)
-//    val countDown = new CountDownLatch(1)
-//
-//    result.deliverTo{v => countDown.countDown()}
-//    countDown.await()
 
     Mockito.verify(collection, times(1)).remove(filter)
 
@@ -32,10 +27,6 @@ class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
 
     val query = remove.from("collection")
     val result = query(collection)
-//    val countDown = new CountDownLatch(1)
-//
-//    result.deliverTo{v => countDown.countDown()}
-//    countDown.await()
 
     Mockito.verify(collection, times(1)).remove(None)
     

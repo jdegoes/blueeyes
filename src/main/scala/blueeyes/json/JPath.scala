@@ -4,7 +4,7 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath { self =>
+sealed trait JPath extends Seq[JPathNode]{ self =>
   def nodes: List[JPathNode]
 
   def parent: Option[JPath] = if (nodes.length == 0) None else Some(JPath(nodes.take(nodes.length - 1): _*))
@@ -25,9 +25,9 @@ sealed trait JPath { self =>
 
   def \ (that: String): JPath = this \ JPath(that)
 
-  def apply(name: String): JPath = this \ JPathField(name)
+  def \ (that: Int): JPath = this \ JPathIndex(that)
 
-  def apply(index: Int): JPath = this \ JPathIndex(index)
+  override def apply(index: Int): JPathNode = nodes(index)
 
   def extract(jvalue: JValue): JValue = {
     def extract0(path: List[JPathNode], d: JValue): JValue = path match {
@@ -73,12 +73,14 @@ sealed trait JPath { self =>
 
   def path = nodes.mkString("")
 
+  override def iterator = nodes.iterator
+
+  def length = nodes.length
+
   override def toString = path
 }
 
-sealed trait JPathNode extends JPath { self =>
-  def nodes = this :: Nil
-}
+sealed trait JPathNode
 sealed case class JPathField(name: String) extends JPathNode {
   override def toString = "." + name
 }
@@ -87,7 +89,7 @@ sealed case class JPathIndex(index: Int) extends JPathNode {
 }
 
 object JPath {
-  private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath
+  private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath 
 
   private val PathPattern  = """\.|(?=\[\d+\])""".r
   private val IndexPattern = """^\[(\d+)\]$""".r
@@ -119,6 +121,8 @@ object JPath {
 
     apply(parse0(PathPattern.split(properPath).toList, Nil).reverse: _*)
   }
+
+  implicit def singleNodePath(node: JPathNode) = JPath(node)
 }
 
 trait JPathImplicits {

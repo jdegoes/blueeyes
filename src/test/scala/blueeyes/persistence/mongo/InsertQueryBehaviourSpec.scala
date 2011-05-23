@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import java.util.concurrent.CountDownLatch
 import org.specs.Specification
 import org.specs.mock.MocksCreation
 import org.specs.util.TimeConversions._
@@ -19,10 +18,6 @@ class InsertQueryBehaviourSpec extends Specification with MocksCreation{
 
     val query  = insert(jObject).into("collection")
     val result = query(collection)
-//    val countDown = new CountDownLatch(1)
-//
-//    result.deliverTo{v => countDown.countDown()}
-//    countDown.await()
 
     Mockito.verify(collection, times(1)).insert(jObject2MongoObject(jObject) :: Nil)
 

@@ -1,5 +1,6 @@
 package blueeyes.concurrent
 
+import blueeyes.util.metrics.Duration
 import java.util.concurrent.{ScheduledExecutorService, Executors, TimeUnit}
 
 trait ScheduledExecutor{
@@ -112,7 +113,7 @@ trait ScheduledExecutor{
 }
 
 trait ScheduledExecutorMultiThreaded extends ScheduledExecutor{
-  def scheduledExecutor = Executors.newScheduledThreadPool(100)
+  lazy val scheduledExecutor = Executors.newScheduledThreadPool(100)
 }
 
 object ScheduledExecutor extends ScheduledExecutorMultiThreaded

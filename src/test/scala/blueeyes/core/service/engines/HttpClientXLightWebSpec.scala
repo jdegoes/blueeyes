@@ -6,7 +6,6 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import java.util.concurrent.CountDownLatch
 import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
@@ -39,11 +38,9 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Bi
       do {
         EchoServer.echoService
         success = try {
-          val doneSignal = new CountDownLatch(1)
-
           Configgy.configureFromString(configPattern.format(port, port + 1))
 
-          EchoServer.start.deliverTo { _ => doneSignal.countDown()}
+          EchoServer.start
           true
         }
         catch {

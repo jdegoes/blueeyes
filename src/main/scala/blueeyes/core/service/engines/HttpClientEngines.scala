@@ -3,7 +3,7 @@ package blueeyes.core.service.engines
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
-import blueeyes.core.service.HttpClient
+import blueeyes.core.service.HttpClientByteChunk
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
 import java.io.IOException
@@ -15,7 +15,7 @@ import scala.collection.JavaConversions._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
 import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
-trait HttpClientXLightWebEngines extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{
+trait HttpClientXLightWebEngines extends HttpClientByteChunk with FutureDeliveryStrategySequential{
 
   private val logger = Logger.get
 

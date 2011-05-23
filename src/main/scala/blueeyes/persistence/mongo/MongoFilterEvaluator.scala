@@ -23,19 +23,17 @@ private[mongo] object Evaluators{
 
   object MongoElementsMatchFilterEvaluator{
     def apply(values: List[JValue], filter: MongoElementsMatchFilter) = {
-      values.filter(value => !searchElements(value.get(filter.lhs) :: Nil, filter).isEmpty)
+      values.filter(value => searchElements(value.get(filter.lhs), filter))
     }
-    private def searchElements(elements: List[JValue], filter: MongoElementsMatchFilter) = {
-      elements.filter(v => v match {
-        case JArray(x)    => 
-            val matched = x.filter(element => element match{
-            case e: JObject => !MongoAndFilterEvaluator(e :: Nil, filter.elementsQuery).isEmpty
-            case _ => false
-          })
-          !matched.isEmpty
-        case e: JObject => !MongoAndFilterEvaluator(e :: Nil, filter.elementsQuery).isEmpty
-        case _          => false
-      })
+    private def searchElements(element: JValue, filter: MongoElementsMatchFilter) = element match{
+      case JArray(x)    =>
+          val matched = x.filter(element => element match{
+          case e: JObject => !MongoAndFilterEvaluator(e :: Nil, filter.elementsQuery).isEmpty
+          case _ => false
+        })
+        !matched.isEmpty
+      case JNothing => false
+      case _        => !MongoAndFilterEvaluator(element :: Nil, filter.elementsQuery).isEmpty
     }
   }
 

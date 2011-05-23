@@ -40,6 +40,8 @@ trait Mongo{
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
 abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
+  def mongo: Mongo
+
   private lazy val mongoActor = new Actor{
 
     val query = lift2((query: MongoQuery[_], collection: DatabaseCollection) => query(collection))
@@ -48,12 +50,12 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
   def apply[T](query: MongoQuery[T]): Future[T]  = {
     val databaseCollection = query.collection match{
       case MongoCollectionReference(name)         => collection(name)
-      case MongoCollectionHolder(realCollection)  => realCollection
+      case MongoCollectionHolder(realCollection, name, database)  => realCollection
     }
     mongoActor.query(query, databaseCollection).asInstanceOf[Future[T]]
   }
 
-  def collections: Set[MongoCollectionReference]
+  def collections: Set[MongoCollectionHolder]
 
   def dump(print: String => Unit = (value: String) => print(value))  = {
     collections foreach { mongoCollection =>

@@ -1,11 +1,9 @@
 package blueeyes.persistence.mongo.mock
 
 import org.specs.Specification
-import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoCollectionReference, MongoImplicits}
+import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
 import blueeyes.json.{Printer, JsonAST}
 import blueeyes.json.JsonAST._
-import java.util.concurrent.CountDownLatch
-import blueeyes.concurrent.Future
 
 class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   private val mongo     = new MockMongo()
@@ -19,7 +17,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
   "return all collections" in{
     database.collection("bar")
-    database.collections.toList mustEqual(List(MongoCollectionReference("bar")))
+    database.collections.toList.map(v => (v.name, v.database)) mustEqual(List(("bar", database)))
   }
 
   "dump empty collections content" in{
@@ -44,12 +42,11 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
   "adToSet really adds to set for not existsing object" in{
     val future1 = database[JNothing.type](upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))
-    awaitFuture[JNothing.type](future1)
+    future1.value must eventually (beSomething)
 
     val future2 = database(select().from("bar"))
-    awaitFuture(future2)
 
-    future2.value.get.iterator.toList mustEqual (JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil)
+    future2.value.map(_.iterator.toList) must eventually(beSome(JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil))
   }
 //  "adToSet really adds to set for existsing object" in{
 //    val future1 = database[JNothing.type](insert(JObject(JField("foo", JArray(List(JString("1")))) :: Nil)).into("bar"))
@@ -87,14 +84,6 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 //
 //    future3.value.get.iterator.toList mustEqual (JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil)
 //  }
-
-  private  def awaitFuture[T](future: Future[T]) = {
-    val countDown = new CountDownLatch(1)
-
-    future.deliverTo(v => countDown.countDown)
-
-    countDown.await
-  }
 
   private def database = mongo.database("foo").asInstanceOf[MockMongoDatabase]
 }

@@ -131,38 +131,32 @@ class ExpirableMapSpec extends Specification{
     expired must be (true)
   }
   "ExpirableMap: putIfAbsent evicts when idle time is expired" in{
-    val map = newMap(Some(1000), None, {hasExpired: Expirable[String, String] => true})
-    Thread.sleep(2000)
-    map.containsValue("bar") must be (false)
+    val map = newMap(Some(50), None, {hasExpired: Expirable[String, String] => true})
+    map.containsValue("bar") must eventually (be (false))
   }
   "ExpirableMap: putIfAbsent evicts when live time is expired" in{
-    val map = newMap(None, Some(1000), {hasExpired: Expirable[String, String] => true})
-    Thread.sleep(2000)
-    map.containsValue("bar")  must be (false)
+    val map = newMap(None, Some(500), {hasExpired: Expirable[String, String] => true})
+    map.containsValue("bar")  must eventually(be (false))
   }
   "ExpirableMap.put: evicts when idle time is expired" in{
-    val map = newMap(Some(1000), None, {hasExpired: Expirable[String, String] => true})
+    val map = newMap(Some(50), None, {hasExpired: Expirable[String, String] => true})
     map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.containsValue("baz") must be (false)
+    map.containsValue("baz") must eventually(be (false))
   }
   "ExpirableMap.put: evicts when live time is expired" in{
-    val map = newMap(None, Some(1000), {hasExpired: Expirable[String, String] => true})
+    val map = newMap(None, Some(500), {hasExpired: Expirable[String, String] => true})
     map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.containsValue("baz")  must be (false)
+    map.containsValue("baz") must eventually(be (false))
   }
   "ExpirableMap.replace: evicts when idle time is expired" in{
-    val map = newMap(Some(2000), None, {hasExpired: Expirable[String, String] => hasExpired.value == "baz"})
+    val map = newMap(Some(50), None, {hasExpired: Expirable[String, String] => hasExpired.value == "baz"})
     map.replace("foo", "baz") must beSome("bar")
-    Thread.sleep(3000)
-    map.containsValue("foo") must be (false)
+    map.containsValue("foo") must eventually(be (false))
   }
   "ExpirableMap.replace: evicts when live time is expired" in{
-    val map = newMap(None, Some(2000), {hasExpired: Expirable[String, String] => hasExpired.value == "baz"})
+    val map = newMap(None, Some(500), {hasExpired: Expirable[String, String] => hasExpired.value == "baz"})
     map.replace("foo", "baz") must beSome("bar")
-    Thread.sleep(3000)
-    map.containsValue("foo")  must be (false)
+    map.containsValue("foo")  must eventually(be (false))
   }
 
   private def newMap(timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None, hasExpired: Expirable[String, String] => Boolean = {hasExpired: Expirable[String, String] => false},

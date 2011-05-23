@@ -2,7 +2,8 @@ package blueeyes.core.http
 
 import scala.util.parsing.combinator._
 
-case class URI(scheme: Option[String], userInfo: Option[String], host: Option[String], port: Option[Int], path: Option[String], query: Option[String], fragment: Option[String]){
+case class URI(scheme: Option[String], userInfo: Option[String], host: Option[String], port: Option[Int], path: Option[String], query: Option[String], fragment: Option[String]){ self =>
+  import URITranscoders._
   private lazy  val _toString: String = List(scheme.map(_ + ":"), host.orElse(port).map(v =>"//" + authority.getOrElse("")).orElse(authority), path, query.map("?" + _), fragment.map("#" + _)).map(_.getOrElse("")).mkString("")
 
   lazy val authority  = List(userInfo.map(_ + "@"), host, port.map(":" + _)).filter(_ != None) match{
@@ -10,6 +11,9 @@ case class URI(scheme: Option[String], userInfo: Option[String], host: Option[St
     case Nil => None
   }
   val isAbsolute = scheme.map(v => true).getOrElse(false)
+
+  def encode = self.copy(path = path.map(pathTranscoder.encode(_)), query = query.map(queryTranscoder.encode(_)))
+  def decode = self.copy(path = path.map(pathTranscoder.decode(_)), query = query.map(queryTranscoder.decode(_)))
 
   override def toString = _toString
 }

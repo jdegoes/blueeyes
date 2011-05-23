@@ -1,9 +1,8 @@
 package blueeyes.demo
 
-import java.util.concurrent.CountDownLatch
 import blueeyes.core.service.test.BlueEyesServiceSpecification
-import blueeyes.persistence.mongo.{Mongo, MockMongo}
-import blueeyes.core.http.{HttpStatus, HttpResponse, MimeTypes}
+import blueeyes.persistence.mongo.MockMongo
+import blueeyes.core.http.{HttpStatus, MimeTypes}
 import blueeyes.json.JsonAST.{JValue, JObject, JField, JString, JNothing, JArray}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
@@ -12,7 +11,6 @@ import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import blueeyes.core.data.{BijectionsChunkJson, BijectionsIdentity}
-import blueeyes.core.service.HttpClient
 
 class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
@@ -42,31 +40,20 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
       val f = service.post("/contacts")(contact.serialize)
       f.value must eventually(beSomething)
 
-      val response = f.value.get
-
-      val countDown = new CountDownLatch(1)
-
       val created = database(select().from(collectionName))
-      created.deliverTo{v =>
-        countDown.countDown()
-      }
-      countDown.await()
 
-      created.value.get.toList.map(_.deserialize[Contact]) mustEqual(List(contact))
+      created.value.map(_.toList.map(_.deserialize[Contact])) must eventually (beSome(List(contact)))
     }
   }
 
    "Demo Service" should {
-     def awaitResult[T](future: Future[T]) = {
-       val countDown = new CountDownLatch(1)
-       future deliverTo {v => countDown.countDown()}
-       countDown.await()
-     }
 
      val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
 
-     val removed  = awaitResult[JNothing.type](database[JNothing.type](remove.from(collectionName)))
-     val inserted = awaitResult[JNothing.type](database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName)))
+     val removed = database[JNothing.type](remove.from(collectionName))
+     removed.value must eventually (beSomething)
+     val inserted = database[JNothing.type](insert(contact.serialize.asInstanceOf[JObject]).into(collectionName))
+     inserted.value must eventually (beSomething)
 
      "return contact list" in {
         val f = service.get("/contacts")

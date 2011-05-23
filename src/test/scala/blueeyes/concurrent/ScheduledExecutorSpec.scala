@@ -2,7 +2,7 @@ package blueeyes.concurrent
 
 import org.specs.Specification
 import org.specs.util.{Duration => SpecsDuration}
-import Duration._
+import blueeyes.util.metrics.Duration._
 
 class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySequential{
   "ScheduledExecutor.once" should {
@@ -32,13 +32,10 @@ class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySeq
       f.cancel
       cancelled = true
 
-      val lastExecutionTime = System.currentTimeMillis
+      executedIfCancelled must eventually (be(false))
 
-      Thread.sleep(500)
-
-      executedIfCancelled must be (false)
       executionCount must beGreaterThan(10)
-      exectionTime   must beCloseTo(lastExecutionTime, 200)
+      exectionTime   must beCloseTo(System.currentTimeMillis, 200)
     }
   }
   "ScheduledExecutor.repeat" should {

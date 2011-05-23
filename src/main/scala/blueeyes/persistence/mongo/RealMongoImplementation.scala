@@ -8,7 +8,7 @@ import net.lag.configgy.ConfigMap
 import blueeyes.json.{JPath}
 import blueeyes.concurrent.ActorStrategy._
 
-class RealMongo(config: ConfigMap) extends Mongo{
+class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
   private lazy val mongo = {
@@ -31,16 +31,19 @@ class RealMongo(config: ConfigMap) extends Mongo{
     mongo
   }
 
-  def database(databaseName: String) = new RealMongoDatabase(mongo.getDB(databaseName))
+  def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
 }
 
-private[mongo] class RealMongoDatabase(database: DB) extends MongoDatabase{
-  protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName))
+private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase{
+  protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
-  def collections = database.getCollectionNames.map(MongoCollectionReference(_)).toSet
+  def collections = database.getCollectionNames.map{v =>
+    val mongoCollection = collection(v)
+    MongoCollectionHolder(mongoCollection, mongoCollection.collection.getName, this)
+  }.toSet
 }
 
-private[mongo] class RealDatabaseCollection(collection: DBCollection) extends DatabaseCollection{
+private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealMongoDatabase) extends DatabaseCollection{
 
   def requestDone = {collection.getDB.requestDone}
 
@@ -92,7 +95,7 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
   }
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
-    new RealMapReduceOutput(collection.mapReduce(map, reduce, outputCollection.getOrElse(null), toMongoFilter(filter)))
+    new RealMapReduceOutput(collection.mapReduce(map, reduce, outputCollection.getOrElse(null), toMongoFilter(filter)), database)
   }
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) = {
@@ -113,10 +116,10 @@ private[mongo] class RealDatabaseCollection(collection: DBCollection) extends Da
 }
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
-private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput) extends MapReduceOutput{
+private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealMongoDatabase) extends MapReduceOutput{
   def drop = {output.drop}
 
-  def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection))
+  def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
 }
 
 class IterableViewImpl[+A](delegate: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{

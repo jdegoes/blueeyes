@@ -1,13 +1,11 @@
 package blueeyes.persistence.mongo
 
-import java.util.concurrent.CountDownLatch
 import org.specs.Specification
 import org.specs.mock.MocksCreation
 import MongoQueryBuilder._
 import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 import blueeyes.json.JsonAST._
-import blueeyes.json.JPath
 import com.mongodb.MongoException
 
 class MongoQueryBehaviourSpec extends Specification with MocksCreation{

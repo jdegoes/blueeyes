@@ -205,16 +205,16 @@ case class ValueTuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 case class ValueTuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22](value: Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22])(implicit v1ToS: T1 => Storeable, v2ToS: T2 => Storeable, v3ToS: T3 => Storeable, v4ToS: T4 => Storeable, v5ToS: T5 => Storeable, v6ToS: T6 => Storeable, v7ToS: T7 => Storeable, v8ToS: T8 => Storeable, v9ToS: T9 => Storeable, v10ToS: T10 => Storeable, v11ToS: T11 => Storeable, v12ToS: T12 => Storeable, v13ToS: T13 => Storeable, v14ToS: T14 => Storeable, v15ToS: T15 => Storeable, v16ToS: T16 => Storeable, v17ToS: T17 => Storeable, v18ToS: T18 => Storeable, v19ToS: T19 => Storeable, v20ToS: T20 => Storeable, v21ToS: T21 => Storeable, v22ToS: T22 => Storeable) extends Value
 
 //import scalaz.{Failure, Success}
-//case class Person(name: String, age: Int, orders: List[Person]) extends Record3[String, Int, List[Person]] {
+//case class Person(name: String, age: Int, persons: List[Person]) extends Record3[String, Int, List[Person]] {
 //  def companion = Person
 //}
 //
 //object Person extends Record3Companion[RecordNothing.type, Person, String, Int, List[Person]]{
-//  val _1 = Field[Person, String]("name", _.name, (person, name) => person.copy(name = name), Failure("No name specified!"))
+//  val _1, name = Field[Person, String]("name", _.name, (person, name) => person.copy(name = name), Failure("No name specified!"))
 //
-//  val _2 = Field[Person, Int]("age", _.age, (person, age) => person.copy(age = age), -1)
+//  val _2, age = Field[Person, Int]("age", _.age, (person, age) => person.copy(age = age), -1)
 //
-//  val _3 = Field[Person, List[Person]]("orders", _.orders, (person, orders) => person.copy(orders = orders), Failure("No name specified!"))
+//  val _3, persons  = Field[Person, List[Person]]("persons", _.persons, (person, persons) => person.copy(persons = persons), Failure("No name specified!"))
 //
 //  def _example: Person = Person("John Doe", 123, Nil)
 //}

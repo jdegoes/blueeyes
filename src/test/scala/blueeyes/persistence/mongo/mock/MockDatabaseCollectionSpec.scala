@@ -327,6 +327,18 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None).toList mustEqual(jObject :: Nil)
   }
+  "select jobjects by filter with exists" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.select(MongoSelection(Nil), Some(MongoAndFilter(MongoFieldFilter("address.city", $eq, "A") :: MongoFieldFilter("address.street", $exists, true) :: Nil)), None, None, None).toList mustEqual(jObject :: Nil)
+  }
+  "does select jobjects by filter with wrong exists" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.data", $exists, true)), None, None, None).toList mustEqual(Nil)
+  }
   "select jobjects with array when array element field filter is specified" in{
     val collection = newCollection
 
@@ -398,5 +410,5 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.select(MongoSelection(JPath("address.town") :: Nil), None, Some(sort), None, None).toList mustEqual(Nil)
   }
 
-  private def newCollection = new MockDatabaseCollection()
+  private def newCollection = new MockDatabaseCollection("foo", new MockMongoDatabase(new MockMongo()))
 }

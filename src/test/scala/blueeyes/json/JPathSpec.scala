@@ -50,9 +50,8 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
         testData match {
           case (obj, allPathValues) => 
             val allProps = allPathValues.map {
-              case (path, pathValue) => path.extract(obj) mustEqual pathValue
+              case (path, pathValue) => path.extract(obj) == pathValue
             }
-
             allProps.foldLeft[Prop](true)(_ && _)
         }
       } must pass
