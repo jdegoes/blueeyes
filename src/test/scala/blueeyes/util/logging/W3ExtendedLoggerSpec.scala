@@ -48,18 +48,14 @@ class W3ExtendedLoggerSpec extends Specification{
 
       w3Logger("foo")
       w3Logger("bar")
-
-      Thread.sleep(3000)
-
       w3Logger("baz")
 
-      Thread.sleep(1000)
+      val file = new File(w3Logger.fileName.get)
 
-      val content = getContents(new File(w3Logger.fileName.get))
+      getContents(file).indexOf("foo") must eventually(notEq (-1))
+      getContents(file).indexOf("bar") must eventually(notEq (-1))
+
       cleanUp()
-
-      content.indexOf("foo") must notEq (-1)
-      content.indexOf("bar") must notEq (-1)
     }
 
     def cleanUp(){

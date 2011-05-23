@@ -26,24 +26,21 @@ class CacheSpec extends Specification{
   }
 
   "Cache.concurrent.put: evicts when idle time is expired" in{
-    val map = Cache.concurrent(settings(Some(1000)))
+    val map = Cache.concurrent(settings(Some(50)))
     map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.contains("baz") must be (false)
+    map.contains("baz") must eventually (be (false))
   }
   "Cache.concurrent.put: evicts when live time is expired" in{
-    val map = Cache.concurrent(settings(None, Some(1000)))
+    val map = Cache.concurrent(settings(None, Some(200)))
     map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.contains("baz")  must be (false)
+    map.contains("baz")  must eventually (be (false))
   }
   "Cache.concurrent: evict is called when entry is expired" in{
     var expired = false
-    val map = Cache.concurrent(settings(None, Some(1000), {(key: String, value: String) => expired = key == "foo" && value == "bar"}))
+    val map = Cache.concurrent(settings(None, Some(200), {(key: String, value: String) => expired = key == "foo" && value == "bar"}))
     map.put("foo", "bar")
-    Thread.sleep(2000)
-    map.contains("foo")
 
+    map.contains("foo") must eventually (be (false))
     expired must be (true)
   }
   "Cache.concurrent: adds new Entry" in {
@@ -52,29 +49,6 @@ class CacheSpec extends Specification{
 
     map.get("foo") must beSome("bar")
   }
-
-  "Cache.concurrent.put: evicts when idle time is expired" in{
-    val map = Cache.concurrent(settings(Some(1000)))
-    map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.contains("baz") must be (false)
-  }
-  "Cache.concurrent.put: evicts when live time is expired" in{
-    val map = Cache.concurrent(settings(None, Some(1000)))
-    map.put("baz", "bar")
-    Thread.sleep(2000)
-    map.contains("baz")  must be (false)
-  }
-  "Cache.concurrent: evict is called when entry is expired" in{
-    var expired = false
-    val map = Cache.concurrent(settings(None, Some(1000), {(key: String, value: String) => expired = key == "foo" && value == "bar"}))
-    map.put("foo", "bar")
-    Thread.sleep(2000)
-    map.contains("foo")
-
-    expired must be (true)
-  }
-
 
   private def settings(timeToIdle: Option[Long] = None, timeToLive: Option[Long] = None,
                        evict: (String, String) => Unit = {(key: String, value: String) => }) = CacheSettings[String, String](ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), 100, evict)

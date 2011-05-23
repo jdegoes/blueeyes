@@ -9,20 +9,16 @@ class ExpirationPredicateSpec extends Specification{
   "ExpirationPredicate: 'false' when policy is 'eternal'" in{
     val expirable = Expirable("foo", "bar", ExpirationPolicy(None, None, MILLISECONDS))
 
-    predicate(expirable) must be (false)
+    predicate(expirable) must eventually(be (false))
   }
   "ExpirationPredicate: 'true' when Idle time is expired" in{
     val expirable = Expirable("foo", "bar", ExpirationPolicy(Some(1), None, MILLISECONDS))
 
-    Thread.sleep(2)
-
-    predicate(expirable) must be (true)
+    predicate(expirable) must eventually(be (true))
   }
   "ExpirationPredicate: 'true' when live time is expired" in{
     val expirable = Expirable("foo", "bar", ExpirationPolicy(None, Some(1), MILLISECONDS))
 
-    Thread.sleep(2)
-
-    predicate(expirable) must be (true)
+    predicate(expirable) must eventually(be (true))
   }
 }
