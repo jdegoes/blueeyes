@@ -45,7 +45,7 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {
-    val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
+    val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar%20foo?param1=foo%20bar")
     nettyRequest.setContent(ChannelBuffers.wrappedBuffer("12".getBytes))
     nettyRequest.setHeader("retry-after", "1")
 
@@ -53,8 +53,8 @@ class NettyConvertersSpec extends Specification with NettyConverters with Biject
     val request = fromNettyRequest(nettyRequest, address)
 
     request.method       mustEqual(HttpMethods.GET)
-    request.uri          mustEqual(URI("http://foo/bar?param1=value1"))
-    request.parameters   mustEqual(Map('param1 -> "value1"))
+    request.parameters   mustEqual(Map('param1 -> "foo bar"))
+    request.uri          mustEqual(URI("http://foo/bar foo?param1=foo bar"))
     request.headers      mustEqual(Map("retry-after" -> "1"))
     request.version      mustEqual(`HTTP/1.0`)
     request.remoteHost   mustEqual(Some(address.getAddress()))
