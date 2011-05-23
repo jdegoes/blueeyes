@@ -32,7 +32,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product {
+  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] {
     type Values
     type Self <: JValue
 
@@ -54,6 +54,8 @@ object JsonAST {
         case _ => this
       }).asInstanceOf[Self]
     }
+
+    def compare(that: JValue): Int = blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(this, that)
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
