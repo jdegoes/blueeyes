@@ -52,7 +52,7 @@ case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]
       cache + (
         key -> CacheValue(
           value, oldValue.map(_.creationTime).getOrElse(accessTime), 
-          oldValue.cata(v => Math.max(v.accessTime, accessTime), accessTime)
+          oldValue.cata(v => v.accessTime.max(accessTime), accessTime)
         )
       )
     )

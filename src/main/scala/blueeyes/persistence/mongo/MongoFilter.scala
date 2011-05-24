@@ -269,7 +269,7 @@ case class MongoFilterBuilder(jpath: JPath) {
 
   def hasSize(length: Int): MongoFieldFilter =  MongoFieldFilter(jpath, $size, length)
 
-  def exists: MongoFieldFilter = MongoFieldFilter(jpath, $exists, true)
+  def isDefined: MongoFieldFilter = MongoFieldFilter(jpath, $exists, true)
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
 }

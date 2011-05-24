@@ -17,6 +17,8 @@
 package blueeyes {
 package json {
 
+import scalaz.NonEmptyList
+
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
@@ -740,7 +742,8 @@ object JsonDSL extends JsonDSL with Printer
 trait JsonDSL extends Implicits {
   import JsonAST._
 
-  implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => val v: JValue = a; v })
+  implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => a: JValue })
+  implicit def nel2JValue[A <% JValue](s: NonEmptyList[A]) = JArray(s.list.map { a => a: JValue })
   implicit def option2jvalue[A <% JValue](opt: Option[A]): JValue = opt match {
     case Some(x) => x
     case None => JNothing
@@ -786,6 +789,7 @@ trait Printer {
   import java.util.IdentityHashMap
   import scala.text._
   import scala.collection.immutable.Stack
+  import JsonAST._
 
   /** Compact printing (no whitespace etc.)
    */
@@ -830,6 +834,22 @@ trait Printer {
     d.format(0, out)
     out
   }
+
+  def normalize[T <: JValue](jvalue: T): T = {
+    import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
+
+    jvalue match {
+      case JObject(fields) => JObject(fields.map(normalize _).sorted(JValueOrdering)).asInstanceOf[T]
+      case JArray(elements) => JArray(elements.map(normalize _).sorted(JValueOrdering)).asInstanceOf[T]
+      case JField(name, value) => JField(name, normalize(value)).asInstanceOf[T]
+
+      case _ => jvalue
+    }
+  }
+
+  /** Renders a normalized JValue.
+   */
+  def renderNormalized(jvalue: JValue): String = compact(render(normalize(jvalue)))
 }
 
 }

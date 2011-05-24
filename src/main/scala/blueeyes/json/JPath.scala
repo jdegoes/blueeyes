@@ -4,7 +4,7 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath extends Seq[JPathNode]{ self =>
+sealed trait JPath { self =>
   def nodes: List[JPathNode]
 
   def parent: Option[JPath] = if (nodes.length == 0) None else Some(JPath(nodes.take(nodes.length - 1): _*))
@@ -27,7 +27,7 @@ sealed trait JPath extends Seq[JPathNode]{ self =>
 
   def \ (that: Int): JPath = this \ JPathIndex(that)
 
-  override def apply(index: Int): JPathNode = nodes(index)
+  def apply(index: Int): JPathNode = nodes(index)
 
   def extract(jvalue: JValue): JValue = {
     def extract0(path: List[JPathNode], d: JValue): JValue = path match {
@@ -73,7 +73,7 @@ sealed trait JPath extends Seq[JPathNode]{ self =>
 
   def path = nodes.mkString("")
 
-  override def iterator = nodes.iterator
+  def iterator = nodes.iterator
 
   def length = nodes.length
 
@@ -102,7 +102,7 @@ object JPath {
 
   def unapplySeq(path: String): Option[List[JPathNode]] = Some(apply(path).nodes)
 
-  def apply(path: String): JPath = {
+  implicit def apply(path: String): JPath = {
     def parse0(segments: List[String], acc: List[JPathNode]): List[JPathNode] = segments match {
       case Nil => acc
 
