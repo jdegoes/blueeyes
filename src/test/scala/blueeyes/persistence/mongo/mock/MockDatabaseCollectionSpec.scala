@@ -13,6 +13,7 @@ class MockDatabaseCollectionSpec extends Specification{
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
+  private val jObjectWithArray = JObject(JField("array", JArray( JString("C") :: Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
 
   private val jobjectsWithArray = parse("""{ "foo" : [{"shape" : "square", "color" : "purple", "thick" : false}, {"shape" : "circle", "color" : "red", "thick" : true}] } """) :: parse("""{ "foo" : [{"shape" : "square", "color" : "red", "thick" : true}, {"shape" : "circle", "color" : "purple", "thick" : false}] }""") :: Nil
@@ -333,12 +334,18 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), Some(MongoAndFilter(MongoFieldFilter("address.city", $eq, "A") :: MongoFieldFilter("address.street", $exists, true) :: Nil)), None, None, None).toList mustEqual(jObject :: Nil)
   }
-  "does select jobjects by filter with wrong exists" in{
+  "does not select jobjects by filter with wrong exists" in{
     val collection = newCollection
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Nil), Some(MongoFieldFilter("address.data", $exists, true)), None, None, None).toList mustEqual(Nil)
   }
+//  "does not select jobjects by filter with index in path" in{
+//    val collection = newCollection
+//
+//    collection.insert(jobjects)
+//    collection.select(MongoSelection(Nil), Some(MongoFieldFilter("array[1]", $eq, true)), None, None, None).toList mustEqual(Nil)
+//  }
   "select jobjects with array when array element field filter is specified" in{
     val collection = newCollection
 
