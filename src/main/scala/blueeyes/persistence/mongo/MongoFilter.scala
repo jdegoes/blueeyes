@@ -275,6 +275,13 @@ case class MongoFilterBuilder(jpath: JPath) {
 }
 
 private[mongo] object JPathExtension{
-  def toMongoField(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
-
+  def toMongoField(path: JPath) = {
+    val mongoPath = JPath(path.nodes.map{ node =>
+      node match{
+        case e: JPathIndex => JPathField(e.index.toString)
+        case _ => node
+      }
+    })
+    if (mongoPath.path.startsWith(".")) mongoPath.path.substring(1) else mongoPath.path
+  }
 }
