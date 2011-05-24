@@ -4,7 +4,7 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath { self =>
+sealed trait JPath{ self =>
   def nodes: List[JPathNode]
 
   def parent: Option[JPath] = if (nodes.length == 0) None else Some(JPath(nodes.take(nodes.length - 1): _*))
@@ -123,6 +123,10 @@ object JPath {
   }
 
   implicit def singleNodePath(node: JPathNode) = JPath(node)
+
+  implicit val OrderingJValue = new Ordering[JPath] {
+    def compare(v1: JPath, v2: JPath): Int = v1.toString.compare(v2.toString)
+  }
 }
 
 trait JPathImplicits {
