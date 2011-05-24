@@ -12,7 +12,7 @@ class MongoFilterBuilderSpec extends Specification{
     JPath("foo") === "bar" mustEqual (MongoFieldFilter("foo", $eq, MongoPrimitiveString("bar")))
   }
   "builds $ne operation" in {
-    JPath("foo") != 1 mustEqual (MongoFieldFilter("foo", $ne, MongoPrimitiveInt(1)))
+    (JPath("foo") !== 1) mustEqual (MongoFieldFilter("foo", $ne, MongoPrimitiveInt(1)))
   }
   "builds $gt operation" in {
     JPath("foo") > 1l mustEqual (MongoFieldFilter("foo", $gt, MongoPrimitiveLong(1l)))
@@ -31,7 +31,7 @@ class MongoFilterBuilderSpec extends Specification{
     JPath("foo").hasSize(1) mustEqual (MongoFieldFilter("foo", $size, MongoPrimitiveInt(1)))
   }
   "builds $exists operation" in {
-    MongoFilterBuilder(JPath("foo")).exists mustEqual (MongoFieldFilter("foo", $exists, MongoPrimitiveBoolean(true)))
+    MongoFilterBuilder(JPath("foo")).isDefined mustEqual (MongoFieldFilter("foo", $exists, MongoPrimitiveBoolean(true)))
   }
   "builds $hasType operation" in {
     JPath("foo").hasType[JString] mustEqual (MongoFieldFilter("foo", $type, MongoPrimitiveInt(2)))
