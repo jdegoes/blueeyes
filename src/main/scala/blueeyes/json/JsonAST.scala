@@ -591,6 +591,8 @@ object JsonAST {
     
     def values = Map() ++ fields.map(_.values : (String, Any))
 
+    override lazy val hashCode = Set(this.fields: _*).hashCode
+
     override def equals(that: Any): Boolean = that match {
       case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
       case _ => false

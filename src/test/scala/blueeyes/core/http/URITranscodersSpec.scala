@@ -8,6 +8,7 @@ import org.specs.{ScalaCheck, Specification}
 
 class URITranscodersSpec extends Specification with ScalaCheck{
   private val random = new Random()
+
   private def unicodeChar = Gen((p: Gen.Params) => {
     var c = 0
     do {
@@ -16,34 +17,21 @@ class URITranscodersSpec extends Specification with ScalaCheck{
     Some(c.toChar)
   })
 
-  private def pathElementGen: Gen[String] = {
-    for {
-      size   <- Gen.choose(1, 10)
-      values <- Gen.listOfN(size, Gen.oneOf(Gen.oneOf[Char](URITranscoders.SafePathChars.toCharArray().toList), unicodeChar, Gen.alphaChar)).map(v => "/" + v.mkString(""))
-    } yield {values}
-  }
+  private def pathElementGen: Gen[String] = Gen.listOfN(listSize, Gen.oneOf(Gen.oneOf[Char](URITranscoders.SafePathChars.toCharArray().toList), unicodeChar, Gen.alphaChar)).map(v => "/" + v.mkString(""))
 
   private def queryElementGen: Gen[String] = {
     def gen = Gen.oneOf(Gen.oneOf[Char](URITranscoders.SafeQueryChars.toCharArray().toList), unicodeChar, Gen.alphaChar)
     for {
-      keySize   <- Gen.choose(1, 10)
-      valueSize <- Gen.choose(1, 10)
-      key   <- Gen.listOfN(keySize, gen).map(v => v.mkString(""))
-      value <- Gen.listOfN(valueSize, gen).map(v => v.mkString(""))
+      key   <- Gen.listOfN(listSize, gen).map(v => v.mkString(""))
+      value <- Gen.listOfN(listSize, gen).map(v => v.mkString(""))
     } yield {key + "=" + value}
   }
-  private def pathGen: Gen[String] = {
-    for {
-      size   <- Gen.choose(1, 10)
-      values <- Gen.listOfN(size, pathElementGen)
-    } yield {values.mkString("")}
-  }
-  private def queryGen: Gen[String] = {
-    for {
-      size   <- Gen.choose(1, 10)
-      values <- Gen.listOfN(size, queryElementGen).map(v => v.mkString("&"))
-    } yield {values.mkString("")}
-  }
+
+  private def pathGen: Gen[String]  = for (values <- Gen.listOfN(listSize, pathElementGen)) yield values.mkString("")
+
+  private def queryGen: Gen[String] = for (values <- Gen.listOfN(listSize, queryElementGen).map(v => v.mkString("&"))) yield values.mkString("")
+
+  private def listSize = Gen.choose(1, 10).sample.get
 
   "URITranscoders.pathTranscoder" should{
     "encode and decode path" in{
