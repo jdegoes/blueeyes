@@ -112,8 +112,14 @@ trait ScheduledExecutor{
   private def toScheduledFunction[B](f: Function0[Future[B]]) = { v: Unit => f()}
 }
 
+trait ScheduledExecutorSingleThreaded extends ScheduledExecutor{
+  lazy val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
+}
+
+object ScheduledExecutorSingleThreaded extends ScheduledExecutorSingleThreaded
+
 trait ScheduledExecutorMultiThreaded extends ScheduledExecutor{
-  lazy val scheduledExecutor = Executors.newScheduledThreadPool(30)
+  lazy val scheduledExecutor = Executors.newScheduledThreadPool(10)
 }
 
 object ScheduledExecutor extends ScheduledExecutorMultiThreaded
