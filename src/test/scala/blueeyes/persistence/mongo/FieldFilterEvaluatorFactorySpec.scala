@@ -3,46 +3,47 @@ package blueeyes.persistence.mongo
 import org.specs.Specification
 import blueeyes.persistence.mongo.MongoFilterOperators._
 import Evaluators._
+import blueeyes.json.JPathImplicits
 
-class FieldFilterEvaluatorFactorySpec extends Specification {
+class FieldFilterEvaluatorFactorySpec extends Specification with JPathImplicits{
   "creates $eq Evaluator" in {
-    FieldFilterEvaluatorFactory($eq) must be (EqFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $eq) must be (EqFieldFilterEvaluator)
   }
   "creates $ne Evaluator" in {
-    FieldFilterEvaluatorFactory($ne) must be (NeFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $ne).isInstanceOf[NeFieldFilterEvaluator] must be (true)
   }
   "creates $gt Evaluator" in {
-    FieldFilterEvaluatorFactory($gt) must be (GtFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $gt) must be (GtFieldFilterEvaluator)
   }
   "creates $gte Evaluator" in {
-    FieldFilterEvaluatorFactory($gte) must be (GteFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $gte) must be (GteFieldFilterEvaluator)
   }
   "creates $lt Evaluator" in {
-    FieldFilterEvaluatorFactory($lt) must be (LtFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $lt) must be (LtFieldFilterEvaluator)
   }
   "creates $lte Evaluator" in {
-    FieldFilterEvaluatorFactory($lte) must be (LteFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $lte) must be (LteFieldFilterEvaluator)
   }
   "creates $in Evaluator" in {
-    FieldFilterEvaluatorFactory($in) must be (InFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $in) must be (InFieldFilterEvaluator)
   }
   "creates $nin Evaluator" in {
-    FieldFilterEvaluatorFactory($nin) must be (NinFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $nin) must be (NinFieldFilterEvaluator)
   }
   "creates $mod Evaluator" in {
-    FieldFilterEvaluatorFactory($mod) must be (ModFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $mod) must be (ModFieldFilterEvaluator)
   }
   "creates $all Evaluator" in {
-    FieldFilterEvaluatorFactory($all) must be (AllFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $all) must be (AllFieldFilterEvaluator)
   }
 
   "creates $size Evaluator" in {
-    FieldFilterEvaluatorFactory($size) must be (SizeFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $size) must be (SizeFieldFilterEvaluator)
   }
   "creates $exists Evaluator" in {
-    FieldFilterEvaluatorFactory($exists) must be (ExistsFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $exists) must be (ExistsFieldFilterEvaluator)
   }
   "creates $type Evaluator" in {
-    FieldFilterEvaluatorFactory($type) must be (TypeFieldFilterEvaluator)
+    FieldFilterEvaluatorFactory("foo", $type) must be (TypeFieldFilterEvaluator)
   }
 }

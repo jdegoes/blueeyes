@@ -119,11 +119,8 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       process(filter, f)
     }
   }
-  private def process[T](filter: Option[MongoFilter], f: (List[JObject]) => T): T = {
-    val dd = f(search(filter))
-    dd
-  }
-  
+  private def process[T](filter: Option[MongoFilter], f: (List[JObject]) => T): T = f(search(filter))
+
   private def search(filter: Option[MongoFilter]) = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
 
   private def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)

@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
+import blueeyes.json.{JPathIndex, JPath}
 
 private[mongo] object MongoFilterEvaluator{
   implicit def valuesToEvaluator(values: List[JValue]) = MongoFilterEvaluator(values)
@@ -52,7 +53,7 @@ private[mongo] object Evaluators{
     def apply(values: List[JValue], filter: MongoFieldFilter) = searchByField(values, filter)
 
     private def searchByField(values: List[JValue], filter: MongoFieldFilter) = {
-      val evaluator = FieldFilterEvaluatorFactory(filter.operator)
+      val evaluator = FieldFilterEvaluatorFactory(filter.lhs, filter.operator)
       values.filter(value => {
         val pathValue = value.get(filter.lhs)
         !pathValue.filter(v => {
@@ -66,13 +67,13 @@ private[mongo] object Evaluators{
   }
 
   object FieldFilterEvaluatorFactory{
-    def apply(operator: MongoFilterOperator): FieldFilterEvaluator = operator match{
+    def apply(lhs: JPath, operator: MongoFilterOperator): FieldFilterEvaluator = operator match{
       case $gt      => GtFieldFilterEvaluator
       case $gte     => GteFieldFilterEvaluator
       case $lt      => LtFieldFilterEvaluator
       case $lte     => LteFieldFilterEvaluator
       case $eq      => EqFieldFilterEvaluator
-      case $ne      => NeFieldFilterEvaluator
+      case $ne      => NeFieldFilterEvaluator(lhs)
       case $in      => InFieldFilterEvaluator
       case $nin     => NinFieldFilterEvaluator
       case $mod     => ModFieldFilterEvaluator
@@ -90,8 +91,14 @@ private[mongo] object Evaluators{
   case object EqFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v1 == v2
   }
-  case object NeFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v1 != v2
+  case class NeFieldFilterEvaluator(lhs: JPath) extends FieldFilterEvaluator{
+    def apply(v1: JValue, v2: JValue) = v2 match{
+      case JNull => lhs.nodes.lastOption match{
+        case Some(e : JPathIndex) => false
+        case _ => v1 != v2
+      }
+      case _   => v1 != v2
+    }
   }
   case object GtFieldFilterEvaluator extends FieldFilterEvaluator{
     import Predef._

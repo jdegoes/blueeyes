@@ -4,7 +4,7 @@ import scala.annotation.tailrec
 
 import MongoFilterOperators._
 
-import blueeyes.json.{JsonAST, Printer, JPath, ArbitraryJValue}
+import blueeyes.json._
 import blueeyes.json.JsonAST._
 
 import net.lag.configgy.Configgy
@@ -26,42 +26,34 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
   private val collection = "test-collection"
 
-//  "Select the same value form Mock and Real Mongo" in{
-//    forAll { value: JObject =>
-//
-//        println("-----------------")
-//        println(Printer.compact(JsonAST.render(value)))
-//      query[JNothing.type](insert(value).into(collection))
-//
-//      val pass = checkSelectWhilePass(value.flattenWithPath)
-//
-//      query[JNothing.type](remove.from(collection))
-//
-//      pass
-//    } must pass
-//  }
+  "Mongo" should{
+    skip("run manually")
+    "Select the same value form Mock and Real Mongo for And operator" in{
+      forAll { value: JObject =>
 
-  private def checkSelectWhilePass(values: List[(JPath, JValue)]): Boolean = {
-    println("-----------------")
-    println(Printer.compact(JsonAST.render(generateQuery(values).filter)))
-    if (checkSelectPass(values)) true
-    else {
-      val current     = filter(values.head)
-      val filterValue = current.filter
-      println(Printer.compact(JsonAST.render(filterValue)))
-      val mayBeGood   = checkSelectWhilePass(values.tail)
-      mayBeGood
+        query[JNothing.type](insert(value).into(collection))
+        val pass = checkSelectPass(value)
+        query[JNothing.type](remove.from(collection))
+
+        pass
+      } must pass
     }
   }
 
-  private def checkSelectPass(values: List[(JPath, JValue)]): Boolean = {
-    val selectQuery  = generateQuery(values)
+  private def checkSelectPass(value: JObject): Boolean = {
+    val selectQuery  = generateQuery(value.flattenWithPath)
     val selection    = query(select().from(collection).where(selectQuery))
     val real         = selection._1.toList
     val mock         = selection._2.toList
     val pass         = real == mock
-    val mayBePass = if (pass) true else {
-      checkSelectPass(values.tail)
+    if (!pass) {
+      println("--------OBJECT--------")
+      println(Printer.compact(JsonAST.render(value)))
+      println("--------OBJECT--------")
+      println("--------QUERY--------")
+      println(Printer.compact(JsonAST.render(selectQuery.filter)))
+      println("--------QUERY--------")
+      oneQuery(select().from(collection).where(selectQuery), mockDatabase)
     }
     pass
   }
@@ -75,18 +67,29 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     future.value.get
   }
 
-  private def generateQuery(values: List[(JPath, JValue)]) = MongoAndFilter(values.foldLeft(List[MongoFieldFilter]()){(result, element) => filter(element) :: result})
+  private def generateQuery(values: List[(JPath, JValue)]) = {
+    val filters = values.foldLeft(List[MongoFieldFilter]()) {
+      (result, element) => filter(element) :: result
+    } filterNot { filter => filter.operator == $exists && filter.lhs.nodes.last.isInstanceOf[JPathIndex]}
+    MongoAndFilter(filters)
+  }
 
   private def filter(pathAndValue: (JPath, JValue)) = {
     pathAndValue._2 match{
       case e: JInt    => filterForInt(pathAndValue._1, e)
       case e: JDouble => filterForDouble(pathAndValue._1, e)
       case e: JBool   => filterForBoolean(pathAndValue._1, e)
+      case e: JString => filterForString(pathAndValue._1, e)
+      case e: JArray  => filterForArray(pathAndValue._1, e)
+      case JNull      => filterForNull(pathAndValue._1)
       case _          => MongoFieldFilter(pathAndValue._1, $eq, pathAndValue._2)
     }
   }
 
-  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1)).sample.get
-  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 1), path > JDouble(value.value - 1), path >= JDouble(value.value - 1), path < JDouble(value.value + 1), path <= JDouble(value.value + 1)).sample.get
-  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value)).sample.get
+  def filterForNull(path: JPath)                    = Gen.oneOf[MongoFieldFilter](path.hasType[JNull.type], path === JNull).sample.get
+  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt))).sample.get
+  def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFieldFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value))).sample.get
+  def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFieldFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive[_]](value.elements.map(jvalueToMongoPrimitive(_).get): _*)).sample.get
+  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 1), path > JDouble(value.value - 1), path >= JDouble(value.value - 1), path < JDouble(value.value + 1), path <= JDouble(value.value + 1), path.anyOf(MongoPrimitiveDouble(value.value))).sample.get
+  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value))).sample.get
 }
