@@ -1,10 +1,13 @@
 package blueeyes.core.http
 
 import blueeyes.core.http.HttpVersions._
+import HttpHeaders._
+
 import java.net.InetAddress
 
-//import HttpVersions._
 sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameters: Map[Symbol, String], headers: HttpHeaders, content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
+
+  lazy val mimeTypes: List[MimeType] = (for (`Content-Type`(mimeTypes) <- headers) yield mimeTypes.toList).toList.flatten
 
   def withSubpath(p: String) = copy(subpath = p)
 

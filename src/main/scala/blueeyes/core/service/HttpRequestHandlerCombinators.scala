@@ -332,9 +332,8 @@ trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
    */
   def accept[T, S, U](mimeType: MimeType)(h: HttpRequestHandler2[T, S])(implicit b: Bijection[U, T]): HttpRequestHandler2[U, S] = new HttpRequestHandler2[U, S] {
     def isDefinedAt(r: HttpRequest[U]): Boolean = {
-      val requestMimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- r.headers) yield mimeTypes.toList).toList.flatten
 
-      requestMimeType.find(_ == mimeType).map { mimeType =>
+      r.mimeTypes.find(_ == mimeType).map { mimeType =>
         h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
       }.orElse {
         r.content.map(b.isDefinedAt _)

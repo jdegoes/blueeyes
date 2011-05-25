@@ -228,10 +228,7 @@ trait HttpClientXLightWebEngines extends HttpClientByteChunk with FutureDelivery
     }
   }
 
-  private def requestContentType(request: HttpRequest[ByteChunk]) = {
-    val mimeType: List[MimeType] = (for (`Content-Type`(mimeTypes) <- request.headers) yield mimeTypes.toList).toList.flatten
-    `Content-Type`(mimeType : _*)
-  }
+  private def requestContentType(request: HttpRequest[ByteChunk]) = `Content-Type`(request.mimeTypes : _*)
   private def requestContentLength(request: HttpRequest[ByteChunk]) = notChunkedContent(request.content).map(v => `Content-Length`(v.size))
 
   private def notChunkedContent(chunk: Option[ByteChunk]): Option[Array[Byte]] = {
