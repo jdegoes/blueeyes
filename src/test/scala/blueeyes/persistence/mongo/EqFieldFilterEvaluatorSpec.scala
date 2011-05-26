@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import blueeyes.json.JsonAST.JString
+import blueeyes.json.JsonAST._
 import Evaluators._
 
 class EqFieldFilterEvaluatorSpec  extends Specification {
@@ -10,5 +10,8 @@ class EqFieldFilterEvaluatorSpec  extends Specification {
   }
   "returns false for different JValues" in {
     EqFieldFilterEvaluator(JString("bar"), JString("foo")) must be (false)
+  }
+  "returns true if valie is JNothing and matching value is JNull" in {
+    EqFieldFilterEvaluator(JNothing, JNull) must be (true)
   }
 }

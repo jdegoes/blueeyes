@@ -1,7 +1,5 @@
 package blueeyes.persistence.mongo
 
-import scala.annotation.tailrec
-
 import MongoFilterOperators._
 
 import blueeyes.json._
@@ -23,37 +21,74 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   private val mockMongo     = new MockMongo()
   private val realDatabase  = realMongo.database( "mydb" )
   private val mockDatabase  = mockMongo.database( "mydb" )
+  private val collection    = "test-collection"
 
-  private val collection = "test-collection"
+  def size = choose(20, 100).sample.get
+  def genJObjects = Gen.containerOfN[List, JObject](size, genObject)
+  implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
     skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator" in{
-      forAll { value: JObject =>
+      forAll { values: List[JObject] =>
+        query[JNothing.type](insert(values: _*).into(collection))
 
-        query[JNothing.type](insert(value).into(collection))
-        val pass = checkSelectPass(value)
+        val value  = values.head
+        val fields = value.flattenWithPath
+        var passed = true
+
+        for (i <- 1 to fields.size if (passed)){
+          val filter = generateQuery(fields.take(i))
+          passed = checkSelectPass(filter, value)
+        }
+
         query[JNothing.type](remove.from(collection))
 
-        pass
+        passed
+      } must pass
+    }
+
+    skip("run manually")
+    "Select the same value form Mock and Real Mongo for OR operator" in{
+      forAll { values: List[JObject] =>
+        query[JNothing.type](insert(values: _*).into(collection))
+
+        val value1  = values.head
+        val value2  = values.tail.head
+        val fields1 = value1.flattenWithPath
+        val fields2 = value2.flattenWithPath
+
+        var passed = true
+
+        for (i <- 1 to scala.math.min(fields1.size, 2); j <- 1 to scala.math.min(fields2.size, 2) if (passed)){
+          val filter = generateQuery(fields1.take(i)) || generateQuery(fields2.take(j))
+          passed = checkSelectPass(filter, value1, value2)
+        }
+
+        query[JNothing.type](remove.from(collection))
+
+        passed
       } must pass
     }
   }
 
-  private def checkSelectPass(value: JObject): Boolean = {
-    val selectQuery  = generateQuery(value.flattenWithPath)
-    val selection    = query(select().from(collection).where(selectQuery))
-    val real         = selection._1.toList
-    val mock         = selection._2.toList
+  private def checkSelectPass(filter: MongoFilter, values : JObject*): Boolean = {
+    val selectQuery  = select().from(collection).where(filter)
+    val selection    = query(selectQuery)
+    val real         = selection._1.toSet
+    val mock         = selection._2.toSet
     val pass         = real == mock
     if (!pass) {
       println("--------OBJECT--------")
-      println(Printer.compact(JsonAST.render(value)))
+      values.foreach{value =>
+        println("----------------")
+        println(Printer.compact(JsonAST.render(value)))
+      }
       println("--------OBJECT--------")
       println("--------QUERY--------")
-      println(Printer.compact(JsonAST.render(selectQuery.filter)))
+      println(Printer.compact(JsonAST.render(filter.filter)))
       println("--------QUERY--------")
-      oneQuery(select().from(collection).where(selectQuery), mockDatabase)
+      oneQuery(selectQuery, mockDatabase)
     }
     pass
   }
@@ -71,7 +106,11 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     val filters = values.foldLeft(List[MongoFieldFilter]()) {
       (result, element) => filter(element) :: result
     } filterNot { filter => filter.operator == $exists && filter.lhs.nodes.last.isInstanceOf[JPathIndex]}
-    MongoAndFilter(filters)
+
+    filters match{
+      case x :: Nil => x
+      case _ => MongoAndFilter(filters)
+    }
   }
 
   private def filter(pathAndValue: (JPath, JValue)) = {
@@ -93,3 +132,6 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 1), path > JDouble(value.value - 1), path >= JDouble(value.value - 1), path < JDouble(value.value + 1), path <= JDouble(value.value + 1), path.anyOf(MongoPrimitiveDouble(value.value))).sample.get
   def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value))).sample.get
 }
+
+//        val value = JsonParser.parse("""{"995031":[false,-1.0,[""]],"585784":{"655939":[true,0.0,null,["",464012249,false,[8.988465674311579E307,[{"407323":"","20133":null,"600812":false,"538065":null,"424169":true},1,true],1868626500,1,1],[[1119944048]]],{"44603":null,"341200":true,"790448":null,"574840":"","549036":[-2147483648,"",["",""],568312444]}]},"693895":{"710558":-8.988465674311579E307,"651688":{},"642919":[],"736812":null}}""").asInstanceOf[JObject]
+//        query[JNothing.type](insert(value).into(collection))

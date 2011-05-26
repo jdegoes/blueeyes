@@ -89,15 +89,18 @@ private[mongo] object Evaluators{
   sealed trait FieldFilterEvaluator extends Function2[JValue, JValue, Boolean]
 
   case object EqFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v1 == v2
+    def apply(v1: JValue, v2: JValue) = v1 == v2 || v2 == JNull && v1 == JNothing
   }
   case class NeFieldFilterEvaluator(lhs: JPath) extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v2 match{
-      case JNull => lhs.nodes.lastOption match{
-        case Some(e : JPathIndex) => false
-        case _ => v1 != v2
+    def apply(v1: JValue, v2: JValue) = {
+      def compare = if (v1 == JNothing) v2 != JNull else v1 != v2
+      v2 match{
+        case JNull => lhs.nodes.lastOption match{
+          case Some(e : JPathIndex) => false
+          case _ => compare
+        }
+        case _   => compare
       }
-      case _   => v1 != v2
     }
   }
   case object GtFieldFilterEvaluator extends FieldFilterEvaluator{

@@ -18,6 +18,12 @@ class NeqFieldFilterEvaluatorSpec  extends Specification with JPathImplicits{
   "returns false if path last element is index and matching value is JNull" in {
     NeFieldFilterEvaluator("foo[0]")(JString("bar"), JNull) must be (false)
   }
+  "returns false if value is JNothing and match value is null" in {
+    NeFieldFilterEvaluator("foo")(JNothing, JNull) must be (false)
+  }
+  "returns true if value is JNothing and match value is not null" in {
+    NeFieldFilterEvaluator("foo")(JNothing, JString("bar")) must be (true)
+  }
   "returns true if path not last element is index and matching value is JNull" in {
     NeFieldFilterEvaluator("foo[0].bar")(JString("bar"), JNull) must be (true)
   }
