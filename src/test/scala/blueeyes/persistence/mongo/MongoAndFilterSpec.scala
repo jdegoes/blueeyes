@@ -16,6 +16,9 @@ class MongoAndFilterSpec extends Specification{
   "create valid json for or filter" in {
     (andFilter).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields))
   }
+  "create valid json for AND filter with $eq filter" in {
+    (("foo" === 1) && ("foo" !== 2)).filter mustEqual(JObject(JField("foo", JInt(1)) :: JField("foo", JObject(JField("$ne", JInt(2)) :: Nil)) :: Nil))
+  }
 
   "combine with filter3 to create a new filter" in {
     (andFilter && filter3).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ 

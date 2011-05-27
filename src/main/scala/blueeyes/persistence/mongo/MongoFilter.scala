@@ -99,7 +99,13 @@ sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter 
 
 sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter { self =>
   def filter: JValue = {
-    queries.foldLeft(JObject(Nil).asInstanceOf[JValue]) { (obj, e) => obj.merge(e.filter) }
+    val (notEqs, eqs) = queries partition { filter => filter match {
+      case MongoFieldFilter(lhs, e @ $eq, rhs) => false
+      case _ => true
+    }}
+    val notEqsQuery = notEqs.foldLeft(JObject(Nil).asInstanceOf[JValue]) {(obj, e) => obj.merge(e.filter)}.asInstanceOf[JObject]
+    val eqsQuery    = eqs.map(_.asInstanceOf[MongoFieldFilter]).foldLeft(JObject(Nil).asInstanceOf[JValue]) {(obj, e) => JObject(JField(JPathExtension.toMongoField(e.lhs), e.rhs.toJValue) :: obj.asInstanceOf[JObject].fields)}.asInstanceOf[JObject]
+    JObject(notEqsQuery.fields ::: eqsQuery.fields)
   }
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))

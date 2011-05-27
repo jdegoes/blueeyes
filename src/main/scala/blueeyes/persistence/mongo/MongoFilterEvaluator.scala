@@ -73,7 +73,7 @@ private[mongo] object Evaluators{
       case $lt      => LtFieldFilterEvaluator
       case $lte     => LteFieldFilterEvaluator
       case $eq      => EqFieldFilterEvaluator
-      case $ne      => NeFieldFilterEvaluator(lhs)
+      case $ne      => NeFieldFilterEvaluator
       case $in      => InFieldFilterEvaluator
       case $nin     => NinFieldFilterEvaluator
       case $mod     => ModFieldFilterEvaluator
@@ -91,16 +91,9 @@ private[mongo] object Evaluators{
   case object EqFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v1 == v2 || v2 == JNull && v1 == JNothing
   }
-  case class NeFieldFilterEvaluator(lhs: JPath) extends FieldFilterEvaluator{
+  case object NeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = {
-      def compare = if (v1 == JNothing) v2 != JNull else v1 != v2
-      v2 match{
-        case JNull => lhs.nodes.lastOption match{
-          case Some(e : JPathIndex) => false
-          case _ => compare
-        }
-        case _   => compare
-      }
+      if (v1 == JNothing) v2 != JNull else v1 != v2
     }
   }
   case object GtFieldFilterEvaluator extends FieldFilterEvaluator{
@@ -179,6 +172,7 @@ private[mongo] object Evaluators{
         case (JBool(_),   8)  => true
         case (JNull,      10) => true
         case (JInt(_),    18) => true
+        case (JInt(_),    1) => true
         case _ => false
       }
       case _ => false

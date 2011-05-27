@@ -47,6 +47,30 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         passed
       } must pass
     }
+    skip("run manually")
+    "Select the same value form Mock and Real Mongo for And operator for every field" in{
+      forAll { vv: List[JObject] =>
+        val values = List(JsonParser.parse("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
+        query[JNothing.type](insert(values: _*).into(collection))
+
+        val value  = values.head
+        val fields = value.flattenWithPath
+
+        val passed = fields.forall{field =>
+          val filters = allFilters(field)
+
+          var passedNow = true
+          for (i <- 1 to filters.size if (passedNow)){
+            val filter = MongoAndFilter(filters.take(i))
+            passedNow = checkSelectPass(filter, value)
+          }
+          passedNow
+        }
+        query[JNothing.type](remove.from(collection))
+
+        passed
+      } must pass
+    }
 
     skip("run manually")
     "Select the same value form Mock and Real Mongo for OR operator" in{
@@ -103,9 +127,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   }
 
   private def generateQuery(values: List[(JPath, JValue)]) = {
-    val filters = values.foldLeft(List[MongoFieldFilter]()) {
+    val filters = removeUnclear(values.foldLeft(List[MongoFieldFilter]()) {
       (result, element) => filter(element) :: result
-    } filterNot { filter => filter.operator == $exists && filter.lhs.nodes.last.isInstanceOf[JPathIndex]}
+    })
 
     filters match{
       case x :: Nil => x
@@ -124,13 +148,33 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       case _          => MongoFieldFilter(pathAndValue._1, $eq, pathAndValue._2)
     }
   }
+  private def allFilters(pathAndValue: (JPath, JValue)): List[MongoFieldFilter] = {
+    removeUnclear(pathAndValue._2 match{
+      case e: JInt    => allFiltersForInt(pathAndValue._1, e)
+      case e: JDouble => allFiltersForDouble(pathAndValue._1, e)
+      case e: JBool   => allFiltersForBoolean(pathAndValue._1, e)
+      case e: JString => allFiltersForString(pathAndValue._1, e)
+      case e: JArray  => allFiltersForArray(pathAndValue._1, e)
+      case JNull      => allFiltersForNull(pathAndValue._1)
+      case _          => List(MongoFieldFilter(pathAndValue._1, $eq, pathAndValue._2))
+    })
+  }
 
-  def filterForNull(path: JPath)                    = Gen.oneOf[MongoFieldFilter](path.hasType[JNull.type], path === JNull).sample.get
-  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt))).sample.get
-  def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFieldFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value))).sample.get
-  def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFieldFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive[_]](value.elements.map(jvalueToMongoPrimitive(_).get): _*)).sample.get
-  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 1), path > JDouble(value.value - 1), path >= JDouble(value.value - 1), path < JDouble(value.value + 1), path <= JDouble(value.value + 1), path.anyOf(MongoPrimitiveDouble(value.value))).sample.get
-  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value))).sample.get
+  private def removeUnclear(filters: List[MongoFieldFilter]) = filters.filterNot { filter => (filter.operator == $exists || (filter.operator == $ne && filter.rhs == MongoPrimitiveNull)) && filter.lhs.nodes.last.isInstanceOf[JPathIndex]}
+
+  def filterForNull(path: JPath)                    = Gen.oneOf[MongoFieldFilter](allFiltersForNull(path)).sample.get
+  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFieldFilter](allFiltersForInt(path, value)).sample.get
+  def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFieldFilter](allFiltersForString(path, value)).sample.get
+  def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFieldFilter](allFiltersForArray(path, value)).sample.get
+  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](allFiltersForDouble(path, value)).sample.get
+  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](allFiltersForBoolean(path, value)).sample.get
+
+  def allFiltersForNull(path: JPath)                    = List[MongoFieldFilter](path.hasType[JNull.type], path === JNull)
+  def allFiltersForInt(path: JPath, value: JInt)        = List[MongoFieldFilter](path.hasType[JInt], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt)))
+  def allFiltersForString(path: JPath, value: JString)  = List[MongoFieldFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
+  def allFiltersForArray(path: JPath, value: JArray)    = List[MongoFieldFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive[_]](value.elements.map(jvalueToMongoPrimitive(_).get): _*))
+  def allFiltersForDouble(path: JPath, value: JDouble)  = List[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 10.02E301), path > JDouble(value.value - 10.02E301), path >= JDouble(value.value - 10.02E301), path < JDouble(value.value + 10.02E301), path <= JDouble(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value)))
+  def allFiltersForBoolean(path: JPath, value: JBool)   = List[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value)))
 }
 
 //        val value = JsonParser.parse("""{"995031":[false,-1.0,[""]],"585784":{"655939":[true,0.0,null,["",464012249,false,[8.988465674311579E307,[{"407323":"","20133":null,"600812":false,"538065":null,"424169":true},1,true],1868626500,1,1],[[1119944048]]],{"44603":null,"341200":true,"790448":null,"574840":"","549036":[-2147483648,"",["",""],568312444]}]},"693895":{"710558":-8.988465674311579E307,"651688":{},"642919":[],"736812":null}}""").asInstanceOf[JObject]

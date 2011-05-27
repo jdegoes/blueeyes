@@ -10,7 +10,7 @@ class FieldFilterEvaluatorFactorySpec extends Specification with JPathImplicits{
     FieldFilterEvaluatorFactory("foo", $eq) must be (EqFieldFilterEvaluator)
   }
   "creates $ne Evaluator" in {
-    FieldFilterEvaluatorFactory("foo", $ne).isInstanceOf[NeFieldFilterEvaluator] must be (true)
+    FieldFilterEvaluatorFactory("foo", $ne) must be (NeFieldFilterEvaluator)
   }
   "creates $gt Evaluator" in {
     FieldFilterEvaluatorFactory("foo", $gt) must be (GtFieldFilterEvaluator)
