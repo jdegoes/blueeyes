@@ -20,7 +20,7 @@ trait BijectionsChunkJson{
       JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
     }
     catch {
-      case e: ParseException => error("Data is too big, use big data handler.")
+      case e: ParseException => new ParseException("""Data is too big, use big data handler. If "aggregate" combinator is used then probably Json is broken.""", e)
     }
   }
 
