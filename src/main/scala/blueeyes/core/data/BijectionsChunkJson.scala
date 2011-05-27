@@ -17,7 +17,6 @@ trait BijectionsChunkJson{
       new MemoryChunk(stream.toByteArray())
     }
     def unapply(s: ByteChunk)  = try {
-      error
       JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
     }
     catch {
