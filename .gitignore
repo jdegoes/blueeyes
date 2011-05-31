@@ -18,3 +18,5 @@ classes
 /.idea
 blueeyes.iml
 tags
+nbproject
+build.xml
