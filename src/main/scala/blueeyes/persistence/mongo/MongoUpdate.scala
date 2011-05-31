@@ -47,20 +47,20 @@ import UpdateFieldFunctions._
  * <p>
  */
 case class MongoUpdateBuilder(jpath: JPath) {
-  def inc [T](value: MongoPrimitive[T]) : MongoUpdateField = IncF(jpath, value)
-  def set [T](value: MongoPrimitive[T]) : MongoUpdateField = SetF(jpath, value)
+  def inc(value: MongoPrimitive) : MongoUpdateField = IncF(jpath, value)
+  def set(value: MongoPrimitive) : MongoUpdateField = SetF(jpath, value)
   def unset                             : MongoUpdateField = UnsetF(jpath)
   def popLast                           : MongoUpdateField = PopLastF(jpath)
   def popFirst                          : MongoUpdateField = PopFirstF(jpath)
-  def push [T](value: MongoPrimitive[T]): MongoUpdateField = PushF(jpath, value)
+  def push [T](value: MongoPrimitive): MongoUpdateField = PushF(jpath, value)
   def pull(filter: MongoFilter)         : MongoUpdateField = PullF(jpath, filter)
-  def pushAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PushAllF(jpath, List(items: _*))
-  def pullAll [T <: MongoPrimitive[_]](items: T*) : MongoUpdateField = PullAllF(jpath, List(items: _*))
+  def pushAll [T <: MongoPrimitive](items: T*) : MongoUpdateField = PushAllF(jpath, List(items: _*))
+  def pullAll [T <: MongoPrimitive](items: T*) : MongoUpdateField = PullAllF(jpath, List(items: _*))
 
-  def addToSet [T <: MongoPrimitive[_]](items: T*): MongoUpdateField = {
+  def addToSet [T <: MongoPrimitive](items: T*): MongoUpdateField = {
     val itemsList = List(items: _*)
     val (value, filter) = if (itemsList.size == 1) {
-      val value: MongoPrimitive[_] = itemsList.head
+      val value: MongoPrimitive = itemsList.head
       (value, "" === value)
     }
     else {
@@ -109,11 +109,11 @@ sealed trait MongoUpdate{ self =>
   private lazy val sorted = toJValue.sort
 }
 
-sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate{
+sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
     def toJValue = value
 }
 
-private[mongo] object MongoUpdateObject{
+private[mongo] object MongoUpdateObject {
   def decompose(jObject: JObject): List[MongoUpdateField] = decompose(jObject, None)
 
   private def decompose(jObject: JObject, parentPath: Option[JPath]): List[MongoUpdateField] = {
@@ -144,7 +144,7 @@ sealed trait MongoUpdateField extends MongoUpdate with Change1{  self =>
 }
 
 private[mongo] object UpdateFieldFunctions{
-  case class SetF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
+  case class SetF(path: JPath, value: MongoPrimitive) extends MongoUpdateField{
     val operator = $set
 
     val filter   = ("" === value)
@@ -160,7 +160,7 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = Some(this)
   }
 
-  case class IncF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
+  case class IncF(path: JPath, value: MongoPrimitive) extends MongoUpdateField{
     val operator = $inc
 
     val filter   = ("" === value)
@@ -173,7 +173,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("IncF can be only combined with SetF and IncF. Older=" + older)
     }
 
-    private def plus(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_] = (v1, v2) match {
+    private def plus(v1: MongoPrimitive, v2: MongoPrimitive): MongoPrimitive = (v1, v2) match {
       case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => x1 + x2
       case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => x1 + x2
       case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => x1 + x2
@@ -203,7 +203,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
     }
 
-    private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
+    private def pop(v1: MongoPrimitive): MongoPrimitive  = v1 match{
       case MongoPrimitiveArray(Nil) => v1
       case MongoPrimitiveArray(x)   => MongoPrimitiveArray(x.dropRight(1))
 
@@ -224,7 +224,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("PopLastF can be only combined with SetF, PopLastF and PopFirstF. Older=" + older)
     }
 
-    private def pop(v1: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
+    private def pop(v1: MongoPrimitive): MongoPrimitive  = v1 match{
       case MongoPrimitiveArray(Nil) => v1
       case MongoPrimitiveArray(x)   => MongoPrimitiveArray(x.drop(1))
 
@@ -232,7 +232,7 @@ private[mongo] object UpdateFieldFunctions{
     }
   }
 
-  case class PushF(path: JPath, value: MongoPrimitive[_]) extends MongoUpdateField{
+  case class PushF(path: JPath, value: MongoPrimitive) extends MongoUpdateField{
     val operator = $push
 
     val filter   = ("" === value)
@@ -246,7 +246,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("PushF can be only combined with SetF, PushAllF and PushF. Older=" + older)
     }
 
-    private def push(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitive[_]  = v1 match{
+    private def push(v1: MongoPrimitive, v2: MongoPrimitive): MongoPrimitive  = v1 match{
       case MongoPrimitiveNull      => MongoPrimitiveArray(v2 :: Nil)
       case MongoPrimitiveArray(x)  => MongoPrimitiveArray(x :+ v2)
 
@@ -254,7 +254,7 @@ private[mongo] object UpdateFieldFunctions{
     }
   }
 
-  case class PushAllF[T <: MongoPrimitive[_]](path: JPath, value: List[T]) extends MongoUpdateField{
+  case class PushAllF(path: JPath, value: List[MongoPrimitive]) extends MongoUpdateField{
     val operator = $pushAll
 
     val filter   = "" === MongoPrimitiveArray(value)
@@ -268,7 +268,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("PushAllF can be only combined with SetF, PushF and PushAllF. Older=" + older)
     }
 
-    private def pushAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
+    private def pushAll(v1: MongoPrimitive, v2: List[MongoPrimitive]): MongoPrimitive  = v1 match{
       case MongoPrimitiveNull      => MongoPrimitiveArray(v2)
       case MongoPrimitiveArray(x)  => MongoPrimitiveArray(x ++ v2)
 
@@ -276,7 +276,7 @@ private[mongo] object UpdateFieldFunctions{
     }
   }
 
-  case class PullAllF[T <: MongoPrimitive[_]](path: JPath, value: List[T]) extends MongoUpdateField{
+  case class PullAllF(path: JPath, value: List[MongoPrimitive]) extends MongoUpdateField{
     val operator = $pullAll
 
     val filter   = "" === MongoPrimitiveArray(value)
@@ -290,14 +290,14 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("""PullAllF can be only combined with SetF, PullAllF and PullF(when filter is ("" === value)). Older=""" + older)
     }
 
-    private def pullAll(v1: MongoPrimitive[_], v2: List[T]): MongoPrimitive[_]  = v1 match{
+    private def pullAll(v1: MongoPrimitive, v2: List[MongoPrimitive]): MongoPrimitive  = v1 match{
       case MongoPrimitiveArray(x)  => MongoPrimitiveArray(x filterNot (v2 contains))
 
       case _ => throw new MongoException("Cannot apply $pullAll modifier to non-array")
     }
   }
 
-  case class AddToSetF(path: JPath, value: MongoPrimitive[_], filter: MongoFilter) extends MongoUpdateField{
+  case class AddToSetF(path: JPath, value: MongoPrimitive, filter: MongoFilter) extends MongoUpdateField{
     val operator = $addToSet
 
     override protected def fuseWithImpl(older: Change1) = older match {
@@ -316,15 +316,15 @@ private[mongo] object UpdateFieldFunctions{
       case _ => error("PullAllF can be only combined with SetF and PullAllF. Older=" + older)
     }
 
-    private def addToSet(v1: MongoPrimitive[_], v2: MongoPrimitive[_]): MongoPrimitiveArray[_]  = v1 match {
+    private def addToSet(v1: MongoPrimitive, v2: MongoPrimitive): MongoPrimitiveArray = v1 match {
       case MongoPrimitiveNull  => v2 match {
-        case e: MongoPrimitiveArray[_]  => e
+        case e: MongoPrimitiveArray  => e
         case MongoPrimitiveNull         => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
         case _                          => MongoPrimitiveArray(v2 :: Nil)
       }
-      case e: MongoPrimitiveArray[_] => v2 match {
-        case y: MongoPrimitiveArray[_]  => {
-          val initialArray: List[MongoPrimitive[_]] = e.value
+      case e: MongoPrimitiveArray => v2 match {
+        case y: MongoPrimitiveArray  => {
+          val initialArray: List[MongoPrimitive] = e.value
 
           MongoPrimitiveArray(y.value.foldLeft(initialArray) {(result, element) => addToSet0(result, element)})
         }
@@ -334,7 +334,7 @@ private[mongo] object UpdateFieldFunctions{
       case _ => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
     }
 
-    private def addToSet0(value: List[MongoPrimitive[_]], setValue: MongoPrimitive[_]) = value.find(_ == setValue) match {
+    private def addToSet0(value: List[MongoPrimitive], setValue: MongoPrimitive) = value.find(_ == setValue) match {
       case Some(x) => value
       case None => value :+ setValue
     }
@@ -354,7 +354,7 @@ private[mongo] object UpdateFieldFunctions{
       case (_, _) => error("""PullF can be only combined with SetF PullAllF (when self.filter is ("" === value)) and PullF (when self.filter is ("" === value) and older.filter is ("" === value)). Older=""" + older)
     }
 
-    private def pull(v1: MongoPrimitive[_], filter: MongoFilter): MongoPrimitive[_]  = v1 match{
+    private def pull(v1: MongoPrimitive, filter: MongoFilter): MongoPrimitive  = v1 match{
       case MongoPrimitiveArray(x)  => {
         val valuesAndJValues  = x.zip(x.map(_.toJValue))
         val matchedJVales     = valuesAndJValues.unzip._2.filter(filter)
