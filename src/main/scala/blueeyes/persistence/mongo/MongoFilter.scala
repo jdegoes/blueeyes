@@ -69,6 +69,13 @@ sealed trait MongoFilter { self =>
   private lazy val sorted = filter.sort
 }
 
+object MongoFilter extends MongoFilterImplicits {
+  def apply[T](lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive[T])(implicit f: T => MongoPrimitive[T]): MongoFilter = rhs match {
+    case opt @ MongoPrimitiveOption(value) => value.map(MongoFieldFilter(lhs, operator, _)).getOrElse(MongoFilterAll)
+    case rhs => MongoFieldFilter(lhs, operator, rhs)
+  }
+}
+
 case object MongoFilterAll extends MongoFilter {
   def filter: JValue = JObject(Nil)
 
@@ -129,6 +136,9 @@ sealed trait MongoPrimitive[T] {
   def toJValue: JValue
 }
 
+case class MongoPrimitiveOption[T](value: Option[T])(implicit f: T => MongoPrimitive[T]) extends MongoPrimitive[T] {
+  def toJValue = value.map(_.toJValue).getOrElse(JNothing)
+}
 case class MongoPrimitiveString(value: String) extends MongoPrimitive[String] {
   def toJValue = JString(value)
 }
@@ -165,34 +175,14 @@ trait MongoFilterImplicits {
 
   implicit def jpathToMongoFilterBuilder(jpath: JPath): MongoFilterBuilder = MongoFilterBuilder(jpath)
 
-  // TODO: Delete this!!!
-  implicit def jvalueToMongoPrimitive(value: JValue): Option[MongoPrimitive[_]] = {
-    val mongoPromitive: Option[MongoPrimitive[_]] = value match {
-      case x: JString => Some(MongoPrimitiveString(x.value))
-      case x: JInt    => Some(MongoPrimitiveLong(x.value.longValue))
-      case x: JDouble => Some(MongoPrimitiveDouble(x.value))
-      case x: JBool   => Some(MongoPrimitiveBoolean(x.value))
-      case x: JObject => Some(MongoPrimitiveJObject(x))
-      case x: JArray  => {
-        var values: List[MongoPrimitive[_]] = x.elements.map(jvalueToMongoPrimitive(_)).filter(_ != None).map(_.get)
-        Some(MongoPrimitiveArray(values))
-      }
-      case JNull | JNothing => Some(MongoPrimitiveNull)
-
-      case _  => error("Cannot convert JField to Mongo primitive")
-    }
-    mongoPromitive
-  }
-  implicit def jvalueToMongoPrimitive2(value: JValue): MongoPrimitive[_] = value match {
+  implicit def jvalueToMongoPrimitive(value: JValue): MongoPrimitive[_] = value match {
     case x: JString => MongoPrimitiveString(x.value)
     case x: JInt    => MongoPrimitiveLong(x.value.longValue)
     case x: JDouble => MongoPrimitiveDouble(x.value)
     case x: JBool   => MongoPrimitiveBoolean(x.value)
     case x: JObject => MongoPrimitiveJObject(x)
-    case x: JArray  => {
-      var values: List[MongoPrimitive[_]] = x.elements.map(jvalueToMongoPrimitive(_)).filter(_ != None).map(_.get)
-      MongoPrimitiveArray(values)
-    }
+    case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))
+
     case JNull | JNothing => MongoPrimitiveNull
 
     case _ => error("Cannot convert JField to Mongo primitive")
@@ -257,27 +247,27 @@ object MongoFilterImplicits extends MongoFilterImplicits
  */
 case class MongoFilterBuilder(jpath: JPath) {
   import MongoFilterImplicits._
-  def === [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $eq, value)
+  def === [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $eq, value)
 
-  def !== [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $ne, value)
+  def !== [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $ne, value)
 
-  def > [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $gt, value)
+  def > [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $gt, value)
 
-  def >= [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $gte, value)
+  def >= [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $gte, value)
 
-  def < [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $lt, value)
+  def < [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $lt, value)
 
-  def <= [T](value: MongoPrimitive[T]): MongoFieldFilter = MongoFieldFilter(jpath, $lt, value)
+  def <= [T](value: MongoPrimitive[T]): MongoFilter = MongoFieldFilter(jpath, $lt, value)
 
-  def anyOf [T <: MongoPrimitive[_]](items: T*): MongoFieldFilter = MongoFieldFilter(jpath, $in, List(items: _*))
+  def anyOf [T <: MongoPrimitive[_]](items: T*): MongoFilter = MongoFieldFilter(jpath, $in, List(items: _*))
 
-  def contains [T <: MongoPrimitive[_]](items: T*): MongoFieldFilter = MongoFieldFilter(jpath, $all, List(items: _*))
+  def contains [T <: MongoPrimitive[_]](items: T*): MongoFilter = MongoFieldFilter(jpath, $all, List(items: _*))
 
-  def hasSize(length: Int): MongoFieldFilter =  MongoFieldFilter(jpath, $size, length)
+  def hasSize(length: Int): MongoFilter =  MongoFieldFilter(jpath, $size, length)
 
-  def isDefined: MongoFieldFilter = MongoFieldFilter(jpath, $exists, true)
+  def isDefined: MongoFilter = MongoFieldFilter(jpath, $exists, true)
 
-  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFieldFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
+  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
 }
 
 private[mongo] object JPathExtension{

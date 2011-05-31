@@ -121,9 +121,9 @@ private[mongo] object MongoUpdateObject{
       val fieldPath = parentPath.map(_ \ field.name).getOrElse(JPath(field.name))
 
       jvalueToMongoPrimitive(field.value) match {
-        case Some(MongoPrimitiveJObject(x))   => decompose(x, Some(fieldPath))
-        case Some(MongoPrimitiveNull) | None  => List(fieldPath.unset)
-        case Some(v)                          => List(fieldPath.set(v))
+        case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
+        case MongoPrimitiveNull         => List(fieldPath.unset)
+        case v                          => List(fieldPath.set(v))
       }
     }).flatten
   }

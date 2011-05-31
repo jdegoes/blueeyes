@@ -14,13 +14,15 @@ import org.scalacheck.Prop._
 import org.specs.{ScalaCheck, Specification}
 
 class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits{
+  val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
+  if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
 
-  Configgy.configure("/etc/default/blueeyes.conf")
-
-  private val realMongo     = new RealMongo(Configgy.config.configMap("mongo"))
   private val mockMongo     = new MockMongo()
-  private val realDatabase  = realMongo.database( "mydb" )
   private val mockDatabase  = mockMongo.database( "mydb" )
+
+  private lazy val realMongo     = new RealMongo(Configgy.config.configMap("mongo"))
+  private lazy val realDatabase  = realMongo.database( "mydb" )
+
   private val collection    = "test-collection"
 
   def size = choose(20, 100).sample.get
@@ -117,7 +119,11 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     pass
   }
 
-  private def query[T](query: MongoQuery[T]): (T, T) = (oneQuery(query, realDatabase), oneQuery(query, mockDatabase))
+  private def query[T](query: MongoQuery[T]): (Option[T], T) = (
+    if (testLive) Some(oneQuery(query, realDatabase)) else None, 
+    oneQuery(query, mockDatabase)
+  )
+
   private def oneQuery[T](query: MongoQuery[T], database: MongoDatabase) = {
     val future = database(query)
 
@@ -127,7 +133,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   }
 
   private def generateQuery(values: List[(JPath, JValue)]) = {
-    val filters = removeUnclear(values.foldLeft(List[MongoFieldFilter]()) {
+    val filters = removeUnclear(values.foldLeft(List[MongoFilter]()) {
       (result, element) => filter(element) :: result
     })
 
@@ -148,7 +154,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       case _          => MongoFieldFilter(pathAndValue._1, $eq, pathAndValue._2)
     }
   }
-  private def allFilters(pathAndValue: (JPath, JValue)): List[MongoFieldFilter] = {
+  private def allFilters(pathAndValue: (JPath, JValue)): List[MongoFilter] = {
     removeUnclear(pathAndValue._2 match{
       case e: JInt    => allFiltersForInt(pathAndValue._1, e)
       case e: JDouble => allFiltersForDouble(pathAndValue._1, e)
@@ -160,21 +166,24 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     })
   }
 
-  private def removeUnclear(filters: List[MongoFieldFilter]) = filters.filterNot { filter => (filter.operator == $exists || (filter.operator == $ne && filter.rhs == MongoPrimitiveNull)) && filter.lhs.nodes.last.isInstanceOf[JPathIndex]}
+  private def removeUnclear(filters: List[MongoFilter]) = filters.filterNot { 
+    case filter @ MongoFieldFilter(lhs, operator, rhs) => (operator == $exists || (operator == $ne && rhs == MongoPrimitiveNull)) && lhs.nodes.last.isInstanceOf[JPathIndex]
+    case x => true
+  }
 
-  def filterForNull(path: JPath)                    = Gen.oneOf[MongoFieldFilter](allFiltersForNull(path)).sample.get
-  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFieldFilter](allFiltersForInt(path, value)).sample.get
-  def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFieldFilter](allFiltersForString(path, value)).sample.get
-  def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFieldFilter](allFiltersForArray(path, value)).sample.get
-  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFieldFilter](allFiltersForDouble(path, value)).sample.get
-  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFieldFilter](allFiltersForBoolean(path, value)).sample.get
+  def filterForNull(path: JPath)                    = Gen.oneOf[MongoFilter](allFiltersForNull(path)).sample.get
+  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFilter](allFiltersForInt(path, value)).sample.get
+  def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFilter](allFiltersForString(path, value)).sample.get
+  def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFilter](allFiltersForArray(path, value)).sample.get
+  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFilter](allFiltersForDouble(path, value)).sample.get
+  def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFilter](allFiltersForBoolean(path, value)).sample.get
 
-  def allFiltersForNull(path: JPath)                    = List[MongoFieldFilter](path.hasType[JNull.type], path === JNull)
-  def allFiltersForInt(path: JPath, value: JInt)        = List[MongoFieldFilter](path.hasType[JInt], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt)))
-  def allFiltersForString(path: JPath, value: JString)  = List[MongoFieldFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
-  def allFiltersForArray(path: JPath, value: JArray)    = List[MongoFieldFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive[_]](value.elements.map(jvalueToMongoPrimitive(_).get): _*))
-  def allFiltersForDouble(path: JPath, value: JDouble)  = List[MongoFieldFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 10.02E301), path > JDouble(value.value - 10.02E301), path >= JDouble(value.value - 10.02E301), path < JDouble(value.value + 10.02E301), path <= JDouble(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value)))
-  def allFiltersForBoolean(path: JPath, value: JBool)   = List[MongoFieldFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value)))
+  def allFiltersForNull(path: JPath)                    = List[MongoFilter](path.hasType[JNull.type], path === JNull)
+  def allFiltersForInt(path: JPath, value: JInt)        = List[MongoFilter](path.hasType[JInt], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt)))
+  def allFiltersForString(path: JPath, value: JString)  = List[MongoFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
+  def allFiltersForArray(path: JPath, value: JArray)    = List[MongoFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive[_]](value.elements.map(jvalueToMongoPrimitive): _*))
+  def allFiltersForDouble(path: JPath, value: JDouble)  = List[MongoFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 10.02E301), path > JDouble(value.value - 10.02E301), path >= JDouble(value.value - 10.02E301), path < JDouble(value.value + 10.02E301), path <= JDouble(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value)))
+  def allFiltersForBoolean(path: JPath, value: JBool)   = List[MongoFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value)))
 }
 
 //        val value = JsonParser.parse("""{"995031":[false,-1.0,[""]],"585784":{"655939":[true,0.0,null,["",464012249,false,[8.988465674311579E307,[{"407323":"","20133":null,"600812":false,"538065":null,"424169":true},1,true],1868626500,1,1],[[1119944048]]],{"44603":null,"341200":true,"790448":null,"574840":"","549036":[-2147483648,"",["",""],568312444]}]},"693895":{"710558":-8.988465674311579E307,"651688":{},"642919":[],"736812":null}}""").asInstanceOf[JObject]
