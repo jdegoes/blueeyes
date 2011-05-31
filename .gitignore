@@ -3,6 +3,7 @@ test-deps
 lib_managed
 project/boot
 project/plugins/src_managed
+project/plugins/project
 **.DS_Store
 *~
 GPATH
