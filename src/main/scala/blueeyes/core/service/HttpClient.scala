@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import blueeyes.concurrent.Future
+import blueeyes.concurrent.FutureDeliveryStrategySequential
 import blueeyes.core.http._
 import blueeyes.core.data._
 import java.net.InetAddress
@@ -115,5 +116,13 @@ object HttpClient {
     def isDefinedAt(r: HttpRequest[A]): Boolean = h.isDefinedAt(r)
 
     def apply(r: HttpRequest[A]): Future[HttpResponse[A]] = h.apply(r)
+  }
+
+  class EchoClient[T](f: HttpRequest[T] => Option[T]) extends HttpClient[T] with FutureDeliveryStrategySequential {
+    override def apply(r: HttpRequest[T]) = {
+      Future[HttpResponse[T]](HttpResponse[T](content = f(r)))
+    }
+
+    override def isDefinedAt(x: HttpRequest[T]) = true
   }
 }
