@@ -16,7 +16,7 @@ class MongoUpdateObjectSpec  extends Specification {
   }
   "decompose nested JObject with null element" in{
     val jObject = parse("""{ "id" : 1.0, "name" : null }""")
-    decompose(jObject) mustEqual(List(("id" set 1.0), ("name" unset)))
+    decompose(jObject) mustEqual(List(("id" set 1.0), ("name" set MongoPrimitiveNull)))
   }
 
   private def parse(value: String) = JsonParser.parse(value).asInstanceOf[JObject]

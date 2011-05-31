@@ -122,7 +122,6 @@ private[mongo] object MongoUpdateObject{
 
       jvalueToMongoPrimitive(field.value) match {
         case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
-        case MongoPrimitiveNull         => List(fieldPath.unset)
         case v                          => List(fieldPath.set(v))
       }
     }).flatten

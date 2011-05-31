@@ -63,7 +63,10 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
     writeLock{
       var (objects, update) = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
-                                case Nil if upsert => (List(JObject(Nil)), value & filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
+                                case Nil if upsert => value match {
+                                  case e: MongoUpdateObject => (List(JObject(Nil)), value)
+                                  case _ => (List(JObject(Nil)), value & filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
+                                }
                                 case v => (v, value)
                               }
       var updated = UpdateFunction(update, objects)
