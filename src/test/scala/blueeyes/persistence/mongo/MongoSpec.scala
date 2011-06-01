@@ -30,6 +30,28 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
+    "Upsert the same value form Mock and Real Mongo for existing object" in{
+      skip("run manually")
+      forAll { values: List[JObject] =>
+        query[JNothing.type](remove.from(collection))
+        query[JNothing.type](insert(values: _*).into(collection))
+
+        val value  = values.head
+
+        val newField  = genField.sample.get
+        val newObject = JObject(newField :: value.fields.tail)
+
+        val filter = generateQuery(value.flattenWithPath)
+        query[JNothing.type](upsert(collection).set(newObject).where(filter))
+
+        var passed = checkSelectPass(MongoFilterAll, value)
+        if (passed) passed = checkSelectPass(generateQuery(newObject.flattenWithPath), value)
+
+        query[JNothing.type](remove.from(collection))
+
+        passed
+      } must pass
+    }
     skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator" in{
       forAll { values: List[JObject] =>
@@ -101,7 +123,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   private def checkSelectPass(filter: MongoFilter, values : JObject*): Boolean = {
     val selectQuery  = select().from(collection).where(filter)
     val selection    = query(selectQuery)
-    val real         = selection._1.toSet
+    val real         = selection._1.map(_.toSet).getOrElse(Set[JObject]())
     val mock         = selection._2.toSet
     val pass         = real == mock
     if (!pass) {
@@ -111,6 +133,18 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         println(Printer.compact(JsonAST.render(value)))
       }
       println("--------OBJECT--------")
+      println("-REAL-")
+      real.foreach{value =>
+        println("--")
+        println(Printer.compact(JsonAST.render(value)))
+      }
+      println("-REAL-")
+      println("-MOCK-")
+      mock.foreach{value =>
+        println("--")
+        println(Printer.compact(JsonAST.render(value)))
+      }
+      println("-MOCK-")
       println("--------QUERY--------")
       println(Printer.compact(JsonAST.render(filter.filter)))
       println("--------QUERY--------")
