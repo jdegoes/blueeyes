@@ -268,7 +268,7 @@ private[mongo] object UpdateFieldFunctions{
       case SetF(f, v)     => Some(SetF(path, pullAll(v, value)))
 
       case PullAllF(_, olderValue)       => Some(PullAllF(path, value ::: olderValue))
-      case PullF(_, e: MongoFieldFilter) if (e.lhs == JPath("") && e.operator == $eq) => Some(PullAllF(path, value ::: List(e.rhs)))
+      case PullF(_, MongoFieldFilter(lhs, op, rhs)) if (lhs == JPath("") && op == $eq) => Some(PullAllF(path, value ::: List(rhs)))
 
       case _ => sys.error("""PullAllF can be only combined with SetF, PullAllF and PullF(when filter is ("" === value)). Older=""" + older)
     }
@@ -305,12 +305,8 @@ private[mongo] object UpdateFieldFunctions{
         case MongoPrimitiveNull         => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
         case _                          => MongoPrimitiveArray(v2 :: Nil)
       }
-      case e: MongoPrimitiveArray => v2 match {
-        case y: MongoPrimitiveArray  => {
-          val initialArray: List[MongoPrimitive] = e.value
-
-          MongoPrimitiveArray(y.value.foldLeft(initialArray) {(result, element) => addToSet0(result, element)})
-        }
+      case MongoPrimitiveArray(e) => v2 match {
+        case MongoPrimitiveArray(y)     => MongoPrimitiveArray(y.foldLeft(e) {(result, element) => addToSet0(result, element)})
         case MongoPrimitiveNull         => throw new MongoException("Cannot apply $push/$pushAll modifier to non-array")
         case _                          => MongoPrimitiveArray(addToSet0(e.value, v2))
       }
@@ -331,8 +327,8 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = (filter, older) match {
       case (_, SetF(f, v))         => Some(SetF(path, pull(v, filter)))
 
-      case (x: MongoFieldFilter, PullF(_, y: MongoFieldFilter)) if (x.lhs == JPath("") && x.operator == $eq && y.lhs == JPath("") && y.operator == $eq) => Some(PullAllF(path, List(x.rhs, y.rhs)))
-      case (x: MongoFieldFilter, PullAllF(_, oldValue)) if (x.lhs == JPath("") && x.operator == $eq) => Some(PullAllF(path, x.rhs :: oldValue))
+      case (MongoFieldFilter(xlhs, xop, xrhs), PullF(_, MongoFieldFilter(ylhs, yop, yrhs))) if xlhs == JPath("") && xop == $eq && ylhs == JPath("") && yop == $eq => Some(PullAllF(path, List(xrhs, yrhs)))
+      case (MongoFieldFilter(lhs, op, rhs), PullAllF(_, oldValue)) if lhs == JPath("") && op == $eq => Some(PullAllF(path, rhs :: oldValue))
 
       case (_, _) => sys.error("""PullF can be only combined with SetF PullAllF (when self.filter is ("" === value)) and PullF (when self.filter is ("" === value) and older.filter is ("" === value)). Older=""" + older)
     }

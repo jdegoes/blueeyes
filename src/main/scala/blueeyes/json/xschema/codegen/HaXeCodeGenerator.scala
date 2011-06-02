@@ -685,8 +685,11 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       case JDouble(v)   => "JNumber(" + v + ")"
       case JArray(v)    => "JArray([" + v.map(renderHaXe).mkString(", ") + "])"
       case JObject(v)   => "JObject([" + v.map(renderHaXe).mkString(", ") + "])"
-      case JField(k, v) => "JField('" + escapeHaXeString(k) + "', " + renderHaXe(v) + ")"
     }
+  }
+
+  private def renderHaXe(jfield: JField): String = { 
+      "JField('" + escapeHaXeString(jfield.name) + "', " + renderHaXe(jfield.value) + ")"
   }
 
   private def escapeHaXeClassName(name: String) = {

@@ -55,17 +55,18 @@ sealed trait JPath { self =>
         case x @ JPathField(name) if (isRegex(name)) => {
           val regex = name.r
 
-          jvalue.children.flatMap { child =>
-            child match {
+          jvalue match {
+            case JObject(fields) => fields.flatMap {
               case JField(regex(name), value) =>
-                val expandedNode = JPathField(name)
-
-                expand0(current :+ expandedNode, tail, value)
+                expand0(current :+ JPathField(name), tail, value)
 
               case _ => Nil
             }
+
+            case _ => Nil
           }
         }
+
         case x @ JPathField(name) => expand0(current :+ x, tail, jvalue \ name)
       }
     }

@@ -191,7 +191,6 @@ trait MongoFilterImplicits {
     case x: JObject => MongoPrimitiveJObject(x)
     case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))
     case JNull | JNothing => MongoPrimitiveNull
-    case JField(_, _) => sys.error("Cannot convert JField to Mongo primitive")
   }
 
   implicit def optionToMongoPrimitive[T <% MongoPrimitive](value: Option[T]) = MongoPrimitiveOption(value.map(a => a : MongoPrimitive))

@@ -83,18 +83,18 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
   private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): Future[List[JString]] = {
     createFilter(filterJObject) map { filter =>
       config.database(select().from(config.collection).where(filter)) map {
-       _.toList.flatMap(_ \ "name" -->? classOf[JString])
+       _.toList.flatMap(_ \ "name" as JString)
       }
     } getOrElse {
       Future.sync[List[JString]](Nil)
     }
   }
 
-  private def createFilter(filterJObject: Option[JObject]) = filterJObject.map {
+  private def createFilter(obj: Option[JObject]) = obj.map {
     _.flatten.collect {
-      case f @ JField(_, JString(_)) => f
-    }.foldLeft(MongoFilterAll.asInstanceOf[MongoFilter]) { (filter, field) =>
-      filter && field.name === field.value.asInstanceOf[JString].value
+      case JObject(fields) => fields
+    }.flatten.foldLeft[MongoFilter](MongoFilterAll) { (filter, field) =>
+      filter && field.name === ((field.value as JString).map(_.value))
     }
   }
 }

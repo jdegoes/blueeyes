@@ -17,6 +17,7 @@
 package blueeyes.json
 
 import scalaz.NonEmptyList
+import blueeyes.json.xschema.DefaultOrderings._
 
 object JsonAST {
   import scala.text.{Document, DocText}
@@ -33,10 +34,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] {
-    type Values
-    type Self <: JValue
-
+  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable {
     /** Sorts the JValue according to natural ordering. This can be considered a
      * form of "normalization" to aid comparisons between different JValues.
      *
@@ -44,17 +42,7 @@ object JsonAST {
      * json.sort
      * }}}
      */
-    def sort: Self = {
-      import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
-
-      (this match {
-        case JObject(fields)      => JObject(fields.map(_.sort).sorted(JValueOrdering))
-        case JArray(elements)     => JArray(elements.map(_.sort).sorted(JValueOrdering))
-        case JField(name, value)  => JField(name, value.sort)
-
-        case _ => this
-      }).asInstanceOf[Self]
-    }
+    def sort: JValue
 
     def compare(that: JValue): Int = blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(this, that)
 
@@ -65,20 +53,9 @@ object JsonAST {
      * json \ "name"
      * </pre>
      */
-    def \ (nameToFind: String): JValue = {
-      def extractValue(jvalue: JValue): JValue = jvalue match {
-        case JField(n, v) => v
-        case _ => jvalue
-      }
-      val p = (json: JValue) => json match {
-        case JField(name, value) if name == nameToFind => true
-        case _ => false
-      }
-      findDirect(children, p) match {
-        case Nil => JNothing
-        case x :: Nil => extractValue(x)
-        case xs => JArray(xs.map(extractValue))
-      }
+    def \ (nameToFind: String): JValue = this match {
+      case JObject(fields) => fields.find(_.name == nameToFind).map(_.value).getOrElse(JNothing)
+      case _ => JNothing
     }
 
     def \? (nameToFind: String): Option[JValue] = {
@@ -89,29 +66,13 @@ object JsonAST {
     }
 
     /**
-     * Returns the element as a JValue of the specified class.
-     * <p>
-     * Example:<pre>
-     * (json \ "foo" --> classOf[JField]).value
-     * </pre>
-     */
-    def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + this.getClass))
-
-    /**
-     * Returns the element as an option of a JValue of the specified class.
+     * Returns the element as an option of a JValue of the specified type.
       * <p>
       * Example:<pre>
-      * (json \ "foo" -->? classOf[JField]).map(_.value).getOrElse(defaultFieldValue)
+      * (json \ "foo" as JString).map(_.value).getOrElse(defaultFieldValue)
       * </pre>
      */
-    def -->? [A <: JValue](clazz: Class[A]): Option[A] = {
-      def extractTyped(value: JValue) = if (value.getClass == clazz) Some(value.asInstanceOf[A]) else None
-
-      this match {
-        case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
-        case _ => extractTyped(this)
-      }
-    }
+    def as[A <: JValue](implicit m : JManifest[A]): Option[A] = m(this)
 
     /** 
      * Does a breadth-first traversal of all descendant JValues, beginning
@@ -143,13 +104,9 @@ object JsonAST {
     }
 
     private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
-      case JObject(l) => l.filter {
-        case x if p(x) => true
-        case _ => false
-      }
+      case JObject(l) => l.filter(x => p(x.value))
       case JArray(l) => findDirect(l, p)
-      case x if p(x) => x :: Nil
-      case _ => Nil
+      case x => if (p(x)) List(x) else Nil
     }
 
     /** XPath-like expression to query JSON fields by name. Returns all matching fields.
@@ -159,17 +116,18 @@ object JsonAST {
      * </pre>
      */
     def \\(nameToFind: String): JValue = {
-      def find(json: JValue): List[JField] = json match {
-        case JObject(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
-        case JArray(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
-        case field @ JField(name, value) if name == nameToFind => field :: find(value)
-        case JField(_, value) => find(value)
-        case _ => Nil
+      def find(json: JValue, acc: List[JField]): List[JField] = json match {
+        case JObject(l) => l.foldLeft(acc) { (a, f) => 
+          if (f.name == nameToFind) f :: find(f.value, a)
+          else find(f.value, a)
+        }
+
+        case JArray(l) => l.foldLeft(acc) { (a, v) => find(v, a) }
+
+        case _ => acc
       }
-      find(this) match {
-        case x :: Nil => x.value
-        case x => JArray(x.map(_.value))
-      }
+
+      JArray(find(this, Nil).map(_.value))
     }
 
     /** XPath-like expression to query JSON fields by type. Matches only fields on
@@ -179,22 +137,30 @@ object JsonAST {
      * json \ classOf[JInt]
      * </pre>
      */
-    def \[A <: JValue](clazz: Class[A]): List[A#Values] =
-      findDirect(children, typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+    def \[A <: JValue](implicit m: JManifest[A]): List[A] = this match {
+      case JArray(values)  => values.flatMap(m)
+      case JObject(fields) => fields.flatMap(f => m(f.value))
+      case _ => Nil
+    }
 
+    def \[A <: JValue](clazz: Class[A])(implicit m: JManifest[A]): List[A] = this \ m
+      
     /** XPath-like expression to query JSON fields by type. Returns all matching fields.
      * <p>
      * Example:<pre>
      * json \\ classOf[JInt]
      * </pre>
      */
-    def \\[A <: JValue](clazz: Class[A]): List[A#Values] =
-      (this filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+    def \\[A <: JValue](implicit m: JManifest[A]): List[A] = m(this).toList ::: (
+      this match {
+        case JArray(values)  => values.flatMap(_ \\ m)  
+        case JObject(fields) => fields.map(_.value).flatMap(_ \\ m)
+        case _ => Nil
+      }
+    )
 
-    private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
-      case x if x.getClass == clazz => true
-      case _ => false
-    }
+    // legacy syntax support
+    def \\[A <: JValue](clazz: Class[A])(implicit m: JManifest[A]): List[A] = this \\ m
 
     /** Gets the specified value located at the terminal of the specified path.
      * <p>
@@ -249,27 +215,6 @@ object JsonAST {
      */
     def apply(i: Int): JValue = JNothing
 
-    /** Return unboxed values from JSON
-     * <p>
-     * Example:<pre>
-     * JObject(JField("name", JString("joe")) :: Nil).values == Map("name" -> "joe")
-     * </pre>
-     */
-    def values: Values
-
-    /** Return direct child elements.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
-     * </pre>
-     */
-    def children: List[JValue] = this match {
-      case JObject(l) => l
-      case JArray(l) => l
-      case JField(n, v) => List(v)
-      case _ => Nil
-    }
-
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
      * for each element. The initial value is <code>z</code>.
      */
@@ -283,9 +228,14 @@ object JsonAST {
       def rec(acc: A, p: JPath, v: JValue): A = {
         val newAcc = f(acc, p, v)
         v match {
-          case JObject(l)   => l.foldLeft(newAcc) { rec(_, p, _) }
-          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { case (a, (e, idx)) => rec(a, p \ idx, e) }
-          case JField(n, v) => rec(newAcc, p \ n, v)
+          case JObject(l)   => l.foldLeft(newAcc) { 
+            case (a, JField(name, value)) => rec(a, p \ name, value) 
+          }
+
+          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { 
+            case (a, (e, idx)) => rec(a, p \ idx, e) 
+          }
+
           case _ => newAcc
         }
       }
@@ -304,12 +254,18 @@ object JsonAST {
      */
     def foldUpWithPath[A](z: A)(f: (A, JPath, JValue) => A): A = {
       def rec(acc: A, p: JPath, v: JValue): A = {
-        f(v match {
-          case JObject(l)   => l.foldLeft(acc) { (a, f) => rec(a, p, f) }
-          case JArray(l)    => l.zipWithIndex.foldLeft(acc) { (a, t) => val (e, idx) = t; rec(a, p \ idx, e) }
-          case JField(n, v) => rec(acc, p \ n, v)
-          case _ => acc
-        }, p, v)
+        f(
+          v match {
+            case JObject(l)   => l.foldLeft(acc) { (a, f) => rec(a, p \ f.name, f.value) }
+
+            case JArray(l)    => l.zipWithIndex.foldLeft(acc) { 
+              case (a, (e, idx)) => rec(a, p \ idx, e) 
+            }
+
+            case _ => acc
+          }, 
+          p, v
+        )
       }
 
       rec(z, JPath.Identity, this)
@@ -335,19 +291,14 @@ object JsonAST {
       def rec(p: JPath, v: JValue): JValue = v match {
         case JObject(l) => f(p, JObject(l.flatMap(f => rec(p, f) match {
           case JNothing => Nil
-
-          case x: JField => x :: Nil
-
           case x => JField(f.name, x) :: Nil
         })))
+
         case JArray(l) => f(p, JArray(l.zipWithIndex.flatMap(t => rec(p \ t._2, t._1) match {
           case JNothing => Nil
           case x => x :: Nil
         })))
-        case JField(name, value) => rec(p \ name, value) match {
-          case JNothing => JNothing
-          case x => f(p, JField(name, x))
-        }
+
         case x => f(p, x)
       }
       rec(JPath.Identity, this)
@@ -373,12 +324,9 @@ object JsonAST {
       def rec(p: JPath, v: JValue): JValue = {
         f(p, v) match {
           case JObject(l) =>
-            JObject(l.flatMap { f =>
-              rec(p, f) match {
+            JObject(l.flatMap { 
+              f => rec(p, f.value) match {
                 case JNothing => Nil
-
-                case x: JField => x :: Nil
-
                 case x => JField(f.name, x) :: Nil
               }
             })
@@ -392,12 +340,6 @@ object JsonAST {
                 case x => x :: Nil
               }
             })
-
-          case JField(name, value) =>
-            rec(p \ name, value) match {
-              case JNothing => JNothing
-              case x => JField(name, x)
-            }
 
           case x => x
         }
@@ -466,36 +408,35 @@ object JsonAST {
      */
     def replace(target: JPath, replacement: JValue): JValue = replace(target, r => replacement)
 
-    /** Return the first element from JSON which matches the given predicate.
+    /** 
+     * Return the first element from JSON which matches the given predicate using a depth-first search.
      * <p>
      * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil) find { _ == JInt(2) } == Some(JInt(2))
      * </pre>
      */
     def find(p: JValue => Boolean): Option[JValue] = {
-      def find(json: JValue): Option[JValue] = {
-        if (p(json)) return Some(json)
-        json match {
-          case JObject(l) => l.flatMap(find _).headOption
-          case JArray(l) => l.flatMap(find _).headOption
-          case JField(_, value) => find(value)
-          case _ => None
-        }
+      def find(values: List[JValue]): Option[JValue] = values.find(_.find(p).isDefined)
+
+      this match {
+        case JObject(l) => find(l.map(_.value))
+        case JArray(l)  => find(l)
+        case x if p(x)  => Some(x)
+        case _          => None
       }
-      find(this)
     }
 
     /** Return a List of all elements which matches the given predicate.
      * <p>
      * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) filter { case JInt(x) => x > 1; case _ => false }
+     * JArray(JInt(1) :: JInt(2) :: Nil) filter { case JInt(x) =&gt; x &gt; 1; case _ =&gt; false }
      * </pre>
      */
     def filter(p: JValue => Boolean): List[JValue] =
-      foldDown(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
+      foldDown(List.empty[JValue])((acc, e) => if (p(e)) e :: acc else acc).reverse
 
     def flatten: List[JValue] =
-      foldDown(List[JValue]())((acc, e) => e :: acc).reverse
+      foldDown(List.empty[JValue])((acc, e) => e :: acc).reverse
 
     /** Flattens the JValue down to a list of path to simple JValue primitive.
      * <p>
@@ -505,15 +446,11 @@ object JsonAST {
      */
     def flattenWithPath: List[(JPath, JValue)] = {
       def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
-        case JObject(fields) => fields.flatMap(flatten0(path))
+        case JObject(fields) => fields.map(_.value).flatMap(flatten0(path))
 
-        case JArray(elements) => elements.zipWithIndex.flatMap { tuple =>
-          val (element, index) = tuple
-
-          flatten0(path \ index)(element)
+        case JArray(elements) => elements.zipWithIndex.flatMap { 
+          case (element, index) => flatten0(path \ index)(element)
         }
-
-        case JField(name, value) => flatten0(path \ name)(value)
 
         case _ => (path -> value) :: Nil
       }
@@ -530,19 +467,14 @@ object JsonAST {
      * </pre>
      */
     def ++(other: JValue) = {
-      def append(value1: JValue, value2: JValue): JValue = (value1, value2) match {
+      (this, other) match {
         case (JNothing, x) => x
         case (x, JNothing) => x
-        case (JObject(xs), x: JField) => JObject(xs ::: List(x))
-        case (x: JField, JObject(xs)) => JObject(x :: xs)
         case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
-        case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
+        case (JArray(xs), v: JValue) => JArray(xs :+ v)
         case (v: JValue, JArray(xs)) => JArray(v :: xs)
-        case (f1: JField, f2: JField) => JObject(f1 :: f2 :: Nil)
-        case (JField(n, v1), v2: JValue) => JField(n, append(v1, v2))
         case (x, y) => JArray(x :: y :: Nil)
       }
-      append(this, other)
     }
 
     /** Return a JSON where all elements matching the given predicate are removed.
@@ -552,82 +484,79 @@ object JsonAST {
      * </pre>
      */
     def remove(p: JValue => Boolean): JValue = this mapUp {
-      case x if p(x) => JNothing
-      case x => x
+      x => if (p(x)) JNothing else x
     }
   }
 
-  case object JNothing extends JValue {
-    type Values = None.type
-    type Self = JValue
+  sealed class JManifest[A <: JValue](f: PartialFunction[JValue, A]) extends (JValue => Option[A]) {
+    def apply(v: JValue): Option[A] = f.lift(v)
+  }
 
-    def values = None
+  object JManifest {
+    implicit val JNothingM = new JManifest[JNothing.type]({ case JNothing => JNothing })
+    implicit val JNullM    = new JManifest[JNull.type]({ case JNull => JNull })
+    implicit val JBoolM    = JBool
+    implicit val JIntM     = JInt
+    implicit val JDoubleM  = JDouble
+    implicit val JStringM  = JString
+    implicit val JArrayM   = JArray
+    implicit val JObjectM  = JObject
   }
-  case object JNull extends JValue {
-    type Values = Null
-    type Self = JValue
-    
-    def values = null
+
+  implicit case object JNothing extends JValue {
+    override def sort: JNothing.type = this
   }
+
+  implicit case object JNull extends JValue {
+    override def sort: JNull.type = this
+  }
+
   case class JBool(value: Boolean) extends JValue {
-    type Values = Boolean
-    type Self = JValue
-    
-    def values = value
+    override def sort: JBool = this
   }
+  object JBool extends JManifest[JBool]({ case v: JBool => v })
+
   case class JInt(value: BigInt) extends JValue {
-    type Values = BigInt
-    type Self = JValue
-    
-    def values = value
+    override def sort: JInt = this  
   }
+  object JInt extends JManifest[JInt]({ case v: JInt => v })
+
   case class JDouble(value: Double) extends JValue {
-    type Values = Double
-    type Self = JValue
-    
-    def values = value
+    override def sort: JDouble = this
   }
+  object JDouble extends JManifest[JDouble]({ case v: JDouble => v })
+
   case class JString(value: String) extends JValue {
-    type Values = String
-    type Self = JValue
-    
-    def values = value
+    override def sort: JString = this
   }
-  case class JField(name: String, value: JValue) extends JValue {
-    type Values = (String, value.Values)
-    type Self = JField
-    
-    def values = (name, value.values)
-    override def apply(i: Int): JValue = value(i)
-  }
-  case class JObject(fields: List[JField]) extends JValue {
-    type Values = Map[String, Any]
-    type Self = JObject
-    
-    def values = Map() ++ fields.map(_.values : (String, Any))
+  object JString extends JManifest[JString]({ case v: JString => v })
 
-    override lazy val hashCode = Set(this.fields: _*).hashCode
-
-    override def equals(that: Any): Boolean = that match {
-      case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
-      case _ => false
-    }
-  }
-  object JObject {
-    lazy val empty = JObject(Nil)
-  }
   case class JArray(elements: List[JValue]) extends JValue {
-    type Values = List[Any]
-    type Self = JArray
-    
-    def values = elements.map(_.values)
-
+    override def sort: JArray = JArray(elements.map(_.sort).sorted(JValueOrdering))
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
-  object JArray {
+  object JArray extends JManifest[JArray]({ case v: JArray => v}) {
     lazy val empty = JArray(Nil)
   }
 
+  case class JObject(fields: List[JField]) extends JValue {
+    override def sort: JObject = JObject(fields.map(_.sort).sorted(JFieldOrdering))
+
+    override lazy val hashCode = Set(this.fields: _*).hashCode
+    override def equals(that: Any): Boolean = that match {
+      case JObject(fields) if (this.fields.length == fields.length) => 
+        Set(this.fields: _*) == Set(fields: _*)
+
+      case _ => false
+    }
+  }
+  object JObject extends JManifest[JObject]({ case v: JObject => v}) {
+    lazy val empty = JObject(Nil)
+  }
+
+  case class JField(name: String, value: JValue) {
+    def sort: JField = JField(name, value.sort)
+  }
 }
 
 /** Basic implicit conversions from primitive types into JSON.
@@ -725,11 +654,12 @@ trait Printer {
     case JString(null) => text("null")
     case JString(s)    => text("\"" + quote(s) + "\"")
     case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
-    case JField(n, v)  => text("\"" + quote(n) + "\":") :: render(v)
     case JObject(obj)  =>
       val nested = break :: fields(trimObj(obj).map(render _))
       text("{") :: nest(2, nested) :: break :: text("}")
   }
+
+  def render(field: JField): Document = text("\"" + quote(field.name) + "\":") :: render(field.value)
 
   /** Renders as Scala code, which can be copy/pasted into a lift-json scala
    * application.
@@ -742,6 +672,8 @@ trait Printer {
     } + Quote
 
     def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
+
+    def renderField(f: JField) = text(scalaQuote(f.name) + ",") :: renderScala(f.value)
 
     value match {
       case null => text("null")
@@ -758,7 +690,6 @@ trait Printer {
         case JString(null) => text("null")
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
-        case JField(n, v)  => text(scalaQuote(n) + ",") :: renderScala(v)
         case JObject(obj)  =>
           val nested = break :: fold(intersperse(intersperse(obj.map(renderScala) ::: List(text("Nil")), text("::")), break))
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes
+package json
 
 /** Fast imperative parser.
  */
@@ -146,9 +146,8 @@ object JsonParser {
 
     // This is a slightly faster way to correct order of fields and arrays than using 'map'.
     def reverse(v: JValue): JValue = v match {
-      case JObject(l) => JObject(l.map(reverse).asInstanceOf[List[JField]].reverse)
-      case JArray(l) => JArray(l.map(reverse).reverse)
-      case JField(name, value) => JField(name, reverse(value))
+      case JObject(l) => JObject(l.map(f => JField(f.name, reverse(f.value))).reverse)
+      case JArray(l)  => JArray(l.map(reverse).reverse)
       case x => x
     }
 
@@ -448,7 +447,4 @@ object JsonParser {
   }
   case class RecycledSegment(seg: Array[Char]) extends Segment
   case class DisposableSegment(seg: Array[Char]) extends Segment
-}
-
-}
 }

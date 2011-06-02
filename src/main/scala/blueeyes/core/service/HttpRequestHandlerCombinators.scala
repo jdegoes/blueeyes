@@ -222,19 +222,14 @@ trait HttpRequestHandlerCombinators{
   def extract[T, S, E1](extractor: HttpRequest[T] => E1) = (h: E1 => HttpRequestHandler2[T, S]) => new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
-        val extracted = extractor(r)
-
-        h(extracted).isDefinedAt(r)
-      }
-      catch {
+        h(extractor(r)).isDefinedAt(r)
+      } catch {
         case t: Throwable => throw HttpException(HttpStatusCodes.BadRequest, t)
       }
     }
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val extracted = extractor(r)
-
-      h(extracted).apply(r)
+      h(extractor(r)).apply(r)
     }
   }
 
@@ -305,17 +300,11 @@ trait HttpRequestHandlerCombinators{
     extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
   } { h }
 
-  private def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
-    val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
-
-    ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
+  private def extractField[F <: JValue : JManifest](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F]): F = {
+    ((content \ s1AndDefault.identifier.name).as[F]).getOrElse(s1AndDefault.default)
   }
 
-  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = sys.error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
-
-  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
-    val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
-
+  def field[S, F1 <: JValue : JManifest](s1AndDefault: IdentifierWithDefault[Symbol, F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
 
