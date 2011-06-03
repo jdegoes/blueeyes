@@ -77,10 +77,10 @@ sealed trait MongoUpdate{ self =>
   import Changelist._
   import MongoUpdateObject._
 
-  private implicit def toMongoUpdate(changes: List[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
+  private implicit def toMongoUpdate(changes: Set[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
   private implicit def toChanges(update: MongoUpdateFields)    = update.list
   private implicit def toChangeList(update: MongoUpdateFields) = Changelist(update.list)
-  private def toUpdateFieldsValues(update: MongoUpdateObject)  = MongoUpdateFields(decompose(update.value))
+  private implicit def toUpdateFieldsValues(update: MongoUpdateObject)  = MongoUpdateFields(decompose(update.value))
 
   def  toJValue: JObject;
 
@@ -97,16 +97,6 @@ sealed trait MongoUpdate{ self =>
     case (MongoUpdateNothing, _)  => that
     case (_, MongoUpdateNothing)  => self
   }
-
-  final override lazy val hashCode = sorted.hashCode
-
-  final override def equals(that: Any) = that match {
-    case that: MongoUpdate if (this.hashCode == that.hashCode) => this.sorted == that.sorted
-
-    case _ => false
-  }
-
-  private lazy val sorted = toJValue.sort
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
@@ -114,17 +104,17 @@ sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
 }
 
 private[mongo] object MongoUpdateObject {
-  def decompose(jObject: JObject): List[MongoUpdateField] = decompose(jObject, None)
+  def decompose(jObject: JObject): Set[MongoUpdateField] = decompose(jObject, None)
 
-  private def decompose(jObject: JObject, parentPath: Option[JPath]): List[MongoUpdateField] = {
+  private def decompose(jObject: JObject, parentPath: Option[JPath]): Set[MongoUpdateField] = {
     jObject.fields.map(field => {
       val fieldPath = parentPath.map(_ \ field.name).getOrElse(JPath(field.name))
 
       jvalueToMongoPrimitive(field.value) match {
         case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
-        case v                          => List(fieldPath.set(v))
+        case v                          => Set(fieldPath.set(v))
       }
-    }).flatten
+    }).flatten.toSet
   }
 }
 
@@ -132,7 +122,7 @@ case object MongoUpdateNothing extends MongoUpdate{
   def toJValue: JObject = JObject(Nil)
 }
 
-sealed case class MongoUpdateFields(list: List[MongoUpdateField]) extends MongoUpdate{
+sealed case class MongoUpdateFields(list: Set[MongoUpdateField]) extends MongoUpdate{
   def toJValue: JObject = list.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 

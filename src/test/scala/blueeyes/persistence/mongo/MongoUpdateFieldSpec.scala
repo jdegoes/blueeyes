@@ -6,7 +6,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.JsonParser
 import UpdateFieldFunctions._
 
-class MongoUpdateFieldValueSpec  extends Specification{
+class MongoUpdateFieldSpec  extends Specification{
   "build valid json" in {
     IncF("n", 1).toJValue mustEqual  (JObject(JField("$inc", JObject(JField("n", JInt(1)) :: Nil)) :: Nil))
   }
