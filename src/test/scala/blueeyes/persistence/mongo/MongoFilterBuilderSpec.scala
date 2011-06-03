@@ -20,6 +20,9 @@ class MongoFilterBuilderSpec extends Specification{
   "builds $gte operation" in {
     JPath("foo") >= 1.1 mustEqual (MongoFieldFilter("foo", $gte, MongoPrimitiveDouble(1.1)))
   }
+  "builds $lte operation" in {
+    JPath("foo") <= 1.1 mustEqual (MongoFieldFilter("foo", $lte, MongoPrimitiveDouble(1.1)))
+  }
   "builds $in operation" in {
     JPath("foo").anyOf(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")) mustEqual (MongoFieldFilter("foo", $in, MongoPrimitiveArray(MongoPrimitiveString("foo") :: MongoPrimitiveString("bar") :: Nil)))
   }

@@ -256,7 +256,7 @@ case class MongoFilterBuilder(jpath: JPath) {
 
   def < [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $lt, value)
 
-  def <= [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $lt, value)
+  def <= [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $lte, value)
 
   def anyOf[T <: MongoPrimitive](items: T*): MongoFilter = MongoFieldFilter(jpath, $in, List(items: _*))
 
