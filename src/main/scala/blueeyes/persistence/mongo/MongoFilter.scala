@@ -45,28 +45,25 @@ sealed trait MongoFilter { self =>
 
   def & (that: MongoFilter)  = &&(that)
 
-  def && (that: MongoFilter) = MongoAndFilter(self :: that :: Nil)
+  def && (that: MongoFilter): MongoAndFilter = (self, that) match{
+    case (x: MongoAndFilter, y: MongoAndFilter)    => MongoAndFilter(x.queries ++ y.queries)
+    case (_, y: MongoAndFilter) => MongoAndFilter(y.queries + self)
+    case (x: MongoAndFilter, _) => MongoAndFilter(x.queries + that)
+    case (MongoFilterAll, _)   => MongoAndFilter(Set(that))
+    case (_, MongoFilterAll)   => MongoAndFilter(Set(self))
+    case _  => MongoAndFilter(Set(self, that))
+  }
 
   def | (that: MongoFilter)  = ||(that)
 
   def || (that: MongoFilter) = (self, that) match{
     case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
-    case (_, y: MongoOrFilter) => MongoOrFilter(self :: y.queries)
-    case (x: MongoOrFilter, _) => MongoOrFilter(x.queries :+ that)
+    case (_, y: MongoOrFilter) => MongoOrFilter(y.queries + self)
+    case (x: MongoOrFilter, _) => MongoOrFilter(x.queries + that)
     case (MongoFilterAll, _)   => that
     case (_, MongoFilterAll)   => self
-    case _  => MongoOrFilter(self :: that :: Nil)
+    case _  => MongoOrFilter(Set(self, that))
   }
-
-  final override lazy val hashCode = sorted.hashCode
-
-  final override def equals(that: Any) = that match {
-    case that: MongoFilter if (this.hashCode == that.hashCode) => this.sorted == that.sorted
-
-    case _ => false
-  }
-
-  private lazy val sorted = filter.sort
 }
 
 object MongoFilter extends MongoFilterImplicits {
@@ -98,13 +95,13 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
-sealed case class MongoOrFilter(queries: List[MongoFilter]) extends MongoFilter {
-  def filter: JValue = JObject(JField($or.symbol, JArray(queries.map(_.filter))) :: Nil)
+sealed case class MongoOrFilter(queries: Set[MongoFilter]) extends MongoFilter {
+  def filter: JValue = JObject(JField($or.symbol, JArray(queries.toList.map(_.filter))) :: Nil)
 
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
 }
 
-sealed case class MongoAndFilter(queries: List[MongoFilter]) extends MongoFilter { self =>
+sealed case class MongoAndFilter(queries: Set[MongoFilter]) extends MongoFilter { self =>
   def filter: JValue = {
     val (notEqs, eqs) = queries partition { filter => filter match {
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false

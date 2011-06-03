@@ -20,7 +20,7 @@ class PullFieldEvaluatorSpec  extends Specification{
      PullFieldEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]"""), operation.filter) mustEqual(JsonParser.parse("""[{"foo": 2}]"""))
   }
   "pull element by element match " in {
-    val operation = "foo" pull (MongoAndFilter(MongoFieldFilter("foo", $eq, 1) :: Nil).elemMatch(""))
+    val operation = "foo" pull (MongoAndFilter(Set(MongoFieldFilter("foo", $eq, 1))).elemMatch(""))
      PullFieldEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]"""), operation.filter) mustEqual(JsonParser.parse("""[{"foo": 2}]"""))
   }
   "cannot pull from not Array field" in {

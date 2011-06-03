@@ -67,6 +67,6 @@ class MongoFilterEvaluatorSpec extends Specification{
      MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
   }
   "select element from array by element match " in {
-     MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(MongoFieldFilter("foo", $eq, 1) :: Nil).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+     MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(Set(MongoFieldFilter("foo", $eq, 1))).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
   }
 }

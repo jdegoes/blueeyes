@@ -14,6 +14,6 @@ class MongoUpdateFieldValueSpec  extends Specification{
     PullF("foo", "bar" === 1).toJValue mustEqual  (JObject(JField("$pull", JObject(JField("foo", JObject(JField("bar", JInt(1)) :: Nil)) :: Nil)) :: Nil))
   }
   "build valid json for pull and for elemMatch" in {
-    PullF("foo", MongoAndFilter(("bar" === 1) :: Nil).elemMatch("")).toJValue mustEqual  (JsonParser.parse(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
+    PullF("foo", MongoAndFilter(Set("bar" === 1)).elemMatch("")).toJValue mustEqual  (JsonParser.parse(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
   }
 }

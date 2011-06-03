@@ -71,7 +71,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         passed
       } must pass
     }
-    skip("run manually")
+    //skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator for every field" in{
       forAll { vv: List[JObject] =>
         val values = List(JsonParser.parse("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
@@ -85,7 +85,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
           var passedNow = true
           for (i <- 1 to filters.size if (passedNow)){
-            val filter = MongoAndFilter(filters.take(i))
+            val filter = MongoAndFilter(filters.take(i).toSet)
             passedNow = checkSelectPass(filter, value)
           }
           passedNow
@@ -173,7 +173,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
     filters match{
       case x :: Nil => x
-      case _ => MongoAndFilter(filters)
+      case _ => MongoAndFilter(filters.toSet)
     }
   }
 
