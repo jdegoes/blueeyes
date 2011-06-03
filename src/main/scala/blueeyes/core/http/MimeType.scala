@@ -36,7 +36,7 @@ sealed trait MimeType {
 object MimeTypes {
 
   def parseMimeTypes(inString: String): Array[MimeType] = {
-    def MimeTypeRegex = new Regex("""([a-z\-]+)/(([.+a-z\-]+)|\*)|\*/\*""")
+    def MimeTypeRegex = new Regex("""((application)|(text)|(audio)|(multipart)|(image)|(video)|(\*))/(([a-z\-]+)|\*)""")
 
     /* Split the string on commas, which separate the mimes */
     var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
