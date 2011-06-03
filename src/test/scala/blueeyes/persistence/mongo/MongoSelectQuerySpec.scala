@@ -13,15 +13,15 @@ class MongoSelectQuerySpec extends Specification{
   private val query = select("foo", "bar").from(MongoCollectionReference("collection"))
 
   "'where' method sets new filter" in {
-    query.where("name" === "Joe") mustEqual (MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
   "'sortBy' method sets new sort" in {
-    query.sortBy("name" << ) mustEqual (MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
+    query.sortBy("name" << ) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
   }
   "'skip' method sets new skip" in {
-    query.skip(10) mustEqual (MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", None, None, Some(10)))
+    query.skip(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, Some(10)))
   }
   "'limit' method sets new limit" in {
-    query.limit(10) mustEqual (MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", None, None, None, Some(10)))
+    query.limit(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, Some(10)))
   }
 }

@@ -62,7 +62,7 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
       print("""{
   "%s":[""".format(mongoCollection.name))
 
-      val jobjects = collection(mongoCollection.name).select(MongoSelection(Nil), None, None, None, None)
+      val jobjects = collection(mongoCollection.name).select(MongoSelection(Set()), None, None, None, None)
       var first    = true
 
       jobjects foreach { jobject =>
@@ -89,7 +89,7 @@ private[mongo] trait DatabaseCollection{
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])
   def count(filter: Option[MongoFilter]): Long
-  def ensureIndex(name: String, keys: List[JPath], unique: Boolean)
+  def ensureIndex(name: String, keys: Set[JPath], unique: Boolean)
   def dropIndexes
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)

@@ -16,7 +16,7 @@ class EnsureIndexQueryBehaviourSpec extends Specification with MocksCreation{
     val query  = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")
     val result = query(collection)
 
-    Mockito.verify(collection, times(1)).ensureIndex("index", JPath("address.city") :: JPath("address.street") :: Nil, true)
+    Mockito.verify(collection, times(1)).ensureIndex("index", Set(JPath("address.city"), JPath("address.street")), true)
 
     result must be (JNothing)
   }

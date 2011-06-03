@@ -6,9 +6,9 @@ import blueeyes.json.JsonAST.JObject
 import blueeyes.persistence.mongo.MongoSelection
 
 private[mock] trait MockIndex extends JObjectFields{
-  private var indexes   = Map[String, List[JPath]]()
+  private var indexes   = Map[String, Set[JPath]]()
 
-  def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keys: Set[JPath], unique: Boolean) = {
     indexes = if (unique) indexes.get(name) match{
       case None    => indexes + Tuple2(name, keys)
       case Some(x) => indexes
@@ -19,7 +19,7 @@ private[mock] trait MockIndex extends JObjectFields{
     indexes = indexes - name
   }
 
-  def dropIndexes = indexes = Map[String, List[JPath]]()
+  def dropIndexes = indexes = Map[String, Set[JPath]]()
 
   def index(newObjects: List[JObject]) = {
     indexes.foreach(index => {

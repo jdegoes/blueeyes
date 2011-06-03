@@ -12,10 +12,10 @@ class MongoSelectOneQuerySpec extends Specification{
   private val query = selectOne("foo", "bar").from(MongoCollectionReference("collection"))
 
   "'where' method sets new filter" in {
-    query.where("name" === "Joe") mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoSelectOneQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
 
   "'sortBy' method sets new sort" in {
-    query.sortBy("name" << ) mustEqual (MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
+    query.sortBy("name" << ) mustEqual (MongoSelectOneQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
   }
 }

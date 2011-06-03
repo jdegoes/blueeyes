@@ -12,7 +12,7 @@ import blueeyes.json.JPath
 class SelectOneQueryBehaviourSpec extends Specification with MocksCreation{
   private val collection  = mock[DatabaseCollection]
 
-  private val keys     = MongoSelection(JPath("foo") :: JPath("bar") :: Nil)
+  private val keys     = MongoSelection(Set(JPath("foo"), JPath("bar")))
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road 1")) ::  Nil)) :: Nil)
 
   "Call collection method" in{

@@ -57,7 +57,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
-  def ensureIndex(name: String, keysPaths: List[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keysPaths: Set[JPath], unique: Boolean) = {
     val options = JObject(JField("name", JString(name)) :: JField("background", JBool(true)) :: JField("unique", JBool(unique)) :: Nil)
 
     collection.ensureIndex(toMongoKeys(keysPaths), options)
@@ -111,7 +111,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   }
 
   private def toMongoKeys(selection : MongoSelection):    JObject = toMongoKeys(selection.selection)
-  private def toMongoKeys(keysPaths: List[JPath]):        JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+  private def toMongoKeys(keysPaths: Set[JPath]):         JObject = JObject(keysPaths.toList.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
   private def toMongoFilter(filter: Option[MongoFilter]): JObject = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
 }
 

@@ -9,10 +9,10 @@ class MongoQueryBuilderSpec  extends Specification{
   private val jObject = JObject(JField("Foo", JString("bar")) :: Nil)
 
   "creates select query" in{
-    select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection") )
+    select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection") )
   }
   "creates group query" in{
-    group(JObject(Nil), "dummy", "foo", "bar").from("collection") mustEqual ( MongoGroupQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", JObject(Nil), "dummy") )
+    group(JObject(Nil), "dummy", "foo", "bar").from("collection") mustEqual ( MongoGroupQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", JObject(Nil), "dummy") )
   }
   "creates mapReduce query" in{
     mapReduce("foo", "bar").from("collection") mustEqual ( MongoMapReduceQuery("foo", "bar",  "collection") )
@@ -21,7 +21,7 @@ class MongoQueryBuilderSpec  extends Specification{
     distinct("foo").from("collection") mustEqual ( MongoDistinctQuery(JPath("foo"), "collection") )
   }
   "creates selectOne query" in{
-    selectOne("foo", "bar").from("collection") mustEqual ( MongoSelectOneQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection") )
+    selectOne("foo", "bar").from("collection") mustEqual ( MongoSelectOneQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection") )
   }
   "creates remove query" in{
     remove.from("collection") mustEqual ( MongoRemoveQuery("collection") )
@@ -33,7 +33,7 @@ class MongoQueryBuilderSpec  extends Specification{
     insert(jObject).into("collection") mustEqual ( MongoInsertQuery("collection", jObject :: Nil) )
   }
   "creates ensureIndex query" in{
-    ensureIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", JPath("address.city") :: Nil, false) )
+    ensureIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", Set(JPath("address.city")), false) )
   }
   "creates dropIndex query" in{
     dropIndex("index").in("collection") mustEqual ( MongoDropIndexQuery("collection", "index") )
@@ -42,7 +42,7 @@ class MongoQueryBuilderSpec  extends Specification{
     dropIndexes.in("collection") mustEqual ( MongoDropIndexesQuery("collection") )
   }
   "creates ensureUniqueIndex query" in{
-    ensureUniqueIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", JPath("address.city") :: Nil, true) )
+    ensureUniqueIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", Set(JPath("address.city")), true) )
   }
   "creates update query" in{
     update("collection").set(jObject) mustEqual ( MongoUpdateQuery("collection", jObject) )

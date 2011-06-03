@@ -39,7 +39,7 @@ private[mongo] object QueryBehaviours{
       collection.ensureIndex(name, keys, unique)
       JNothing
     }
-    def keys: List[JPath]
+    def keys: Set[JPath]
     def name: String
     def unique: Boolean
   }

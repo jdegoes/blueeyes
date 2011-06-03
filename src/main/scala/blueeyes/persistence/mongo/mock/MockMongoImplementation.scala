@@ -97,7 +97,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
 
-  override def ensureIndex(name: String, keys: List[JPath], unique: Boolean) = {
+  override def ensureIndex(name: String, keys: Set[JPath], unique: Boolean) = {
     writeLock{
       super.ensureIndex(name, keys, unique)
     }

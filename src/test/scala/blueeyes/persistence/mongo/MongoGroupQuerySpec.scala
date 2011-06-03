@@ -12,6 +12,6 @@ class MongoGroupQuerySpec extends Specification{
   private val query = group(JObject(Nil), "dummy", "foo", "bar").from(MongoCollectionReference("collection"))
 
   "'where' method sets new filter" in {
-    query.where("name" === "Joe") mustEqual (MongoGroupQuery(MongoSelection(JPath("foo") :: JPath("bar") :: Nil), "collection", JObject(Nil), "dummy", Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where("name" === "Joe") mustEqual (MongoGroupQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", JObject(Nil), "dummy", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
 }

@@ -11,7 +11,7 @@ private[mock] trait JObjectFields{
     transformer(x).map(jobjectRestorer(selectionPath, _))
   }
 
-  def selectFields(jobjects: List[JObject], selection : List[JPath], transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = {
+  def selectFields(jobjects: List[JObject], selection : Set[JPath], transformer: (JValue) => Option[JValue], jobjectRestorer: (JPath, JValue) => JValue) = {
     if (!selection.isEmpty) {
       val allJFields = jobjects.map(jobject => selection.map(selectByPath(_, jobject, transformer, jobjectRestorer)))
       allJFields.map(jfields => {
@@ -21,7 +21,7 @@ private[mock] trait JObjectFields{
     } else jobjects
   }
 
-  def selectExistingFields(jobjects: List[JObject], selection : List[JPath]) = {
+  def selectExistingFields(jobjects: List[JObject], selection : Set[JPath]) = {
     def updateValue(value: JValue) = value match{
       case JNothing => None
       case _ => Some(value)
