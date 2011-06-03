@@ -16,9 +16,9 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) extends FutureDe
     MongoPatches(that.patches.foldLeft(this.patches) { (allPatches, tuple) =>
       val (filter, update2) = tuple
 
-      val update1 = allPatches.get(filter).getOrElse(MongoUpdateNothing)
+      val update = allPatches.get(filter).map(_ & update2).getOrElse(update2)
 
-      allPatches + (filter -> (update1 & update2))
+      allPatches + (filter -> update)
     })
   }
 

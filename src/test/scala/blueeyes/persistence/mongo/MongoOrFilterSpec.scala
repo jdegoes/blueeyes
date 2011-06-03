@@ -11,7 +11,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
 
-class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongoFilter{
+class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2  = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val orFilter = filter1 || filter2
@@ -26,7 +26,7 @@ class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicit
   "MongoOrFilter" should{
     "convert to the same JValue, no matter the order of constructions" in{
       forAll { filters: (MongoOrFilter, MongoOrFilter) =>
-        def orValue(filter: MongoOrFilter) = filter.filter.asInstanceOf[JObject].fields.head.value.asInstanceOf[JArray].elements.toSet
+        def orValue(filter: MongoOrFilter) = filter.filter.sort
 
         orValue(filters._1) == orValue(filters._2)
       } must pass
