@@ -11,15 +11,15 @@ libraryDependencies ++= Seq(
   "com.thoughtworks.paranamer"  % "paranamer"           % "2.3",
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "net.lag"                     % "configgy"            % "2.0.0",
+  "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.4.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.5.3",
   "org.scalaz"                  %% "scalaz-core"        % "6.0-SNAPSHOT",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
-  "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "test",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "test",
-  "org.mockito"                 % "mockito-all"         % "1.8.5"         % "test"
+  "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "provided",
+  "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "provided",
+  "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
 )
 
 resolvers ++= Seq(
