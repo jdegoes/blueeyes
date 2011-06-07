@@ -10,27 +10,17 @@ package blueeyes.demo {
   import blueeyes.demo.Serialization._
   import blueeyes.demo.Constants._
 
-  import blueeyes.demo.{Contact}
-  
   object ExampleProductData {
     lazy val ExampleContact: blueeyes.demo.Contact = JObject(Nil).deserialize[blueeyes.demo.Contact]
   }
+
   object DataProductSerializationExamples extends Specification {
     "Deserialization of Contact succeeds even when information is missing" in {
       ExampleProductData.ExampleContact.isInstanceOf[blueeyes.demo.Contact] must be (true)
     }
+
     "Serialization of Contact has non-zero information content" in {
       ExampleProductData.ExampleContact.serialize mustNot be (JObject(Nil))
     }
-  
-  }
-  object ExampleMultitypeData {
-    
-  }
-  object DataCoproductSerializationExamples extends Specification {
-    
-  }
-  object DataConstantsSerializationExamples extends Specification {
-    
   }
 }

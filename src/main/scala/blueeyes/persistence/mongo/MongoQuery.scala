@@ -33,22 +33,6 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
   def << : MongoSort = MongoSort(sortField, MongoSortOrderDescending)
 }
 
-trait MongoImplicits extends JPathImplicits with MongoFilterImplicits with MongoQueryBuilder{
-  implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
-
-  implicit def jpathToMongoSort(jpath: JPath): MongoSort = MongoSort(jpath, MongoSortOrderAscending)
-
-  implicit def stringToMongoSort(string: String): MongoSort = MongoSort(JPath(string), MongoSortOrderAscending)
-
-  implicit def stringToMongoUpdateBuilder(string: String): MongoUpdateBuilder = MongoUpdateBuilder(JPath(string))
-
-  implicit def jpathToMongoUpdateBuilder(jpath: JPath): MongoUpdateBuilder = MongoUpdateBuilder(jpath)
-
-  implicit def jvalueToMongoUpdateObject(value: JObject): MongoUpdateObject = MongoUpdateObject(value)
-}
-
-object MongoImplicits extends MongoImplicits
-
 case class MongoSelection(selection: Set[JPath])
 
 /** Basic trait for mongo queries.
@@ -111,39 +95,42 @@ trait MapReduceOutput{
  */
 
 trait MongoQueryBuilder{
-  class FromQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
+  class FromQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
     def from (collection: MongoCollection): T = f(collection)
   }
-  class IntoQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
+  class IntoQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
     def into (collection: MongoCollection): T = f(collection)
   }
-  class OnKeysQueryEntryPoint[T](f: (Set[JPath]) => T){
+  class OnKeysQueryEntryPoint[T](f: Set[JPath] => T){
     def on(keys: JPath*): T = f(Set(keys: _*))
   }
-  class InQueryEntryPoint[T <: MongoQuery[_]](f: (MongoCollection) => T){
+  class InQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
     def in(collection: MongoCollection): T = f(collection)
   }
-  class SetQueryEntryPoint[T <: MongoQuery[_]](f: (MongoUpdate) => T){
+  class SetQueryEntryPoint[T <: MongoQuery[_]](f: MongoUpdate => T){
     def set(value: MongoUpdate): T = f(value)
   }
 
-  def select(selection: JPath*)                 = new FromQueryEntryPoint[MongoSelectQuery]   ((collection: MongoCollection) => {MongoSelectQuery(MongoSelection(Set(selection: _*)), collection)})
+  def select(selection: JPath*)                 = new FromQueryEntryPoint(MongoSelectQuery(MongoSelection(Set(selection: _*)), _))
   def selectAll                                 = select()
-  def distinct(selection: JPath)                = new FromQueryEntryPoint[MongoDistinctQuery] ((collection: MongoCollection) => {MongoDistinctQuery(selection, collection)})
-  def selectOne(selection: JPath*)              = new FromQueryEntryPoint[MongoSelectOneQuery]((collection: MongoCollection) => {MongoSelectOneQuery(MongoSelection(Set(selection: _*)), collection)})
-  def remove                                    = new FromQueryEntryPoint[MongoRemoveQuery]   ((collection: MongoCollection) => {MongoRemoveQuery(collection)})
-  def count                                     = new FromQueryEntryPoint[MongoCountQuery]    ((collection: MongoCollection) => {MongoCountQuery(collection)})
-  def insert( value: JObject*)                  = new IntoQueryEntryPoint[MongoInsertQuery]   ((collection: MongoCollection) => {MongoInsertQuery(collection, List(value: _*))})
-  def ensureIndex(name: String)                 = new OnKeysQueryEntryPoint[InQueryEntryPoint[MongoEnsureIndexQuery]]((keys: Set[JPath]) => {new InQueryEntryPoint[MongoEnsureIndexQuery]((collection: MongoCollection) => {MongoEnsureIndexQuery(collection, name, keys, false)})})
-  def ensureUniqueIndex(name: String)           = new OnKeysQueryEntryPoint[InQueryEntryPoint[MongoEnsureIndexQuery]]((keys: Set[JPath]) => {new InQueryEntryPoint[MongoEnsureIndexQuery]((collection: MongoCollection) => {MongoEnsureIndexQuery(collection, name, keys, true)})})
-  def dropIndex(name: String)                   = new InQueryEntryPoint[MongoDropIndexQuery]((collection: MongoCollection) => {MongoDropIndexQuery(collection, name)})
-  def dropIndexes                               = new InQueryEntryPoint[MongoDropIndexesQuery]((collection: MongoCollection) => {MongoDropIndexesQuery(collection)})
-  def update( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, false, false)})
-  def updateMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, false, true)})
-  def upsert( collection: MongoCollection)      = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, true, false)})
-  def upsertMany( collection: MongoCollection)  = new SetQueryEntryPoint[MongoUpdateQuery]((value: MongoUpdate) => {MongoUpdateQuery(collection, value, None, true, true)})
-  def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint[MongoMapReduceQuery](((collection: MongoCollection) => {MongoMapReduceQuery(map, reduce, collection, None, None)}))
-  def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint[MongoGroupQuery]   ((collection: MongoCollection) => {MongoGroupQuery(MongoSelection(Set(selection: _*)), collection, initial, reduce)})
+  def distinct(selection: JPath)                = new FromQueryEntryPoint(MongoDistinctQuery(selection, _))
+  def selectOne(selection: JPath*)              = new FromQueryEntryPoint(MongoSelectOneQuery(MongoSelection(Set(selection: _*)), _))
+  def remove                                    = new FromQueryEntryPoint(MongoRemoveQuery(_))
+  def count                                     = new FromQueryEntryPoint(MongoCountQuery(_))
+  def insert(value: JObject*)                   = new IntoQueryEntryPoint(MongoInsertQuery(_, List(value: _*)))
+  def ensureIndex(name: String)                 = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys, false)))
+  def ensureUniqueIndex(name: String)           = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys, true)))
+
+  def dropIndex(name: String)                   = new InQueryEntryPoint(MongoDropIndexQuery(_, name))
+  def dropIndexes                               = new InQueryEntryPoint(MongoDropIndexesQuery(_))
+
+  def update(collection: MongoCollection)       = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, false, false))
+  def updateMany(collection: MongoCollection)   = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, false, true))
+  def upsert(collection: MongoCollection)       = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, true, false))
+  def upsertMany(collection: MongoCollection)   = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, true, true))
+
+  def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint(MongoMapReduceQuery(map, reduce, _, None, None))
+  def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint(MongoGroupQuery(MongoSelection(Set(selection: _*)), _, initial, reduce))
 }
 
 object MongoQueryBuilder extends MongoQueryBuilder

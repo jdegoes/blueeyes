@@ -1,10 +1,8 @@
 package blueeyes.persistence
 
-import blueeyes.persistence.mongo._
-
 import scalaz.Monoid
 
-package object mongo extends MongoImplicits{
+package object mongo extends blueeyes.persistence.mongo.MongoImplicits {
   type MockMongo = mock.MockMongo
 
   implicit val MongoUpdateMonoid = new Monoid[MongoUpdate] {
