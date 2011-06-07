@@ -1,16 +1,14 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.mutable.Map
-
 import blueeyes.json.JsonAST._
 
-import blueeyes.persistence.cache.{ExpirationPolicy, CacheSettings, Stage}
+import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 
 case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacity: Int)
 
 /** A stage for updates to Mongo.
  */
-class MongoStage(database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings) extends
+class MongoStage (database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings) extends
   Stage[MongoFilter, MongoUpdate] {
 
   def flush(filter: MongoFilter, update: MongoUpdate) = {
