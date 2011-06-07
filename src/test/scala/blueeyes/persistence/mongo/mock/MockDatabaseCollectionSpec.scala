@@ -33,7 +33,7 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val result = collection.mapReduce(map, reduce, None, None)
 
-    val outputCollection = result.outpotCollection.collection
+    val outputCollection = result.outputCollection.collection
     outputCollection.select(MongoSelection(Set()), None, None, None, None).toList mustEqual(JObject(List(JField("count",JDouble(2.0)))) :: JObject(List(JField("count",JDouble(3.0)))) :: JObject(List(JField("count",JDouble(1.0)))) :: Nil)
   }
 

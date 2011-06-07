@@ -79,8 +79,8 @@ case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCol
   def into(newOutputCollection: String) = copy(outputCollection = Some(newOutputCollection))
 }
 
-trait MapReduceOutput{
-  def outpotCollection: MongoCollection
+trait MapReduceOutput {
+  def outputCollection: MongoCollection
   def drop: Unit
 }
 

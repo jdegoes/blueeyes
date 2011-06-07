@@ -148,8 +148,7 @@ private[mock] object FilterToUpdateConvert{
   }
 }
 
-private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput{
-  def drop = {}
-
-  def outpotCollection = MongoCollectionHolder(output, output.name, output.database)
+private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput {
+  override def outputCollection = MongoCollectionHolder(output, output.name, output.database)
+  override def drop = {}
 }

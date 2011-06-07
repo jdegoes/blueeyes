@@ -1,6 +1,6 @@
 name := "blueeyes"
 
-version := "0.4.0"
+version := "0.3.28"
 
 organization := "com.reportgrid"
 
@@ -33,3 +33,11 @@ resolvers ++= Seq(
 )
 
 parallelExecution in Test := false
+
+publishTo <<= (version) { version: String =>
+  val nexus = "http://nexus.scala-tools.org/content/repositories/"
+  if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"snapshots/") 
+  else                                   Some("releases"  at nexus+"releases/")
+}
+
+credentials := Credentials(Path.userHome / ".ivy2" / ".credentials") :: Nil

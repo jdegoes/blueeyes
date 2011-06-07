@@ -117,9 +117,8 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
 private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealMongoDatabase) extends MapReduceOutput{
-  def drop = {output.drop}
-
-  def outpotCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
+  override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
+  def drop = output.drop
 }
 
 class IterableViewImpl[+A](delegate: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{
