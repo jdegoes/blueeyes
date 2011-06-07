@@ -24,7 +24,7 @@ trait ArbitraryJPath {
     case ex => { ex.printStackTrace; throw ex }
   }
 
-  implicit val arbJPath: Arbitrary[JPath] = Arbitrary {
+  val genJPath = {
     import Gen._
 
     val genIndex = for {
@@ -38,9 +38,11 @@ trait ArbitraryJPath {
     val genIndexOrField = Gen.oneOf(genIndex, genField)
 
     for {
-      length      <- choose(0, 10)
+      length      <- choose(1, 10)
       listOfNodes <- listOfN(length, genIndexOrField)
     } yield JPath(listOfNodes)
   }
+
+  implicit val arbJPath: Arbitrary[JPath] = Arbitrary(genJPath)
 }
 object ArbitraryJPath extends ArbitraryJPath

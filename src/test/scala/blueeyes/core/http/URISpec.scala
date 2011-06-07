@@ -3,7 +3,7 @@ package blueeyes.core.http
 import org.specs.Specification
 import org.specs.ScalaCheck
 import org.scalacheck._
-import org.scalacheck.Prop.forAllNoShrink
+import org.scalacheck.Prop.forAll
 
 class URISpec extends Specification with URIGen with ScalaCheck{
   "URL.toString" should{
@@ -17,11 +17,11 @@ class URISpec extends Specification with URIGen with ScalaCheck{
 
   "URI" should{
     "parser uri" in {
-      passTest(uri)
+      forAll{n: String => URI(n).toString == n } must pass
     }
   }
 
-  private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => URI(n).toString == n) must pass
+//  private def passTest(gen: Gen[String]) =
 }
 
 import org.scalacheck._
@@ -67,4 +67,6 @@ trait URIGen{
       fragment <- option(fragmentGen)
     } yield ( URI(scheme, userInfo, host, port.map(_.toInt), path, query, fragment).toString )
   }
+
+  implicit val arbUri: Arbitrary[String] = Arbitrary(uri)
 }
