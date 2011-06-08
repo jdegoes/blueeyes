@@ -1,12 +1,13 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.persistence.mongo.json.MongoJson._
-import scala.collection.JavaConversions._
+import blueeyes.concurrent.ActorStrategy._
 import blueeyes.json.JsonAST._
+import blueeyes.json.{JPath}
+import blueeyes.persistence.mongo.json.MongoJson._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
-import blueeyes.json.{JPath}
-import blueeyes.concurrent.ActorStrategy._
+import scala.collection.JavaConversions._
+import scala.collection.immutable.ListSet
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
@@ -57,7 +58,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
-  def ensureIndex(name: String, keysPaths: Set[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) = {
     val options = JObject(JField("name", JString(name)) :: JField("background", JBool(true)) :: JField("unique", JBool(unique)) :: Nil)
 
     collection.ensureIndex(toMongoKeys(keysPaths), options)

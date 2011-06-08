@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
+import scala.collection.immutable.ListSet
 import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathImplicits, JPath}
@@ -66,7 +67,7 @@ case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilt
   def where (newFilter: MongoFilter): MongoCountQuery = copy(filter = Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
-case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: Set[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
 case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery[JNothing.type] with DropIndexQueryBehaviour
 case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery[JNothing.type] with DropIndexesQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdate, filter: Option[MongoFilter] = None, upsert: Boolean = false,
@@ -101,8 +102,8 @@ trait MongoQueryBuilder{
   class IntoQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
     def into (collection: MongoCollection): T = f(collection)
   }
-  class OnKeysQueryEntryPoint[T](f: Set[JPath] => T){
-    def on(keys: JPath*): T = f(Set(keys: _*))
+  class OnKeysQueryEntryPoint[T](f: ListSet[JPath] => T){
+    def on(keys: JPath*): T = f(ListSet(keys: _*))
   }
   class InQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
     def in(collection: MongoCollection): T = f(collection)

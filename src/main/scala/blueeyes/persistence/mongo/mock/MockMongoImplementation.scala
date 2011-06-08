@@ -1,14 +1,15 @@
 package blueeyes.persistence.mongo.mock
 
-import java.util.concurrent.ConcurrentHashMap
-import collection.mutable.ConcurrentMap
-import scala.collection.JavaConversions._
+import blueeyes.concurrent.ReadWriteLock
+import blueeyes.concurrent.ActorStrategySequential._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
-import blueeyes.concurrent.ReadWriteLock
-import blueeyes.concurrent.ActorStrategySequential._
+import collection.mutable.ConcurrentMap
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConversions._
+import scala.collection.immutable.ListSet
 
 class MockMongo() extends Mongo {
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
@@ -33,7 +34,7 @@ private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase{
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 }
 
-private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock{
+private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
   private var container = JArray(Nil)
 
   def insert(objects: List[JObject]): Unit = {
@@ -97,8 +98,8 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
 
-  override def ensureIndex(name: String, keys: Set[JPath], unique: Boolean) = {
-    writeLock{
+  override def ensureIndex(name: String, keys: ListSet[JPath], unique: Boolean) = {
+    writeLock {
       super.ensureIndex(name, keys, unique)
     }
   }

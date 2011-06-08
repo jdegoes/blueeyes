@@ -1,10 +1,11 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.IterableView
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
-import com.mongodb.MongoException
 import blueeyes.concurrent._
+import com.mongodb.MongoException
+import scala.collection.IterableView
+import scala.collection.immutable.ListSet
 
 private[mongo] object QueryBehaviours{
   trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
@@ -17,11 +18,9 @@ private[mongo] object QueryBehaviours{
         val lastError = collection.getLastError
 
         lastError.map(why => Left(new MongoException(why))).getOrElse(Right(answer))
-      }
-      catch {
+      } catch {
        case error: Throwable => Left(error)
-      }
-      finally {
+      } finally {
         collection.requestDone
       }
 
@@ -39,7 +38,8 @@ private[mongo] object QueryBehaviours{
       collection.ensureIndex(name, keys, unique)
       JNothing
     }
-    def keys: Set[JPath]
+
+    def keys: ListSet[JPath]
     def name: String
     def unique: Boolean
   }
@@ -49,6 +49,7 @@ private[mongo] object QueryBehaviours{
       collection.dropIndex(name)
       JNothing
     }
+
     def name: String
   }
   trait DropIndexesQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
