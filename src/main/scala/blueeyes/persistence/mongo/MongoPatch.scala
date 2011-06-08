@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 
 private[mongo] object Changes {
@@ -7,7 +8,7 @@ private[mongo] object Changes {
     /**
      * The list of changes that make up this change.
      */
-    def flatten: Set[Change1]
+    def flatten: ListSet[Change1]
 
     /**
      * Coalesces this change with that change, to produce a new change that
@@ -19,7 +20,7 @@ private[mongo] object Changes {
      * Coalesces this change with the list of changes, to produce a new
      * change that achieves the effect of both changes applied sequentially.
      */
-    def *>(list: Set[Change]) = Changes.compose(flatten, Changelist(list).flatten)
+    def *>(list: ListSet[Change]) = Changes.compose(flatten, Changelist(list).flatten)
   }
 
     trait Change1 extends Change {
@@ -28,7 +29,7 @@ private[mongo] object Changes {
      */
     def path: JPath
 
-    def flatten = Set(this)
+    def flatten = ListSet.empty + this
 
     final def commuteWith(older: Change1): Option[Tuple2[Change1, Change1]] = if (older.path != this.path) Some((older, this)) else commuteWithImpl(older)
 
@@ -39,24 +40,23 @@ private[mongo] object Changes {
     protected def fuseWithImpl(older: Change1): Option[Change1] = None
   }
 
-  sealed case class Changelist[T <: Change](list: Set[T]) extends Change {
+  sealed case class Changelist[T <: Change](list: ListSet[T]) extends Change {
     lazy val flatten = list.flatMap(_.flatten)
   }
 
   object Changelist {
-    implicit def patchToChangelist[T <: Change1](patch: T): Changelist[T] = Changelist[T](Set(patch))
+    implicit def patchToChangelist[T <: Change1](patch: T): Changelist[T] = Changelist[T](ListSet.empty + patch)
 
-    implicit def setToChangelist[T <: Change1](list: Set[T]): Changelist[T] = Changelist[T](list)
+    implicit def setToChangelist[T <: Change1](list: ListSet[T]): Changelist[T] = Changelist[T](list)
   }
 
-  def compose(older: Set[Change1], newer: Set[Change1]): Set[Change1] = compose(older.toList, newer.toList).toSet
-  def compose(older: List[Change1], newer: List[Change1]): List[Change1] = if (newer.isEmpty) older else compose(compose(newer.last, older), newer.take(newer.length - 1))
+  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = if (newer.isEmpty) older else compose(compose(newer.last, older), newer.take(newer.size - 1))
 
-  private def compose(c: Change1, cs: List[Change1]): List[Change1] = if (cs.isEmpty) c :: Nil else c.fuseWith(cs.head) match {
+  private def compose(c: Change1, cs: ListSet[Change1]): ListSet[Change1] = if (cs.isEmpty) ListSet.empty + c else c.fuseWith(cs.head) match {
     case None => c.commuteWith(cs.head) match {
-      case None => c :: cs
-      case Some(t) => t._1 :: compose(t._2, cs.tail)
+      case None => ListSet.empty + c ++ cs
+      case Some(t) => ListSet.empty + t._1 ++ compose(t._2, cs.tail)
     }
-    case Some(f) => f :: cs.tail
+    case Some(f) => ListSet.empty + f ++ cs.tail
   }
 }

@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.immutable.ListSet
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JsonAST.{JField, JObject}
 import blueeyes.json.JPath
@@ -85,7 +86,7 @@ sealed trait MongoUpdate { self =>
   import Changelist._
   import MongoUpdateObject._
 
-  private implicit def toMongoUpdate(changes: Set[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
+  private implicit def toMongoUpdate(changes: ListSet[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
   private implicit def toChanges(update: MongoUpdateFields)    = update.list
   private implicit def toChangeList(update: MongoUpdateFields) = Changelist(update.list)
   private implicit def toUpdateFieldsValues(update: MongoUpdateObject)  = MongoUpdateFields(decompose(update.value))
@@ -112,17 +113,17 @@ sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
 }
 
 private[mongo] object MongoUpdateObject {
-  def decompose(jObject: JObject): Set[MongoUpdateField] = decompose(jObject, None)
+  def decompose(jObject: JObject): ListSet[MongoUpdateField] = decompose(jObject, None)
 
-  private def decompose(jObject: JObject, parentPath: Option[JPath]): Set[MongoUpdateField] = {
-    jObject.fields.map(field => {
+  private def decompose(jObject: JObject, parentPath: Option[JPath]): ListSet[MongoUpdateField] = {
+    ListSet.empty ++ jObject.fields.map(field => {
       val fieldPath = parentPath.map(_ \ field.name).getOrElse(JPath(field.name))
 
       jvalueToMongoPrimitive(field.value) match {
         case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
         case v                          => Set(fieldPath.set(v))
       }
-    }).flatten.toSet
+    }).flatten
   }
 }
 
@@ -130,7 +131,7 @@ case object MongoUpdateNothing extends MongoUpdate{
   def toJValue: JObject = JObject(Nil)
 }
 
-sealed case class MongoUpdateFields(list: Set[MongoUpdateField]) extends MongoUpdate{
+sealed case class MongoUpdateFields(list: ListSet[MongoUpdateField]) extends MongoUpdate{
   def toJValue: JObject = list.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
 }
 

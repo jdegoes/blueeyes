@@ -9,15 +9,17 @@ import org.scalacheck.Prop._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
+import scala.collection.immutable.ListSet
 
 class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val filter3    = MongoFilterBuilder(JPath("rar")).<(MongoPrimitiveInt(6))
+  private val filter4    = MongoFilterBuilder(JPath("baz")).<(MongoPrimitiveInt(6))
   private val andFilter  = filter1 && filter2
 
   def getDifferentOrdersAnds: Gen[(MongoAndFilter, MongoAndFilter)] = getListMongoFieldFilter.map{filters =>
-    def andFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoAndFilter(Set(values.head))){(andFilter, filter) => andFilter && filter}
+    def andFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoAndFilter(ListSet.empty + values.head)){(andFilter, filter) => andFilter && filter}
     (andFilter(filters), andFilter(filters.reverse))
   }
 
@@ -38,6 +40,9 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
 
     "create valid json for or filter" in {
       (andFilter).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields))
+      (andFilter && filter3).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter3.filter.asInstanceOf[JObject].fields))
+      (filter3 && andFilter).filter mustEqual (JObject(filter3.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter1.filter.asInstanceOf[JObject].fields))
+      (andFilter && (filter3 && filter4)).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter3.filter.asInstanceOf[JObject].fields ++ filter4.filter.asInstanceOf[JObject].fields))
     }
     "create valid json for AND filter with $eq filter" in {
       (("foo" === 1) && ("foo" !== 2)).filter mustEqual(JObject(JField("foo", JInt(1)) :: JField("foo", JObject(JField("$ne", JInt(2)) :: Nil)) :: Nil))
