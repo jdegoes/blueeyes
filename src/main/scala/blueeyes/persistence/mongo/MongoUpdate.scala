@@ -6,6 +6,7 @@ import blueeyes.json.JPath
 import MongoImplicits._
 import MongoFilterOperators._
 import com.mongodb.MongoException
+import scalaz._
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
@@ -73,7 +74,14 @@ case class MongoUpdateBuilder(jpath: JPath) {
 
 import Changes._
 
-sealed trait MongoUpdate{ self =>
+object MongoUpdate {
+  implicit object MongoUpdateMonoid extends Monoid[MongoUpdate] {
+    override val zero: MongoUpdate = MongoUpdateNothing
+    override def append(m1: MongoUpdate, m2: => MongoUpdate): MongoUpdate = m1 & m2
+  }
+}
+
+sealed trait MongoUpdate { self =>
   import Changelist._
   import MongoUpdateObject._
 
@@ -100,7 +108,7 @@ sealed trait MongoUpdate{ self =>
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
-    def toJValue = value
+  def toJValue = value
 }
 
 private[mongo] object MongoUpdateObject {
