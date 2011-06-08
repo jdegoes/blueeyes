@@ -7,6 +7,7 @@ import com.mongodb.MongoException
 import blueeyes.persistence.mongo._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JsonParser, JPath, Printer}
+import scala.collection.immutable.ListSet
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -70,7 +71,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not store jobject when unique index exists and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city"), JPath("address.street")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
     collection.insert(jObject :: jObject :: Nil) must throwA[MongoException]
 
     collection.select(MongoSelection(Set()), None, None, None, None).toList mustEqual(Nil)
@@ -78,7 +79,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when index is dropped and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city"), JPath("address.street")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
     collection.dropIndex("index")
     collection.insert(jObject :: jObject :: Nil)
 
@@ -87,7 +88,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when indexes are dropped and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city"), JPath("address.street")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
     collection.dropIndexes
     collection.insert(jObject :: jObject :: Nil)
 
@@ -96,7 +97,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
     collection.insert(jObject1 :: Nil)
     collection.insert(jObject2 :: Nil) must throwA[MongoException]
 
@@ -105,7 +106,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when unique index exists and objects are different" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city"), JPath("address.street")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
     collection.insert(jObject :: jObject1 :: Nil)
     collection.insert(jObject2 :: jObject3 :: Nil)
 
@@ -267,7 +268,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "update by update when upsert is true and index exist" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", Set(JPath("address.city")), true)
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
     collection.update(None, MongoUpdateObject(jObject2), true, false)
     collection.update(None, MongoUpdateObject(jObject2), true, false)
 
@@ -332,7 +333,7 @@ class MockDatabaseCollectionSpec extends Specification{
     val collection = newCollection
 
     collection.insert(jobjects)
-    collection.select(MongoSelection(Set()), Some(MongoAndFilter(Set(MongoFieldFilter("address.city", $eq, "A"), MongoFieldFilter("address.street", $exists, true)))), None, None, None).toList mustEqual(jObject :: Nil)
+    collection.select(MongoSelection(Set()), Some(MongoAndFilter(ListSet.empty[MongoFilter] + MongoFieldFilter("address.city", $eq, "A") + MongoFieldFilter("address.street", $exists, true))), None, None, None).toList mustEqual(jObject :: Nil)
   }
   "does not select jobjects by filter with wrong exists" in{
     val collection = newCollection

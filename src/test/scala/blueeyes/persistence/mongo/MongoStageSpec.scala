@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.immutable.ListSet
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import org.specs.{ScalaCheck, Specification}
 import org.scalacheck._
@@ -34,7 +35,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
     filters     <- Gen.listOfN(Gen.choose(3, 7).sample.get, genFieldFilter)
     updateValue <- Gen.choose(5, 10)
     path        <- genJPath
-  } yield((MongoAndFilter(filters.toSet), path inc (updateValue)))
+  } yield((MongoAndFilter(ListSet.empty ++ filters), path inc (updateValue)))
 
   implicit def arbUpdates = Arbitrary{Gen.listOfN(Gen.choose(1, 1).sample.get, genUpdate)}
 

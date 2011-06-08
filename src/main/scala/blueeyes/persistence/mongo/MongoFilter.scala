@@ -1,8 +1,8 @@
 package blueeyes.persistence.mongo
 
+import scala.collection.immutable.ListSet
 import blueeyes.json._
 import blueeyes.json.JsonAST._
-
 import blueeyes.util.ProductPrefixUnmangler
 
 object MongoFilterOperators {
@@ -46,23 +46,23 @@ sealed trait MongoFilter { self =>
   def & (that: MongoFilter)  = &&(that)
 
   def && (that: MongoFilter): MongoAndFilter = (self, that) match{
-    case (x: MongoAndFilter, y: MongoAndFilter)    => MongoAndFilter(x.queries ++ y.queries)
+    case (x: MongoAndFilter, y: MongoAndFilter)    => MongoAndFilter(y.queries ++ x.queries.toList.reverse)
     case (_, y: MongoAndFilter) => MongoAndFilter(y.queries + self)
-    case (x: MongoAndFilter, _) => MongoAndFilter(x.queries + that)
-    case (MongoFilterAll, _)   => MongoAndFilter(Set(that))
-    case (_, MongoFilterAll)   => MongoAndFilter(Set(self))
-    case _  => MongoAndFilter(Set(self, that))
+    case (x: MongoAndFilter, _) => MongoAndFilter(ListSet.empty + that ++ x.queries.toList.reverse)
+    case (MongoFilterAll, _)   => MongoAndFilter(ListSet.empty + that)
+    case (_, MongoFilterAll)   => MongoAndFilter(ListSet.empty + self)
+    case _  => MongoAndFilter(ListSet.empty + (that, self))
   }
 
   def | (that: MongoFilter)  = ||(that)
 
   def || (that: MongoFilter) = (self, that) match{
-    case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(x.queries ++ y.queries)
+    case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(y.queries ++ x.queries.toList.reverse)
     case (_, y: MongoOrFilter) => MongoOrFilter(y.queries + self)
-    case (x: MongoOrFilter, _) => MongoOrFilter(x.queries + that)
+    case (x: MongoOrFilter, _) => MongoOrFilter(ListSet.empty + that ++ x.queries.toList.reverse)
     case (MongoFilterAll, _)   => that
     case (_, MongoFilterAll)   => self
-    case _  => MongoOrFilter(Set(self, that))
+    case _  => MongoOrFilter(ListSet.empty + (that, self))
   }
 }
 
@@ -95,13 +95,13 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
-sealed case class MongoOrFilter(queries: Set[MongoFilter]) extends MongoFilter {
+sealed case class MongoOrFilter(queries: ListSet[MongoFilter]) extends MongoFilter {
   def filter: JValue = JObject(JField($or.symbol, JArray(queries.toList.map(_.filter))) :: Nil)
 
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
 }
 
-sealed case class MongoAndFilter(queries: Set[MongoFilter]) extends MongoFilter { self =>
+sealed case class MongoAndFilter(queries: ListSet[MongoFilter]) extends MongoFilter { self =>
   def filter: JValue = {
     val (notEqs, eqs) = queries partition { filter => filter match {
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false
