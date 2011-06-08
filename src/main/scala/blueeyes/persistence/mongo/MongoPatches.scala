@@ -3,6 +3,8 @@ package persistence.mongo
 
 import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
 import blueeyes.json.JsonAST._
+import scalaz._
+import Scalaz._
 
 /**
  * Simple abstraction for representing a collections of MongoDB patches.
@@ -13,13 +15,13 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Combines the two collections of patches into a single collection.
    */
   def ++ (that: MongoPatches): MongoPatches = {
-    MongoPatches(MapMonoid[MongoFilter, MongoUpdate].append(this.patches, that.patches))
+    MongoPatches(this.patches <+> that.patches)
   }
 
   /** Adds a single patch to this collection of patches.
    */
   def + (patch: (MongoFilter, MongoUpdate)): MongoPatches = copy(
-    patches = MapMonoid[MongoFilter, MongoUpdate].append(this.patches, Map(patch))
+    patches = this.patches <+> Map(patch)
   )
 
   /** Commits all patches to the database and returns a future that completes

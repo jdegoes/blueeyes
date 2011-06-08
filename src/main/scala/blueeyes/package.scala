@@ -1,5 +1,4 @@
-import scalaz.Monoid
-import scalaz.Semigroup
+import scalaz._
 import scalaz.Scalaz._
 
 package object blueeyes {
@@ -11,7 +10,7 @@ package object blueeyes {
 
   implicit def KT[A](a: A): util.KT[A] = new util.KT(a)
 
-  implicit def MapMonoid[K, V](implicit valueSemigroup: Semigroup[V]): Monoid[Map[K, V]] = new Monoid[Map[K, V]] {
+  implicit def mapMonoid[K, V](implicit valueSemigroup: Semigroup[V]): Monoid[Map[K, V]] = new Monoid[Map[K, V]] {
     override val zero = Map.empty[K, V]
     override def append(m1: Map[K, V], m2: => Map[K, V]) = {
       val (from, to, semigroup) = {
@@ -23,6 +22,14 @@ package object blueeyes {
         case (to, (k, v)) => to + (k -> to.get(k).map(semigroup(_, v)).getOrElse(v))
       }
     }
+  }
+
+  implicit def mapPlus[V: Semigroup]: Plus[({type λ[α] = Map[α, V]})#λ] = new Plus[({type λ[α] = Map[α, V]})#λ] {
+    override def plus[K](m1: Map[K, V], m2: => Map[K, V]) = mapMonoid[K, V].append(m1, m2)
+  }
+
+  implicit def mapMA[K, V](m: Map[K, V]): MA[({type λ[α] = Map[α, V]})#λ, K] = new MA[({type λ[α] = Map[α, V]})#λ, K] {
+    override val value = m
   }
 }
 
