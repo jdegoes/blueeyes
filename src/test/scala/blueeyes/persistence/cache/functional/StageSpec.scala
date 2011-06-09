@@ -67,7 +67,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
           case ((discarded1, stage), operation) =>
             val (discarded2, stage2) = stage.apply(operation) 
 
-            (MapMonoid[Int, String].append(discarded1, discarded2), stage2)
+            (mapMonoid[Int, String].append(discarded1, discarded2), stage2)
         }
 
         val (finalFlushed, _) = finalStage(ExpireAll)
@@ -84,7 +84,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
           case PutAll(iter: Iterable[(Int, String)], _) => iter.size
         }.sum
 
-        val actualDiscarded = MapMonoid[Int, String].append(discarded, finalFlushed)
+        val actualDiscarded = mapMonoid[Int, String].append(discarded, finalFlushed)
 
         actualDiscarded == expectedDiscarded
       } must pass
@@ -191,7 +191,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
               case (k, _) => retained.contains(k)
             }
 
-            (removed, MapMonoid[Int, String].append(removedRetained, retained))
+            (removed, mapMonoid[Int, String].append(removedRetained, retained))
         }
 
         val (removed, nextStage) = stage.expire(0, accessTimeCutoff)
@@ -219,7 +219,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
               case (k, _) => removed.contains(k)
             }
 
-            (MapMonoid[Int, String].append(removed, retainedRemoved), retained)
+            (mapMonoid[Int, String].append(removed, retainedRemoved), retained)
         }
 
         val (removed, nextStage) = stage.expire(creationTimeCutoff, 0)
