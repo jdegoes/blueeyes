@@ -6,7 +6,7 @@ import RollPolicies._
 import java.io.File
 import scala.io.Source
 
-class W3ExtendedLoggerSpec extends Specification{
+class W3ExtendedLoggerSpec extends Specification with blueeyes.concurrent.FutureDeliveryStrategySequential {
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
 
   private var w3Logger: W3ExtendedLogger = _

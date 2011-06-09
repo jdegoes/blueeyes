@@ -2,13 +2,15 @@ package blueeyes
 package persistence.cache
 
 import org.specs.Specification
+import org.specs.util.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
-import scala.util.Random
-import scalaz.Semigroup
 import blueeyes.concurrent.{ActorStrategy, Actor, Future}
-import org.specs.util.TimeConversions._
 import ActorStrategy._
+
+import scala.util.Random
+import scalaz._
+import Scalaz._
 
 class StageSpec extends Specification{
   private val random    = new Random()

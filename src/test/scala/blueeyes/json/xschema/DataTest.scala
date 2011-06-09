@@ -9,8 +9,6 @@ package blueeyes.json.xschema {
   
   import blueeyes.json.xschema.Serialization._
   import blueeyes.json.xschema.Constants._
-
-  import blueeyes.json.xschema.{XSchema, XReference, XPrimitiveRef, XContainerRef, XCollection, XDefinition, XMultitype, XField, XOrder, XRoot, XDefinitionRef, XBoolean, XInt, XLong, XFloat, XDouble, XString, XJSON, XDate, XList, XSet, XArray, XMap, XOptional, XTuple, XProduct, XCoproduct, XUnion, XConstant, XRealField, XViewField, XConstantField, XOrderAscending, XOrderDescending, XOrderIgnore}
   
   object ExampleProductData {
     lazy val ExampleXRoot: blueeyes.json.xschema.XRoot = JObject(Nil).deserialize[blueeyes.json.xschema.XRoot]

@@ -694,8 +694,6 @@ package data.fringe {
   import data.fringe.Serialization._
   import data.fringe.Constants._
 
-  import data.fringe.{ConstantSingleton, ConstantWithRealField, ProductWithUnionField}
-  
   object ExampleProductData {
     lazy val ExampleConstantSingleton: data.fringe.ConstantSingleton.type = data.fringe.Extractors.ConstantSingletonExtractor.extract(JObject(Nil))
     
