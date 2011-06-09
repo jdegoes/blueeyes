@@ -10,7 +10,7 @@ import blueeyes.util.ClockSystem._
 import scalaz.Scalaz._
 
 
-trait Stage[K, V] extends FutureDeliveryStrategySequential {
+abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrategy) {
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V])
 
   def flush(k: K, v: V): Unit
@@ -119,7 +119,7 @@ trait Stage[K, V] extends FutureDeliveryStrategySequential {
 }
 
 object Stage {
-  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit) = new Stage[K, V] {
+  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit)(implicit deliveryStrategy: FutureDeliveryStrategy): Stage[K, V] = new Stage[K, V]()(deliveryStrategy) {
     def expirationPolicy = policy
 
     def maximumCapacity = capacity

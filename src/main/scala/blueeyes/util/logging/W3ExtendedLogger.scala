@@ -1,15 +1,16 @@
 package blueeyes.util.logging
 
+import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
+import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
+import blueeyes.persistence.cache.{ExpirationPolicy, CacheSettings, Stage}
+import blueeyes.util.RichThrowableImplicits
+
 import java.io.{FileOutputStream, OutputStreamWriter, File, Writer}
 import java.text.SimpleDateFormat
 import java.util.concurrent.TimeUnit.SECONDS
-import blueeyes.persistence.cache.{ExpirationPolicy, CacheSettings, Stage}
-import blueeyes.util.RichThrowableImplicits
 import java.util.{GregorianCalendar, Calendar, Date}
-import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 
 import scalaz.Semigroup
-import blueeyes.concurrent.Future
 
 object RollPolicies{
   sealed abstract class Policy
@@ -23,7 +24,7 @@ import RollPolicies._
 object W3ExtendedLogger{
   private val loggersCache = new scala.collection.mutable.HashMap[String, W3ExtendedLogger]
 
-  def get(fileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int): W3ExtendedLogger = {
+  def get(fileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int)(implicit fds: FutureDeliveryStrategy): W3ExtendedLogger = {
     loggersCache.get(fileName) match {
       case Some(logger) =>
         logger
@@ -35,8 +36,7 @@ object W3ExtendedLogger{
   }
 }
 
-class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
-
+class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int)(implicit fds: FutureDeliveryStrategy){
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
   private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write)
 

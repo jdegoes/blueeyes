@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.4.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.5.3",
-  "org.scalaz"                  %% "scalaz-core"        % "6.0",
+  "org.scalaz"                  %% "scalaz-core"        % "6.0.1-SNAPSHOT",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "provided",
