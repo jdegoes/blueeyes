@@ -19,7 +19,7 @@ trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
-class MongoActor extends Actor {
+class MongoActor(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy) extends Actor {
   val query = lift3((query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean) => query(collection, isVerified))
 }
 
