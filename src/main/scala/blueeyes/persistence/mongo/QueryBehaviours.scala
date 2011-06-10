@@ -6,28 +6,35 @@ import blueeyes.concurrent._
 import com.mongodb.MongoException
 import scala.collection.IterableView
 import scala.collection.immutable.ListSet
+import scalaz.{Validation, Success, Failure}
 
 private[mongo] object QueryBehaviours{
-  trait QueryBehaviour[T] extends Function[DatabaseCollection, T]
+  trait QueryBehaviour[T] extends Function2[DatabaseCollection, Boolean, T]
 
   trait MongoQueryBehaviour[T] extends QueryBehaviour[T]{
-    def apply(collection: DatabaseCollection) = {
-      collection.requestStart
-      val result: Either[Throwable, T] = try {
-        val answer    = query(collection)
-        val lastError = collection.getLastError
-
-        lastError.map(why => Left(new MongoException(why))).getOrElse(Right(answer))
+    def apply(collection: DatabaseCollection, isVerified: Boolean = true) = {
+      val result = try{
+        if (isVerified) verifiedQuery(collection) else unverifiedQuery(collection)
       } catch {
-       case error: Throwable => Left(error)
-      } finally {
-        collection.requestDone
+        case error: Throwable => Failure(error)
       }
 
       result match {
-        case Left(why)     => throw why
-        case Right(answer) => answer
+        case Failure(why)     => throw why
+        case Success(answer) => answer
       }
+    }
+
+    private def unverifiedQuery(collection: DatabaseCollection): Validation[Throwable, T] = Success(query(collection))
+
+    private def verifiedQuery(collection: DatabaseCollection): Validation[Throwable, T] = try {
+      collection.requestStart
+      val answer    = query(collection)
+      val lastError = collection.getLastError
+
+      lastError.map(why => Failure(new MongoException(why))).getOrElse(Success(answer))
+    } finally {
+      collection.requestDone
     }
 
     def query(collection: DatabaseCollection): T

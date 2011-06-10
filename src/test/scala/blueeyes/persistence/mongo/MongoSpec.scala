@@ -72,7 +72,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         passed
       } must pass
     }
-    //skip("run manually")
+    skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator for every field" in{
       forAll { vv: List[JObject] =>
         val values = List(JsonParser.parse("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
@@ -160,7 +160,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   )
 
   private def oneQuery[T](query: MongoQuery[T], database: MongoDatabase) = {
-    val future = database(query)
+    val future = database(query, false)
 
     future.isDelivered must eventually (be(true))
 
