@@ -3,6 +3,7 @@ package blueeyes.core.service.engines.security
 import net.lag.configgy.ConfigMap
 import java.security.KeyStore
 import blueeyes.core.service.engines.InetInterfaceLookup
+import blueeyes.concurrent.FutureDeliveryStrategy
 
 object CertificateConfig{
   val SslKey              = "ssl"
@@ -30,7 +31,7 @@ object BlueEyesKeyStoreFactory{
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private var keyStore: Option[KeyStore] = None
 
-  def apply(config: ConfigMap) = {
+  def apply(config: ConfigMap)(implicit deliveryStrategy: FutureDeliveryStrategy) = {
     writeLock{
       val value = keyStore.getOrElse({
         val newKeyStore = create(config)
@@ -41,13 +42,13 @@ object BlueEyesKeyStoreFactory{
     }
   }
 
-  private def create(config: ConfigMap) = {
+  private def create(config: ConfigMap)(implicit deliveryStrategy: FutureDeliveryStrategy) = {
     val keyAndCertificate = ConfigCertificateKeyEntry(config).getOrElse(generate(config))
 
     KeyStoreFactory(keyAndCertificate._1, keyAndCertificate._2, alias, password)
   }
 
-  private def generate(config: ConfigMap) = {
+  private def generate(config: ConfigMap)(implicit deliveryStrategy: FutureDeliveryStrategy) = {
     val certificateConfig   = config.configMap(SslKey).configMap(CertificateEntryKey)
     val cn = "CN=" + certificateConfig.getString("CN", InetInterfaceLookup.host(config))
     CertificateGenerator("RSA", alias, cn, 36500, password)
