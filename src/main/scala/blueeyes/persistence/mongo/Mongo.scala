@@ -19,6 +19,10 @@ trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
+class MongoActor extends Actor {
+  val query = lift3((query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean) => query(collection, isVerified))
+}
+
 /** The MongoDatabase executes MongoQuery.
  * <p>
  * <pre>
@@ -43,10 +47,7 @@ trait Mongo{
 abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy){
   def mongo: Mongo
 
-  private lazy val mongoActor = new Actor{
-
-    val query = lift3((query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean) => query(collection, isVerified))
-  }
+  private lazy val mongoActor = new MongoActor
 
   def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
 
@@ -57,6 +58,7 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
       case MongoCollectionReference(name)         => collection(name)
       case MongoCollectionHolder(realCollection, name, database)  => realCollection
     }
+
     mongoActor.query(query, databaseCollection, isVerified).asInstanceOf[Future[T]]
   }
 
