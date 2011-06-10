@@ -2,12 +2,15 @@ package blueeyes.persistence.mongo
 
 import scala.collection.immutable.ListSet
 import blueeyes.util.ProductPrefixUnmangler
-import blueeyes.json.JsonAST.{JField, JObject}
 import blueeyes.json.JPath
 import MongoImplicits._
 import MongoFilterOperators._
 import com.mongodb.MongoException
+import blueeyes.json.JsonAST.{JField, JObject}
+
 import scalaz._
+import Scalaz._
+
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
@@ -74,38 +77,10 @@ case class MongoUpdateBuilder(jpath: JPath) {
 }
 
 import Changes._
-
-object MongoUpdate {
-  implicit object MongoUpdateMonoid extends Monoid[MongoUpdate] {
-    override val zero: MongoUpdate = MongoUpdateNothing
-    override def append(m1: MongoUpdate, m2: => MongoUpdate): MongoUpdate = m1 & m2
-  }
-}
-
 sealed trait MongoUpdate { self =>
-  import Changelist._
-  import MongoUpdateObject._
+  def toJValue: JObject;
 
-  private implicit def toMongoUpdate(changes: ListSet[Change1])   = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
-  private implicit def toChanges(update: MongoUpdateFields)    = update.list
-  private implicit def toChangeList(update: MongoUpdateFields) = Changelist(update.list)
-  private implicit def toUpdateFieldsValues(update: MongoUpdateObject)  = MongoUpdateFields(decompose(update.value))
-
-  def  toJValue: JObject;
-
-  def & (that: MongoUpdate): MongoUpdate = (self, that) match {
-    case (x: MongoUpdateField,   y: MongoUpdateField)  => x *> y
-    case (x: MongoUpdateField,   y: MongoUpdateFields) => x *> toChanges(y)
-
-    case (x: MongoUpdateFields, y: MongoUpdateField)   => x *> y
-    case (x: MongoUpdateFields, y: MongoUpdateFields)  => x *> toChanges(y)
-
-    case (x: MongoUpdateObject, _)   => toUpdateFieldsValues(x) & that
-    case (_, y: MongoUpdateObject)   => self & toUpdateFieldsValues(y)
-
-    case (MongoUpdateNothing, _)  => that
-    case (_, MongoUpdateNothing)  => self
-  }
+  def :+ (that: MongoUpdate): MongoUpdate = MongoUpdateMonoid.append(self, that)
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
@@ -132,7 +107,7 @@ case object MongoUpdateNothing extends MongoUpdate{
 }
 
 sealed case class MongoUpdateFields(list: ListSet[MongoUpdateField]) extends MongoUpdate{
-  def toJValue: JObject = list.foldLeft(JObject(Nil)) { (obj, e) => obj.merge(e.toJValue).asInstanceOf[JObject] }
+  def toJValue: JObject = list.map(_.toJValue).asMA.sum
 }
 
 sealed trait MongoUpdateField extends MongoUpdate with Change1{  self =>

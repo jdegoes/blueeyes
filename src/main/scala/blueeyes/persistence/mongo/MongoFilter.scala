@@ -1,9 +1,12 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.immutable.ListSet
-import blueeyes.json._
+import blueeyes.json.{JPath, JPathIndex, JPathField}
 import blueeyes.json.JsonAST._
 import blueeyes.util.ProductPrefixUnmangler
+
+import scalaz._
+import Scalaz._
 
 object MongoFilterOperators {
   sealed trait MongoFilterOperator extends Product with ProductPrefixUnmangler {
@@ -45,25 +48,11 @@ sealed trait MongoFilter { self =>
 
   def & (that: MongoFilter)  = &&(that)
 
-  def && (that: MongoFilter): MongoAndFilter = (self, that) match{
-    case (x: MongoAndFilter, y: MongoAndFilter)    => MongoAndFilter(y.queries ++ x.queries.toList.reverse)
-    case (_, y: MongoAndFilter) => MongoAndFilter(y.queries + self)
-    case (x: MongoAndFilter, _) => MongoAndFilter(ListSet.empty + that ++ x.queries.toList.reverse)
-    case (MongoFilterAll, _)   => MongoAndFilter(ListSet.empty + that)
-    case (_, MongoFilterAll)   => MongoAndFilter(ListSet.empty + self)
-    case _  => MongoAndFilter(ListSet.empty + (that, self))
-  }
+  def && (that: MongoFilter) = MongoFilterAndMonoid.append(self, that)
 
   def | (that: MongoFilter)  = ||(that)
 
-  def || (that: MongoFilter) = (self, that) match{
-    case (x: MongoOrFilter, y: MongoOrFilter)    => MongoOrFilter(y.queries ++ x.queries.toList.reverse)
-    case (_, y: MongoOrFilter) => MongoOrFilter(y.queries + self)
-    case (x: MongoOrFilter, _) => MongoOrFilter(ListSet.empty + that ++ x.queries.toList.reverse)
-    case (MongoFilterAll, _)   => that
-    case (_, MongoFilterAll)   => self
-    case _  => MongoOrFilter(ListSet.empty + (that, self))
-  }
+  def || (that: MongoFilter) = MongoFilterOrMonoid.append(self, that)
 }
 
 object MongoFilter extends MongoFilterImplicits {
@@ -107,9 +96,18 @@ sealed case class MongoAndFilter(queries: ListSet[MongoFilter]) extends MongoFil
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false
       case _ => true
     }}
-    val notEqsQuery = notEqs.foldLeft(JObject(Nil).asInstanceOf[JValue]) {(obj, e) => obj.merge(e.filter)}.asInstanceOf[JObject]
-    val eqsQuery    = eqs.map(_.asInstanceOf[MongoFieldFilter]).foldLeft(JObject(Nil).asInstanceOf[JValue]) {(obj, e) => JObject(JField(JPathExtension.toMongoField(e.lhs), e.rhs.toJValue) :: obj.asInstanceOf[JObject].fields)}.asInstanceOf[JObject]
-    JObject(notEqsQuery.fields ::: eqsQuery.fields)
+    JObject(notEqsQuery(notEqs).fields ::: eqsQuery(eqs).fields)
+  }
+
+  private def notEqsQuery(queries: ListSet[MongoFilter]) = {
+    import blueeyes.json.MergeMonoid
+    val objects = queries.map(_.filter).toList
+    (JObject(Nil) :: objects).asMA.sum.asInstanceOf[JObject]
+  }
+  private def eqsQuery(queries: ListSet[MongoFilter]) = {
+    import blueeyes.json.ConcatMonoid
+    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue]).toList
+    (JObject(Nil) :: fields).asMA.sum.asInstanceOf[JObject]
   }
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))

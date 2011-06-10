@@ -15,7 +15,7 @@ import blueeyes.json.{ArbitraryJValue, JPath}
 class MongoUpdateSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
 
   def getDifferentOrdersUpdates: Gen[(MongoUpdate, MongoUpdate)] = getListMongoUpdate.map{updates =>
-    def andUpdate(values: List[MongoUpdate]) = {values.foldLeft(MongoUpdateNothing.asInstanceOf[MongoUpdate]){(andUpdate, update) => (andUpdate & update)}    }
+    def andUpdate(values: List[MongoUpdate]) = {values.foldLeft(MongoUpdateNothing.asInstanceOf[MongoUpdate]){(andUpdate, update) => (andUpdate :+ update)}    }
     (andUpdate(updates), andUpdate(updates.reverse))
   }
 

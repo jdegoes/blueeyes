@@ -132,7 +132,7 @@ class MockDatabaseCollectionSpec extends Specification{
     val collection = newCollection
 
     collection.insert(jObject :: Nil)
-    collection.update(None, ("address.city" set ("B")) & ("address.street" set ("3")), false, false)
+    collection.update(None, ("address.city" set ("B")) :+ ("address.street" set ("3")), false, false)
 
     collection.select(MongoSelection(Set()), None, None, None, None).toList mustEqual((jObject2 :: Nil).toStream)
   }

@@ -43,7 +43,7 @@ class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits
     }
 
     def checkCommit(patches: List[(MongoFilter, List[MongoUpdate])], mongoPatches: MongoPatches) = {
-      val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.tail.foldLeft(v._2.head){(updates, update) => updates & update})))
+      val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.tail.foldLeft(v._2.head){(updates, update) => updates :+ update})))
 
       mongoPatches.commit(database, "foo")
 

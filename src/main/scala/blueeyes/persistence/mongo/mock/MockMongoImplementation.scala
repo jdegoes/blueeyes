@@ -10,6 +10,8 @@ import collection.mutable.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
+import scalaz._
+import Scalaz._
 
 class MockMongo() extends Mongo {
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
@@ -66,7 +68,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       var (objects, update) = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
                                 case Nil if upsert => value match {
                                   case e: MongoUpdateObject => (List(JObject(Nil)), value)
-                                  case _ => (List(JObject(Nil)), value & filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
+                                  case _ => (List(JObject(Nil)), value :+ filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
                                 }
                                 case v => (v, value)
                               }
@@ -145,7 +147,7 @@ private[mock] object FilterToUpdateConvert{
       case $eq  => x.lhs set x.rhs
       case _    => MongoUpdateNothing
     }
-    case x : MongoAndFilter           => x.queries.foldLeft(MongoUpdateNothing.asInstanceOf[MongoUpdate]){ (result, currentFilter) =>  result &  FilterToUpdateConvert(currentFilter)}
+    case x : MongoAndFilter           => x.queries.map(FilterToUpdateConvert(_)).asMA.sum
   }
 }
 

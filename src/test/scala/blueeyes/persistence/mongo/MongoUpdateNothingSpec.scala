@@ -7,7 +7,7 @@ import blueeyes.json.JsonAST._
 
 class MongoUpdateNothingSpec  extends Specification{
   "build valid json with MongoUpdateField" in {
-    MongoUpdateNothing & ("x" inc (1)) mustEqual ("x" inc (1))
+    MongoUpdateNothing :+ ("x" inc (1)) mustEqual ("x" inc (1))
   }
 
 }

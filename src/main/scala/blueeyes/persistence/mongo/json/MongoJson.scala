@@ -25,7 +25,7 @@ object MongoJson {
       JField(key, anyRef2JValue(dbObject.get(key)))
     } 
 
-    JObject(pureKeys.foldLeft(List[JField]()){ (obj, key) => toJField(key) :: obj })
+    JObject(pureKeys.map(toJField(_)).toList)
   }
 
   implicit def jObject2MongoObject(jObject: JObject): DBObject = {
