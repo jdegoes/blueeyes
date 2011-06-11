@@ -23,7 +23,7 @@ class MockMongo() extends Mongo {
   }
 }
 
-private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase{
+private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
   private val databaseCollections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
 
   def collection(collectionName: String) = {

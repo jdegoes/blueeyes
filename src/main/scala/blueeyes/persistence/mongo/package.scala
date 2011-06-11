@@ -45,6 +45,7 @@ package object mongo extends blueeyes.persistence.mongo.MongoImplicits {
       case _  => MongoAndFilter(ListSet.empty + (f2, f1))
     }
   }
+
   implicit val MongoFilterOrMonoid = new Monoid[MongoFilter]{
     val zero = MongoFilterAll
 

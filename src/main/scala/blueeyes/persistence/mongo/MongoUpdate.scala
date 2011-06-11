@@ -80,6 +80,7 @@ import Changes._
 sealed trait MongoUpdate { self =>
   def toJValue: JObject;
 
+  /** It's also possible to use the scalaz |+| operator for this */
   def :+ (that: MongoUpdate): MongoUpdate = MongoUpdateMonoid.append(self, that)
 }
 
