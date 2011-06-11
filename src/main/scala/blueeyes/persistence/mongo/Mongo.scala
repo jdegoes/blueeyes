@@ -48,7 +48,11 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
     val query = lift3((query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean) => query(collection, isVerified))
   }
 
-  def apply[T](query: MongoQuery[T], isVerified: Boolean = true): Future[T]  = {
+  def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
+
+  def unverified[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, false)
+
+  private def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]  = {
     val databaseCollection = query.collection match{
       case MongoCollectionReference(name)         => collection(name)
       case MongoCollectionHolder(realCollection, name, database)  => realCollection

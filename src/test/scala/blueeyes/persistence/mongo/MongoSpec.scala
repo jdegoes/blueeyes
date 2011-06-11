@@ -31,8 +31,48 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
-    "Upsert the same value form Mock and Real Mongo for existing object" in{
       skip("run manually")
+    "Remove the same value form Mock and Real Mongo for existing object" in{
+      forAll { values: List[JObject] =>
+        query[JNothing.type](remove.from(collection))
+        query[JNothing.type](insert(values: _*).into(collection))
+
+        val value  = values.head
+
+        val filter = generateQuery(value.flattenWithPath)
+        var passed = checkSelectPass(filter, value)
+
+        query[JNothing.type](remove.from(collection).where(filter))
+
+        if (passed) passed = checkSelectPass(MongoFilterAll, value)
+        if (passed) passed = checkSelectPass(filter, value)
+
+        query[JNothing.type](remove.from(collection))
+
+        passed
+      } must pass
+    }
+    skip("run manually")
+    "Insert the same value form Mock and Real Mongo for existing object" in{
+      forAll { values: List[JObject] =>
+        query[JNothing.type](remove.from(collection))
+        query[JNothing.type](insert(values.tail: _*).into(collection))
+
+        val value  = values.head
+
+        val filter = generateQuery(value.flattenWithPath)
+        query[JNothing.type](insert(value).into(collection))
+
+        var passed = checkSelectPass(MongoFilterAll, value)
+        if (passed) passed = checkSelectPass(filter, value)
+
+        query[JNothing.type](remove.from(collection))
+
+        passed
+      } must pass
+    }
+    skip("run manually")
+    "Upsert the same value form Mock and Real Mongo for existing object" in{
       forAll { values: List[JObject] =>
         query[JNothing.type](remove.from(collection))
         query[JNothing.type](insert(values: _*).into(collection))
@@ -126,6 +166,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     val selection    = query(selectQuery)
     val real         = selection._1.map(_.toSet).getOrElse(Set[JObject]())
     val mock         = selection._2.toSet
+    val size1 = real.size
+    val size2 = real.size
+//    println("SIZE=" + size1 + "; " + size2)
     val pass         = real == mock
     if (!pass) {
       println("--------OBJECT--------")
@@ -160,7 +203,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   )
 
   private def oneQuery[T](query: MongoQuery[T], database: MongoDatabase) = {
-    val future = database(query, false)
+    val future = database(query)
 
     future.isDelivered must eventually (be(true))
 
