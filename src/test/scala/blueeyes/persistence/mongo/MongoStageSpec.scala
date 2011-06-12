@@ -15,11 +15,13 @@ import scala.util.Random
 import blueeyes.concurrent.{Future, ActorStrategy, Actor}
 import ActorStrategy._
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
+import scalaz._
+import Scalaz._
 
 class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {
-    def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 :+ v2
+    def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 |+| v2
   }
 
   def getJPathElement = Gen.listOfN(Gen.choose(2, 4).sample.get, Gen.alphaChar).map(chars => new String(chars.toArray))

@@ -7,7 +7,7 @@ import blueeyes.persistence.mongo._
 
 class SetFieldEvaluatorSpec extends Specification{
   "returns value as it is" in {
-    val operation = "foo" set (MongoPrimitiveString("bar"))    
+    val operation = ("foo" set (MongoPrimitiveString("bar"))).asInstanceOf[MongoUpdateField]
     SetFieldEvaluator(JString("foo"), operation.filter) mustEqual(JString("bar"))
   }
 }

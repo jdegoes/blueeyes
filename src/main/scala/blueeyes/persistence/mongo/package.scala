@@ -18,6 +18,9 @@ package object mongo extends blueeyes.persistence.mongo.MongoImplicits {
       def updateFields(update: MongoUpdateObject)         = MongoUpdateFields(decompose(update.value))
 
       (u1, u2) match {
+        case (MongoUpdateNothing, _)  => u2
+        case (_, MongoUpdateNothing)  => u1
+
         case (x: MongoUpdateField,   y: MongoUpdateField)  => x *> y
         case (x: MongoUpdateField,   y: MongoUpdateFields) => x *> y.list
 
@@ -26,9 +29,6 @@ package object mongo extends blueeyes.persistence.mongo.MongoImplicits {
 
         case (x: MongoUpdateObject, _)   => append(updateFields(x), u2)
         case (_, y: MongoUpdateObject)   => append(u1, updateFields(y))
-
-        case (MongoUpdateNothing, _)  => u2
-        case (_, MongoUpdateNothing)  => u1
       }
     }
   }

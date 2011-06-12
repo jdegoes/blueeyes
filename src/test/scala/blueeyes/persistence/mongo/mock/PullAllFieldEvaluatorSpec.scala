@@ -8,7 +8,7 @@ import blueeyes.persistence.mongo._
 
 class PullAllFieldEvaluatorSpec  extends Specification{
   "pull elements" in {
-    val operation = "foo" pullAll (MongoPrimitiveInt(1), MongoPrimitiveInt(2))      
+    val operation = ("foo" pullAll (MongoPrimitiveInt(1), MongoPrimitiveInt(2))).asInstanceOf[MongoUpdateField]
     PullAllFieldEvaluator(JArray(JInt(1) :: JInt(2) :: JInt(3) :: Nil), operation.filter) mustEqual(JArray(JInt(3) :: Nil))
   }
 }

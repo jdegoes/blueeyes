@@ -12,6 +12,8 @@ import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
 import blueeyes.concurrent.{FutureDeliveryStrategySequential, ActorExecutionStrategySequential, Future}
+import scalaz._
+import Scalaz._
 
 class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with FutureDeliveryStrategySequential with ActorExecutionStrategySequential{
 
@@ -43,7 +45,7 @@ class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits
     }
 
     def checkCommit(patches: List[(MongoFilter, List[MongoUpdate])], mongoPatches: MongoPatches) = {
-      val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.tail.foldLeft(v._2.head){(updates, update) => updates :+ update})))
+      val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.asMA.sum)))
 
       mongoPatches.commit(database, "foo")
 

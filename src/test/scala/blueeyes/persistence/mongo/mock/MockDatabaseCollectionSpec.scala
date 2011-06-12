@@ -9,6 +9,9 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.{JsonParser, JPath, Printer}
 import scala.collection.immutable.ListSet
 
+import scalaz._
+import Scalaz._
+
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
@@ -132,7 +135,7 @@ class MockDatabaseCollectionSpec extends Specification{
     val collection = newCollection
 
     collection.insert(jObject :: Nil)
-    collection.update(None, ("address.city" set ("B")) :+ ("address.street" set ("3")), false, false)
+    collection.update(None, ("address.city" set ("B")) |+| ("address.street" set ("3")), false, false)
 
     collection.select(MongoSelection(Set()), None, None, None, None).toList mustEqual((jObject2 :: Nil).toStream)
   }

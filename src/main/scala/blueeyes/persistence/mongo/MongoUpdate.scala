@@ -52,15 +52,15 @@ import UpdateFieldFunctions._
  * <p>
  */
 case class MongoUpdateBuilder(jpath: JPath) {
-  def inc(value: MongoPrimitive) : MongoUpdateField = IncF(jpath, value)
-  def set(value: MongoPrimitive) : MongoUpdateField = SetF(jpath, value)
-  def unset                             : MongoUpdateField = UnsetF(jpath)
-  def popLast                           : MongoUpdateField = PopLastF(jpath)
-  def popFirst                          : MongoUpdateField = PopFirstF(jpath)
-  def push [T](value: MongoPrimitive): MongoUpdateField = PushF(jpath, value)
-  def pull(filter: MongoFilter)         : MongoUpdateField = PullF(jpath, filter)
-  def pushAll [T <: MongoPrimitive](items: T*) : MongoUpdateField = PushAllF(jpath, List(items: _*))
-  def pullAll [T <: MongoPrimitive](items: T*) : MongoUpdateField = PullAllF(jpath, List(items: _*))
+  def inc(value: MongoPrimitive)        : MongoUpdate = IncF(jpath, value)
+  def set(value: MongoPrimitive)        : MongoUpdate = SetF(jpath, value)
+  def unset                             : MongoUpdate = UnsetF(jpath)
+  def popLast                           : MongoUpdate = PopLastF(jpath)
+  def popFirst                          : MongoUpdate = PopFirstF(jpath)
+  def push [T](value: MongoPrimitive)   : MongoUpdate = PushF(jpath, value)
+  def pull(filter: MongoFilter)         : MongoUpdate = PullF(jpath, filter)
+  def pushAll [T <: MongoPrimitive](items: T*) : MongoUpdate = PushAllF(jpath, List(items: _*))
+  def pullAll [T <: MongoPrimitive](items: T*) : MongoUpdate = PullAllF(jpath, List(items: _*))
 
   def addToSet [T <: MongoPrimitive](items: T*): MongoUpdateField = {
     val itemsList = List(items: _*)
@@ -79,9 +79,6 @@ case class MongoUpdateBuilder(jpath: JPath) {
 import Changes._
 sealed trait MongoUpdate { self =>
   def toJValue: JObject;
-
-  /** It's also possible to use the scalaz |+| operator for this */
-  def :+ (that: MongoUpdate): MongoUpdate = MongoUpdateMonoid.append(self, that)
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
@@ -97,7 +94,7 @@ private[mongo] object MongoUpdateObject {
 
       jvalueToMongoPrimitive(field.value) match {
         case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
-        case v                          => Set(fieldPath.set(v))
+        case v                          => Set(fieldPath.set(v).asInstanceOf[MongoUpdateField])
       }
     }).flatten
   }

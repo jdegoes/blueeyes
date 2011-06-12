@@ -7,15 +7,15 @@ import blueeyes.persistence.mongo._
 
 class PopFieldEvaluatorSpec  extends Specification{
   "pop first element" in {
-    val operation = "foo".popFirst
+    val operation = ("foo".popFirst).asInstanceOf[MongoUpdateField]
     PopFieldEvaluator(JArray(JInt(1) :: JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: Nil))
   }
   "pop last element" in {
-    val operation = "foo".popLast
+    val operation = ("foo".popLast).asInstanceOf[MongoUpdateField]
     PopFieldEvaluator(JArray(JInt(1) :: JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(1) :: Nil))
   }
   "pop empty array" in {
-    val operation = "foo".popLast
+    val operation = ("foo".popLast).asInstanceOf[MongoUpdateField]
     PopFieldEvaluator(JArray(Nil), operation.filter) mustEqual(JArray(Nil))
   }
 }
