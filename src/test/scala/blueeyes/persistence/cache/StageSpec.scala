@@ -5,14 +5,15 @@ import org.specs.Specification
 import org.specs.util.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
-import blueeyes.concurrent.{ActorStrategy, Actor, Future}
-import ActorStrategy._
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.FutureImplicits._
 
 import scala.util.Random
 import scalaz._
 import Scalaz._
+import akka.actor.Actor
 
-class StageSpec extends Specification{
+class StageSpec extends Specification with FutureDeliveryStrategySequential{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2
@@ -100,9 +101,13 @@ class StageSpec extends Specification{
 
       @volatile var collected = 0
       val stage     = newStage(Some(10), None, {(key: String, value: String) => collected = collected + (value.length / key.length)})
-      val actors    = List.range(0, threadsCount) map {i => new MessageActor("1", "1", messagesCount, stage) }
+      val actors    = List.range(0, threadsCount) map {i =>
+        val actor = Actor.actorOf(new MessageActor("1", "1", messagesCount, stage))
+        actor.start()
+        actor
+      }
 
-      val futures   = Future((actors map {actor => actor.send()}): _*)
+      val futures   = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
@@ -112,6 +117,8 @@ class StageSpec extends Specification{
 
       val stop = stage.stop
       stop.isDone must eventually (be (true))
+
+      actors.foreach(_.stop())
     }
 
     "evict all messages when multiple threads send messages with different keys" in{
@@ -129,9 +136,13 @@ class StageSpec extends Specification{
         }
         collected.put(key, count + (value.length / key.length))
       })
-      val actors    = messages map {msgs => (new MessageActor(msgs(0), msgs(0), messagesCount, stage))}
+      val actors    = messages map {msgs =>
+        val actor = Actor.actorOf(new MessageActor(msgs(0), msgs(0), messagesCount, stage))
+        actor.start()
+        actor
+      }
 
-      val futures = Future((actors map {actor => actor.send()}): _*)
+      val futures = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
@@ -141,6 +152,8 @@ class StageSpec extends Specification{
 
       val stop = stage.stop
       stop.isDone must eventually (be (true))
+
+      actors.foreach(_.stop())
     }
   }
 
@@ -157,11 +170,14 @@ class StageSpec extends Specification{
   }
 
   class MessageActor(key: String, message: String, size: Int, stage: Stage[String, String]) extends Actor{
-    def send = lift{ () =>
-      for (j <- 0 until size){
-        Thread.sleep(random.nextInt(100))
-        stage.put(key, message)
-      }
+    def receive = {
+      case "Send" =>
+        for (j <- 0 until size){
+          Thread.sleep(random.nextInt(100))
+          stage.put(key, message)
+        }
+        self.reply(())
+      case _ =>
     }
   }
 }

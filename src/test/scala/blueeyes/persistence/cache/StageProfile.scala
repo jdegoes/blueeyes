@@ -4,11 +4,12 @@ import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 import scala.util.Random
 import scalaz.Semigroup
-import blueeyes.concurrent.{ActorStrategy, Actor, Future}
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.FutureImplicits._
 import org.specs.util.TimeConversions._
-import ActorStrategy._
+import akka.actor.Actor
 
-object StageProfile{
+object StageProfile extends FutureDeliveryStrategySequential{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2
@@ -32,9 +33,13 @@ object StageProfile{
       }
       collected.put(key, count + (value.length / key.length))
     })
-    val actors    = messages map {msgs => (new MessageActor(msgs(0), msgs(0), messagesCount, stage))}
+    val actors    = messages map {msgs =>
+      val actor = Actor.actorOf(new MessageActor(msgs(0), msgs(0), messagesCount, stage))
+      actor.start()
+      actor
+    }
 
-    val futures = Future((actors map {actor => actor.send()}): _*)
+    val futures = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
     awaitFuture(futures)
 
 //    val flushFuture = stage.flushAll
@@ -44,6 +49,7 @@ object StageProfile{
     Thread.sleep(30000)
     println("REAL STOPPED")
 
+    actors.foreach(_.stop())
   }
 
   private def awaitFuture(future: Future[_]) = {
@@ -67,12 +73,14 @@ object StageProfile{
   }
 
   class MessageActor(key: String, message: String, size: Int, stage: Stage[String, String]) extends Actor{
-    def send = lift{ () =>
-      for (j <- 0 until size){
-        Thread.sleep(random.nextInt(100))
-        stage.put(key, message)
-      }
+    def receive = {
+      case "Send" =>
+        for (j <- 0 until size){
+          Thread.sleep(random.nextInt(100))
+          stage.put(key, message)
+        }
+        self.reply(())
+      case _ =>
     }
   }
-
 }

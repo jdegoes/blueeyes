@@ -12,13 +12,14 @@ import blueeyes.persistence.cache.ExpirationPolicy
 import scalaz.Semigroup
 import org.specs.util.TimeConversions._
 import scala.util.Random
-import blueeyes.concurrent.{Future, ActorStrategy, Actor}
-import ActorStrategy._
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.FutureImplicits._
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
+import akka.actor.{Actor}
 import scalaz._
 import Scalaz._
 
-class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
+class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo with FutureDeliveryStrategySequential{
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {
     def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 |+| v2
@@ -51,16 +52,20 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         val mongStage   = MongoStage(mockDatabase, collection, MongoStageSettings(ExpirationPolicy(Some(100), Some(100), MILLISECONDS), 500))
         val actorsCount = 10
         val sendCount   = 20
-        val actors      = Array.fill(actorsCount){new MessageActor(mongStage, updates, sendCount)}
+        val actors      = Array.fill(actorsCount){
+          val actor = Actor.actorOf(new MessageActor(mongStage, updates, sendCount))
+          actor.start()
+          actor
+        }
 
         val start = System.currentTimeMillis
-        val futures = Future((actors map {actor => actor.send()}): _*)
+        val futures = Future(actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}: _*)
         futures.value must eventually(200, 300.milliseconds) (beSomething)
 
         val flushFuture = mongStage.flushAll
         flushFuture.value must eventually (beSomething)
 
-        updates.foldLeft(true){(result, filterAndUdate) =>
+        val pass = updates.foldLeft(true){(result, filterAndUdate) =>
           result && {
             val update = filterAndUdate._2.asInstanceOf[UpdateFieldFunctions.IncF]
 
@@ -73,18 +78,23 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
             value == JsonAST.JInt(setValue * sendCount * actorsCount)
           }
         }
+        actors.foreach(_.stop())
+        pass
       } must pass
     }
   }
+}
 
-  class MessageActor(stage: MongoStage, updates: List[(MongoFilter, MongoUpdate)], size: Int) extends Actor{
-    private val random    = new Random()
-    def send = lift{ () =>
+class MessageActor(stage: MongoStage, updates: List[(MongoFilter, MongoUpdate)], size: Int) extends Actor{
+  private val random    = new Random()
+  def receive = {
+    case "Send" =>
       for (j <- 0 until size){
         updates foreach { update =>
           stage.put(update._1, update._2)
         }
       }
-    }
+      self.reply(())
+    case _ =>
   }
 }

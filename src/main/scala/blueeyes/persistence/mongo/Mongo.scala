@@ -5,7 +5,9 @@ import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
-import blueeyes.concurrent._
+import akka.actor.Actor
+import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
+import blueeyes.concurrent.FutureImplicits._
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -19,8 +21,12 @@ trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
-class MongoActor(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy) extends Actor {
-  val query = lift3((query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean) => query(collection, isVerified))
+case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
+class MongoActor extends Actor {
+  def receive = {
+    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
+    case _ => error("wrong message.")
+  }
 }
 
 /** The MongoDatabase executes MongoQuery.
@@ -44,10 +50,11 @@ class MongoActor(implicit executionStrategy: ActorExecutionStrategy, deliveryStr
  *
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
-abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy, deliveryStrategy: FutureDeliveryStrategy) {
+abstract class MongoDatabase(implicit deliveryStrategy: FutureDeliveryStrategy) {
   def mongo: Mongo
 
-  private lazy val mongoActor = new MongoActor
+  private lazy val mongoActor = Actor.actorOf[MongoActor]
+  mongoActor.start
 
   def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
 
@@ -59,7 +66,7 @@ abstract class MongoDatabase(implicit executionStrategy: ActorExecutionStrategy,
       case MongoCollectionHolder(realCollection, name, database)  => realCollection
     }
 
-    mongoActor.query(query, databaseCollection, isVerified).asInstanceOf[Future[T]]
+    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified))
   }
 
   def collections: Set[MongoCollectionHolder]

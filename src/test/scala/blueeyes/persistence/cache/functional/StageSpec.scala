@@ -10,9 +10,10 @@ import scala.util.Random
 import scala.collection.immutable.ListMap
 import scalaz._
 import scalaz.Scalaz._
-import blueeyes.concurrent.{ActorStrategy, Actor, Future}
+import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.FutureImplicits._
+
 import scala.collection.mutable.ArrayBuilder.ofRef
-import ActorStrategy._
 
 import org.scalacheck.Prop._
 import org.scalacheck._

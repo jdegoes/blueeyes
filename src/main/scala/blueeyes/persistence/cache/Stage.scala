@@ -11,7 +11,6 @@ import blueeyes.util.ClockSystem._
 import scalaz.Scalaz._
 import akka.actor.{Actor, ActorRef, Scheduler}
 
-
 abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrategy) {
 
   private sealed trait StageIn
@@ -61,7 +60,7 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     override def foreach[U](f: ((K, ExpirableValue[V])) => U): Unit = impl.foreach(f)
   }
 
-  private val actor: ActorRef = Actor.actorOf(new Actor{
+  private class StageActor extends Actor{
     import scala.math._
     import java.util.concurrent.TimeUnit
 
@@ -111,7 +110,9 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     private def removeEldestEntries {
       cache.removeEldestEntries(0.max(cache.size - maximumCapacity))
     }
-  })
+  }
+
+  private val actor: ActorRef = Actor.actorOf(new StageActor())
   actor.start
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
