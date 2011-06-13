@@ -6,6 +6,7 @@ import blueeyes.util.metrics.Duration
 import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
 import blueeyes.concurrent.FutureImplicits._
 import blueeyes.util.ClockSystem._
+import scala.collection.JavaConversions._
 
 import scalaz.Scalaz._
 import akka.actor.{Actor, ActorRef, Scheduler}
@@ -24,9 +25,9 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
   def maximumCapacity: Int
 
   private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
-    private val impl = new scala.collection.mutable.LinkedHashMap[K, ExpirableValue[V]]
+    private val impl = new javolution.util.FastMap[K, ExpirableValue[V]]
 
-    def get(key: K): Option[ExpirableValue[V]] = impl.get(key)
+    def get(key: K): Option[ExpirableValue[V]] = Option(impl.get(key))
 
     def iterator: Iterator[(K, ExpirableValue[V])] = impl.iterator
 
@@ -38,7 +39,7 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     }
 
     def -= (k: K): this.type = {
-      impl.get(k) foreach { v =>
+      Option(impl.get(k)) foreach { v =>
         flush(k, v.value) 
         impl.remove(k)
       }
