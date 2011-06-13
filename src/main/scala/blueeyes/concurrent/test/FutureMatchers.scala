@@ -23,7 +23,7 @@ trait FutureMatchers {
   private case class Retry(failureMessage: String) extends Outcome
 
   /*
-   analytics.get("/foo") must deliver {
+   analytics.get("/foo") must whenDelivered {
      beSome(2)
    }
    */

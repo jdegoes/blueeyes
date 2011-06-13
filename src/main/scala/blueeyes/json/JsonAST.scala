@@ -107,6 +107,35 @@ object JsonAST {
       }
     }
 
+    /** 
+     * Does a breadth-first traversal of all descendant JValues, beginning
+     * with this one.
+     */
+    def breadthFirst: List[JValue] = {
+      import scala.collection.immutable.Queue
+
+      def breadthFirst0(cur: List[JValue], queue: Queue[JValue]): List[JValue] = {
+        if (queue.isEmpty) cur
+        else {
+          val (head, nextQueue) = queue.dequeue
+
+          breadthFirst0(head :: cur, 
+            head match {
+              case JObject(fields) =>
+                nextQueue.enqueue(fields.map(_.value))
+
+              case JArray(elements) =>
+                nextQueue.enqueue(elements)
+
+              case jvalue => nextQueue
+            }
+          )
+        }
+      }
+
+      breadthFirst0(Nil, Queue.empty.enqueue(this)).reverse
+    }
+
     private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
       case JObject(l) => l.filter {
         case x if p(x) => true
