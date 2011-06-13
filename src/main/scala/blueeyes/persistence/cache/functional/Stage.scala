@@ -2,13 +2,9 @@ package blueeyes
 package persistence.cache.functional
 
 import scalaz.Semigroup
-import blueeyes.concurrent._
-import blueeyes.concurrent.ActorStrategy._
 import blueeyes.util.ClockSystem._
 
 import scalaz.Scalaz._
-
-import scala.collection.immutable.TreeMap
 
 case class TemporalCacheState[K, V](removed: Map[K, V], retained: TemporalCache[K, V])
 

@@ -6,6 +6,8 @@ trait FutureDeliveryStrategy {
  def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit): Unit
 }
 
+object FutureDeliveryStrategy extends FutureDeliveryStrategySequential
+
 trait FutureDeliveryStrategySequential {
  implicit val futureDeliveryStrategy = new FutureDeliveryStrategy {
    def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) = {

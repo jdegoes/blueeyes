@@ -3,8 +3,7 @@ package persistence.cache
 
 import scalaz.Semigroup
 import blueeyes.util.metrics.Duration
-import blueeyes.concurrent.{Future, ScheduledExecutor, FutureDeliveryStrategy}
-import blueeyes.concurrent.ActorStrategy._
+import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
 import blueeyes.concurrent.FutureImplicits._
 import blueeyes.util.ClockSystem._
 

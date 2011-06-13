@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.concurrent.ActorStrategy._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo.json.MongoJson._
@@ -8,6 +7,7 @@ import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
+import blueeyes.concurrent.FutureDeliveryStrategy._
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
