@@ -1,5 +1,6 @@
 package blueeyes.concurrent
 
+import akka.dispatch.{Future => AkkaFuture}
 import scalaz.{Validation, Success, Failure}
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
@@ -558,6 +559,15 @@ trait FutureImplicits {
   implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = TupleOfFuturesJoiner(tuple)
   case class TupleOfFuturesJoiner[U, V](tuple: (Future[U], Future[V])){
     def join: Future[(U, V)] = tuple._1.zip(tuple._2)
+  }
+
+  implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T])(implicit deliveryStrategy: FutureDeliveryStrategy) = {
+    val future = new Future[T]()
+    akkaFuture.onComplete{ value: AkkaFuture[T] => value.exception.map(future.cancel(_)).getOrElse{
+      value.result.foreach{v =>
+        future.deliver(v)}
+    }}
+    future
   }
 }
 object FutureImplicits extends FutureImplicits

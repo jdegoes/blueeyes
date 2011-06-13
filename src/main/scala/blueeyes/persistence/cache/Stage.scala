@@ -3,15 +3,21 @@ package persistence.cache
 
 import scalaz.Semigroup
 import blueeyes.util.metrics.Duration
-import blueeyes.concurrent._
+import blueeyes.concurrent.{Future, ScheduledExecutor, FutureDeliveryStrategy}
 import blueeyes.concurrent.ActorStrategy._
+import blueeyes.concurrent.FutureImplicits._
 import blueeyes.util.ClockSystem._
 
 import scalaz.Scalaz._
+import akka.actor.{Actor, ActorRef, Scheduler}
 
 
 abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrategy) {
-  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V])
+
+  private sealed trait StageIn
+  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends StageIn
+  private object     FlushAll extends StageIn
+  private object     FlushAllBySchedule extends StageIn
 
   def flush(k: K, v: V): Unit
 
@@ -55,7 +61,7 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     override def foreach[U](f: ((K, ExpirableValue[V])) => U): Unit = impl.foreach(f)
   }
 
-  private val worker = new Actor {
+  private val actor: ActorRef = Actor.actorOf(new Actor{
     import scala.math._
     import java.util.concurrent.TimeUnit
 
@@ -63,15 +69,34 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     private var flushScheduled  = false
     private val duration        = Duration(min(expirationPolicy.timeToIdleNanos.getOrElse(2000000000l), expirationPolicy.timeToLiveNanos.getOrElse(2000000000l)) / 2, TimeUnit.NANOSECONDS)
 
-    val putAll = lift1 { request: PutAll =>
-      putToCache(request)
-      removeEldestEntries
-      scheduleFlush
+    def receive = {
+      case request: PutAll =>
+        putToCache(request)
+        removeEldestEntries
+        scheduleFlush
+
+      case FlushAllBySchedule =>
+        val currentTime = System.nanoTime()
+
+        val keysToRemove = cache.foldLeft[List[K]](Nil) {
+          case (keysToRemove, (key, value)) =>
+            if(expirationPolicy.isExpired(value, currentTime)) key :: keysToRemove
+            else keysToRemove
+        }
+
+        cache --= keysToRemove
+
+        flushScheduled = false
+
+        if (cache.size > 0) scheduleFlush
+      case FlushAll =>
+        cache.clear()
+        self.reply(())
     }
 
     private def scheduleFlush: Unit = if (!flushScheduled) {
-      ScheduledExecutor.once(flushAllBySchedule, duration)
-      flushScheduled = true
+       Scheduler.scheduleOnce(actor, FlushAllBySchedule, duration.time.toLong, duration.unit)
+       flushScheduled = true
     }
 
     private def putToCache(request: PutAll) {
@@ -86,36 +111,33 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
     private def removeEldestEntries {
       cache.removeEldestEntries(0.max(cache.size - maximumCapacity))
     }
+  })
+  actor.start
 
-    val flushAllBySchedule = lift { () =>
-      val currentTime = System.nanoTime()
+  def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 
-      val keysToRemove = cache.foldLeft[List[K]](Nil) { 
-        case (keysToRemove, (key, value)) =>
-          if(expirationPolicy.isExpired(value, currentTime)) key :: keysToRemove 
-          else keysToRemove
-      }
+  def += (tuple: (K, V))(implicit sg: Semigroup[V]) = put(tuple._1, tuple._2)
 
-      cache --= keysToRemove
+  def put(k: K, v: V)(implicit sg: Semigroup[V]) = actor ! PutAll((k, v) :: Nil)
 
-      flushScheduled = false
+  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs)
 
-      if (cache.size > 0) scheduleFlush
+  def flushAll(): Future[Unit] = actor.!!![Unit](FlushAll)
+
+  def stop(): Future[Unit] = {
+    val stopFuture = new Future[Unit]()
+    val flushFuture = flushAll()
+
+    def stopActorAndFinish = {
+      actor.stop()
+      stopFuture.deliver(())
     }
 
-    val flushAll = lift { () => cache.clear() }
+    stopFuture.ifCanceled{v => stopActorAndFinish}
+    stopFuture.deliver{v: Unit => stopActorAndFinish}
+
+    stopFuture
   }
-
-  def += (k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = put(k, v)
-
-  def += (tuple: (K, V))(implicit sg: Semigroup[V]): Future[Unit] = put(tuple._1, tuple._2)
-
-  def put(k: K, v: V)(implicit sg: Semigroup[V]): Future[Unit] = putAll((k, v) :: Nil)
-
-  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]): Future[Unit] = (worker putAll(PutAll(pairs))).toUnit
-
-  def flushAll(): Future[Unit] = (worker flushAll()).toUnit
-
 }
 
 object Stage {

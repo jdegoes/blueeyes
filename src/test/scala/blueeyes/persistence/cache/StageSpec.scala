@@ -33,7 +33,8 @@ class StageSpec extends Specification{
 
       evicted must eventually (be (true))
 
-      stage.flushAll
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict when stage is over capacity" in{
@@ -45,7 +46,8 @@ class StageSpec extends Specification{
 
       evicted must eventually (be (true))
       
-      stage.flushAll
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict when stage is flushed" in{
@@ -56,6 +58,9 @@ class StageSpec extends Specification{
       stage.flushAll
 
       evicted must eventually (be (true))
+
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict automatically" in{
@@ -67,6 +72,9 @@ class StageSpec extends Specification{
       evicted must eventually (be (true))
 
       stage.flushAll
+
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict automatically more then one time" in{
@@ -82,7 +90,8 @@ class StageSpec extends Specification{
 
       evictCount must eventually (beEqualTo(2))
 
-      stage.flushAll
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict all messages when multiple threads send messages" in{
@@ -100,6 +109,9 @@ class StageSpec extends Specification{
       flushFuture.value must eventually (beSomething)
 
       collected mustEqual(messagesCount * threadsCount)
+
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
 
     "evict all messages when multiple threads send messages with different keys" in{
@@ -126,6 +138,9 @@ class StageSpec extends Specification{
       flushFuture.value must eventually (beSomething)
 
       collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
+
+      val stop = stage.stop
+      stop.isDone must eventually (be (true))
     }
   }
 
