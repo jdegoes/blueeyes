@@ -27,7 +27,7 @@ object XmlExamples extends Specification {
   import scala.xml.{Group, Text}
 
   "Basic conversion example" in {
-    val json = toJson(users1) 
+    val json = toJson(users1)
     compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":"1","name":"Harry"},{"id":"2","name":"David","nickname":"Dave"}]}}"""
   }
 
@@ -55,7 +55,7 @@ object XmlExamples extends Specification {
     def flattenArray(nums: List[JValue]) = JString(nums.map(_.values).mkString(","))
 
     val printer = new scala.xml.PrettyPrinter(100,2)
-    val lotto: JObject = LottoExample.json
+    val lotto: JObject = LottoExampleJson
     val xml = toXml(lotto.transform {
       case JField("winning-numbers", JArray(nums)) => JField("winning-numbers", flattenArray(nums))
       case JField("numbers", JArray(nums)) => JField("numbers", flattenArray(nums))
@@ -128,7 +128,7 @@ object XmlExamples extends Specification {
         <id>2</id>
         <name nickname="Dave">David</name>
       </user>
-    </users>   
+    </users>
 
   val users2 =
     <users>
@@ -157,28 +157,29 @@ object XmlExamples extends Specification {
     case JField(n, x: JObject) if n == attrName => JField(fieldName, x)
   }
 
-  "Example with multiple attributes, multiple nested elements " in  {  
+  "Example with multiple attributes, multiple nested elements " in  {
     val a1 = attrToObject("stats", "count", s => JInt(s.value.toInt)) _
     val a2 = attrToObject("messages", "href", identity) _
     val json = a1(a2(toJson(messageXml1)))
     compact(render(json)) mustEqual expected1
   }
 
-  "Example with one attribute, one nested element " in { 
+  "Example with one attribute, one nested element " in {
     val a = attrToObject("stats", "count", s => JInt(s.value.toInt)) _
     compact(render(a(toJson(messageXml2)))) mustEqual expected2
     compact(render(a(toJson(messageXml3)))) mustEqual expected2
   }
 
-  val messageXml1 = 
+  val messageXml1 =
     <message expiry_date="20091126" text="text" word="ant" self="me">
       <stats count="0"></stats>
       <messages href="https://domain.com/message/ant"></messages>
     </message>
 
   val expected1 = """{"message":{"expiry_date":"20091126","word":"ant","text":"text","self":"me","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
+//  val expected1 = """{"message":{"expiry_date":"20091126","text":"text","self":"me","word":"ant","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
 
-  val messageXml2 = 
+  val messageXml2 =
     <message expiry_date="20091126">
       <stats count="0"></stats>
     </message>
@@ -186,6 +187,24 @@ object XmlExamples extends Specification {
   val messageXml3 = <message expiry_date="20091126"><stats count="0"></stats></message>
 
   val expected2 = """{"message":{"expiry_date":"20091126","stats":{"count":0}}}"""
+
+  case class Winner(`winner-id`: Long, numbers: List[Int])
+  case class Lotto(id: Long, `winning-numbers`: List[Int], winners: List[Winner],
+                   `draw-date`: Option[java.util.Date])
+
+  val winners = List(Winner(23, List(2, 45, 34, 23, 3, 5)), Winner(54, List(52, 3, 12, 11, 18, 22)))
+  val lotto = Lotto(5, List(2, 45, 34, 23, 7, 5, 3), winners, None)
+
+  val LottoExampleJson =
+    ("lotto" ->
+      ("id" -> lotto.id) ~
+      ("winning-numbers" -> lotto.`winning-numbers`) ~
+      ("draw-date" -> lotto.`draw-date`.map(_.toString)) ~
+      ("winners" ->
+        lotto.winners.map { w =>
+          (("winner-id" -> w.`winner-id`) ~
+           ("numbers" -> w.numbers))}))
+
 }
 
 }

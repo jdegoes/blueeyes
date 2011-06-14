@@ -17,7 +17,7 @@ class InsertQueryBehaviourSpec extends Specification with MocksCreation{
     when(collection.getLastError).thenReturn(None)
 
     val query  = insert(jObject).into("collection")
-    val result = query(collection)
+    val result: JValue = query(collection)
 
     Mockito.verify(collection, times(1)).insert(jObject2MongoObject(jObject) :: Nil)
 

@@ -8,8 +8,8 @@ import blueeyes.concurrent.FutureImplicits._
 import blueeyes.util.ClockSystem._
 import scala.collection.JavaConversions._
 
-import scalaz.Scalaz._
 import akka.actor.{Actor, ActorRef, Scheduler}
+import Actor._
 
 abstract class Stage[K, V] {
 
@@ -113,7 +113,7 @@ abstract class Stage[K, V] {
   }
 
   private val actor: ActorRef = Actor.actorOf(new StageActor())
-  actor.start
+  actor.start()
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 

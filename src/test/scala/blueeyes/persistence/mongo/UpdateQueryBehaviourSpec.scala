@@ -16,7 +16,7 @@ class UpdateQueryBehaviourSpec  extends Specification with MocksCreation{
     val filter   = Some("name" === "Joe")
 
     val query  = update("collection").set(jObject).where("name" === "Joe")
-    val result = query(collection)
+    val result: JValue = query(collection)
 
     Mockito.verify(collection, times(1)).update(filter, jObject, false, false)
 
@@ -28,7 +28,7 @@ class UpdateQueryBehaviourSpec  extends Specification with MocksCreation{
     val filter   = Some("name" === "Joe")
 
     val query  = update("collection").set(MongoUpdateNothing).where("name" === "Joe")
-    val result = query(collection)
+    val result: JValue = query(collection)
 
     Mockito.verify(collection, times(0)).update(filter, MongoUpdateNothing, false, false)
 

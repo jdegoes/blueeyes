@@ -41,6 +41,8 @@ private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends M
     val mongoCollection = collection(v)
     MongoCollectionHolder(mongoCollection, mongoCollection.collection.getName, this)
   }.toSet
+
+  protected def poolSize = 10
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealMongoDatabase) extends DatabaseCollection{

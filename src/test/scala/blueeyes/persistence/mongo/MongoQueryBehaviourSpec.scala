@@ -18,7 +18,7 @@ class MongoQueryBehaviourSpec extends Specification with MocksCreation{
 
     when(collection.getLastError).thenReturn(None)
 
-    val result    = query(collection)
+    val result: Int    = query(collection)
 
     Mockito.verify(collection, times(1)).requestStart
     Mockito.verify(collection, times(1)).getLastError

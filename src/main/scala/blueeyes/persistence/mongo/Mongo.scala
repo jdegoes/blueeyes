@@ -5,9 +5,13 @@ import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
-import akka.actor.Actor
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
+
+import akka.actor.Actor._
+import akka.actor.Actor
+import akka.routing.Routing._
+import akka.routing.CyclicIterator
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -53,8 +57,9 @@ class MongoActor extends Actor {
 abstract class MongoDatabase {
   def mongo: Mongo
 
-  private lazy val mongoActor = Actor.actorOf[MongoActor]
-  mongoActor.start
+  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( List.fill(poolSize)(Actor.actorOf[MongoActor].start) ) )
+//  private lazy val mongoActor = Actor.actorOf[MongoActor]
+//  mongoActor.start
 
   def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
 
@@ -92,6 +97,8 @@ abstract class MongoDatabase {
 }""")
     }
   }
+
+  protected def poolSize: Int
 
   protected def collection(collectionName: String): DatabaseCollection
 }

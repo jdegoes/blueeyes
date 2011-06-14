@@ -32,6 +32,8 @@ private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
     })
   }
 
+  protected def poolSize = 1
+
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 }
 

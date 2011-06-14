@@ -16,7 +16,7 @@ class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
     val filter = Some("name" === "Joe")
 
     val query  = remove.from("collection").where("name" === "Joe")
-    val result = query(collection)
+    val result: JValue = query(collection)
 
     Mockito.verify(collection, times(1)).remove(filter)
 
@@ -26,7 +26,7 @@ class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
     when(collection.getLastError).thenReturn(None)
 
     val query = remove.from("collection")
-    val result = query(collection)
+    val result: JValue = query(collection)
 
     Mockito.verify(collection, times(1)).remove(None)
     
