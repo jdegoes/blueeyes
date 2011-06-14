@@ -11,11 +11,11 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 import scalaz._
 import Scalaz._
 
-class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with FutureDeliveryStrategySequential{
+class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
 
   def getPatch = for{
     filter <- getMongoFieldFilter

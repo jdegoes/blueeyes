@@ -2,11 +2,11 @@ package blueeyes.core.service
 
 import java.io.ByteArrayOutputStream
 import blueeyes.core.http.{HttpResponse, HttpRequest}
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.util.metrics.DataSize
 
-trait HttpClientByteChunk extends HttpClient[ByteChunk] with FutureDeliveryStrategySequential{ self =>
+trait HttpClientByteChunk extends HttpClient[ByteChunk]{ self =>
   def aggregate(chunkSize: Option[DataSize]) = new HttpClient[ByteChunk] {
     val chunkSizeInBytes = chunkSize.map(_.bytes)
     def isDefinedAt(request: HttpRequest[ByteChunk]) = self.isDefinedAt(request)

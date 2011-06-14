@@ -12,14 +12,14 @@ import blueeyes.persistence.cache.ExpirationPolicy
 import scalaz.Semigroup
 import org.specs.util.TimeConversions._
 import scala.util.Random
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
 import akka.actor.{Actor}
 import scalaz._
 import Scalaz._
 
-class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo with FutureDeliveryStrategySequential{
+class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {
     def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 |+| v2

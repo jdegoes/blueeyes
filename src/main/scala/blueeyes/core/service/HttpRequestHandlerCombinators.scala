@@ -6,12 +6,12 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpHeaderImplicits._
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
 import blueeyes.util.metrics.DataSize
 import java.io.ByteArrayOutputStream
 
-trait HttpRequestHandlerCombinators extends FutureDeliveryStrategySequential{
+trait HttpRequestHandlerCombinators{
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
    *

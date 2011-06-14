@@ -1,7 +1,6 @@
 package blueeyes.core.service
 
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureDeliveryStrategySequential
 import blueeyes.core.http._
 import blueeyes.core.data._
 import java.net.InetAddress
@@ -118,7 +117,7 @@ object HttpClient {
     def apply(r: HttpRequest[A]): Future[HttpResponse[A]] = h.apply(r)
   }
 
-  class EchoClient[T](f: HttpRequest[T] => Option[T]) extends HttpClient[T] with FutureDeliveryStrategySequential {
+  class EchoClient[T](f: HttpRequest[T] => Option[T]) extends HttpClient[T] {
     override def apply(r: HttpRequest[T]) = {
       Future[HttpResponse[T]](HttpResponse[T](content = f(r)))
     }

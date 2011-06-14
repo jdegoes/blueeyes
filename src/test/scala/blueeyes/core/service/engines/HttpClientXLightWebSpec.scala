@@ -9,7 +9,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future, FutureImplicits}
+import blueeyes.concurrent.{Future, FutureImplicits}
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 
@@ -239,7 +239,7 @@ import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
 
 object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
 
-trait ContentReader extends FutureDeliveryStrategySequential{
+trait ContentReader{
   def readContent[T](chunk: Chunk[T]): Future[List[T]] = {
     val result = new Future[List[T]]()
     readContent[T](chunk, List[T](), result)

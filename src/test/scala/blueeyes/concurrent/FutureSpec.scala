@@ -4,7 +4,7 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.FutureImplicits._
 
-class FutureSpec extends Specification with FutureDeliveryStrategySequential{
+class FutureSpec extends Specification{
   "Future" should {
     "support cancel" in { 
       val f = Future.dead[String](new Exception("error"))

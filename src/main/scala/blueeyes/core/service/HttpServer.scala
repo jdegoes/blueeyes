@@ -11,7 +11,7 @@ import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
 import java.net.InetAddress
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -35,7 +35,7 @@ trait HttpReflectiveServiceList[T] { self =>
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
  */
-trait HttpServer extends HttpRequestHandler[ByteChunk] with FutureDeliveryStrategySequential{ self =>
+trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
 
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))

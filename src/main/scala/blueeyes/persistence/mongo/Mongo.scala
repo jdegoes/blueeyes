@@ -6,7 +6,7 @@ import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
 import akka.actor.Actor
-import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 
 /** The Mongo creates a MongoDatabase by  database name.
@@ -50,7 +50,7 @@ class MongoActor extends Actor {
  *
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
-abstract class MongoDatabase(implicit deliveryStrategy: FutureDeliveryStrategy) {
+abstract class MongoDatabase {
   def mongo: Mongo
 
   private lazy val mongoActor = Actor.actorOf[MongoActor]

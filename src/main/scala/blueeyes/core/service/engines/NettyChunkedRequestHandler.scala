@@ -9,12 +9,12 @@ import org.jboss.netty.util.CharsetUtil
 import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
 import NettyChunkedRequestHandler._
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.core.http.HttpRequest
 import net.lag.logging.Logger
 
-class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with NettyConverters with FutureDeliveryStrategySequential{
+class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with NettyConverters{
 
   private val log = Logger.get
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None

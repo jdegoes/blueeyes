@@ -7,7 +7,6 @@ import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
-import blueeyes.concurrent.FutureDeliveryStrategy._
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r

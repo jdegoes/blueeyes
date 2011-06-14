@@ -12,10 +12,10 @@ import javax.net.ssl.SSLContext
 import net.lag.logging.Logger
 import org.xlightweb.client.{HttpClient => XLHttpClient}
 import scala.collection.JavaConversions._
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
-trait HttpClientXLightWebEngines extends HttpClientByteChunk with FutureDeliveryStrategySequential{
+trait HttpClientXLightWebEngines extends HttpClientByteChunk{
 
   private val logger = Logger.get
 

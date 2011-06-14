@@ -1,11 +1,11 @@
 package blueeyes.core.data
 
 import scala.math.min
-import blueeyes.concurrent.{FutureDeliveryStrategy, Future}
+import blueeyes.concurrent.Future
 import java.io.{OutputStream, FileOutputStream, RandomAccessFile, File}
 
-class FileSource(file: File, private[FileSource] var offset: Long, length: Long, chunkSize: Int = 8192)(implicit deliveryStrategy: FutureDeliveryStrategy){
-  def this(file: File)(implicit deliveryStrategy: FutureDeliveryStrategy) = this(file, 0, file.length())
+class FileSource(file: File, private[FileSource] var offset: Long, length: Long, chunkSize: Int = 8192){
+  def this(file: File) = this(file, 0, file.length())
 
   private val accessFile = new RandomAccessFile(file, "r")
   private val endOffset  = offset + length
@@ -37,12 +37,12 @@ class FileSource(file: File, private[FileSource] var offset: Long, length: Long,
 }
 
 object FileSource{
-  def apply(file: File)(implicit deliveryStrategy: FutureDeliveryStrategy): Option[ByteChunk] = new FileSource(file).apply.map(future => future.value.get)
+  def apply(file: File): Option[ByteChunk] = new FileSource(file).apply.map(future => future.value.get)
 }
 
 class FileSink(file: File){
   private var output: Option[OutputStream] = None
-  def apply(chunk: ByteChunk)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[Unit] = {
+  def apply(chunk: ByteChunk): Future[Unit] = {
     val result  = new Future[Unit]()
     try {
       file.createNewFile()
@@ -93,5 +93,5 @@ class FileSink(file: File){
 }
 
 object FileSink{
-  def apply(file: File, chunk: ByteChunk)(implicit deliveryStrategy: FutureDeliveryStrategy) = new FileSink(file).apply(chunk)
+  def apply(file: File, chunk: ByteChunk) = new FileSink(file).apply(chunk)
 }

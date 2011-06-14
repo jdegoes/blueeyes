@@ -1,7 +1,7 @@
 package blueeyes.core.service.engines.security
 
 import net.lag.logging.Logger
-import blueeyes.concurrent.{FutureDeliveryStrategy, Future}
+import blueeyes.concurrent.Future
 import java.lang.ProcessBuilder
 import java.io.{InputStream, ByteArrayOutputStream}
 
@@ -9,7 +9,7 @@ object JavaKeyTool{
 
   private val log = Logger.get
 
-  def apply(keystore: String, keyalg: String, alias: String, dname: String, validity: Int, password: String)(implicit deliveryStrategy: FutureDeliveryStrategy) = {
+  def apply(keystore: String, keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
     val command = Array("keytool",
                         "-keystore",  keystore,
                         "-keyalg",    keyalg,
@@ -36,7 +36,7 @@ object JavaKeyTool{
     (exitCode, stdout, stderr)
   }
 
-  private def pump(is: InputStream)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[String] = Future.async {
+  private def pump(is: InputStream): Future[String] = Future.async {
     val out = new ByteArrayOutputStream()
 
     var looping = true

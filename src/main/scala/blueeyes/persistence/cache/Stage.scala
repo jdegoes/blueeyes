@@ -3,7 +3,7 @@ package persistence.cache
 
 import scalaz.Semigroup
 import blueeyes.util.metrics.Duration
-import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 import blueeyes.util.ClockSystem._
 import scala.collection.JavaConversions._
@@ -11,7 +11,7 @@ import scala.collection.JavaConversions._
 import scalaz.Scalaz._
 import akka.actor.{Actor, ActorRef, Scheduler}
 
-abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrategy) {
+abstract class Stage[K, V] {
 
   private sealed trait StageIn
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends StageIn
@@ -142,7 +142,7 @@ abstract class Stage[K, V](implicit futureDeliveryStrategy: FutureDeliveryStrate
 }
 
 object Stage {
-  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit)(implicit deliveryStrategy: FutureDeliveryStrategy): Stage[K, V] = new Stage[K, V]()(deliveryStrategy) {
+  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit): Stage[K, V] = new Stage[K, V]() {
     def expirationPolicy = policy
 
     def maximumCapacity = capacity

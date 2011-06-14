@@ -1,13 +1,13 @@
 package blueeyes.core.service
 
 import org.specs.Specification
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
 import blueeyes.util.metrics.DataSize
 import DataSize._
 
-class HttpClientByteChunkSpec extends Specification with FutureDeliveryStrategySequential{
+class HttpClientByteChunkSpec extends Specification{
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
       val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")

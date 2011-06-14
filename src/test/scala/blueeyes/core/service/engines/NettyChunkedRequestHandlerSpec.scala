@@ -10,10 +10,10 @@ import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.http.HttpRequest
 import org.jboss.netty.channel._
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
 
-class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation with NettyConverters with FutureDeliveryStrategySequential{
+class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation with NettyConverters{
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]

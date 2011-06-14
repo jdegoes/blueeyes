@@ -10,7 +10,7 @@ import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
 
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
@@ -93,7 +93,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[By
 import NettyChunkedInput._
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with FutureDeliveryStrategySequential{
+class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
 
   private val log   = Logger.get
   private var done  = false

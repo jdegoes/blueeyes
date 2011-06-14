@@ -2,11 +2,10 @@ package blueeyes.core.service.engines.security
 
 import java.io.{File, FileInputStream}
 import java.security.KeyStore
-import blueeyes.concurrent.FutureDeliveryStrategy
 
 object CertificateGenerator{
 
-  def apply(keyalg: String, alias: String, dname: String, validity: Int, password: String)(implicit deliveryStrategy: FutureDeliveryStrategy) = {
+  def apply(keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
     val keyStorePath  = System.getProperty("java.io.tmpdir") + "/" + System.currentTimeMillis + ".jks"
 
     JavaKeyTool(keyStorePath, keyalg, alias, dname, validity, password)

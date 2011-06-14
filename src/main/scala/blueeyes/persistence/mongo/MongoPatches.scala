@@ -1,7 +1,7 @@
 package blueeyes
 package persistence.mongo
 
-import blueeyes.concurrent.{Future, FutureDeliveryStrategy}
+import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import scalaz._
 import Scalaz._
@@ -27,7 +27,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
     */
-  def commit(database: MongoDatabase, collection: MongoCollection)(implicit fds: FutureDeliveryStrategy): Future[Unit] = {
+  def commit(database: MongoDatabase, collection: MongoCollection): Future[Unit] = {
     val futures = patches.toList.map { 
       case (filter, update) =>
         database[JNothing.type] {

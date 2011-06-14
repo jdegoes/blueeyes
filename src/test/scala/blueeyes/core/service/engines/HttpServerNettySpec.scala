@@ -4,7 +4,7 @@ import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
@@ -17,7 +17,7 @@ import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 import java.io.File
 
-class HttpServerNettySpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray with BijectionsChunkString{
+class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString{
 
   private val configPattern = """server{
   port = %d

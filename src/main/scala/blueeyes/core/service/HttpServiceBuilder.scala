@@ -2,7 +2,7 @@ package blueeyes.core.service
 
 import blueeyes.core.http._
 import scala.reflect.Manifest
-import blueeyes.concurrent.{FutureDeliveryStrategySequential, Future}
+import blueeyes.concurrent.Future
 
 /**
 val emailService = {
@@ -20,7 +20,7 @@ val emailService = {
   }
 }
 */
-trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits with FutureDeliveryStrategySequential{
+trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
   protected case class StartupDescriptor[S](startup: () => Future[S]) {
     def -> (request: RequestDescriptor[S]) = new StartupAndShutdownDescriptor(request)
     class StartupAndShutdownDescriptor(request: RequestDescriptor[S]){

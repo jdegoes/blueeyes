@@ -2,7 +2,7 @@ package blueeyes.core.data
 
 import org.specs.Specification
 import java.io.File
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
 
 class FileSinkSpec extends Specification with Data{
@@ -90,7 +90,7 @@ class FileSourceSpec extends Specification with Data{
   }
 }
 
-trait Data extends FutureDeliveryStrategySequential{
+trait Data{
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
   val data     = List.fill(5)(List.fill[Byte](10)('0'))
   val chunk    = data.tail.foldLeft(new ByteMemoryChunk(data.head.toArray)){(chunk, data) => new ByteMemoryChunk(data.toArray, () => Some(Future[ByteChunk](chunk)))}

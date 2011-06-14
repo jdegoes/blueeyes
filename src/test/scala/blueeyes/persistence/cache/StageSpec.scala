@@ -5,7 +5,7 @@ import org.specs.Specification
 import org.specs.util.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 
 import scala.util.Random
@@ -13,7 +13,7 @@ import scalaz._
 import Scalaz._
 import akka.actor.Actor
 
-class StageSpec extends Specification with FutureDeliveryStrategySequential{
+class StageSpec extends Specification{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2

@@ -3,11 +3,11 @@ package blueeyes.core.service
 import org.specs.Specification
 import blueeyes.core.http._
 import blueeyes.core.data.BijectionsByteArray
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-class HttpClientSpec extends Specification with FutureDeliveryStrategySequential with BijectionsByteArray{
+class HttpClientSpec extends Specification with BijectionsByteArray{
 
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "/baz")
 

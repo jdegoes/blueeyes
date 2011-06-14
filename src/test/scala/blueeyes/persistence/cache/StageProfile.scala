@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 import scala.util.Random
 import scalaz.Semigroup
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.concurrent.FutureImplicits._
 import org.specs.util.TimeConversions._
 import akka.actor.Actor
 
-object StageProfile extends FutureDeliveryStrategySequential{
+object StageProfile{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2

@@ -2,9 +2,9 @@ package blueeyes.core.data
 
 import org.specs.Specification
 import blueeyes.json.JsonAST._
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 
-class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArray with FutureDeliveryStrategySequential with BijectionsChunkByteArray{
+class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArray with BijectionsChunkByteArray{
   private val jObject1 = JObject(List(JField("foo", JString("bar"))))
   private val jObject2 = JObject(List(JField("bar", JString("foo"))))
   private val bijection = chunksToChunksArrayByte[JValue]

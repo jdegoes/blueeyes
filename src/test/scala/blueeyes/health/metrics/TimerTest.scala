@@ -1,11 +1,11 @@
 package blueeyes.health.metrics
 
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.util.metrics.Duration
 import Duration._
 import org.specs.Specification
 
-class TimerTest extends Specification with FutureDeliveryStrategySequential {
+class TimerTest extends Specification {
   val precision = 5.0 // milliseconds
 
   "timing an event" should {

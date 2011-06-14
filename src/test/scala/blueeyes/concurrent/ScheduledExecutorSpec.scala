@@ -4,7 +4,7 @@ import org.specs.Specification
 import org.specs.util.{Duration => SpecsDuration}
 import blueeyes.util.metrics.Duration._
 
-class ScheduledExecutorSpec extends Specification with FutureDeliveryStrategySequential{
+class ScheduledExecutorSpec extends Specification{
   "ScheduledExecutor.once" should {
     "execute function" in{
       val f = ScheduledExecutor.once((a: Int) => Future.lift[Int](a), 1, 10.milliseconds)

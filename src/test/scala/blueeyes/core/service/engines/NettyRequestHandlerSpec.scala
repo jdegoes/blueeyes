@@ -6,7 +6,7 @@ import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.channel._
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
-import blueeyes.concurrent.{Future, FutureDeliveryStrategySequential}
+import blueeyes.concurrent.Future
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
@@ -17,7 +17,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with FutureDeliveryStrategySequential with MocksCreation with BijectionsChunkString{
+class NettyRequestHandlerSpec extends Specification with NettyConverters with MocksCreation with BijectionsChunkString{
   private val handler       = mock[HttpRequestHandler[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]

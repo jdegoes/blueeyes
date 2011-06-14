@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.concurrent.FutureDeliveryStrategy
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 
@@ -8,7 +7,7 @@ case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacit
 
 /** A stage for updates to Mongo.
  */
-class MongoStage (database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings)(implicit futureDeliveryStrategy: FutureDeliveryStrategy) 
+class MongoStage (database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings)
 extends Stage[MongoFilter, MongoUpdate] {
 
   def flush(filter: MongoFilter, update: MongoUpdate) = {
@@ -23,7 +22,7 @@ extends Stage[MongoFilter, MongoUpdate] {
 }
 
 object MongoStage {
-  def apply(database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings)(implicit futureDeliveryStrategy: FutureDeliveryStrategy) = {
+  def apply(database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings) = {
     new MongoStage(database, collection, mongoStageSettings)
   }
 }

@@ -1,5 +1,6 @@
 package blueeyes.concurrent
 
+import collection.mutable.ListBuffer
 import akka.dispatch.{Future => AkkaFuture}
 import scalaz.{Validation, Success, Failure}
 
@@ -17,7 +18,7 @@ import scalaz.{Validation, Success, Failure}
  * the exceptions will not terminate calling code. All such "swallowed" exceptions
  * are reported to the thread's default exception handler.
  */
-class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
+class Future[T]{
   import scala.collection.mutable.ArrayBuffer
 
   private val lock = new ReadWriteLock{}
@@ -442,7 +443,20 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
   }
 
   private def deliverAndHandleError[A](value: A, listeners: Iterable[A => Unit], errorHandlers: List[List[Throwable] => Unit]){
-    deliveryStrategy.deliver(value, listeners, handleErrors(errorHandlers) _)
+    deliver(value, listeners, handleErrors(errorHandlers) _)
+  }
+
+  private def deliver[A](value: A, listeners: Iterable[A => Unit], errorHandler: List[Throwable] => Unit) = {
+    val buffer = new ListBuffer[Throwable]
+
+    listeners foreach { listener =>
+      try listener(value)
+      catch {
+        case t: Throwable => buffer += t
+      }
+    }
+
+    if (buffer.length > 0) errorHandler(buffer.toList)
   }
 
   private def handleErrors(errorHandlers: List[List[Throwable] => Unit])(errors: List[Throwable]){
@@ -468,23 +482,23 @@ class Future[T](implicit deliveryStrategy: FutureDeliveryStrategy){
 object Future {
   /** Creates a "dead" future that is canceled and will never be delivered.
    */
-  def dead[T](implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
+  def dead[T]: Future[T] = {
     val f = new Future[T]
     f.cancel
     f
   }
 
-  def dead[T](e: Throwable)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
+  def dead[T](e: Throwable): Future[T] = {
     val f = new Future[T]
     f.cancel(e)
     f
   }
 
-  def lift[T](t: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = new Future().deliver(t: T)
+  def lift[T](t: T): Future[T] = new Future().deliver(t: T)
 
-  def apply[T](t: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = lift(t)
+  def apply[T](t: T): Future[T] = lift(t)
 
-  def apply[T](futures: Future[T]*)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[List[T]] = {
+  def apply[T](futures: Future[T]*): Future[List[T]] = {
     import java.util.concurrent.ConcurrentHashMap
 
     val resultsMap = new ConcurrentHashMap[Int, T]
@@ -525,7 +539,7 @@ object Future {
     result
   }
 
-  def async[T](f: => T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
+  def async[T](f: => T): Future[T] = {
     val result = new Future[T]
 
     import scala.actors.Actor.actor
@@ -537,7 +551,7 @@ object Future {
     result
   }
 
-  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T])(implicit deliveryStrategy: FutureDeliveryStrategy): Future[T] = {
+  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T]): Future[T] = {
     val newF = new Future[T]
 
     f.respond { t =>
@@ -547,21 +561,21 @@ object Future {
     newF
   }
 
-  implicit def futureMonad(implicit deliveryStrategy: FutureDeliveryStrategy): scalaz.Monad[Future] = new scalaz.Monad[Future] {
+  implicit def futureMonad: scalaz.Monad[Future] = new scalaz.Monad[Future] {
     def pure[A](a: => A) = Future.async(a)
     def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
   }
 }
 
 trait FutureImplicits {
-  implicit def any2Future[T, S >: T](any: T)(implicit deliveryStrategy: FutureDeliveryStrategy): Future[S] = Future(any: S)
+  implicit def any2Future[T, S >: T](any: T): Future[S] = Future(any: S)
 
   implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = TupleOfFuturesJoiner(tuple)
   case class TupleOfFuturesJoiner[U, V](tuple: (Future[U], Future[V])){
     def join: Future[(U, V)] = tuple._1.zip(tuple._2)
   }
 
-  implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T])(implicit deliveryStrategy: FutureDeliveryStrategy) = {
+  implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T]) = {
     val future = new Future[T]()
     akkaFuture.onComplete{ value: AkkaFuture[T] => value.exception.map(future.cancel(_)).getOrElse{
       value.result.foreach{v =>
