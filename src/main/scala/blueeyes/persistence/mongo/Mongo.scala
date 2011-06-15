@@ -12,6 +12,11 @@ import akka.actor.Actor._
 import akka.actor.Actor
 import akka.routing.Routing._
 import akka.routing.CyclicIterator
+import akka.dispatch.Dispatchers
+import akka.util.Duration
+
+import java.util.concurrent.TimeUnit
+
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
@@ -25,8 +30,15 @@ trait Mongo{
   def database(databaseName: String): MongoDatabase
 }
 
+object MongoActor{
+  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
+      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+}
+
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
 class MongoActor extends Actor {
+  self.dispatcher = MongoActor.dispatcher
   def receive = {
     case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
     case _ => error("wrong message.")
@@ -57,7 +69,8 @@ class MongoActor extends Actor {
 abstract class MongoDatabase {
   def mongo: Mongo
 
-  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( List.fill(poolSize)(Actor.actorOf[MongoActor].start) ) )
+  private lazy val actors     = List.fill(poolSize)(Actor.actorOf[MongoActor].start)
+  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
 //  private lazy val mongoActor = Actor.actorOf[MongoActor]
 //  mongoActor.start
 
@@ -96,6 +109,11 @@ abstract class MongoDatabase {
       print("""]
 }""")
     }
+  }
+
+  def disconnect() = {
+    actors.foreach(_.stop())
+    mongoActor.stop
   }
 
   protected def poolSize: Int
