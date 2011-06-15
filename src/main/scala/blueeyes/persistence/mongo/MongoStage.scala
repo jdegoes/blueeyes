@@ -8,7 +8,7 @@ case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacit
 
 /** A stage for updates to Mongo.
  */
-class MongoStage (database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings)(implicit futureDeliveryStrategy: FutureDeliveryStrategy) 
+class MongoStage (val database: MongoDatabase, val collection: MongoCollection, mongoStageSettings: MongoStageSettings)(implicit futureDeliveryStrategy: FutureDeliveryStrategy) 
 extends Stage[MongoFilter, MongoUpdate] {
 
   def flush(filter: MongoFilter, update: MongoUpdate) = {
