@@ -29,11 +29,11 @@ trait FutureMatchers {
    */
   case class whenDelivered[A](inner: Matcher[A])(implicit timeouts: FutureTimeouts) extends Matcher[Future[A]]() {
     def apply(future: => Future[A]): (Boolean, String, String) = {
-      retry(future, timeouts.retries)
+      retry(future, timeouts.retries, timeouts.retries)
     }
 
     @tailrec
-    private def retry(future: => Future[A], retries: Int): (Boolean, String, String) = {
+    private def retry(future: => Future[A], retries: Int, totalRetries: Int): (Boolean, String, String) = {
       val start = System.currentTimeMillis
 
       val delivered = future
@@ -55,7 +55,7 @@ trait FutureMatchers {
 
           case None => 
             if (countedDown) Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error.map(_.fullStackTrace))
-            else Retry("Retried after wait of " + timeouts.duration)
+            else Retry("Retried " + (totalRetries - retries) + " times with interval of " + timeouts.duration)
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
@@ -67,11 +67,14 @@ trait FutureMatchers {
 
         case Retry(_) if (retries > 0) => {
           val end = System.currentTimeMillis
-          Thread.sleep(0l.max(timeouts.duration.milliseconds.length - (end - start)))
-          retry(future, retries - 1)
+          Thread.sleep(timeouts.duration.milliseconds.length.min(end - start))
+          print(".")
+          retry(future, retries - 1, totalRetries)
         }
 
-        case Retry(message) => (false, "Enough timeout exceptions.", message)
+        case Retry(message) => 
+          println
+          (false, "Enough timeout exceptions.", message)
       }
     }
   }
