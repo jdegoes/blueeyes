@@ -2,7 +2,8 @@ package blueeyes.concurrent
 package test
 
 import scala.annotation.tailrec  
-import org.specs.matcher.{Matcher}
+import org.specs.matcher.Matcher
+import org.specs.specification.FailureExceptionWithResult
 
 import java.util.concurrent.{TimeoutException,  TimeUnit, CountDownLatch}
 
@@ -59,6 +60,7 @@ trait FutureMatchers {
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
+        case failure: FailureExceptionWithResult[_] => Retry("Assertion failed on retry " + (totalRetries - retries) + ": " + failure.getMessage)
         case ex: Throwable => Retry("Caught exception in matching delivered value: " + ex.fullStackTrace)
       }  
 
@@ -67,7 +69,7 @@ trait FutureMatchers {
 
         case Retry(_) if (retries > 0) => {
           val end = System.currentTimeMillis
-          Thread.sleep(timeouts.duration.milliseconds.length.min(end - start))
+          Thread.sleep(0L.max(timeouts.duration.milliseconds.length - (end - start)))
           print(".")
           retry(future, retries - 1, totalRetries)
         }
