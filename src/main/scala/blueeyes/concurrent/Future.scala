@@ -28,14 +28,14 @@ class Future[T]{
   private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
   private def listeners: List[T => Unit] = lock.readLock { _listeners.toList }
 
-  private var _result: Option[T] = None
-  private var _isSet: Boolean = false
-  private var _isCanceled: Boolean = false
+  @volatile private var _result: Option[T] = None
+  @volatile private var _isSet: Boolean = false
+  @volatile private var _isCanceled: Boolean = false
 
-  private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
+  @volatile private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
   private def canceled: List[Option[Throwable] => Unit] = _canceled.toList
 
-  private var _error: Option[Throwable] = None
+  @volatile private var _error: Option[Throwable] = None
 
   /** Delivers the value of the future to anyone awaiting it. If the value has
    * already been delivered, this method will throw an exception.
@@ -233,6 +233,7 @@ class Future[T]{
     deliverTo { t =>
       fut.deliver(f(t))
     }
+
     ifCanceled { why =>
       fut.forceCancel(why)
     }
@@ -577,10 +578,11 @@ trait FutureImplicits {
 
   implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T]) = {
     val future = new Future[T]()
-    akkaFuture.onComplete{ value: AkkaFuture[T] => value.exception.map(future.cancel(_)).getOrElse{
-      value.result.foreach{v =>
-        future.deliver(v)}
-    }}
+    akkaFuture.onComplete{ value: AkkaFuture[T] => 
+      value.exception.map(future.cancel).getOrElse {
+        value.result.foreach(v => future.deliver(v))
+      }
+    }
     future
   }
 }

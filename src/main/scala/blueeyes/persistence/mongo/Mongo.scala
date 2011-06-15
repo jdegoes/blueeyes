@@ -37,6 +37,7 @@ object MongoActor{
 }
 
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
+
 class MongoActor extends Actor {
   self.dispatcher = MongoActor.dispatcher
   def receive = {

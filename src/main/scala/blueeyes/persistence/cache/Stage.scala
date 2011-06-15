@@ -88,6 +88,7 @@ abstract class Stage[K, V] {
         flushScheduled = false
 
         if (cache.size > 0) scheduleFlush
+
       case FlushAll =>
         cache.clear()
         self.reply(())

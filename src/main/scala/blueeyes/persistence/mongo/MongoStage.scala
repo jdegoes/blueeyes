@@ -11,7 +11,7 @@ class MongoStage (val database: MongoDatabase, val collection: MongoCollection, 
 extends Stage[MongoFilter, MongoUpdate] {
 
   def flush(filter: MongoFilter, update: MongoUpdate) = {
-    database[JNothing.type] {
+    database.unverified[JNothing.type] {
       upsert(collection).set(update).where(filter)
     }
   }
