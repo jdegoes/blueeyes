@@ -33,7 +33,7 @@ trait Mongo{
 object MongoActor{
   val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
       .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+      .setMaxPoolSize(10).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
 
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
