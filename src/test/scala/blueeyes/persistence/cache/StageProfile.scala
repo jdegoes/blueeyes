@@ -39,7 +39,7 @@ object StageProfile{
       actor
     }
 
-    val futures = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
+    val futures = Future((actors map {actor => akkaFutureToFuture[Unit](actor !!! ("Send", 100000))}): _*)
     awaitFuture(futures)
 
 //    val flushFuture = stage.flushAll

@@ -1,34 +1,32 @@
 name := "blueeyes"
 
-version := "0.3.28"
+version := "0.3.29"
 
 organization := "com.reportgrid"
 
-scalaVersion := "2.8.1"
+scalaVersion := "2.9.0-1"
 
 libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
-  "com.thoughtworks.paranamer"  % "paranamer"           % "2.3",
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "se.scalablesolutions.akka"   % "akka-actor"          % "1.0",
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.4.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.5.3",
   "org.scalaz"                  %% "scalaz-core"        % "6.0.1",
-  "se.scalablesolutions.akka"   % "akka-actor"          % "1.0",
-  "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.0",
+  "se.scalablesolutions.akka"   % "akka-actor"          % "1.1.2",
+  "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.1.2",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
-  "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "provided",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "provided",
+  "org.scala-tools.testing"     %% "specs"              % "1.6.8"         % "provided",
+  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"           % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
 )
 
 ivyXML :=
   <dependencies>
-    <dependency org="se.scalablesolutions.akka" name="akka-actor" rev="1.0">
+    <dependency org="se.scalablesolutions.akka" name="akka-actor" rev="1.1.2">
       <exclude module="configgy"/>
     </dependency>
   </dependencies>

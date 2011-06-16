@@ -45,7 +45,7 @@ class Future[T]{
    */
   def deliver(computation: => T): Future[T] = {
     lock.writeLock {
-      if (_isSet) Predef.error("Future already delivered")
+      if (_isSet) sys.error("Future already delivered")
       else if (_isCanceled) None
       else {
         try {
@@ -578,9 +578,11 @@ trait FutureImplicits {
 
   implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T]) = {
     val future = new Future[T]()
-    akkaFuture.onComplete{ value: AkkaFuture[T] => 
-      value.exception.map(future.cancel).getOrElse {
-        value.result.foreach(v => future.deliver(v))
+    akkaFuture.onComplete{ value: AkkaFuture[T] =>
+      value.value match{
+        case Some(Right(value: T)) => future.deliver(value)
+        case Some(Left(error)) => future.cancel(error)
+        case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
       }
     }
     future

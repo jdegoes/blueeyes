@@ -57,20 +57,22 @@ trait OneJar { this: DefaultProject =>
   }
 }
 
-class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin with CoverageProject with SbtNetbeansPlugin {
-  val specs         = "org.scala-tools.testing"     %% "specs"              % "1.6.7"         % "provided"
-  val scala_check   = "org.scala-tools.testing"     %% "scalacheck"         % "1.8"           % "provided"
+class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin{
+  val specs         = "org.scala-tools.testing"     %% "specs"              % "1.6.8"         % "provided"
+  val scala_check   = "org.scala-tools.testing"     %% "scalacheck"         % "1.9"           % "provided"
   val mockito       = "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
-  val paranamer     = "com.thoughtworks.paranamer"  % "paranamer"           % "2.3"
+  val javolution       = "javolution"                  % "javolution"                  % "5.5.1"
   val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
   val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.5.3"         % "compile"
   val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
   val configgy      = "net.lag"                     % "configgy"            % "2.0.0"         % "compile" intransitive()
   val rhino         = "rhino"                       % "js"                  % "1.7R2"         % "compile"
+  val akka_actor = "se.scalablesolutions.akka"   % "akka-actor"         % "1.1.2"
+  val akka_typed_actor = "se.scalablesolutions.akka"   % "akka-typed-actor"   % "1.1.2"
   val xlightweb     = "org.xlightweb"               % "xlightweb"           % "2.13.2"        % "compile"
   val codec         = "commons-codec"               % "commons-codec"       % "1.5"           % "compile"
   val clhm_lru      = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
-  val scalaz_core   = "org.scalaz"                  %% "scalaz-core"        % "6.0-SNAPSHOT"
+  val scalaz_core   = "org.scalaz"                  %% "scalaz-core"        % "6.0.1"
 
   lazy val benchmark = benchmarkTask
 
@@ -80,14 +82,22 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   }
 
   override def mainClass = Some("blueeyes.demo.BlueEyesDemo")
+
+  override val ivyXML =
+  <dependencies>
+    <dependency org="se.scalablesolutions.akka" name="akka-actor" rev="1.1.2">
+      <exclude module="configgy"/>
+    </dependency>
+  </dependencies>
 }
 
 trait Repositories {
   val scalareleases   = MavenRepository("Scala Repo Releases",        "http://scala-tools.org/repo-releases/")
   val scalasnapshots  = MavenRepository("Scala-tools.org Repository", "http://scala-tools.org/repo-snapshots/")
-  val jbossreleases   = MavenRepository("JBoss Releases",             "http://repository.jboss.org/nexus/content/groups/public/")
   val sonatyperelease = MavenRepository("Sonatype Releases",          "http://oss.sonatype.org/content/repositories/releases")
   val nexusscalatools = MavenRepository("Nexus Scala Tools",          "http://nexus.scala-tools.org/content/repositories/releases")
   val mavenrepo1      = MavenRepository("Maven Repo 1",               "http://repo1.maven.org/maven2/")
   val scalablerepo    = MavenRepository("Maven Repo 1",               "http://akka.io/repository/")
+  val guiceyfruitrepo    = MavenRepository("Maven Repo 1",               "http://guiceyfruit.googlecode.com/svn/repo/releases/")
+  val jbossreleases   = MavenRepository("JBoss Releases",             "http://repository.jboss.org/nexus/content/groups/public/")
 }

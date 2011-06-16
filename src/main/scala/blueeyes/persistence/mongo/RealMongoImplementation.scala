@@ -26,7 +26,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
     val mongo = servers match {
       case x :: Nil => new com.mongodb.Mongo(x, options)
       case x :: xs  => new com.mongodb.Mongo(servers, options)
-      case Nil => error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
+      case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
     }
 
     if (config.getBool("slaveOk", true)) { mongo.slaveOk() }

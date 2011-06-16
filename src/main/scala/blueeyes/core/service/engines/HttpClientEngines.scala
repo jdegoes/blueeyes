@@ -98,7 +98,7 @@ trait HttpClientXLightWebEngines extends HttpClientByteChunk{
       case e: IHttpRequestHeader =>
         val bodyDataSink = clientInstance.send(e, handler)
         request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
-      case _ => error("wrong request type")
+      case _ => sys.error("wrong request type")
     }
   }
 
@@ -206,10 +206,10 @@ trait HttpClientXLightWebEngines extends HttpClientByteChunk{
       case HttpMethods.OPTIONS    => new OptionsRequest(url)
       case HttpMethods.POST       => postRequest(request, url)
       case HttpMethods.PUT        => putRequest(request, url)
-      case HttpMethods.CONNECT    => error("CONNECT is not implemented.")
-      case HttpMethods.TRACE      => error("TRACE is not implemented.")
-      case HttpMethods.PATCH      => error("PATCH is not implemented.")
-      case HttpMethods.CUSTOM(x)  => error("CUSTOM is not implemented.")
+      case HttpMethods.CONNECT    => sys.error("CONNECT is not implemented.")
+      case HttpMethods.TRACE      => sys.error("TRACE is not implemented.")
+      case HttpMethods.PATCH      => sys.error("PATCH is not implemented.")
+      case HttpMethods.CUSTOM(x)  => sys.error("CUSTOM is not implemented.")
     }
   }
 

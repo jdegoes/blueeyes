@@ -122,10 +122,10 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   private def slashOptParser = RestPathPatternParsers.SlashOptPathPattern.parser
 
   private def parseFailure(msg: String, s: String) = {
-    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+    sys.error("The pattern " + this.toString + " does not match " + s + ": " + msg)
   }
   private def parseError(msg: String, s: String) = {
-    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+    sys.error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
   }
 }
 object RestPathPattern extends RegexParsers {
@@ -162,9 +162,9 @@ object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar
     val elements = restPathPatternParser(new CharSequenceReader(s)) match {
       case Success(result, _) => result
 
-      case Failure(msg, _) => error("The path specification " + s + " has a syntax error: " + msg)
+      case Failure(msg, _) => sys.error("The path specification " + s + " has a syntax error: " + msg)
 
-      case Error(msg, _) => error("There was an error parsing \"" + s + "\": " + msg)
+      case Error(msg, _) => sys.error("There was an error parsing \"" + s + "\": " + msg)
     }
 
     CompositePathPattern(elements)

@@ -31,7 +31,7 @@ trait Mongo{
 }
 
 object MongoActor{
-  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
+  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("mongo")
       .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
       .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
@@ -42,7 +42,7 @@ class MongoActor extends Actor {
   self.dispatcher = MongoActor.dispatcher
   def receive = {
     case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-    case _ => error("wrong message.")
+    case _ => sys.error("wrong message.")
   }
 }
 
@@ -85,7 +85,7 @@ abstract class MongoDatabase {
       case MongoCollectionHolder(realCollection, name, database)  => realCollection
     }
 
-    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified))
+    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified), 1000 * 60 * 60)
   }
 
   def collections: Set[MongoCollectionHolder]

@@ -80,7 +80,7 @@ private[mongo] object MapReduceFunction extends RhinoJsonImplicits{
     }
     def valueTransformer(value: Any): JObject = value match{
       case e: Scriptable => scriptableObject2JObject(e)
-      case _ => error("value is not Json")
+      case _ => sys.error("value is not Json")
     }
     val mapScriptPattern = """var record  = %s; record.map  = %s; var emit = function(k, v){emitter.emit(k, v)}; record.map()"""
     val mapped          = ValuesGroup[Any, JObject](keyTransformer _, valueTransformer _)
@@ -119,7 +119,7 @@ private[mock] object UpdateFunction extends JObjectFields{
   }
 }
 
-private[mongo] case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {error("any value is not supported")}){
+private[mongo] case class ValuesGroup[K, V](keyTransformer : (Any) => K = (v: Any) => {sys.error("any key is not supported")}, valueTransformer :(Any) => V = (v: Any) => {sys.error("any value is not supported")}){
   private var groupedValues = Map[K, List[V]]()
 
   def emit(key: Any, value: Any) = {

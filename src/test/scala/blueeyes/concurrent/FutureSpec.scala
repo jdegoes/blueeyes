@@ -47,7 +47,7 @@ class FutureSpec extends Specification{
       var result: Option[String] = None
       
       f.deliverTo { s => 
-        error("misbehaving delivery handler")
+        sys.error("misbehaving delivery handler")
       }.deliverTo { s => 
         result = Some(s)
       }
@@ -210,7 +210,7 @@ class FutureSpec extends Specification{
       val original = new Future[String]()
       
       val returned = original.orElse { why =>
-        error("oh no")
+        sys.error("oh no")
       }
       
       original.cancel

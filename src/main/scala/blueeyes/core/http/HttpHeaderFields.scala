@@ -86,9 +86,9 @@ object HttpHeaderFields extends RegexParsers{
     def outFields = parser(new CharSequenceReader(inString.toLowerCase)) match {
       case Success(result, _) => result
 
-      case Failure(msg, _) => error("The HttpHeaderFields " + inString + " has a syntax error: " + msg)
+      case Failure(msg, _) => sys.error("The HttpHeaderFields " + inString + " has a syntax error: " + msg)
 
-      case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+      case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
     }
 
     def notInTrailer(x: HttpHeaderField): Boolean = {

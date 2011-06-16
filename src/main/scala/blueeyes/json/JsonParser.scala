@@ -114,7 +114,7 @@ object JsonParser {
         } else s.append(c)
         cOpt = buf.next
       }
-      error("expected string end")
+      sys.error("expected string end")
     }
     
     buf.mark
@@ -127,7 +127,7 @@ object JsonParser {
       }
       cOpt = buf.next
     }
-    error("expected string end")
+    sys.error("expected string end")
   }
 
   // FIXME fail fast to prevent infinite loop, see
@@ -135,7 +135,7 @@ object JsonParser {
   val BrokenDouble = BigDecimal("2.2250738585072012e-308")
   private[json] def parseDouble(s: String) = {
     val d = BigDecimal(s)
-    if (d == BrokenDouble) error("Error parsing 2.2250738585072012e-308")
+    if (d == BrokenDouble) sys.error("Error parsing 2.2250738585072012e-308")
     else d.doubleValue
   }
 

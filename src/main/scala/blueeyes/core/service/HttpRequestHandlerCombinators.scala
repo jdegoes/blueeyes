@@ -58,7 +58,7 @@ trait HttpRequestHandlerCombinators{
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
       case `method` => h(r)
 
-      case _ => error("The handler " + h + " can only respond to HTTP method " + method)
+      case _ => sys.error("The handler " + h + " can only respond to HTTP method " + method)
     }
   }
 
@@ -184,11 +184,11 @@ trait HttpRequestHandlerCombinators{
               range.split("-").toList.map(_.trim.toLong) match {
                 case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
 
-                case _ => error("missing upper and/or lower bound for range")
+                case _ => sys.error("missing upper and/or lower bound for range")
               }
             }, unit.trim.toLowerCase)
 
-          case _ => error("missing range specifier")
+          case _ => sys.error("missing range specifier")
         }
       }
 
@@ -279,7 +279,7 @@ trait HttpRequestHandlerCombinators{
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(error("Expected cookie " + s.name))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(sys.error("Expected cookie " + s.name))
   }
 
   /** A special-case extractor for cookie.
@@ -314,13 +314,13 @@ trait HttpRequestHandlerCombinators{
     ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
   }
 
-  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
+  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = sys.error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
 
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
     val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
 
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
 
       extractField(content, s1AndDefault)
     } (h)

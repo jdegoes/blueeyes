@@ -81,7 +81,7 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
             } ~
             path("/error") { 
               get { request: HttpRequest[ByteChunk] =>
-                error("He's dead, Jim.")
+                sys.error("He's dead, Jim.")
               }
             } ~
             path("/dead") {

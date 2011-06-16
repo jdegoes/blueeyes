@@ -26,9 +26,9 @@ object EntityTags extends RegexParsers {
   def parseEntityTags(inString: String) = parser(new CharSequenceReader(inString.toLowerCase)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The EntityTags " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The EntityTags " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object Star extends EntityTag {

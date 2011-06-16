@@ -81,8 +81,8 @@ private[mongo] object Evaluators{
       case $size    => SizeFieldFilterEvaluator
       case $exists  => ExistsFieldFilterEvaluator
       case $type    => TypeFieldFilterEvaluator
-      case $or      => error("'or' is not supported")
-      case $each    => error("'or' is not supported")
+      case $or      => sys.error("'or' is not supported")
+      case $each    => sys.error("'or' is not supported")
     }
   }
 

@@ -37,10 +37,10 @@ object XmlBugs extends Specification {
 
   "Jono's XML with attributes parses correctly" in {
     val example1 = <word term="example" self="http://localhost:8080/word/example" available="true">content</word>
-    val expected1 = """{"word":"content","self":"http://localhost:8080/word/example","term":"example","available":"true"}"""
+    val expected1 = """{"word":"content","available":"true","term":"example","self":"http://localhost:8080/word/example"}"""
 
     val example2 = <word term="example" self="http://localhost:8080/word/example" available="true"></word>
-    val expected2 = """{"self":"http://localhost:8080/word/example","term":"example","available":"true"}"""
+    val expected2 = """{"available":"true","term":"example","self":"http://localhost:8080/word/example"}"""
 
     Printer.compact(render(toJson(example1))) mustEqual expected1
     Printer.compact(render(toJson(example2))) mustEqual expected2

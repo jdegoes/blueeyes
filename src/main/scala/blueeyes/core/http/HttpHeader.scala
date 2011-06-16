@@ -116,7 +116,7 @@ case class HttpHeaders (private val headers: Map[String, String]) extends Map[St
 
   def get(key: String) = headers.get(key)
 
-  def header[T <: HttpHeader](implicit m: Manifest[T]) = headerOption(m).getOrElse(error("Header % cannot be found.".format(m.erasure.getName)))
+  def header[T <: HttpHeader](implicit m: Manifest[T]) = headerOption(m).getOrElse(sys.error("Header % cannot be found.".format(m.erasure.getName)))
 
   def headerOption[T <: HttpHeader](implicit m: Manifest[T]): Option[T] = {
     val clazz        = Class.forName(m.erasure.getName + "$")

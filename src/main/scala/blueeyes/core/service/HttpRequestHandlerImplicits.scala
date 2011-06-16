@@ -13,6 +13,6 @@ trait HttpRequestHandlerImplicits extends PartialFunctionCombinators {
     }
   }
   
-  implicit def identifierToIdentifierWithErrorDefault[T <: AnyRef, S](identifier: T) = IdentifierWithDefault[T, S](identifier, () => error("Expected to find value for " + identifier.toString))
+  implicit def identifierToIdentifierWithErrorDefault[T <: AnyRef, S](identifier: T) = IdentifierWithDefault[T, S](identifier, () => sys.error("Expected to find value for " + identifier.toString))
 }
 object HttpRequestHandlerImplicits extends HttpRequestHandlerImplicits

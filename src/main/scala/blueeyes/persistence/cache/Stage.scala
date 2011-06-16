@@ -113,8 +113,7 @@ abstract class Stage[K, V] {
     }
   }
 
-  private val actor: ActorRef = Actor.actorOf(new StageActor())
-  actor.start()
+  private val actor: ActorRef = Actor.actorOf(new StageActor()).start()
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 

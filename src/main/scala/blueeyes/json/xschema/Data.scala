@@ -831,7 +831,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XString",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XSchema, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XSchema, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -855,7 +855,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XString",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XReference, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XReference, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -884,7 +884,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XString",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XPrimitiveRef, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XPrimitiveRef, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -909,7 +909,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XList",JObject(JField("elementType",JObject(JField("XString",JObject(Nil))::Nil))::Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XContainerRef, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XContainerRef, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -990,7 +990,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XList",JObject(JField("elementType",JObject(JField("XString",JObject(Nil))::Nil))::Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XCollection, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XCollection, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -1062,7 +1062,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XProduct",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XDefinition, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XDefinition, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -1085,7 +1085,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XCoproduct",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XMultitype, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XMultitype, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -1109,7 +1109,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XRealField",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XField, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XField, but found " + jvalue + ", and default value was invalid")
           }
         }
       }
@@ -1213,7 +1213,7 @@ package blueeyes.json.xschema {
           case Some(v) => v
           case None => extract0(JObject(JField("XOrderAscending",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find blueeyes.json.xschema.XOrder, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find blueeyes.json.xschema.XOrder, but found " + jvalue + ", and default value was invalid")
           }
         }
       }

@@ -223,7 +223,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
       System.exit(-1)
     }
     else {    
-      Configgy.configure(arguments.parameters.get("configFile").getOrElse(error("Expected --configFile option")))
+      Configgy.configure(arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")))
       
       start.deliverTo { _ =>
         Runtime.getRuntime.addShutdownHook { new Thread {
@@ -250,7 +250,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
   private var _handler: HttpRequestHandler[ByteChunk] = new PartialFunction[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]] {
     def isDefinedAt(r: HttpRequest[ByteChunk]): Boolean = false
     
-    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = error("Function not defined here")
+    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = sys.error("Function not defined here")
   }
   
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>

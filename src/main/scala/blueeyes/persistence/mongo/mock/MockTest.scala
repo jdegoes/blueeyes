@@ -34,7 +34,7 @@ object MockTest extends MongoImplicits{
 
     Thread.sleep(5000)
 
-    exit
+    sys.exit()
   }
 
   private  def awaitFuture[T](future: Future[T]) = {

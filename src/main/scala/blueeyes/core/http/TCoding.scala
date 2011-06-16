@@ -25,9 +25,9 @@ object TCodings extends RegexParsers {
   def parseTCodings(inString: String): List[TCoding] = parser(new CharSequenceReader(inString.toLowerCase.trim)) match {
     case Success(result, _) => result filter(_ != None) map (_.get)
 
-    case Failure(msg, _) => error("The TCodings " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The TCodings " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object trailers extends TCoding

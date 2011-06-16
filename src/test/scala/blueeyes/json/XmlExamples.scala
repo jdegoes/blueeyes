@@ -176,8 +176,8 @@ object XmlExamples extends Specification {
       <messages href="https://domain.com/message/ant"></messages>
     </message>
 
-  val expected1 = """{"message":{"expiry_date":"20091126","word":"ant","text":"text","self":"me","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
-//  val expected1 = """{"message":{"expiry_date":"20091126","text":"text","self":"me","word":"ant","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
+//  val expected1 = """{"message":{"expiry_date":"20091126","word":"ant","text":"text","self":"me","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
+  val expected1 = """{"message":{"expiry_date":"20091126","text":"text","self":"me","word":"ant","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
 
   val messageXml2 =
     <message expiry_date="20091126">

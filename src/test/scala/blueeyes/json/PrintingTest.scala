@@ -31,7 +31,7 @@ object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
     forAll(rendering) must pass
   }
 
-  private def parse(json: String) = scala.util.parsing.json.JSON.parse(json)
+  private def parse(json: String) = scala.util.parsing.json.JSON.parseRaw(json)
 
   implicit def arbDoc: Arbitrary[Document] = Arbitrary(genJValue.map(render(_)))
 }

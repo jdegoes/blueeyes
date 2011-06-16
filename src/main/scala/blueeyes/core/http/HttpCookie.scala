@@ -52,10 +52,10 @@ object CookiesPattern extends PartialFunction[String, List[HttpCookie]]{
   }
 
   private def parseFailure(msg: String, s: String) = {
-    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+    sys.error("The pattern " + this.toString + " does not match " + s + ": " + msg)
   }
   private def parseError(msg: String, s: String) = {
-    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+    sys.error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
   }  
 }
 

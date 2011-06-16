@@ -59,7 +59,7 @@ object URI extends URIGrammar{
     }
   }
 
-  private def parseFailure(msg: String, s: String) = error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+  private def parseFailure(msg: String, s: String) = sys.error("The pattern " + this.toString + " does not match " + s + ": " + msg)
 
-  private def parseError(msg: String, s: String)   = error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+  private def parseError(msg: String, s: String)   = sys.error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
 }
