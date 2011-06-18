@@ -61,7 +61,7 @@ trait ScheduledExecutor{
         (newZ, if (pred(newZ)) Some(message) else None )
       }
     }
-    else Future.lift[Z](seed)
+    else Future.sync[Z](seed)
   }
 
   def unfold[A, B, Z](f: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = {

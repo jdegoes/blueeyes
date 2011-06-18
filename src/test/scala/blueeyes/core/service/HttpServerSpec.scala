@@ -71,17 +71,17 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
     context => {
       startup {
         startupCalled = true
-        "blahblah"
+        "blahblah".future
       } ->
       request { value: String =>
         path("/foo/bar") {
           produce(text/plain) {
             get {
-              request: HttpRequest[ByteChunk] => Future(HttpResponse[String](content=Some(value)))
+              request: HttpRequest[ByteChunk] => Future.sync(HttpResponse[String](content=Some(value)))
             } ~
             path("/error") { 
               get { request: HttpRequest[ByteChunk] =>
-                error("He's dead, Jim.")
+                sys.error("He's dead, Jim.")
               }
             } ~
             path("/dead") {
@@ -93,7 +93,7 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
         }
       } ->
       shutdown { value =>
-        shutdownCalled = true
+        Future.sync(shutdownCalled = true)
       }
     }
   }

@@ -1,17 +1,20 @@
 package blueeyes.core.service
 
-import java.lang.reflect.{Method}
-import java.util.concurrent.CountDownLatch
 
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import blueeyes.core.data.ByteChunk
-import blueeyes.util.CommandLineArguments
-import net.lag.configgy.{Config, ConfigMap, Configgy}
-import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
+import blueeyes.util.CommandLineArguments
+
+import java.lang.reflect.{Method}
+import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
-import blueeyes.concurrent.Future
+
+import net.lag.configgy.{Config, ConfigMap, Configgy}
+import net.lag.logging.Logger
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -64,13 +67,12 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
     // The raw future may die due to error:
     val rawFuture = try {
       if (_handler.isDefinedAt(r)) _handler(r)
-      else Future[HttpResponse[ByteChunk]](NotFound)
-    }
-    catch {
+      else NotFound.future
+    } catch {
       case why: Throwable =>
         // An error during invocation of the request handler, convert to
         // proper response:
-        Future[HttpResponse[ByteChunk]](convertErrorToResponse(why))
+        Future.sync(convertErrorToResponse(why))
     }
 
     // Convert the raw future into one that cannot die:
@@ -223,7 +225,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
       System.exit(-1)
     }
     else {    
-      Configgy.configure(arguments.parameters.get("configFile").getOrElse(error("Expected --configFile option")))
+      Configgy.configure(arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")))
       
       start.deliverTo { _ =>
         Runtime.getRuntime.addShutdownHook { new Thread {
@@ -250,7 +252,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
   private var _handler: HttpRequestHandler[ByteChunk] = new PartialFunction[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]] {
     def isDefinedAt(r: HttpRequest[ByteChunk]): Boolean = false
     
-    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = error("Function not defined here")
+    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = sys.error("Function not defined here")
   }
   
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>

@@ -6,12 +6,18 @@ import org.specs.util.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 
 import scala.util.Random
 import scalaz._
-import Scalaz._
+
+import akka.actor.Actor._
 import akka.actor.Actor
+import akka.routing.Routing._
+import akka.dispatch.Dispatchers
+import akka.util.Duration
+
+import java.util.concurrent.TimeUnit
 
 class StageSpec extends Specification{
   private val random    = new Random()
@@ -46,7 +52,7 @@ class StageSpec extends Specification{
       stage.put("bar2", "baz2")
 
       evicted must eventually (be (true))
-      
+
       val stop = stage.stop
       stop.isDone must eventually (be (true))
     }
@@ -82,7 +88,7 @@ class StageSpec extends Specification{
       @volatile var evictCount = 0
 
       val stage = newStage(Some(10), None, {(key: String, value: String) => if (key == "foo" && value == "bar") evictCount += 1 })
-      
+
       stage.put("foo", "bar")
 
       evictCount must eventually (beEqualTo(1))
@@ -107,7 +113,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures   = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
+      val futures   = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
@@ -142,7 +148,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
+      val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
@@ -169,14 +175,21 @@ class StageSpec extends Specification{
     )
   }
 
+  val testDispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(20)
+      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+
   class MessageActor(key: String, message: String, size: Int, stage: Stage[String, String]) extends Actor{
+    self.dispatcher = testDispatcher
+
     def receive = {
-      case "Send" =>
+      case "Send" => {
         for (j <- 0 until size){
           Thread.sleep(random.nextInt(100))
           stage.put(key, message)
         }
         self.reply(())
+      }
       case _ =>
     }
   }

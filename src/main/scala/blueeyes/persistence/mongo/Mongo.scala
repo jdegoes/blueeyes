@@ -6,7 +6,7 @@ import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 
 import akka.actor.Actor._
 import akka.actor.Actor
@@ -26,14 +26,14 @@ import java.util.concurrent.TimeUnit
  * val mongo = injector.getInstance(classOf[Mongo])
  * </pre>
  */
-trait Mongo{
+trait Mongo {
   def database(databaseName: String): MongoDatabase
 }
 
-object MongoActor{
-  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
+object MongoActor {
+  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
       .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
-      .setMaxPoolSize(10).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
 
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
@@ -42,7 +42,7 @@ class MongoActor extends Actor {
   self.dispatcher = MongoActor.dispatcher
   def receive = {
     case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-    case _ => error("wrong message.")
+    case _ => sys.error("wrong message.")
   }
 }
 
@@ -85,7 +85,7 @@ abstract class MongoDatabase {
       case MongoCollectionHolder(realCollection, name, database)  => realCollection
     }
 
-    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified))
+    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified), 1000 * 60 * 60).toBlueEyes
   }
 
   def collections: Set[MongoCollectionHolder]

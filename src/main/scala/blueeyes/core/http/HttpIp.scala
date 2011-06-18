@@ -29,9 +29,9 @@ object HttpIps extends RegexParsers{
   def parseHttpIps(inString: String): List[HttpIp] = parser(new CharSequenceReader(inString)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The HttpIps " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The HttpIps " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class CustomIP(ip: InetAddress) extends HttpIp

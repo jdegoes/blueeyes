@@ -44,7 +44,7 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case None => false
     case Some(v) => v match {
       case JBool(b) => b
-      case x => error("Expected bool but found: " + x)
+      case x => sys.error("Expected bool but found: " + x)
     }
   }
 
@@ -54,12 +54,12 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case Some(v) => v match {
       case JArray(list) => list.flatMap {
         case JString(s) => s :: Nil
-        case x => error("Expected array of strings for " + prop + " property but found: " + x)
+        case x => sys.error("Expected array of strings for " + prop + " property but found: " + x)
       }
 
       case JString(item) => item :: Nil
 
-      case _ => error("Expected string or array of strings for " + prop + " property")
+      case _ => sys.error("Expected string or array of strings for " + prop + " property")
     }
   }
 
@@ -515,7 +515,7 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case None =>
     case Some(v) => v match {
       case JString(doc) => code.add("/** ").wrap(doc.replaceAll("\\s+", " "), " * ", 80).newline.add(" */").newline
-      case x => error("Expected string for documentation, but found: " + x)
+      case x => sys.error("Expected string for documentation, but found: " + x)
     }
   }
 
@@ -601,7 +601,7 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XArray      => defaultExtractor("[" + getExtractorFor(x.elementType) + "]")
         case x: XTuple      => defaultExtractor(x.types.map(getExtractorFor _).mkString("[", ", ", "]"))
         case x: XOptional   => defaultExtractor("[" + getExtractorFor(x.optionalType) + "]")
-        case _ => error("Impossible")
+        case _ => sys.error("Impossible")
       })
 
       case x: XDefinitionRef => database.resolve(x) match {

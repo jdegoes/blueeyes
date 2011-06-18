@@ -52,7 +52,7 @@ object MongoJson {
     case x: DBObject                     => x.toJValue
     case null                            => JNull
     // Missing cases: com.mongodb.ObjectId, java.util.regex.Pattern, java.util.Date, com.mongodb.DBRef, byte[]
-    case _                               => error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
+    case _                               => sys.error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
   }
 
   private def jValue2MongoValue[T <: JValue](value: T): Option[AnyRef]  = {
@@ -76,7 +76,7 @@ object MongoJson {
       }
       case JNothing   => None
       case JNull      => Some(null)
-      case _          => error("Unknown type for value: " + value)
+      case _          => sys.error("Unknown type for value: " + value)
     }
   }
 }

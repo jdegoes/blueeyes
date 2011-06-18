@@ -19,9 +19,9 @@ object Expectations extends RegexParsers {
   def parseExpectations(inString: String): Option[ExpectType] = parser(new CharSequenceReader(inString)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The Expectations " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The Expectations " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   sealed abstract class ExpectType(inCode: HttpStatusCode) extends Expectation {

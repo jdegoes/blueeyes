@@ -36,7 +36,7 @@ trait RhinoJsonImplicits{
     case x: java.util.ArrayList[AnyRef]  => x.toJValue
     case x: Scriptable                     => x.toJValue
     case null                            => JNull
-    case _                               => error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
+    case _                               => sys.error("Unknown type for. {type=" + value.getClass  + "value=" + value + "}")
   }
 }
 

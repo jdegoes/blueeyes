@@ -10,12 +10,12 @@ import DataSize._
 class HttpClientByteChunkSpec extends Specification{
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
-      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")
+      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")
 
       future.value.get.content.map(v => new String(v.data)) must eventually (beSome("1234"))
     }
     "aggregate content up to the specified size" in{
-      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(Some(2.bytes)).get("foo")
+      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(Some(2.bytes)).get("foo")
 
       future.value.get.content.map(v => new String(v.data)) must eventually (beSome("12"))
     }
@@ -24,6 +24,6 @@ class HttpClientByteChunkSpec extends Specification{
 
   case class HttpClientImpl(content: ByteChunk) extends HttpClientByteChunk{
     def isDefinedAt(request: HttpRequest[ByteChunk]) = true
-    def apply(request: HttpRequest[ByteChunk]) = Future(HttpResponse[ByteChunk](content = Some(content)))
+    def apply(request: HttpRequest[ByteChunk]) = Future.sync(HttpResponse[ByteChunk](content = Some(content)))
   }
 }

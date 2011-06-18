@@ -11,7 +11,7 @@ trait BijectionsChunkXML {
       XML.load(new ByteArrayInputStream(t.data))
     }
     catch {
-      case e: org.xml.sax.SAXParseException => error("Data is too big, use big data handler.")
+      case e: org.xml.sax.SAXParseException => sys.error("Data is too big, use big data handler.")
     }
   }
 

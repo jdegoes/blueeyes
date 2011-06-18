@@ -27,7 +27,7 @@ trait ArbitraryJValue {
   def genJInt:    Gen[JInt]    = arbitrary[Int].map(JInt(_))
   def genJDouble: Gen[JDouble] = arbitrary[Double].map(JDouble(_))
   def genJBool:   Gen[JBool]   = arbitrary[Boolean].map(JBool(_))
-  def genJString: Gen[JString] = arbitrary[String].map(JString(_))
+  def genJString: Gen[JString] = alphaStr.map(JString(_))
   def genSimple: Gen[JValue] = oneOf(
     value(JNull), 
     genJInt,
@@ -41,7 +41,7 @@ trait ArbitraryJValue {
 
   def genList = Gen.containerOfN[List, JValue](listSize, genJValue)
   def genFieldList = Gen.containerOfN[List, JField](listSize, genField)
-  def genField = for (name <- arbitrary[String]; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
+  def genField = for (name <- alphaStr; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
 
   def genJValueClass: Gen[Class[_ <: JValue]] = oneOf(
     JNull.getClass.asInstanceOf[Class[JValue]], JNothing.getClass.asInstanceOf[Class[JValue]], classOf[JInt], 

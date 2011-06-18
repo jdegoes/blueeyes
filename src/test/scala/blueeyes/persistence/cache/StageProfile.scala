@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch
 import scala.util.Random
 import scalaz.Semigroup
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 import org.specs.util.TimeConversions._
 import akka.actor.Actor
 
@@ -39,7 +39,7 @@ object StageProfile{
       actor
     }
 
-    val futures = Future((actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}): _*)
+    val futures = Future((actors map {actor => (actor !!! ("Send", 100000)).toBlueEyes}): _*)
     awaitFuture(futures)
 
 //    val flushFuture = stage.flushAll

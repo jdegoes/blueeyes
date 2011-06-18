@@ -21,9 +21,9 @@ object RangeUnits extends RegexParsers{
   def parseRangeUnits(inString: String): Option[RangeUnit] = parser(new CharSequenceReader(inString.toLowerCase.trim)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The RangeUnits " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The RangeUnits " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case object none extends RangeUnit

@@ -1,12 +1,13 @@
 package blueeyes
 package persistence.cache
 
-import scalaz.Semigroup
-import blueeyes.util.metrics.Duration
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 import blueeyes.util.ClockSystem._
+import blueeyes.util.metrics.Duration
+
 import scala.collection.JavaConversions._
+import scalaz.Semigroup
 
 import akka.actor.{Actor, ActorRef, Scheduler}
 import Actor._
@@ -88,6 +89,7 @@ abstract class Stage[K, V] {
         flushScheduled = false
 
         if (cache.size > 0) scheduleFlush
+
       case FlushAll =>
         cache.clear()
         self.reply(())
@@ -112,8 +114,7 @@ abstract class Stage[K, V] {
     }
   }
 
-  private val actor: ActorRef = Actor.actorOf(new StageActor())
-  actor.start()
+  private val actor: ActorRef = Actor.actorOf(new StageActor()).start()
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 
@@ -123,7 +124,7 @@ abstract class Stage[K, V] {
 
   def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs)
 
-  def flushAll(): Future[Unit] = actor.!!![Unit](FlushAll)
+  def flushAll(): Future[Unit] = (actor.!!![Unit](FlushAll)).toBlueEyes
 
   def stop(): Future[Unit] = {
     val stopFuture = new Future[Unit]()

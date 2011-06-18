@@ -78,7 +78,7 @@ trait BlueEyesDemoFacade extends BijectionsChunkJson{
     case Some(e: JArray) => e.elements.map(v => {
       v match{
         case JString(x) => x
-        case _ => error("wrong type")
+        case _ => sys.error("wrong type")
       }
     })
     case _ => Nil

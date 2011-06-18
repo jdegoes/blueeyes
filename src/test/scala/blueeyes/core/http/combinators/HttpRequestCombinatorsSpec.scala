@@ -29,5 +29,5 @@ class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinato
   
   def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(JInt(123))))
   
-  def jIntHandler(r: HttpRequest[JInt]): Future[HttpResponse[JValue]] = Future(HttpResponse(content = Some(JInt(123): JValue)))
+  def jIntHandler(r: HttpRequest[JInt]): Future[HttpResponse[JValue]] = Future.sync(HttpResponse(content = Some(JInt(123): JValue)))
 }

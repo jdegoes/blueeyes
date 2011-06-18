@@ -100,7 +100,6 @@ private[mongo] object QueryBehaviours{
 
   trait SelectQueryBehaviour extends MongoQueryBehaviour[IterableView[JObject, Iterator[JObject]]]{
     def query(collection: DatabaseCollection) = {
-      val i = 0
       collection.select(selection, filter, sort, skip, limit)
     }
 
@@ -126,14 +125,17 @@ private[mongo] object QueryBehaviours{
   }
 
   trait SelectOneQueryBehaviour extends MongoQueryBehaviour[Option[JObject]]{ self =>
-    private val selectQuery = new SelectQueryBehaviour(){
+    private val selectQuery = new SelectQueryBehaviour() {
       def limit     = Some(1)
       def skip      = None
       def sort      = self.sort
       def filter    = self.filter
       def selection = self.selection
     }
-    def query(collection: DatabaseCollection): Option[JObject] = selectQuery.query(collection).headOption
+
+    def query(collection: DatabaseCollection): Option[JObject] = {
+      selectQuery.query(collection).headOption
+    }
 
     def selection : MongoSelection
     def filter    : Option[MongoFilter]

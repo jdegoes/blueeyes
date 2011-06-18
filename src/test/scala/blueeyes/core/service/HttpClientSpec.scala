@@ -16,7 +16,7 @@ class HttpClientSpec extends Specification with BijectionsByteArray{
 
     def apply(r: HttpRequest[String]) = {
       request = Some(r)
-      Future[HttpResponse[String]](HttpResponse[String]())
+      Future.sync[HttpResponse[String]](HttpResponse[String]())
     }
 
     def isDefinedAt(x: HttpRequest[String]) = true

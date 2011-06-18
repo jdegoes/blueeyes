@@ -619,7 +619,7 @@ package data.fringe {
           case Some(v) => v
           case None => extract0(JObject(JField("String",JObject(Nil))::Nil)) match {
             case Some(v) => v
-            case None => error("Expected to find Any, but found " + jvalue + ", and default value was invalid")
+            case None => sys.error("Expected to find Any, but found " + jvalue + ", and default value was invalid")
           }
         }
       }

@@ -43,7 +43,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case None => false
     case Some(v) => v match {
       case JBool(b) => b
-      case x => error("Expected bool but found: " + x)
+      case x => sys.error("Expected bool but found: " + x)
     }
   }
   
@@ -53,12 +53,12 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case Some(v) => v match {
       case JArray(list) => list.flatMap {
         case JString(s) => s :: Nil
-        case x => error("Expected array of strings for " + prop + " property but found: " + x)
+        case x => sys.error("Expected array of strings for " + prop + " property but found: " + x)
       }
       
       case JString(item) => item :: Nil
     
-      case _ => error("Expected string or array of strings for " + prop + " property")
+      case _ => sys.error("Expected string or array of strings for " + prop + " property")
     }
   }
   
@@ -261,7 +261,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           case product: XProduct => 
             code.using("fieldName" -> viewField.name, "typeSig" -> typeSignatureOf(viewField.fieldType, database)) {
               if (product.isSingleton) {
-                error("View fields cannot be used for objects, constant fields should be used instead")
+                sys.error("View fields cannot be used for objects, constant fields should be used instead")
               }
               else {
                 code.add("def ${fieldName}: ${typeSig} = ${typeSig}(${constructorArgs})",
@@ -270,7 +270,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
               }
             }
             
-          case x => error("View type cannot be anything but product: " + x)
+          case x => sys.error("View type cannot be anything but product: " + x)
         }
       }
     }
@@ -375,7 +375,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     case None => 
     case Some(v) => v match {
       case JString(doc) => code.add("/** ").wrap(doc.replaceAll("\\s+", " "), " * ", 80).newline.add(" */").newline
-      case x => error("Expected string for documentation, but found: " + x)
+      case x => sys.error("Expected string for documentation, but found: " + x)
     }
   }
   
@@ -455,7 +455,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                 case Some(v) => v
                 case None => extract0(${defaultJValue}) match {
                   case Some(v) => v
-                  case None => error("Expected to find ${typeSig}, but found " + jvalue + ", and default value was invalid")
+                  case None => sys.error("Expected to find ${typeSig}, but found " + jvalue + ", and default value was invalid")
                 }
               }
             }

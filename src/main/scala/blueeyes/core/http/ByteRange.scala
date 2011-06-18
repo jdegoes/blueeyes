@@ -33,9 +33,9 @@ object ByteRanges extends RegexParsers with HttpNumberImplicits{
   def parseByteRanges(inString: String) = parser(new CharSequenceReader(inString)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The ByteRanges " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The ByteRanges " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class ByteRangeList(bytePairs: List[BytePair], unit: String) extends ByteRange

@@ -103,7 +103,7 @@ object Stage {
     override def toString = "Stage(" + cache.toString + "," + baseCapacity + "," + maxCapacity + ")"
 
     override def equals(that: Any) = that match {
-      case that: Stage[K, V] => this.expireAll == that.expireAll
+      case that: Stage[_, _] => this.expireAll == that.expireAll
       case _ => false
     }
 

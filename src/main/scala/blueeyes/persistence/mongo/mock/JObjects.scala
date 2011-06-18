@@ -49,6 +49,6 @@ private[mongo] class JObjectOrdering(path: JPath, weight: Int) extends Ordering[
     case (JNothing,     JNothing)    => 0
     case (v,            JNothing)       => 1
     case (JNothing,     v)           => -1
-    case _ => error("differents elements cannot be ordered")
+    case _ => sys.error("differents elements cannot be ordered")
   }
 }

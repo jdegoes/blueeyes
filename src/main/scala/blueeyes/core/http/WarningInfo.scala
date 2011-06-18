@@ -21,15 +21,18 @@ object WarningInfos {
   /* Note about parsing warnings: It's really hard to extract the date! */
   def parseWarnings(inString: String): List[WarningInfo] = {
 
-    def outWarnings = inString.trim.split(",").map(_.trim.split(" ")).map(x => x(0) :: x(1) :: Nil match {
-      case List("110", agent) => Response(agent, None)
-      case List("111", agent) => Revalidation(agent, None)
-      case List("112", agent) => Disconnected(agent, None)
-      case List("113", agent) => Heuristic(agent, None)
-      case List("119", agent) => Miscellaneous(agent, None)
-      case List("214", agent) => Transformation(agent, None)
-      case List("299", agent) => MiscellaneousPersistent(agent, None)
-    })
+    def outWarnings = inString.trim.split(",").map(_.trim.split(" ")).map{ x => 
+      val agent = x(1)
+      x(0) match {
+        case "110" => Response(agent, None)
+        case "111" => Revalidation(agent, None)
+        case "112" => Disconnected(agent, None)
+        case "113" => Heuristic(agent, None)
+        case "119" => Miscellaneous(agent, None)
+        case "214" => Transformation(agent, None)
+        case "299" => MiscellaneousPersistent(agent, None)
+      }
+    }
 
     return outWarnings.toList
   }

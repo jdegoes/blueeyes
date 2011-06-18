@@ -3,6 +3,7 @@ package blueeyes.core.service
 import blueeyes.core.http._
 import scala.reflect.Manifest
 import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 
 /**
 val emailService = {
@@ -45,7 +46,7 @@ trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
   protected def shutdown(shutdown: => Future[Unit]): ShutdownDescriptor[Unit] = ShutdownDescriptor[Unit]((u) => shutdown)
   
   protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[Unit]): HttpServiceDescriptor[T, Unit] = 
-    HttpServiceDescriptor[T, Unit](() => Future(()), rd.request, _ => Future(()))
+    HttpServiceDescriptor[T, Unit](() => ().future, rd.request, _ => ().future)
 
   def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService[T] = new HttpServiceImpl[T](name, version, descriptorFactory)
 

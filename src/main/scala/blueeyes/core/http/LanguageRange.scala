@@ -25,9 +25,9 @@ object LanguageRanges extends RegexParsers {
   def parseLanguageRanges(inString: String): List[Range] = parser(new CharSequenceReader(inString.toLowerCase)) match {
     case Success(result, _) => result filter(_ != None) map (_.get)
 
-    case Failure(msg, _) => error("The LanguageRanges " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The LanguageRanges " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   case class Range (mainType: String, subType: Option[String], subSubType: Option[String]) extends LanguageRange

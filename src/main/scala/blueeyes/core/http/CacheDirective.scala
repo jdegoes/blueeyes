@@ -41,9 +41,9 @@ object CacheDirectives extends RegexParsers with HttpNumberImplicits{
   def parseCacheDirectives(inString: String) = parser(new CharSequenceReader(inString)) match {
     case Success(result, _) => result
 
-    case Failure(msg, _) => error("The CacheDirectives " + inString + " has a syntax error: " + msg)
+    case Failure(msg, _) => sys.error("The CacheDirectives " + inString + " has a syntax error: " + msg)
 
-    case Error(msg, _) => error("There was an error parsing \"" + inString + "\": " + msg)
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
   }
 
   sealed abstract class RequestDirective extends CacheDirective 

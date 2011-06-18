@@ -58,7 +58,7 @@ trait HttpRequestHandlerCombinators{
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = r.method match {
       case `method` => h(r)
 
-      case _ => error("The handler " + h + " can only respond to HTTP method " + method)
+      case _ => sys.error("The handler " + h + " can only respond to HTTP method " + method)
     }
   }
 
@@ -120,7 +120,7 @@ trait HttpRequestHandlerCombinators{
    * convert all full request handlers into partial request handlers,
    * as required by type signatures.
    */
-  implicit def commit[T, S](h: HttpRequest[T] => Future[HttpResponse[S]]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
+  implicit def commitFull[T, S](h: HttpRequest[T] => Future[HttpResponse[S]]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
@@ -151,15 +151,15 @@ trait HttpRequestHandlerCombinators{
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h.apply(r)
   }
 
-  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { commit { h } } }
-  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { commit { h } } }
-  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { commit { h } } }
-  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.DELETE)   { commit { h } } }
-  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.HEAD)     { commit { h } } }
-  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PATCH)    { commit { h } } }
-  def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { commit { h } } }
-  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { commit { h } } }
-  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { commit { h } } }
+  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { commitFull { h } } }
+  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PUT)      { commitFull { h } } }
+  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.POST)     { commitFull { h } } }
+  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.DELETE)   { commitFull { h } } }
+  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.HEAD)     { commitFull { h } } }
+  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.PATCH)    { commitFull { h } } }
+  def options [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.OPTIONS)  { commitFull { h } } }
+  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.TRACE)    { commitFull { h } } }
+  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.CONNECT)  { commitFull { h } } }
 
   /** Creates a handler that accepts ranged GET requests. A ranged GET request
    * uses the Range header with the following syntax: [unit]=[lower-bound]-[upper-bound].
@@ -184,11 +184,11 @@ trait HttpRequestHandlerCombinators{
               range.split("-").toList.map(_.trim.toLong) match {
                 case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
 
-                case _ => error("missing upper and/or lower bound for range")
+                case _ => sys.error("missing upper and/or lower bound for range")
               }
             }, unit.trim.toLowerCase)
 
-          case _ => error("missing range specifier")
+          case _ => sys.error("missing range specifier")
         }
       }
 
@@ -279,7 +279,7 @@ trait HttpRequestHandlerCombinators{
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(error("Expected cookie " + s.name))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(sys.error("Expected cookie " + s.name))
   }
 
   /** A special-case extractor for cookie.
@@ -314,13 +314,13 @@ trait HttpRequestHandlerCombinators{
     ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
   }
 
-  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
+  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = sys.error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
 
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
     val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
 
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
-      val content = request.content.getOrElse(error("Expected request body to be JSON object"))
+      val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
 
       extractField(content, s1AndDefault)
     } (h)

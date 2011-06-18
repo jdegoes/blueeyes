@@ -122,10 +122,10 @@ sealed trait RestPathPattern extends PartialFunction[String, Map[Symbol, String]
   private def slashOptParser = RestPathPatternParsers.SlashOptPathPattern.parser
 
   private def parseFailure(msg: String, s: String) = {
-    error("The pattern " + this.toString + " does not match " + s + ": " + msg)
+    sys.error("The pattern " + this.toString + " does not match " + s + ": " + msg)
   }
   private def parseError(msg: String, s: String) = {
-    error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
+    sys.error("There was an error parsing \"" + s + "\" with pattern \"" + this.toString + "\": " + msg)
   }
 }
 object RestPathPattern extends RegexParsers {
@@ -162,9 +162,9 @@ object RestPathPatternParsers extends RegexParsers with RegularExpressionGrammar
     val elements = restPathPatternParser(new CharSequenceReader(s)) match {
       case Success(result, _) => result
 
-      case Failure(msg, _) => error("The path specification " + s + " has a syntax error: " + msg)
+      case Failure(msg, _) => sys.error("The path specification " + s + " has a syntax error: " + msg)
 
-      case Error(msg, _) => error("There was an error parsing \"" + s + "\": " + msg)
+      case Error(msg, _) => sys.error("There was an error parsing \"" + s + "\": " + msg)
     }
 
     CompositePathPattern(elements)
@@ -250,22 +250,23 @@ private[service] trait RegexUtil{
   }
 
   private def extractNamedCaptureGroup(regexAtom: RegexAtom): (RegexAtom, List[String], List[String]) = {
-    val (newElement: RegexAtomElement, allNewNames: List[String], newNames: List[String]) = regexAtom.element match{
+    def resultFor(newElement: RegexAtomElement, allNewNames: List[String], newNames: List[String]) = (RegexAtom(newElement, regexAtom.quantifier), allNewNames, newNames)
+
+    regexAtom.element match {
       case  e: NamedCaptureGroup =>
-         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
         val newAllNames: List[String] = e.name :: groupNames
-        (Group(groupElements: _*), newAllNames, newAllNames)
+        resultFor(Group(groupElements: _*), newAllNames, newAllNames)
       case  e: Group =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (Group(groupElements: _*), e.toString :: allNames, groupNames)
+        resultFor(Group(groupElements: _*), e.toString :: allNames, groupNames)
       case e: NonCapturingGroup =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (NonCapturingGroup(e.flags, groupElements: _*), allNames, groupNames)
+        resultFor(NonCapturingGroup(e.flags, groupElements: _*), allNames, groupNames)
       case e: AtomicGroup =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (AtomicGroup(groupElements: _*), allNames, groupNames)
-      case _ => (regexAtom.element, Nil, Nil)
+        resultFor(AtomicGroup(groupElements: _*), allNames, groupNames)
+      case _ => resultFor(regexAtom.element, Nil, Nil)
     }
-    (RegexAtom(newElement, regexAtom.quantifier), allNewNames, newNames)
   }
 }

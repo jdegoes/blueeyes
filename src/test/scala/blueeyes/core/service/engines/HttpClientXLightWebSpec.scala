@@ -9,11 +9,13 @@ import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.concurrent.{Future, FutureImplicits}
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
+
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 
-class HttpClientXLightWebSpec extends Specification with FutureImplicits with BijectionsChunkString with ContentReader{
+class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader{
   import HttpHeaderImplicits._
 
   val duration = 250
@@ -157,7 +159,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Bi
     "Support POST requests with large payload with several chunks" in {
       import BijectionsIdentity._
       val content = Array.fill[Byte](2048*100)('0')
-      val chunk   = new ByteMemoryChunk(content, () => Some(Future(new ByteMemoryChunk(content))))
+      val chunk   = new ByteMemoryChunk(content, () => Some(Future.sync(new ByteMemoryChunk(content))))
       val f = httpClient.post[ByteChunk](uri)(chunk)
       f.value must eventually(retries * 3, new Duration(duration))(beSomething)
       (new String(f.value.get.content.get.data).length) must beEqual(new String(content ++ content).length)
@@ -215,7 +217,7 @@ class HttpClientXLightWebSpec extends Specification with FutureImplicits with Bi
       import BijectionsByteArray._
       implicit val bijection = chunksToChunksArrayByte[String]
 
-      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future[Chunk[String]](new MemoryChunk[String]("bar"))))
+      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future.sync[Chunk[String]](new MemoryChunk[String]("bar"))))
 
       val f = httpClient.post(uri)(chunks)(bijection)
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -278,7 +280,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with
     }.getOrElse("")
     val content: Future[String] = request.content.map{v =>
       readStringContent(v)
-    }.getOrElse(Future.lift[String](""))
+    }.getOrElse(Future.sync[String](""))
     val result = new Future[HttpResponse[String]]()
     content.deliverTo{v => result.deliver(response(content = Some(params + v + headers)))}
     content.ifCanceled(th => result.cancel(th))

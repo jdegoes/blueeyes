@@ -22,34 +22,33 @@ class RealMongo(config: ConfigMap) extends Mongo {
         case _ => new ServerAddress(server, ServerAddress.defaultPort())
       }
     }).toList
+
     val mongo = servers match {
       case x :: Nil => new com.mongodb.Mongo(x, options)
       case x :: xs  => new com.mongodb.Mongo(servers, options)
-      case Nil => error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
+      case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
     }
+
     if (config.getBool("slaveOk", true)) { mongo.slaveOk() }
+
     mongo
   }
 
   def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
 }
 
-private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase{
+private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase {
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
-  def collections = database.getCollectionNames.map{v =>
-    val mongoCollection = collection(v)
-    MongoCollectionHolder(mongoCollection, mongoCollection.collection.getName, this)
-  }.toSet
+  def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
   protected def poolSize = 10
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealMongoDatabase) extends DatabaseCollection{
+  def requestDone = collection.getDB.requestDone
 
-  def requestDone = {collection.getDB.requestDone}
-
-  def requestStart = {collection.getDB.requestStart}
+  def requestStart = collection.getDB.requestStart
 
   def insert(objects: List[JObject])      = collection.insert(objects.map(jObject2MongoObject(_)))
 
@@ -57,10 +56,15 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def count(filter: Option[MongoFilter])  = collection.getCount(toMongoFilter(filter))
 
-  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
+  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = 
+    collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
 
   def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) = {
-    val options = JObject(JField("name", JString(name)) :: JField("background", JBool(true)) :: JField("unique", JBool(unique)) :: Nil)
+    val options = JObject(
+      JField("name", JString(name)) :: 
+      JField("background", JBool(true)) :: 
+      JField("unique", JBool(unique)) :: Nil
+    )
 
     collection.ensureIndex(toMongoKeys(keysPaths), options)
   }
@@ -70,7 +74,6 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def dropIndexes = collection.dropIndexes()
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
-
     val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
 
     val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))

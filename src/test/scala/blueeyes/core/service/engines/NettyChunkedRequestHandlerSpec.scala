@@ -69,7 +69,7 @@ class NettyChunkedRequestHandlerSpec extends Specification with MocksCreation wi
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Future.lift[ByteChunk](new MemoryChunk(chunkData))
+      val nextChunk = Future.sync[ByteChunk](new MemoryChunk(chunkData))
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData, () => Some(nextChunk))))
       Mockito.verify(context, times(1)).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }

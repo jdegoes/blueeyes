@@ -17,7 +17,7 @@ class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers{
   }
   "HttpResponseHelpers respondLater: creates Future when response is OK" in {
     val headers = Map("foo" -> "bar")
-    val content = Future("zoo")
+    val content = Future.sync("zoo")
     respondLater[String](content, headers).value.get mustEqual(HttpResponse[String](HttpStatus(OK), headers, Some("zoo")))
   }
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled with error)" in {

@@ -16,7 +16,7 @@ class HttpRequestLoggerSpec extends Specification with ClockMock{
 
   private val request        = HttpRequest[String](method = HttpMethods.GET, uri = "/foo/bar?param=value", remoteHost = Some(InetAddress.getLocalHost), headers = Map[String, String]("content-language" -> "en"))
   private val response       = HttpResponse[String](status = HttpStatus(Created), headers = Map[String, String]("content-length" -> "1000", "age" -> "3"))
-  private val responseFuture = Future.lift(response)
+  private val responseFuture = Future.sync(response)
 
   "HttpRequestLogger: logs multiple values" in {
     log(DateIdentifier, TimeIdentifier).value must eventually (beSome(DateFormatter.print(clockMock.now()) + " " + TimeFormatter.print(clockMock.now())))

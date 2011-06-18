@@ -7,7 +7,7 @@ import blueeyes.util.metrics.Duration._
 class ScheduledExecutorSpec extends Specification{
   "ScheduledExecutor.once" should {
     "execute function" in{
-      val f = ScheduledExecutor.once((a: Int) => Future.lift[Int](a), 1, 10.milliseconds)
+      val f = ScheduledExecutor.once((a: Int) => Future.sync[Int](a), 1, 10.milliseconds)
 
       f.value must eventually (beSome(1))
     }
@@ -24,7 +24,7 @@ class ScheduledExecutorSpec extends Specification{
         executionCount = executionCount + 1
         if (cancelled) executedIfCancelled = true
 
-        Future.lift[Int](a)
+        Future.sync[Int](a)
       }, 1, 100.milliseconds)
 
       Thread.sleep(2000)
@@ -35,7 +35,7 @@ class ScheduledExecutorSpec extends Specification{
       executedIfCancelled must eventually (be(false))
 
       executionCount must beGreaterThan(10)
-      exectionTime   must beCloseTo(System.currentTimeMillis, 200)
+      exectionTime   must beCloseTo(System.currentTimeMillis, 500)
     }
   }
   "ScheduledExecutor.repeat" should {
@@ -44,7 +44,7 @@ class ScheduledExecutorSpec extends Specification{
 
       val f = ScheduledExecutor.repeat((a: Int) => {
         executionCount = executionCount + 1
-        Future.lift[Int](a)
+        Future.sync[Int](a)
       }, 1, 20.milliseconds, 5)(15)((z: Int, a: Int) => z + a)
 
 
@@ -58,7 +58,7 @@ class ScheduledExecutorSpec extends Specification{
 
       val f = ScheduledExecutor.repeatWhile((a: Int) => {
         executionCount = executionCount + 1
-        Future.lift[Int](a)
+        Future.sync[Int](a)
       }, 1, 20.milliseconds, (z: Int) => {z < 20})(15)((z: Int, a: Int) => z + a)
 
 
@@ -70,7 +70,7 @@ class ScheduledExecutorSpec extends Specification{
 
       val f = ScheduledExecutor.repeatWhile((a: Int) => {
         executionCount = executionCount + 1
-        Future.lift[Int](a)
+        Future.sync[Int](a)
       }, 1, 200.milliseconds, (z: Int) => {z < 20})(15)((z: Int, a: Int) => z + a)
 
       Thread.sleep(200)

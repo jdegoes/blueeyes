@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import blueeyes.json.JsonAST._
+import blueeyes.concurrent.Future
 import blueeyes.core.data._
 import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder}
 import blueeyes.core.http.HttpResponse
@@ -13,7 +14,9 @@ trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealt
       path("/blueeyes/server/health") {
         produce(application/json){
           get { request =>
-            HttpResponse[JValue](content=Some(toJValue(context)))
+            Future.async {
+              HttpResponse[JValue](content=Some(toJValue(context)))
+            }
           }
         }
       }

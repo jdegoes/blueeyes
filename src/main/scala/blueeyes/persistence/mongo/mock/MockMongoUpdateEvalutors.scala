@@ -25,7 +25,7 @@ private[mock] object MockMongoUpdateEvaluators{
   sealed trait UpdateFieldEvaluator extends Function2[JValue, MongoFilter, JValue]{
     def << (filter: MongoFilter) = filter match{
       case e: MongoFieldFilter => e.rhs.toJValue
-      case _ => error("filter is not MongoFieldFilter")
+      case _ => sys.error("filter is not MongoFieldFilter")
     }
   }
 

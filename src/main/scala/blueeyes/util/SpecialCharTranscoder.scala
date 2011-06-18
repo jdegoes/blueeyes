@@ -41,7 +41,7 @@ case class SpecialCharTranscoder(val escape: Char, encoding: PartialFunction[Cha
       val c = s.charAt(i)
       
       if (escaping) {
-        val original = decodingF(c).getOrElse(error("Expected to find encoded character but found: " + c))
+        val original = decodingF(c).getOrElse(sys.error("Expected to find encoded character but found: " + c))
         
         decoded.append(original)
         

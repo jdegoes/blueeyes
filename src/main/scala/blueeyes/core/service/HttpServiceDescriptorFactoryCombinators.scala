@@ -46,7 +46,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
             val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
             val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
             val health        = monitor.toJValue
-            HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
+            Future.async {
+              HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
+            }
           }
         }
       }
@@ -94,7 +96,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
           val configValue = configMap.getString("fields", "time cs-method cs-uri sc-status")
           W3ExtendedLog("#Fields: " + configValue) match {
             case (e: FieldsDirective) :: Nil => e
-            case _ => error("Log directives are not specified.")
+            case _ => sys.error("Log directives are not specified.")
           }
         }
 
@@ -109,7 +111,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
           case "thursday"   => Weekly(Calendar.THURSDAY)
           case "friday"     => Weekly(Calendar.FRIDAY)
           case "saturday"   => Weekly(Calendar.SATURDAY)
-          case x            => error("Unknown logfile rolling policy: " + x)
+          case x            => sys.error("Unknown logfile rolling policy: " + x)
         }
 
         val fileName = configMap.getString("file", context.toString + "-request.log")

@@ -11,7 +11,7 @@ import scala.collection.immutable.ListMap
 import scalaz._
 import scalaz.Scalaz._
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 
 import scala.collection.mutable.ArrayBuilder.ofRef
 

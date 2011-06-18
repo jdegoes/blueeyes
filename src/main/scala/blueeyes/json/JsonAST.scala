@@ -89,7 +89,7 @@ object JsonAST {
      * (json \ "foo" --> classOf[JField]).value
      * </pre>
      */
-    def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(error("Expected class " + clazz + ", but found: " + this.getClass))
+    def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + this.getClass))
 
     /**
      * Returns the element as an option of a JValue of the specified class.
@@ -204,7 +204,7 @@ object JsonAST {
       def up(l: List[JValue], i: Int, v: JValue) = l.length match {
           case len if len == i =>  l :+ v 
           case len if i < 0 || i > len =>
-            error("Attempt to create a new element out of JArray bounds at " + i) 
+            sys.error("Attempt to create a new element out of JArray bounds at " + i)
 
           case _ => l.updated(i, v) 
       }
@@ -215,13 +215,13 @@ object JsonAST {
 
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
           
-          case _ => error("Objects are not indexed")
+          case _ => sys.error("Objects are not indexed")
         }
 
         case arr @ JArray(elements) => path.nodes match {
           case JPathIndex(index) :: Nil => JArray(up(elements, index, value))
           case JPathIndex(index) :: nodes => JArray(up(elements, index, elements.lift(index).getOrElse(JNothing).set(JPath(nodes), value)))
-          case _ => error("Arrays have no fields")
+          case _ => sys.error("Arrays have no fields")
         }
 
         case _ => path.nodes match {
@@ -633,7 +633,7 @@ object JsonAST {
     case JDouble(n)    => text(n.toString)
     case JInt(n)       => text(n.toString)
     case JNull         => text("null")
-    case JNothing      => error("can't render 'nothing'")
+    case JNothing      => sys.error("can't render 'nothing'")
     case JString(null) => text("null")
     case JString(s)    => text("\"" + quote(s) + "\"")
     case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
@@ -662,7 +662,7 @@ object JsonAST {
       case JNull => text("JNull")
 
       case _ => text(value.productPrefix + "(") :: (value match {
-        case JNull | JNothing => error("impossible")
+        case JNull | JNothing => sys.error("impossible")
 
         case JBool(value)  => text(value.toString)
         case JDouble(n)    => text(n.toString)

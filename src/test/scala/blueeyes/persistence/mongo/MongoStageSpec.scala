@@ -13,7 +13,7 @@ import scalaz.Semigroup
 import org.specs.util.TimeConversions._
 import scala.util.Random
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
 import akka.actor.{Actor}
 import scalaz._
@@ -59,7 +59,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         }
 
         val start = System.currentTimeMillis
-        val futures = Future(actors map {actor => akkaFutureToFuture(actor.!!![Unit]("Send"))}: _*)
+        val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
         futures.value must eventually(200, 300.milliseconds) (beSomething)
 
         val flushFuture = mongStage.flushAll
