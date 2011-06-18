@@ -93,5 +93,5 @@ class FileSourceSpec extends Specification with Data{
 trait Data{
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
   val data     = List.fill(5)(List.fill[Byte](10)('0'))
-  val chunk    = data.tail.foldLeft(new ByteMemoryChunk(data.head.toArray)){(chunk, data) => new ByteMemoryChunk(data.toArray, () => Some(Future[ByteChunk](chunk)))}
+  val chunk    = data.tail.foldLeft(new ByteMemoryChunk(data.head.toArray)){(chunk, data) => new ByteMemoryChunk(data.toArray, () => Some(Future.sync[ByteChunk](chunk)))}
 }

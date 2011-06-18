@@ -33,13 +33,13 @@ ivyXML :=
 
 
 resolvers ++= Seq(
-  "Scala Repo Releases" at        "http://scala-tools.org/repo-releases/",
-  "Scala-tools.org Repository" at "http://scala-tools.org/repo-snapshots/",
+  "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",
+  "Scala-Tools Snapshots" at      "http://scala-tools.org/repo-snapshots/",
+  "Akka Repository" at            "http://akka.io/repository/",
   "JBoss Releases" at             "http://repository.jboss.org/nexus/content/groups/public/",
   "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
   "Nexus Scala Tools" at          "http://nexus.scala-tools.org/content/repositories/releases",
   "Maven Repo 1" at               "http://repo1.maven.org/maven2/",
-  "Akka Repository" at            "http://akka.io/repository/",
   "Guiceyfruit Googlecode " at    "http://guiceyfruit.googlecode.com/svn/repo/releases/"
 )
 

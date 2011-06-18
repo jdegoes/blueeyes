@@ -119,7 +119,7 @@ object HttpClient {
 
   class EchoClient[T](f: HttpRequest[T] => Option[T]) extends HttpClient[T] {
     override def apply(r: HttpRequest[T]) = {
-      Future[HttpResponse[T]](HttpResponse[T](content = f(r)))
+      Future.async(HttpResponse[T](content = f(r)))
     }
 
     override def isDefinedAt(x: HttpRequest[T]) = true

@@ -36,7 +36,7 @@ trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
       produce(text/html) {
         path("/bar/'foo/bar.html") {
           get { request: HttpRequest[ByteChunk] =>
-            serviceResponse
+            serviceResponse.future
           }
         }~
         path("/asynch/future") {
@@ -49,10 +49,10 @@ trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
         path("/asynch/eventually") {
           get { request: HttpRequest[ByteChunk] =>
             if (eventuallyCondition) {
-              serviceResponse
+              serviceResponse.future
             } else {
               eventuallyCondition = true
-              HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound))
+              HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)).future
             }
           }
         }

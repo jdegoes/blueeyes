@@ -46,7 +46,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
             val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
             val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
             val health        = monitor.toJValue
-            HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
+            Future.async {
+              HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
+            }
           }
         }
       }

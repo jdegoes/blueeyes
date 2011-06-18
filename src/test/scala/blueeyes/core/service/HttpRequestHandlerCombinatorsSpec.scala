@@ -13,7 +13,7 @@ import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits
+import blueeyes.concurrent.Future._
 import blueeyes.util.metrics.DataSize
 import DataSize._
 
@@ -34,7 +34,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         path("/foo/bar") {
           path("/baz") {
             get { (request: HttpRequest[Int]) =>
-              Future(HttpResponse[Int]())
+              Future.sync(HttpResponse[Int]())
             }
           }
         }
@@ -50,7 +50,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[JValue] =>
-              Future(HttpResponse[JValue](content = Some(JString("foo"))))
+              Future.sync(HttpResponse[JValue](content = Some(JString("foo"))))
             }
           }
         }
@@ -71,7 +71,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             post { request: HttpRequest[JValue] =>
-              Future(HttpResponse[JValue](content = request.content))
+              Future.sync(HttpResponse[JValue](content = request.content))
             }
           }
         }
@@ -92,7 +92,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[JValue] =>
-              Future(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
+              Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
             }
           }
         }
@@ -113,7 +113,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[JValue] =>
-              Future(HttpResponse[JValue]())
+              Future.sync(HttpResponse[JValue]())
             }
           }
         }
@@ -134,7 +134,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[JValue] =>
-              Future(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
+              Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
             }
           }
         }
@@ -157,7 +157,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/bar") {
         cookie('someCookie ?: defaultValue) { cookieVal =>
           get { (request: HttpRequest[String]) =>
-            Future(HttpResponse[String](content=Some(cookieVal)))
+            Future.sync(HttpResponse[String](content=Some(cookieVal)))
           }
         }
       }(HttpRequest[String](HttpMethods.GET, "/foo/bar"))
@@ -171,7 +171,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/'bar") {
         parameter[String, String]('bar) { bar =>
           get { (request: HttpRequest[String]) =>
-            Future(HttpResponse[String](content=Some(bar)))
+            Future.sync(HttpResponse[String](content=Some(bar)))
           }
         }
       }(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
@@ -185,7 +185,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           get { (request: HttpRequest[String]) =>
             request.parameters mustEqual Map('bar -> "bebe")
 
-            Future(HttpResponse[String](content=Some(bar)))
+            Future.sync(HttpResponse[String](content=Some(bar)))
           }
         }
       }
@@ -200,7 +200,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         produce(application/json) {
           parameter[String, JValue]('bar) { bar =>
             get { (request: HttpRequest[String]) =>
-              Future(HttpResponse[JValue](content=Some(JString(bar))))
+              Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
             }
           }
         }
@@ -215,7 +215,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       (path('token) {
         parameter('token) { token =>
           get { (request: HttpRequest[String]) =>
-            Future(HttpResponse[String](content=Some(token)))
+            Future.sync(HttpResponse[String](content=Some(token)))
           }
         }
       }).apply(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B", content = None)).value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
@@ -227,7 +227,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           produce(application/json) {
             parameter[String, JValue]('bar) { bar =>
               get { (request: HttpRequest[String]) =>
-                Future(HttpResponse[JValue](content=Some(JString(bar))))
+                Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
               }
             }
           }
@@ -243,19 +243,19 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       (aggregate(None){
         path("/foo"){
           get { (request: HttpRequest[ByteChunk]) =>
-            Future(HttpResponse[ByteChunk](content=request.content))
+            Future.sync(HttpResponse[ByteChunk](content=request.content))
           }
         }
-      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
     }
     "aggregate content up to the specified size" in{
       (aggregate(Some(2.bytes)){
         path("/foo"){
           get { (request: HttpRequest[ByteChunk]) =>
-            Future(HttpResponse[ByteChunk](content=request.content))
+            Future.sync(HttpResponse[ByteChunk](content=request.content))
           }
         }
-      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("12")
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("12")
     }
   }
 }

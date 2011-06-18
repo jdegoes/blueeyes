@@ -1,7 +1,10 @@
 package blueeyes.concurrent
 
-import collection.mutable.ListBuffer
-import akka.dispatch.{Future => AkkaFuture}
+import akka.dispatch.{Future => AkkaFuture, MessageDispatcher, Dispatchers}
+import akka.actor.Scheduler
+import akka.util.Duration
+import java.util.concurrent.TimeUnit
+import scala.collection.mutable.ListBuffer
 import scalaz.{Validation, Success, Failure}
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
@@ -404,7 +407,7 @@ class Future[T]{
       case false =>
 
       case true =>
-        deliverAndHandleError(error ,_canceled.toList, errorHandlers)
+        deliverAndHandleError(error, _canceled.toList, errorHandlers)
 
         _canceled.clear()
     }
@@ -480,30 +483,56 @@ class Future[T]{
   }
 }
 
-object Future {
+trait FutureImplicits {
+  implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = new TupleOfFuturesJoiner(tuple)
+  class TupleOfFuturesJoiner[U, V](tuple: (Future[U], Future[V])){
+    def join: Future[(U, V)] = tuple._1.zip(tuple._2)
+  }
+
+  implicit def fromAkka[T](akkaFuture: AkkaFuture[T]) = new AkkaFutureConversion(akkaFuture)
+  class AkkaFutureConversion[T](akkaFuture: AkkaFuture[T]) { 
+    def toBlueEyes(implicit futureDispatch: FutureDispatch): Future[T] = {
+      @volatile var completed = false
+      val future = new Future[T]()
+      akkaFuture.onComplete{ value: AkkaFuture[T] =>
+        completed = true
+        value.value match{
+          case Some(Right(value: T)) => future.deliver(value)
+          case Some(Left(error)) => future.cancel(error)
+          case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
+        }
+      }
+
+      Scheduler.scheduleOnce(
+        () => if (!completed) future.cancel, 
+        akkaFuture.timeoutInNanos, TimeUnit.NANOSECONDS
+      )
+
+      future
+    }
+  }
+
+  implicit def anyToFutureLifted[T](v: => T) = new FutureLifted(v)
+  class FutureLifted[T](v: => T) {
+    def future: Future[T] = Future.sync(v)
+  }
+}
+
+object Future extends FutureImplicits {
   /** Creates a "dead" future that is canceled and will never be delivered.
    */
-  def dead[T]: Future[T] = {
-    val f = new Future[T]
-    f.cancel
-    f
+  def dead[T]: Future[T] = new Future[T] ->- (_.cancel)
+
+  def dead[T](e: Throwable): Future[T] = new Future[T] ->- (_.cancel(e))
+
+  def sync[T](t: => T): Future[T] = new Future[T] ->- {
+    future => try { future.deliver(t) } catch { case ex => future.cancel(ex) }
   }
-
-  def dead[T](e: Throwable): Future[T] = {
-    val f = new Future[T]
-    f.cancel(e)
-    f
-  }
-
-  def lift[T](t: T): Future[T] = new Future().deliver(t: T)
-
-  def apply[T](t: T): Future[T] = lift(t)
 
   def apply[T](futures: Future[T]*): Future[List[T]] = {
     import java.util.concurrent.ConcurrentHashMap
 
     val resultsMap = new ConcurrentHashMap[Int, T]
-
     val result = new Future[List[T]]
 
     if (!futures.isEmpty){
@@ -534,58 +563,29 @@ object Future {
           }
         }
       }
-    }
-    else result.deliver(Nil)
-
-    result
-  }
-
-  def async[T](f: => T): Future[T] = {
-    val result = new Future[T]
-
-    import scala.actors.Actor.actor
-
-    actor {
-      result.deliver(f)
+    } else {
+      result.deliver(Nil)
     }
 
     result
   }
 
-  implicit def actorFuture2TimeStealingFuture[T](f: scala.actors.Future[T]): Future[T] = {
-    val newF = new Future[T]
-
-    f.respond { t =>
-      newF.deliver(t)
-    }
-
-    newF
+  def async[T](t: => T)(implicit futureDispatch: FutureDispatch): Future[T] = {
+    akka.dispatch.Future(t, futureDispatch.timeout)(futureDispatch.dispatcher).toBlueEyes
   }
 
-  implicit def futureMonad: scalaz.Monad[Future] = new scalaz.Monad[Future] {
-    def pure[A](a: => A) = Future.async(a)
+  implicit val FutureMonad: scalaz.Monad[Future] = new scalaz.Monad[Future] {
+    def pure[A](a: => A) = async(a)
     def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
   }
 }
 
-trait FutureImplicits {
-  implicit def any2Future[T, S >: T](any: T): Future[S] = Future(any: S)
-
-  implicit def tupleOfFuturesToJoiner[U, V](tuple: (Future[U], Future[V])) = TupleOfFuturesJoiner(tuple)
-  case class TupleOfFuturesJoiner[U, V](tuple: (Future[U], Future[V])){
-    def join: Future[(U, V)] = tuple._1.zip(tuple._2)
-  }
-
-  implicit def akkaFutureToFuture[T](akkaFuture: AkkaFuture[T]) = {
-    val future = new Future[T]()
-    akkaFuture.onComplete{ value: AkkaFuture[T] =>
-      value.value match{
-        case Some(Right(value: T)) => future.deliver(value)
-        case Some(Left(error)) => future.cancel(error)
-        case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
-      }
-    }
-    future
-  }
+class FutureDispatch(val timeout: Long, val dispatcher: MessageDispatcher)
+object FutureDispatch {
+  implicit val DefaultFutureDispatch: FutureDispatch = new FutureDispatch (
+    Long.MaxValue, //don't time things out
+    Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_async")
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
+      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+  )
 }
-object FutureImplicits extends FutureImplicits

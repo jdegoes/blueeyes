@@ -201,12 +201,12 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
           get { request: HttpRequest[ByteChunk] =>
-            Future.lift[HttpResponse[String]](response)
+            Future.sync[HttpResponse[String]](response)
           }
         } ~
         path("/foo") {
           get { request: HttpRequest[ByteChunk] =>
-            Future.lift[HttpResponse[String]](response)
+            Future.sync[HttpResponse[String]](response)
           }
         } ~
         path("/error") {
@@ -222,15 +222,15 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future.lift(new ByteMemoryChunk(Context.hugeContext.tail.head))))
+          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future.sync(new ByteMemoryChunk(Context.hugeContext.tail.head))))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.lift[HttpResponse[ByteChunk]](response)
+          Future.sync[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/empty/response"){
         post { request: HttpRequest[ByteChunk] =>
-          Future.lift[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
+          Future.sync[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
         }
       } ~
       path("/file/write"){
@@ -246,7 +246,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       path("/file/read"){
         get { request: HttpRequest[ByteChunk] =>
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(Context.dataFile))
-          Future.lift[HttpResponse[ByteChunk]](response)
+          Future.sync[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/huge/delayed"){
@@ -262,7 +262,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(nextChunkFuture))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.lift[HttpResponse[ByteChunk]](response)
+          Future.sync[HttpResponse[ByteChunk]](response)
         }
       }
     }

@@ -53,9 +53,8 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
 
       try {
         self.apply(request)
-      }
-      catch {
-        case t: Throwable => Future[HttpResponse[ByteChunk]](convertErrorToResponse(t))
+      } catch {
+        case t: Throwable => Future.sync(convertErrorToResponse(t))
       }
     }
 

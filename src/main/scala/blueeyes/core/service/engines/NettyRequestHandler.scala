@@ -99,7 +99,7 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
   private var done  = false
   private var nextChunkFuture: Future[ByteChunk] = _
 
-  setNextChunkFuture(Future.lift(chunk))
+  setNextChunkFuture(Future.sync(chunk))
 
   def close = {nextChunkFuture.cancel}
 
@@ -124,7 +124,7 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
         case Some(future)     => setNextChunkFuture(future)
           true
         case None if (!done)  => {
-          setNextChunkFuture(Future.lift[ByteChunk](new MemoryChunk(Array[Byte]())))
+          setNextChunkFuture(Future.sync[ByteChunk](new MemoryChunk(Array[Byte]())))
           done = true
           true
         }

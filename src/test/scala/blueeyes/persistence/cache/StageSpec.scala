@@ -6,7 +6,7 @@ import org.specs.util.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.FutureImplicits._
+import blueeyes.concurrent.Future._
 
 import scala.util.Random
 import scalaz._
@@ -113,7 +113,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures   = Future((actors map {actor => akkaFutureToFuture[Unit](actor !!! ("Send", 100000))}): _*)
+      val futures   = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll
@@ -148,7 +148,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures = Future((actors map {actor => akkaFutureToFuture[Unit](actor !!! ("Send", 100000))}): _*)
+      val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSomething)
 
       val flushFuture = stage.flushAll

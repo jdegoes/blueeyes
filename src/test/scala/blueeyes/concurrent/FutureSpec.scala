@@ -1,10 +1,10 @@
 package blueeyes.concurrent
 
+import Future._
 import org.specs.Specification
 import org.specs.util._
-import blueeyes.concurrent.FutureImplicits._
 
-class FutureSpec extends Specification{
+class FutureSpec extends Specification {
   "Future" should {
     "support cancel" in { 
       val f = Future.dead[String](new Exception("error"))
@@ -15,9 +15,7 @@ class FutureSpec extends Specification{
 
   "Future.split" should {
     "split apart future of tuple" in {
-      val f = Future.lift(("foo", 123))
-
-      val (string, integer) = f.split
+      val (string, integer) = ("foo", 123).future.split
 
       string.value  must eventually (beEqualTo(Some("foo")))
       integer.value must eventually (beEqualTo(Some(123)))
@@ -26,7 +24,7 @@ class FutureSpec extends Specification{
 
   "Future implicit join" should {
     "glue together tuple of futures into single future of tuple" in {
-      val (string, integer) = Future.lift(("foo", 123)).split
+      val (string, integer) = ("foo", 123).future.split
 
       (string, integer).join.value must eventually (beEqualTo(Some(("foo", 123))))
     }
@@ -127,7 +125,7 @@ class FutureSpec extends Specification{
     "cancel mapped future when mapping function throws error" in {
       val e = new Exception("foo")
       
-      val f = Future("foo")
+      val f = "foo".future
       
       f.map { string =>
         throw e
@@ -140,14 +138,14 @@ class FutureSpec extends Specification{
       val f = Future.dead[String](new Exception("error"))
     
       f.flatMap { s =>
-        "future should not deliver this handler"
+        "future should not deliver this handler".future
       }.error must eventually (beSomething)
     }
     
     "cancel mapped future when mapping function throws error" in {
       val e = new Exception("foo")
       
-      val f = Future("foo")
+      val f = "foo".future
       
       f.flatMap { string =>
         throw e
@@ -159,7 +157,7 @@ class FutureSpec extends Specification{
     "cancel filtered future when filtering function throws error" in {
       val e = new Exception("foo")
       
-      val f = Future("foo")
+      val f = "foo".future
       
       f.filter { string =>
         throw e

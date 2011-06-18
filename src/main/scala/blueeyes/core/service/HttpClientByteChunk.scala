@@ -30,12 +30,13 @@ trait HttpClientByteChunk extends HttpClient[ByteChunk]{ self =>
             }
           }
         }
+
         response.content match {
           case Some(chunk) =>
             val newResponse = new Future[HttpResponse[ByteChunk]]()
             aggregateContent(chunk, new ByteArrayOutputStream(), newResponse)
             newResponse
-          case None        => Future(response)
+          case None        => Future.sync(response)
         }
       }
     }

@@ -65,16 +65,16 @@ object HttpRequestLogger{
   def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock): HttpRequestLogger[T, S] = {
     def apply0(identifiers: List[FieldIdentifier]): HttpRequestLogger[T, S] = identifiers match {
       case Nil =>
-        lift((rq, rs) => Future.lift(""))
+        lift((rq, rs) => Future.sync(""))
       
       case head :: tail =>
         (lift { (request: HttpRequest[T], response: Future[HttpResponse[S]]) => 
           head match {
             case DateIdentifier =>
-              Future.lift(DateFormatter.print(clock.now()))
+              Future.sync(DateFormatter.print(clock.now()))
           
             case TimeIdentifier =>
-              Future.lift(TimeFormatter.print(clock.now()))
+              Future.sync(TimeFormatter.print(clock.now()))
           
             case TimeTakenIdentifier =>
               val start = clock.now().getMillis
@@ -106,48 +106,48 @@ object HttpRequestLogger{
               }
           
             case IpIdentifier(prefix) => prefix match {
-              case ClientPrefix => Future.lift(request.remoteHost.map(_.getHostAddress).getOrElse(""))
-              case ServerPrefix => Future.lift(IpIdentifierValue)
-              case _   => Future.lift("")
+              case ClientPrefix => Future.sync(request.remoteHost.map(_.getHostAddress).getOrElse(""))
+              case ServerPrefix => Future.sync(IpIdentifierValue)
+              case _   => Future.sync("")
             }
             case DnsNameIdentifier(prefix) => prefix match {
-              case ClientPrefix => Future.lift(request.remoteHost.map(_.getHostName).getOrElse(""))
-              case ServerPrefix => Future.lift(DnsNameIdentifierValue)
-              case _   => Future.lift("")
+              case ClientPrefix => Future.sync(request.remoteHost.map(_.getHostName).getOrElse(""))
+              case ServerPrefix => Future.sync(DnsNameIdentifierValue)
+              case _   => Future.sync("")
             }
             case StatusIdentifier(prefix) => prefix match {
               case ServerToClientPrefix => response map { response => response.status.code.name }
-              case _   => Future.lift("")
+              case _   => Future.sync("")
             }
             case CommentIdentifier(prefix) => prefix match {
               case ServerToClientPrefix => response map { response => response.status.reason }
-              case _   => Future.lift("")
+              case _   => Future.sync("")
             }
             case MethodIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.method.value)
-              case _   => Future.lift("")
+              case ClientToServerPrefix => Future.sync(request.method.value)
+              case _   => Future.sync("")
             }
             case UriIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.uri.toString)
-              case _   => Future.lift("")
+              case ClientToServerPrefix => Future.sync(request.uri.toString)
+              case _   => Future.sync("")
             }
             case UriStemIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.uri.path.getOrElse(""))
-              case _   => Future.lift("")
+              case ClientToServerPrefix => Future.sync(request.uri.path.getOrElse(""))
+              case _   => Future.sync("")
             }
             case UriQueryIdentifier(prefix) => prefix match {
-              case ClientToServerPrefix => Future.lift(request.uri.query.getOrElse(""))
-              case _   => Future.lift("")
+              case ClientToServerPrefix => Future.sync(request.uri.query.getOrElse(""))
+              case _   => Future.sync("")
             }
             case HeaderIdentifier(prefix, header) =>
               def find(key: String, headers: Map[String, String]) = headers find {keyValue => keyValue._1.toLowerCase == key.toLowerCase} map {keyValue => keyValue._2} getOrElse ("")
               prefix match {
-                case ClientToServerPrefix => Future.lift(find(header, request.headers))
+                case ClientToServerPrefix => Future.sync(find(header, request.headers))
                 case ServerToClientPrefix => response map { response => find(header, response.headers) }
-                case _   => Future.lift("")
+                case _   => Future.sync("")
               }
             case CustomIdentifier(value) =>
-              Future.lift("")
+              Future.sync("")
           }
         }) :+ apply0(tail)
     }

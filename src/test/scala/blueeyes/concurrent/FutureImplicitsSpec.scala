@@ -1,37 +1,39 @@
 package blueeyes.concurrent
 
+import Future._
 import org.specs.Specification
 import org.specs.util.TimeConversions._
 
 import akka.actor.Actor
 
-class FutureImplicitsSpec extends Specification with FutureImplicits{
-
+class FutureImplicitsSpec extends Specification {
   "FutureImplicitsSpec" should{
     "convert Akka future when value is delivered" in{
       val actor = Actor.actorOf[GetActor]
       actor.start
 
-      val result: Future[String] = actor !!! "success"
-      result.value must eventually (beSome("foo"))
+      val result = actor !!! "success"
+      result.toBlueEyes.value must eventually (beSome("foo"))
 
       actor.stop
     }
+
     "convert Akka future for long running actor when value is delivered" in{
       val actor = Actor.actorOf[GetActor]
       actor.start
 
-      val result: Future[String] = actor !!! ("long", 10000)
-      result.value must eventually(20, 1.second) (beSome("foo"))
+      val result = actor !!! ("long", 10000)
+      result.toBlueEyes.value must eventually(20, 1.second) (beSome("foo"))
 
       actor.stop
     }
+
     "convert Akka future when future has error" in{
       val actor = Actor.actorOf[GetActor]
       actor.start
 
-      val result: Future[String] = actor !!! "error"
-      result.isCanceled must eventually (be(true))
+      val result = actor !!! "error"
+      result.toBlueEyes.isCanceled must eventually (be(true))
 
       actor.stop
     }
@@ -41,7 +43,6 @@ class FutureImplicitsSpec extends Specification with FutureImplicits{
 }
 
 class GetActor extends Actor{
-
   def receive = {
     case "success" =>
       self.reply("foo")

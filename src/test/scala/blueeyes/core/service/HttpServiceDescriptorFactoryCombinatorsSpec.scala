@@ -8,6 +8,7 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString
 import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import java.io.File
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
@@ -32,7 +33,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
-      Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
+      Future.sync(HttpResponse[ByteChunk](content = Some(r.uri.path match {
         case Some("/foo/v1/proxy")  => BijectionsChunkString.StringToChunk("it works!")
 
         case _ => BijectionsChunkString.StringToChunk("it does not work!")
@@ -101,7 +102,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
             context => {
               request {
                 path("/foo") {
-                  get  { request: HttpRequest[ByteChunk] => Future(HttpResponse[ByteChunk]()) }
+                  get  { request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]().future }
                 } ~
                 path("/proxy") {
                   get { request: HttpRequest[ByteChunk] =>
@@ -112,7 +113,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
                 } ~
                 remainingPath{ path =>
                   get{
-                    request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]()
+                    request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]().future
                   }
                 }
               }

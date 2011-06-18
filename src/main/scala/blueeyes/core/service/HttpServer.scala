@@ -1,17 +1,20 @@
 package blueeyes.core.service
 
-import java.lang.reflect.{Method}
-import java.util.concurrent.CountDownLatch
 
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import blueeyes.core.data.ByteChunk
-import blueeyes.util.CommandLineArguments
-import net.lag.configgy.{Config, ConfigMap, Configgy}
-import net.lag.logging.Logger
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
+import blueeyes.util.CommandLineArguments
+
+import java.lang.reflect.{Method}
+import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
-import blueeyes.concurrent.Future
+
+import net.lag.configgy.{Config, ConfigMap, Configgy}
+import net.lag.logging.Logger
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -64,13 +67,12 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
     // The raw future may die due to error:
     val rawFuture = try {
       if (_handler.isDefinedAt(r)) _handler(r)
-      else Future[HttpResponse[ByteChunk]](NotFound)
-    }
-    catch {
+      else NotFound.future
+    } catch {
       case why: Throwable =>
         // An error during invocation of the request handler, convert to
         // proper response:
-        Future[HttpResponse[ByteChunk]](convertErrorToResponse(why))
+        Future.sync(convertErrorToResponse(why))
     }
 
     // Convert the raw future into one that cannot die:
