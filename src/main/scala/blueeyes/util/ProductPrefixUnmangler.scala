@@ -1,7 +1,7 @@
 package blueeyes.util 
 
 trait ProductPrefixUnmangler extends Product {
- def unmangledName = unmangleName(productPrefix)
+ lazy val unmangledName = unmangleName(productPrefix)
 
  private def unmangleName(name: String): String = operators.foldLeft(name)((n, o) => n.replace(o._1, o._2))
 
@@ -12,9 +12,4 @@ trait ProductPrefixUnmangler extends Product {
    "$bar" -> "|", "$bslash" -> "\\")
 }
 
-/*
-trait HttpHeader extends ProductPrefixUnmangler {
- def value = unmangledName
-}
-*/
 
