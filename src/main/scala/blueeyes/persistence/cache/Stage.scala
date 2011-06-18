@@ -13,7 +13,6 @@ import akka.actor.{Actor, ActorRef, Scheduler}
 import Actor._
 
 abstract class Stage[K, V] {
-
   private sealed trait StageIn
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends StageIn
   private object     FlushAll extends StageIn
@@ -101,11 +100,8 @@ abstract class Stage[K, V] {
     }
 
     private def putToCache(request: PutAll) {
-      cache ++= request.pairs.map {
-        case (key, value) => (
-          key,
-          cache.get(key).map{ current => current.withValue(request.semigroup.append(current.value, value)) }.getOrElse(ExpirableValue(value))
-        )
+      request.pairs.foreach { tuple => 
+        cache.put(tuple._1, cache.get(tuple._1).map(current => current.withValue(request.semigroup.append(current.value, tuple._2))).getOrElse(ExpirableValue(tuple._2)))
       }
     }
 

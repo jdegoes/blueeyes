@@ -23,7 +23,7 @@ private[mongo] object Changes {
     def *>(list: ListSet[Change]) = Changes.compose(flatten, Changelist(list).flatten)
   }
 
-    trait Change1 extends Change {
+  trait Change1 extends Change {
     /**
      * The path that will be changed.
      */
@@ -37,7 +37,7 @@ private[mongo] object Changes {
 
     protected def commuteWithImpl(older: Change1): Option[Tuple2[Change1, Change1]] = None
 
-    protected def fuseWithImpl(older: Change1): Option[Change1] = None
+    protected def fuseWithImpl(older: Change1): Option[Change1]
   }
 
   sealed case class Changelist[T <: Change](list: ListSet[T]) extends Change {
@@ -50,13 +50,19 @@ private[mongo] object Changes {
     implicit def setToChangelist[T <: Change1](list: ListSet[T]): Changelist[T] = Changelist[T](list)
   }
 
-  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = if (newer.isEmpty) older else compose(compose(newer.last, older), newer.take(newer.size - 1))
+  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = 
+    if (newer.isEmpty) older 
+    else compose(_compose(newer.last, older), newer.take(newer.size - 1))
 
-  private def compose(c: Change1, cs: ListSet[Change1]): ListSet[Change1] = if (cs.isEmpty) ListSet.empty + c else c.fuseWith(cs.head) match {
-    case None => c.commuteWith(cs.head) match {
-      case None => ListSet.empty + c ++ cs
-      case Some(t) => ListSet.empty + t._1 ++ compose(t._2, cs.tail)
+  private def _compose(c: Change1, cs: ListSet[Change1]): ListSet[Change1] = {
+    if (cs.isEmpty) ListSet(c)
+    else c.fuseWith(cs.head) match {
+      case None => c.commuteWith(cs.head) match {
+        case None => ListSet(c) ++ cs
+        case Some(t) => ListSet(t._1) ++ _compose(t._2, cs.tail)
+      }
+
+      case Some(f) => ListSet(f) ++ cs.tail
     }
-    case Some(f) => ListSet.empty + f ++ cs.tail
   }
 }

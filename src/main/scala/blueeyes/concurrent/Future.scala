@@ -491,7 +491,7 @@ trait FutureImplicits {
 
   implicit def fromAkka[T](akkaFuture: AkkaFuture[T]) = new AkkaFutureConversion(akkaFuture)
   class AkkaFutureConversion[T](akkaFuture: AkkaFuture[T]) { 
-    def toBlueEyes(implicit futureDispatch: FutureDispatch): Future[T] = {
+    def toBlueEyes: Future[T] = {
       @volatile var completed = false
       val future = new Future[T]()
       akkaFuture.onComplete{ value: AkkaFuture[T] =>
@@ -502,11 +502,6 @@ trait FutureImplicits {
           case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
         }
       }
-
-      Scheduler.scheduleOnce(
-        () => if (!completed) future.cancel, 
-        akkaFuture.timeoutInNanos, TimeUnit.NANOSECONDS
-      )
 
       future
     }
@@ -585,7 +580,7 @@ object FutureDispatch {
   implicit val DefaultFutureDispatch: FutureDispatch = new FutureDispatch (
     Long.MaxValue, //don't time things out
     Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_async")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
       .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
   )
 }

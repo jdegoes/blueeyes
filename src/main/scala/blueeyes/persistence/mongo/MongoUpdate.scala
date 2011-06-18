@@ -14,7 +14,7 @@ import Scalaz._
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
-    def symbol: String = unmangledName
+    lazy val symbol: String = unmangledName
 
     override def toString = symbol
   }

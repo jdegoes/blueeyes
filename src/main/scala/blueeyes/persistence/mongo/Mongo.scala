@@ -32,7 +32,7 @@ trait Mongo {
 
 object MongoActor {
   val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(2)
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
       .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
 
