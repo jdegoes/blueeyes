@@ -1,10 +1,12 @@
 name := "blueeyes"
 
-version := "0.3.29"
+version := "0.4.0"
 
 organization := "com.reportgrid"
 
 scalaVersion := "2.9.0-1"
+
+scalacOptions += "-deprecation"
 
 libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
