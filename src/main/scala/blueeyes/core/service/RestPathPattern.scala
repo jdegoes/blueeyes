@@ -250,22 +250,23 @@ private[service] trait RegexUtil{
   }
 
   private def extractNamedCaptureGroup(regexAtom: RegexAtom): (RegexAtom, List[String], List[String]) = {
-    val (newElement: RegexAtomElement, allNewNames: List[String], newNames: List[String]) = regexAtom.element match{
+    def resultFor(newElement: RegexAtomElement, allNewNames: List[String], newNames: List[String]) = (RegexAtom(newElement, regexAtom.quantifier), allNewNames, newNames)
+
+    regexAtom.element match {
       case  e: NamedCaptureGroup =>
-         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
+        val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
         val newAllNames: List[String] = e.name :: groupNames
-        (Group(groupElements: _*), newAllNames, newAllNames)
+        resultFor(Group(groupElements: _*), newAllNames, newAllNames)
       case  e: Group =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (Group(groupElements: _*), e.toString :: allNames, groupNames)
+        resultFor(Group(groupElements: _*), e.toString :: allNames, groupNames)
       case e: NonCapturingGroup =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (NonCapturingGroup(e.flags, groupElements: _*), allNames, groupNames)
+        resultFor(NonCapturingGroup(e.flags, groupElements: _*), allNames, groupNames)
       case e: AtomicGroup =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
-        (AtomicGroup(groupElements: _*), allNames, groupNames)
-      case _ => (regexAtom.element, Nil, Nil)
+        resultFor(AtomicGroup(groupElements: _*), allNames, groupNames)
+      case _ => resultFor(regexAtom.element, Nil, Nil)
     }
-    (RegexAtom(newElement, regexAtom.quantifier), allNewNames, newNames)
   }
 }

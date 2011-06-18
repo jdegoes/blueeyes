@@ -6,7 +6,7 @@ organization := "com.reportgrid"
 
 scalaVersion := "2.9.0-1"
 
-scalacOptions += "-deprecation"
+scalacOptions ++= Seq("-deprecation", "-unchecked")
 
 libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",

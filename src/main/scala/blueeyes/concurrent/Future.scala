@@ -497,7 +497,7 @@ trait FutureImplicits {
       akkaFuture.onComplete{ value: AkkaFuture[T] =>
         completed = true
         value.value match{
-          case Some(Right(value: T)) => future.deliver(value)
+          case Some(Right(value)) => future.deliver(value)
           case Some(Left(error)) => future.cancel(error)
           case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
         }
