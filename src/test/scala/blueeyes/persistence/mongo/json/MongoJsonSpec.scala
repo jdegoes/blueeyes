@@ -52,6 +52,17 @@ class MongoJsonSpec extends Specification {
         case e: Throwable => e.printStackTrace()
       }
     }
+    "convert BasicDBList type" in {
+      try {
+        val array = new BasicDBList()
+        array.add(new java.lang.Integer(1))
+        array.add("2")
+        toJson("array", array) mustEqual(JArray(List(JInt(1), JString("2"))))
+      }
+      catch {
+        case e: Throwable => e.printStackTrace()
+      }
+    }
     "remove reserved mongo keys" in {
       val dbObject = new BasicDBObject()
       dbObject.put("_id", "4b7d91799790c34331062bc0")
