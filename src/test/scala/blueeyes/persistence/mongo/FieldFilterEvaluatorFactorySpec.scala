@@ -46,4 +46,7 @@ class FieldFilterEvaluatorFactorySpec extends Specification with JPathImplicits{
   "creates $type Evaluator" in {
     FieldFilterEvaluatorFactory("foo", $type) must be (TypeFieldFilterEvaluator)
   }
+  "creates $regex Evaluator" in {
+    FieldFilterEvaluatorFactory("foo", $regex) must be (RegexFilterEvaluator)
+  }
 }

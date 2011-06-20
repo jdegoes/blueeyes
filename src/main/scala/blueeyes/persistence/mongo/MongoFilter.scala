@@ -25,10 +25,11 @@ object MongoFilterOperators {
   sealed trait MongoFilterOperatorEquality extends MongoFilterOperator
   case object $eq extends MongoFilterOperatorEquality { def unary_! = $ne; } // This is a virtual operator, it's not real!!!!
   case object $ne extends MongoFilterOperatorEquality { def unary_! = $eq; }
+  case object $regex extends MongoFilterOperatorEquality { def unary_! : MongoFilterOperator  = sys.error("The $regex operator does not have a negation"); }
 
   sealed trait MongoFilterOperatorContainment extends MongoFilterOperator
-  case object $in   extends MongoFilterOperatorContainment { def unary_! = $nin; }
-  case object $nin  extends MongoFilterOperatorContainment { def unary_! = $in; }
+  case object $in    extends MongoFilterOperatorContainment { def unary_! = $nin; }
+  case object $nin   extends MongoFilterOperatorContainment { def unary_! = $in; }
 
   case object $mod        extends MongoFilterOperator { def unary_! : MongoFilterOperator = sys.error("The $mod operator does not have a negation"); }
   case object $all        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $all operator does not have a negation"); }
@@ -71,7 +72,7 @@ case object MongoFilterAll extends MongoFilter {
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive) extends MongoFilter { self =>
   def filter: JValue = {
     val value = operator match {
-      case $eq => rhs.toJValue
+      case $eq | $regex => rhs.toJValue
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
@@ -260,6 +261,8 @@ case class MongoFilterBuilder(jpath: JPath) {
   def hasSize(length: Int): MongoFilter =  MongoFieldFilter(jpath, $size, length)
 
   def isDefined: MongoFilter = MongoFieldFilter(jpath, $exists, true)
+
+  def regex(regex: String, options: String = "") = MongoFieldFilter(jpath, $regex, JObject(List(JField("$regex", JString(regex)), JField("$options", JString(options)))))
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
 }

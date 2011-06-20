@@ -7,6 +7,10 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST.{JObject, JString, JField}
 
 class MongoFieldFilterSpec extends Specification{
+  "creates valid json for $regex operator" in{
+    import MongoFilterImplicits._
+    MongoFieldFilter("foo", $regex, JObject(List(JField("$regex", JString("bar")), JField("$options", JString("i"))))).filter mustEqual (JObject(JField("foo", JObject(List(JField("$regex", JString("bar")), JField("$options", JString("i"))))) :: Nil))
+  }
   "creates valid json for $eq operator" in{
     import MongoFilterImplicits._
     MongoFieldFilter("foo", $eq, "bar").filter mustEqual (JObject(JField("foo", JString("bar")) :: Nil))

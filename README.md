@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.github.blueeyes</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.3.29</version>
+      <version>0.4.0</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.3.29" % "compile"
+    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.4.0" % "compile"
 
 ## Origins
 
@@ -489,7 +489,7 @@ To modify or retrieve documents from a database, you first create a query and th
     val query    = selectOne().from("mycollection").sortBy("foo.bar" <<)
     val document = database(query)
 
-To restrict the scope of a query, you need to create a filter. Possible filters include: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches).
+To restrict the scope of a query, you need to create a filter. Possible filters include: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches), "regex" (regular expressions).
 
   * Equals filter:
       "foo" === "bar"

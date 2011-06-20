@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import org.specs.Specification
 import MongoFilterOperators._
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST.JString
+import blueeyes.json.JsonAST._
 import MongoFilterImplicits._
 
 class MongoFilterBuilderSpec extends Specification{
@@ -38,5 +38,11 @@ class MongoFilterBuilderSpec extends Specification{
   }
   "builds $hasType operation" in {
     JPath("foo").hasType[JString] mustEqual (MongoFieldFilter("foo", $type, MongoPrimitiveInt(2)))
+  }
+  "builds $regex operation" in {
+    ("foo" regex "bar") mustEqual (MongoFieldFilter("foo", $regex, MongoPrimitiveJObject(JObject(List(JField("$regex", JString("bar")), JField("$options", JString("")))))))
+  }
+  "builds $regex operation with options" in {
+    ("foo" regex ("bar", "i")) mustEqual (MongoFieldFilter("foo", $regex, MongoPrimitiveJObject(JObject(List(JField("$regex", JString("bar")), JField("$options", JString("i")))))))
   }
 }

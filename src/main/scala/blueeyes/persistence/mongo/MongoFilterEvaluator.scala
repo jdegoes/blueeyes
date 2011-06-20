@@ -3,6 +3,7 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
 import blueeyes.json.{JPathIndex, JPath}
+import util.matching.Regex
 
 private[mongo] object MongoFilterEvaluator{
   implicit def valuesToEvaluator(values: List[JValue]) = MongoFilterEvaluator(values)
@@ -81,6 +82,7 @@ private[mongo] object Evaluators{
       case $size    => SizeFieldFilterEvaluator
       case $exists  => ExistsFieldFilterEvaluator
       case $type    => TypeFieldFilterEvaluator
+      case $regex   => RegexFilterEvaluator
       case $or      => sys.error("'or' is not supported")
       case $each    => sys.error("'or' is not supported")
     }
@@ -161,6 +163,20 @@ private[mongo] object Evaluators{
   }
   case object ExistsFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v1 != JNothing
+  }
+  case object RegexFilterEvaluator extends FieldFilterEvaluator{
+    def apply(v1: JValue, v2: JValue) = (v1, v2) match {
+      case (JString(value), JObject(List(JField("$regex", JString(regexValue)), JField("$options", JString(options))))) =>
+        val regex = regexValue match{
+          case "" => regexValue
+          case _ => "(?%s)%s".format(options, regexValue)
+        }
+        new Regex(regex) findPrefixMatchOf (value) match {
+          case Some(x) => true
+          case None => false
+        }
+      case _ => false
+    }
   }
   case object TypeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v2 match {

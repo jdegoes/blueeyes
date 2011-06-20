@@ -31,6 +31,25 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
+    skip("run manually")
+    "Select the same value form Mock and Real Mongo for And operator" in{
+      forAll { values: List[JObject] =>
+        query[JNothing.type](insert(values: _*).into(collection))
+
+        val value  = values.head
+        val fields = value.flattenWithPath
+        var passed = true
+
+        for (i <- 1 to fields.size if (passed)){
+          val filter = generateQuery(fields.take(i))
+          passed = checkSelectPass(filter, value)
+        }
+
+        query[JNothing.type](remove.from(collection))
+
+        passed
+      } must pass
+    }
       skip("run manually")
     "Remove the same value form Mock and Real Mongo for existing object" in{
       forAll { values: List[JObject] =>
@@ -87,25 +106,6 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
         var passed = checkSelectPass(MongoFilterAll, value)
         if (passed) passed = checkSelectPass(generateQuery(newObject.flattenWithPath), value)
-
-        query[JNothing.type](remove.from(collection))
-
-        passed
-      } must pass
-    }
-    skip("run manually")
-    "Select the same value form Mock and Real Mongo for And operator" in{
-      forAll { values: List[JObject] =>
-        query[JNothing.type](insert(values: _*).into(collection))
-
-        val value  = values.head
-        val fields = value.flattenWithPath
-        var passed = true
-
-        for (i <- 1 to fields.size if (passed)){
-          val filter = generateQuery(fields.take(i))
-          passed = checkSelectPass(filter, value)
-        }
 
         query[JNothing.type](remove.from(collection))
 
@@ -258,11 +258,8 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
   def allFiltersForNull(path: JPath)                    = List[MongoFilter](path.hasType[JNull.type], path === JNull)
   def allFiltersForInt(path: JPath, value: JInt)        = List[MongoFilter](path.hasType[JInt], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt)))
-  def allFiltersForString(path: JPath, value: JString)  = List[MongoFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
+  def allFiltersForString(path: JPath, value: JString)  = List[MongoFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path regex value.value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
   def allFiltersForArray(path: JPath, value: JArray)    = List[MongoFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive](value.elements.map(jvalueToMongoPrimitive): _*))
   def allFiltersForDouble(path: JPath, value: JDouble)  = List[MongoFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 10.02E301), path > JDouble(value.value - 10.02E301), path >= JDouble(value.value - 10.02E301), path < JDouble(value.value + 10.02E301), path <= JDouble(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value)))
   def allFiltersForBoolean(path: JPath, value: JBool)   = List[MongoFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value)))
 }
-
-//        val value = JsonParser.parse("""{"995031":[false,-1.0,[""]],"585784":{"655939":[true,0.0,null,["",464012249,false,[8.988465674311579E307,[{"407323":"","20133":null,"600812":false,"538065":null,"424169":true},1,true],1868626500,1,1],[[1119944048]]],{"44603":null,"341200":true,"790448":null,"574840":"","549036":[-2147483648,"",["",""],568312444]}]},"693895":{"710558":-8.988465674311579E307,"651688":{},"642919":[],"736812":null}}""").asInstanceOf[JObject]
-//        query[JNothing.type](insert(value).into(collection))
