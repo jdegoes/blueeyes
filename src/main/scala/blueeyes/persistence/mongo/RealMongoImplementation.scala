@@ -73,13 +73,18 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def dropIndexes = collection.dropIndexes()
 
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = {
     val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
 
+    val index = collection.getIndexInfo()
     val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))
     val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
     val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
     val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
+    val hintedCursor  = hint.map{value => value match{
+      case NamedHint(name) => limitedCursor.hint(name)
+      case KeyedHint(keys) => limitedCursor.hint(toMongoKeys(keys))
+    }}.getOrElse(limitedCursor)
 
     iterator(limitedCursor.iterator)
   }

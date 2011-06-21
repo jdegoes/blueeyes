@@ -95,7 +95,7 @@ abstract class MongoDatabase {
       print("""{
   "%s":[""".format(mongoCollection.name))
 
-      val jobjects = collection(mongoCollection.name).select(MongoSelection(Set()), None, None, None, None)
+      val jobjects = collection(mongoCollection.name).select(MongoSelection(Set()), None, None, None, None, None)
       var first    = true
 
       jobjects foreach { jobject =>
@@ -124,7 +124,7 @@ abstract class MongoDatabase {
 
 private[mongo] trait DatabaseCollection{
   def insert(objects: List[JObject])
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]): IterableView[JObject, Iterator[JObject]]
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]): IterableView[JObject, Iterator[JObject]]
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])

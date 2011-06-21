@@ -2,9 +2,8 @@ package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
 import scala.collection.immutable.ListSet
-import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JPathImplicits, JPath}
+import blueeyes.json.JPath
 import QueryBehaviours._
 
 sealed trait MongoCollection{
@@ -36,29 +35,37 @@ case class MongoSort(sortField: JPath, sortOrder: MongoSortOrder){
 
 case class MongoSelection(selection: Set[JPath])
 
+sealed trait Hint
+case class NamedHint(indexName: String) extends Hint
+case class KeyedHint(keys: ListSet[JPath]) extends Hint
+
 /** Basic trait for mongo queries.
  */
 sealed trait MongoQuery[T] extends QueryBehaviour[T]{
   def collection: MongoCollection;
 }
 
-case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
+case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None, hint: Option[Hint] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
   def where (newFilter: MongoFilter): MongoDistinctQuery = copy(filter = Some(newFilter))
+  def hint  (newHint: Hint)         : MongoDistinctQuery = copy(hint = Some(newHint))
 }
 case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JArray] with GroupQueryBehaviour{
   def where (newFilter: MongoFilter): MongoGroupQuery = copy(filter = Some(newFilter))
 }
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None) extends MongoQuery[IterableView[JObject, Iterator[JObject]]] with SelectQueryBehaviour{
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None) extends MongoQuery[IterableView[JObject, Iterator[JObject]]] with SelectQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectQuery = copy(sort = Some(newSort))
   def skip  (newSkip: Int)          : MongoSelectQuery = copy(skip = Some(newSkip))
   def limit (newLimit: Int)         : MongoSelectQuery = copy(limit = Some(newLimit))
+  def hint  (newHint: Hint)         : MongoSelectQuery = copy(hint = Some(newHint))
 }
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                              sort: Option[MongoSort] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
+                              sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = copy(sort = Some(newSort))
+  def hint(newHint: Hint)           : MongoSelectOneQuery = copy(hint = Some(newHint))
+  def hint  (keys: JPath*)          : MongoSelectOneQuery = copy(hint = Some(KeyedHint(ListSet(keys: _*))))
 }
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = copy(filter = Some(newFilter))

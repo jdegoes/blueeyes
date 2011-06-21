@@ -100,7 +100,7 @@ private[mongo] object QueryBehaviours{
 
   trait SelectQueryBehaviour extends MongoQueryBehaviour[IterableView[JObject, Iterator[JObject]]]{
     def query(collection: DatabaseCollection) = {
-      collection.select(selection, filter, sort, skip, limit)
+      collection.select(selection, filter, sort, skip, limit, hint)
     }
 
     def selection : MongoSelection
@@ -108,6 +108,7 @@ private[mongo] object QueryBehaviours{
     def sort      : Option[MongoSort]
     def skip      : Option[Int]
     def limit     : Option[Int]
+    def hint      : Option[Hint]
   }
   trait GroupQueryBehaviour extends MongoQueryBehaviour[JArray]{
     def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
@@ -131,6 +132,7 @@ private[mongo] object QueryBehaviours{
       def sort      = self.sort
       def filter    = self.filter
       def selection = self.selection
+      def hint      = self.hint
     }
 
     def query(collection: DatabaseCollection): Option[JObject] = {
@@ -140,6 +142,7 @@ private[mongo] object QueryBehaviours{
     def selection : MongoSelection
     def filter    : Option[MongoFilter]
     def sort      : Option[MongoSort]
+    def hint      : Option[Hint]
   }
 
 
@@ -157,4 +160,5 @@ private[mongo] object QueryBehaviours{
     def upsert: Boolean
     def multi : Boolean
   }
+
 }

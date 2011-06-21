@@ -7,7 +7,7 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
-
+import collection.immutable.ListSet
 
 class MongoSelectQuerySpec extends Specification{
   private val query = select("foo", "bar").from(MongoCollectionReference("collection"))
@@ -23,5 +23,11 @@ class MongoSelectQuerySpec extends Specification{
   }
   "'limit' method sets new limit" in {
     query.limit(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, Some(10)))
+  }
+  "'hint' with name sets new hint" in {
+    query.hint("foo") mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(NamedHint("foo"))))
+  }
+  "'hint' with keys sets new hint" in {
+    query.hint(JPath("foo") :: JPath("bar") :: Nil) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(ListSet(JPath("foo"), JPath("bar"))))))
   }
 }

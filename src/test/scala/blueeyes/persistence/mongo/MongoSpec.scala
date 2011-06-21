@@ -31,6 +31,20 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
+    "Select the same value with hints" in{
+      val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
+      val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
+      val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
+      val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
+
+      query[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
+      query[JNothing.type](ensureIndex("myindex").on("address.city", "address.street").in(collection))
+
+      var passed = checkSelectPass(select().from(collection).where("address.city" === "B").hint("myindex")) //&&
+        //checkSelectPass(select().from(collection).where("address.city" === "B").hint(List(JPath("address.city"))))
+
+      passed must be(true)
+    }
     skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator" in{
       forAll { values: List[JObject] =>
@@ -50,7 +64,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         passed
       } must pass
     }
-      skip("run manually")
+    skip("run manually")
     "Remove the same value form Mock and Real Mongo for existing object" in{
       forAll { values: List[JObject] =>
         query[JNothing.type](remove.from(collection))
@@ -161,8 +175,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     }
   }
 
-  private def checkSelectPass(filter: MongoFilter, values : JObject*): Boolean = {
-    val selectQuery  = select().from(collection).where(filter)
+  private def checkSelectPass(filter: MongoFilter, values : JObject*): Boolean = checkSelectPass(select().from(collection).where(filter), values: _*)
+
+  private def checkSelectPass(selectQuery: MongoSelectQuery, values : JObject*): Boolean = {
     val selection    = query(selectQuery)
     val real         = selection._1.map(_.toSet).getOrElse(Set[JObject]())
     val mock         = selection._2.toSet
@@ -190,7 +205,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       }
       println("-MOCK-")
       println("--------QUERY--------")
-      println(Printer.compact(JsonAST.render(filter.filter)))
+      println(Printer.compact(JsonAST.render(selectQuery.filter.get.filter)))
       println("--------QUERY--------")
       oneQuery(selectQuery, mockDatabase)
     }

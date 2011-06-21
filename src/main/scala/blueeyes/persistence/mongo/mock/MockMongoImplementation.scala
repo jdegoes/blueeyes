@@ -83,7 +83,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
     }
   }
 
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int]) = {
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = {
     safeProcess(filter, {objects: List[JObject] =>
       val sorted  = sort.map(v => objects.sorted(new JObjectOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
