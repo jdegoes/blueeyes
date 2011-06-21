@@ -29,6 +29,10 @@ class RestPathPatternSpec extends Specification{
     "match regexp element nested in NamedCaptureGroup" in{
       testPath("(foo(?<bar>baz(?<foo>[1-9]+)))", List(("foobaz123", Map('bar -> "baz123", 'foo -> "123"))), List("1970"))
     }
+    "match regexp with group nested in capture groups" in {
+      testPath("""(/var/(?<id3>([\w_-])+)/events/(?<id4>[\w_-]+))""",
+        List(("/var/j20b/events/impress", Map('id3 -> "j20b", 'id4 -> "impress"))), List())
+    }
   }
 
   "path matching and symbol extraction" should {

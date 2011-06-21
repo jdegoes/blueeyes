@@ -27,6 +27,9 @@ class RegexUtilSpec extends  Specification with RegexUtil{
     "extract name from named group nested in AtomicGroup" in{
       testExtract("(?>bar(?<foo>[1-9]+))", ("(?>bar([1-9]+))", List("foo"), List("foo")))
     }
+    "extract name from named group nested in AtomicGroup and which contains group" in{
+      testExtract("(?>bar(?<foo>([1-9])+))", ("(?>bar(([1-9])+))", List("foo", "([1-9])"), List("foo")))
+    }
   }
 
   private def testExtract(input: String, output: (String, List[String], List[String])) = {

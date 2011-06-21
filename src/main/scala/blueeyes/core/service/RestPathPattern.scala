@@ -256,7 +256,7 @@ private[service] trait RegexUtil{
       case  e: NamedCaptureGroup =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
         val newAllNames: List[String] = e.name :: groupNames
-        resultFor(Group(groupElements: _*), newAllNames, newAllNames)
+        resultFor(Group(groupElements: _*), e.name :: allNames, e.name :: groupNames)
       case  e: Group =>
         val (groupElements, allNames, groupNames) = extractNamedCaptureGroup(e.group.toList)
         resultFor(Group(groupElements: _*), e.toString :: allNames, groupNames)
