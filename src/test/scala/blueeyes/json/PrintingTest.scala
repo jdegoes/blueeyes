@@ -23,6 +23,7 @@ import org.specs.ScalaCheck
 
 object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
+  import Printer._
   import scala.text.Document
 
   "rendering does not change semantics" in {

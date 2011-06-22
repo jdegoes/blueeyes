@@ -14,6 +14,7 @@ import blueeyes.concurrent.Future._
 
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
+import blueeyes.json.Printer._
 
 class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader{
   import HttpHeaderImplicits._

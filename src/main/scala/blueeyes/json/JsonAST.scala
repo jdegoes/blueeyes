@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
 import scalaz.NonEmptyList
 
@@ -622,6 +621,88 @@ object JsonAST {
     lazy val empty = JArray(Nil)
   }
 
+}
+
+/** Basic implicit conversions from primitive types into JSON.
+ * Example:<pre>
+ * import blueeyes.json.Implicits._
+ * JObject(JField("name", "joe") :: Nil) == JObject(JField("name", JString("joe")) :: Nil)
+ * </pre>
+ */
+object Implicits extends Implicits
+trait Implicits {
+  import JsonAST._
+
+  implicit def int2jvalue(x: Int) = JInt(x)
+  implicit def long2jvalue(x: Long) = JInt(x)
+  implicit def bigint2jvalue(x: BigInt) = JInt(x)
+  implicit def double2jvalue(x: Double) = JDouble(x)
+  implicit def float2jvalue(x: Float) = JDouble(x)
+  implicit def bigdecimal2jvalue(x: BigDecimal) = JDouble(x.doubleValue)
+  implicit def boolean2jvalue(x: Boolean) = JBool(x)
+  implicit def string2jvalue(x: String) = JString(x)
+}
+
+/** A DSL to produce valid JSON.
+ * Example:<pre>
+ * import blueeyes.json.JsonDSL._
+ * ("name", "joe") ~ ("age", 15) == JObject(JField("name",JString("joe")) :: JField("age",JInt(15)) :: Nil)
+ * </pre>
+ */
+object JsonDSL extends JsonDSL with Printer
+trait JsonDSL extends Implicits {
+  import JsonAST._
+
+  implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => a: JValue })
+  implicit def nel2JValue[A <% JValue](s: NonEmptyList[A]) = JArray(s.list.map { a => a: JValue })
+  implicit def option2jvalue[A <% JValue](opt: Option[A]): JValue = opt match {
+    case Some(x) => x
+    case None => JNothing
+  }
+
+  implicit def symbol2jvalue(x: Symbol) = JString(x.name)
+  implicit def pair2jvalue[A <% JValue](t: (String, A)) = JObject(List(JField(t._1, t._2)))
+  implicit def list2jvalue(l: List[JField]) = JObject(l)
+  implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.fields)
+  implicit def pair2Assoc[A <% JValue](t: (String, A)) = new JsonAssoc(t)
+
+  class JsonAssoc[A <% JValue](left: (String, A)) {
+    def ~[B <% JValue](right: (String, B)) = {
+      val l: JValue = left._2
+      val r: JValue = right._2
+      JObject(JField(left._1, l) :: JField(right._1, r) :: Nil)
+    }
+
+    def ~(right: JObject) = {
+      val l: JValue = left._2
+      JObject(JField(left._1, l) :: right.fields)
+    }
+  }
+
+  class JsonListAssoc(left: List[JField]) {
+    def ~(right: (String, JValue)) = JObject(left ::: List(JField(right._1, right._2)))
+    def ~(right: JObject) = JObject(left ::: right.fields)
+  }
+}
+
+/** Printer converts JSON to String.
+ * Before printing a <code>JValue</code> needs to be rendered into scala.text.Document.
+ * <p>
+ * Example:<pre>
+ * pretty(render(json))
+ * </pre>
+ *
+ * @see blueeyes.json.JsonAST#render
+ */
+object Printer extends Printer
+trait Printer {
+  import java.io._
+  import java.util.IdentityHashMap
+  import scala.text.{Document, DocText, DocCons, DocBreak, DocNest, DocGroup, DocNil}
+  import scala.text.Document._
+  import scala.collection.immutable.Stack
+  import JsonAST._
+
   /** Renders JSON.
    * @see Printer#compact
    * @see Printer#pretty
@@ -721,86 +802,6 @@ object JsonAST {
     }
     buf.toString
   }
-}
-
-/** Basic implicit conversions from primitive types into JSON.
- * Example:<pre>
- * import blueeyes.json.Implicits._
- * JObject(JField("name", "joe") :: Nil) == JObject(JField("name", JString("joe")) :: Nil)
- * </pre>
- */
-object Implicits extends Implicits
-trait Implicits {
-  import JsonAST._
-
-  implicit def int2jvalue(x: Int) = JInt(x)
-  implicit def long2jvalue(x: Long) = JInt(x)
-  implicit def bigint2jvalue(x: BigInt) = JInt(x)
-  implicit def double2jvalue(x: Double) = JDouble(x)
-  implicit def float2jvalue(x: Float) = JDouble(x)
-  implicit def bigdecimal2jvalue(x: BigDecimal) = JDouble(x.doubleValue)
-  implicit def boolean2jvalue(x: Boolean) = JBool(x)
-  implicit def string2jvalue(x: String) = JString(x)
-}
-
-/** A DSL to produce valid JSON.
- * Example:<pre>
- * import blueeyes.json.JsonDSL._
- * ("name", "joe") ~ ("age", 15) == JObject(JField("name",JString("joe")) :: JField("age",JInt(15)) :: Nil)
- * </pre>
- */
-object JsonDSL extends JsonDSL with Printer
-trait JsonDSL extends Implicits {
-  import JsonAST._
-
-  implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => a: JValue })
-  implicit def nel2JValue[A <% JValue](s: NonEmptyList[A]) = JArray(s.list.map { a => a: JValue })
-  implicit def option2jvalue[A <% JValue](opt: Option[A]): JValue = opt match {
-    case Some(x) => x
-    case None => JNothing
-  }
-
-  implicit def symbol2jvalue(x: Symbol) = JString(x.name)
-  implicit def pair2jvalue[A <% JValue](t: (String, A)) = JObject(List(JField(t._1, t._2)))
-  implicit def list2jvalue(l: List[JField]) = JObject(l)
-  implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.fields)
-  implicit def pair2Assoc[A <% JValue](t: (String, A)) = new JsonAssoc(t)
-
-  class JsonAssoc[A <% JValue](left: (String, A)) {
-    def ~[B <% JValue](right: (String, B)) = {
-      val l: JValue = left._2
-      val r: JValue = right._2
-      JObject(JField(left._1, l) :: JField(right._1, r) :: Nil)
-    }
-
-    def ~(right: JObject) = {
-      val l: JValue = left._2
-      JObject(JField(left._1, l) :: right.fields)
-    }
-  }
-
-  class JsonListAssoc(left: List[JField]) {
-    def ~(right: (String, JValue)) = JObject(left ::: List(JField(right._1, right._2)))
-    def ~(right: JObject) = JObject(left ::: right.fields)
-  }
-}
-
-/** Printer converts JSON to String.
- * Before printing a <code>JValue</code> needs to be rendered into scala.text.Document.
- * <p>
- * Example:<pre>
- * pretty(render(json))
- * </pre>
- *
- * @see blueeyes.json.JsonAST#render
- */
-object Printer extends Printer
-trait Printer {
-  import java.io._
-  import java.util.IdentityHashMap
-  import scala.text._
-  import scala.collection.immutable.Stack
-  import JsonAST._
 
   /** Compact printing (no whitespace etc.)
    */
@@ -861,7 +862,4 @@ trait Printer {
   /** Renders a normalized JValue.
    */
   def renderNormalized(jvalue: JValue): String = compact(render(normalize(jvalue)))
-}
-
-}
 }

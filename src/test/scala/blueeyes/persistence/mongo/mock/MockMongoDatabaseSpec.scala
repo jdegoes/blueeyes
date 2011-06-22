@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo.mock
 
 import org.specs.Specification
 import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
-import blueeyes.json.{Printer, JsonAST}
+import blueeyes.json.Printer
 import blueeyes.json.JsonAST._
 
 class MockMongoDatabaseSpec extends Specification with MongoImplicits{
@@ -26,7 +26,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
     database.dump((v: String) => b.append(v))
 
-    b.toString mustEqual(Printer.pretty(JsonAST.render(JObject(List(JField("bar", JArray(Nil)))))))
+    b.toString mustEqual(Printer.pretty(Printer.render(JObject(List(JField("bar", JArray(Nil)))))))
   }
   "dump not empty collections content" in{
     val jobject  = JObject(JField("foo", JArray(List(JString("1")))) :: JField("baz", JString("foo")) :: Nil)
@@ -37,7 +37,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
     val b = new StringBuilder()
     database.dump((v: String) => b.append(v))
 
-    b.toString mustEqual(Printer.pretty(JsonAST.render(JObject(List(JField("bar", JArray(jobject :: jobject2 :: Nil)))))))
+    b.toString mustEqual(Printer.pretty(Printer.render(JObject(List(JField("bar", JArray(jobject :: jobject2 :: Nil)))))))
   }
 
   "adToSet really adds to set for not existsing object" in{

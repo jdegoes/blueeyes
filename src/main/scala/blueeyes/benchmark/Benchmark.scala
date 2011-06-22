@@ -50,7 +50,7 @@ object Benchmark extends ServerStart{ self =>
       println("********************************")
       println("*     Server Health report     *")
       println("********************************")
-      println(blueeyes.json.Printer.pretty(blueeyes.json.JsonAST.render(response.get)))
+      println(blueeyes.json.Printer.pretty(blueeyes.json.JsonDSL.render(response.get)))
 
       taskCounDown.countDown
     })

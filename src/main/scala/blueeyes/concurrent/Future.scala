@@ -5,7 +5,8 @@ import akka.actor.Scheduler
 import akka.util.Duration
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
-import scalaz.{Validation, Success, Failure}
+import scalaz.{Validation, Success, Failure, Semigroup, Monad}
+import scalaz.Scalaz._
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
  * this future has three possible states: undecided (not done), canceled (aborted
@@ -492,11 +493,9 @@ trait FutureImplicits {
   implicit def fromAkka[T](akkaFuture: AkkaFuture[T]) = new AkkaFutureConversion(akkaFuture)
   class AkkaFutureConversion[T](akkaFuture: AkkaFuture[T]) { 
     def toBlueEyes: Future[T] = {
-      @volatile var completed = false
       val future = new Future[T]()
-      akkaFuture.onComplete{ value: AkkaFuture[T] =>
-        completed = true
-        value.value match{
+      akkaFuture.onComplete { value: AkkaFuture[T] =>
+        value.value match {
           case Some(Right(value)) => future.deliver(value)
           case Some(Left(error)) => future.cancel(error)
           case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
@@ -569,9 +568,13 @@ object Future extends FutureImplicits {
     akka.dispatch.Future(t, futureDispatch.timeout)(futureDispatch.dispatcher).toBlueEyes
   }
 
-  implicit val FutureMonad: scalaz.Monad[Future] = new scalaz.Monad[Future] {
+  implicit val FutureMonad: Monad[Future] = new Monad[Future] {
     def pure[A](a: => A) = async(a)
     def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
+  }
+
+  implicit def FutureSemigroup[T: Semigroup]: Semigroup[Future[T]] = new Semigroup[Future[T]] {
+    override def append(f1: Future[T], f2: => Future[T]) = f1.zip(f2).map(_.fold(implicitly[Semigroup[T]].append(_, _)))
   }
 }
 

@@ -4,7 +4,7 @@ import scala.collection.IterableView
 import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
-import blueeyes.json.{Printer, JsonAST}
+import blueeyes.json.Printer
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 
@@ -104,7 +104,7 @@ abstract class MongoDatabase {
           ""
         } else ","
 
-        print(prefix + Printer.pretty(scala.text.DocNest(2, JsonAST.render(jobject))))
+        print(prefix + Printer.pretty(scala.text.DocNest(2, Printer.render(jobject))))
       }
 
       print("""]

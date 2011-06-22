@@ -8,6 +8,8 @@ package object blueeyes {
 
   def lp[T](label: String) = (t: T) => println(label + ": " + t)
 
+  def lpf[T](label: String)(f: T => Any) = (t: T) => println(label + ": " + f(t))
+
   implicit def K[A](a: A): util.K[A] = new util.K(a)
 }
 

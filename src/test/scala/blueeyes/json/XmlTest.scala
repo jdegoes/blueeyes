@@ -24,7 +24,7 @@ import org.specs.ScalaCheck
 object XmlSpec extends Specification with ArbitraryXml with ArbitraryJValue with ScalaCheck {
   import Xml._
   import JsonAST._
-  import Printer.compact
+  import Printer._
   import JsonParser.parse
   import scala.xml.Node
 

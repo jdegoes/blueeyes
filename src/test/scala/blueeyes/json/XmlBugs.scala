@@ -21,6 +21,7 @@ import _root_.org.specs.Specification
 
 object XmlBugs extends Specification {
   import JsonAST._
+  import Printer._
   import Xml._
   import scala.xml.{Group, Text}
 
