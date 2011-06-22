@@ -20,6 +20,9 @@ private[mock] trait MockIndex extends JObjectFields{
     indexes = indexes - name
   }
 
+  def indexExists(name: String): Boolean = indexes.contains(name)
+  def indexExists(keys: Set[JPath]): Boolean = indexes.find(keyAndValue => keys.toSet == keyAndValue._2.toSet) != None
+
   def dropIndexes = indexes = Map[String, Set[JPath]]()
 
   def index(newObjects: List[JObject]) = {

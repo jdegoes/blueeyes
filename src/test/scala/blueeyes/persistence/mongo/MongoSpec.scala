@@ -40,8 +40,8 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       query[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
       query[JNothing.type](ensureIndex("myindex").on("address.city", "address.street").in(collection))
 
-      var passed = checkSelectPass(select().from(collection).where("address.city" === "B").hint("myindex")) //&&
-        //checkSelectPass(select().from(collection).where("address.city" === "B").hint(List(JPath("address.city"))))
+      var passed = checkSelectPass(select().from(collection).where("address.city" === "B").hint("myindex")) &&
+        checkSelectPass(select().from(collection).where("address.city" === "B").hint(List(JPath("address.city"), JPath("address.street"))))
 
       passed must be(true)
     }
