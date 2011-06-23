@@ -106,6 +106,49 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Set()), None, None, None, None, None).toList mustEqual(jObject1 :: Nil)
   }
+  "does not store jobject when unique index exists and the same object exists" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.insert(jObject1 :: Nil)
+    collection.insert(jObject2 :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None).toList mustEqual(jObject1 :: Nil)
+  }
+  "does not throw an error when the hint refers to not a existing index (by name)" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.insert(jObject1 :: Nil)
+    collection.insert(jObject2 :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, Some(NamedHint("index"))).toList mustEqual(jObject1 :: Nil)
+  }
+  "does not throw an error when the hint refers to not a existing index (by keys)" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.insert(jObject1 :: Nil)
+    collection.insert(jObject2 :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, Some(KeyedHint(ListSet.empty + JPath("address.city")))).toList mustEqual(jObject1 :: Nil)
+  }
+  "throw an error when hint refers to not existing index (by name)" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.insert(jObject1 :: Nil)
+
+    collection.select(MongoSelection(Set()), None, None, None, None, Some(NamedHint("foo"))) must throwA[MongoException]
+  }
+  "throw an error when hint refers to not existing index (by keys)" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.insert(jObject1 :: Nil)
+
+    collection.select(MongoSelection(Set()), None, None, None, None, Some(KeyedHint(ListSet.empty + JPath("address")))) must throwA[MongoException]
+  }
   "store jobject when unique index exists and objects are different" in{
     val collection = newCollection
 

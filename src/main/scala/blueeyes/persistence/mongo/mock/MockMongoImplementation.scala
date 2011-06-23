@@ -11,6 +11,7 @@ import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
 import scalaz._
 import Scalaz._
+import com.mongodb.MongoException
 
 class MockMongo() extends Mongo {
   private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
@@ -85,6 +86,8 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = {
     safeProcess(filter, {objects: List[JObject] =>
+      checkHint(hint)
+
       val sorted  = sort.map(v => objects.sorted(new JObjectOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
@@ -93,6 +96,11 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
       new IterableViewImpl[JObject](jObjectIterator)
     })
+  }
+  private def checkHint(hint: Option[Hint]) = hint match{
+    case Some(NamedHint(name)) => if (!indexExists(name)) throw new MongoException("bad index")
+    case Some(KeyedHint(keys)) => if (!indexExists(keys)) throw new MongoException("bad index")
+    case _ =>
   }
 
   def requestStart: Unit = ()
