@@ -9,6 +9,7 @@ import collection.mutable.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
+import blueeyes.concurrent.Future
 import scalaz._
 import Scalaz._
 import com.mongodb.MongoException
@@ -33,9 +34,11 @@ private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
     })
   }
 
-  protected def poolSize = 1
+  def applyQuery[T](query: MongoQuery[T], isVerified: Boolean) = Future.sync(query(query.collection, isVerified))
 
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
+
+  def disconnect() = {}
 }
 
 private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {

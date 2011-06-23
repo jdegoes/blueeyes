@@ -4,47 +4,18 @@ import scala.collection.IterableView
 import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer
+import blueeyes.json.{Printer, JsonAST}
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 
-import akka.actor.Actor._
-import akka.actor.Actor
-import akka.routing.Routing._
-import akka.routing.CyclicIterator
-import akka.dispatch.Dispatchers
-import akka.util.Duration
-
-import java.util.concurrent.TimeUnit
-
-
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
- * <pre>
- * lazy val injector = Guice.createInjector(new FilesystemConfiggyModule(ConfiggyModule.FileLoc), new RealMongoModule)
- *
- * val mongo = injector.getInstance(classOf[Mongo])
- * </pre>
  */
 trait Mongo {
   def database(databaseName: String): MongoDatabase
 }
 
-object MongoActor {
-  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-}
-
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
-
-class MongoActor extends Actor {
-  self.dispatcher = MongoActor.dispatcher
-  def receive = {
-    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-    case _ => sys.error("wrong message.")
-  }
-}
 
 /** The MongoDatabase executes MongoQuery.
  * <p>
@@ -70,23 +41,9 @@ class MongoActor extends Actor {
 abstract class MongoDatabase {
   def mongo: Mongo
 
-  private lazy val actors     = List.fill(poolSize)(Actor.actorOf[MongoActor].start)
-  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
-//  private lazy val mongoActor = Actor.actorOf[MongoActor]
-//  mongoActor.start
-
   def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
 
   def unverified[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, false)
-
-  private def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]  = {
-    val databaseCollection = query.collection match{
-      case MongoCollectionReference(name)         => collection(name)
-      case MongoCollectionHolder(realCollection, name, database)  => realCollection
-    }
-
-    mongoActor.!!![T](MongoQueryTask(query, databaseCollection, isVerified), 1000 * 60 * 60).toBlueEyes
-  }
 
   def collections: Set[MongoCollectionHolder]
 
@@ -112,12 +69,14 @@ abstract class MongoDatabase {
     }
   }
 
-  def disconnect() = {
-    actors.foreach(_.stop())
-    mongoActor.stop
+  implicit protected def databaseCollection(mongoCollection: MongoCollection) = mongoCollection match{
+    case MongoCollectionReference(name)         => collection(name)
+    case MongoCollectionHolder(realCollection, name, database)  => realCollection
   }
 
-  protected def poolSize: Int
+  protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]
+
+  protected def disconnect()
 
   protected def collection(collectionName: String): DatabaseCollection
 }

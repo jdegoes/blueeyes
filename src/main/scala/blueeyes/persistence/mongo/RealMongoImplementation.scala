@@ -3,10 +3,21 @@ package blueeyes.persistence.mongo
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo.json.MongoJson._
+import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListSet
+
+import akka.actor.Actor._
+import akka.actor.Actor
+import akka.routing.Routing._
+import akka.routing.CyclicIterator
+import akka.dispatch.Dispatchers
+import akka.util.Duration
+
+import java.util.concurrent.TimeUnit
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
@@ -37,12 +48,37 @@ class RealMongo(config: ConfigMap) extends Mongo {
   def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
 }
 
+object RealMongoActor {
+  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
+      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+}
+
+class RealMongoActor extends Actor {
+  self.dispatcher = RealMongoActor.dispatcher
+  def receive = {
+    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
+    case _ => sys.error("wrong message.")
+  }
+}
+
 private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase {
+  private val poolSize = 10
+
+  private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
+  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
+
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  protected def poolSize = 10
+  def disconnect() = {
+    actors.foreach(_.stop())
+    mongoActor.stop
+  }
+
+  protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]  =
+    mongoActor.!!![T](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealMongoDatabase) extends DatabaseCollection{
