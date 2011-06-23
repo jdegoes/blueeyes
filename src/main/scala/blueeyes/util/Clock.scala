@@ -1,12 +1,14 @@
 package blueeyes.util
 
 import blueeyes.concurrent.Future
-import org.joda.time.{DateTime, DateTimeZone, Period}
+import org.joda.time.{DateTime, DateTimeZone, Period, Instant}
 
 trait Clock {
   /** Returns the current time.
    */
   def now(): DateTime
+
+  def instant(): Instant
 
   def nanoTime(): Long
   
@@ -36,8 +38,10 @@ trait Clock {
 }
 
 trait ClockSystem {
-  implicit val clockSystem = new Clock {
+  implicit val realtimeClock = new Clock {
     def now(): DateTime = new DateTime(DateTimeZone.UTC)
+
+    def instant(): Instant = new Instant()
 
     def nanoTime(): Long = System.nanoTime()
   }
@@ -50,6 +54,8 @@ trait ClockMock {
     private var _nanoTime: Long = 0
     
     def now() = _now 
+
+    def instant() = _now.toInstant()
 
     def nanoTime() = _nanoTime
     

@@ -30,16 +30,16 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
    * @return the result of T
    */
   def time[T](f: => T): T = {
-    val startTime = clockSystem.nanoTime
+    val startTime = realtimeClock.nanoTime
     val t = f
-    this += (clockSystem.nanoTime - startTime).nanoseconds
+    this += (realtimeClock.nanoTime - startTime).nanoseconds
     return t
   }
 
   def time[T](f: Future[T]): Future[T] = {
-    val startTime = clockSystem.nanoTime
+    val startTime = realtimeClock.nanoTime
     f.deliverTo(v => {
-      this += (clockSystem.nanoTime - startTime).nanoseconds
+      this += (realtimeClock.nanoTime - startTime).nanoseconds
     })
   }
 
