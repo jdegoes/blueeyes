@@ -5,7 +5,6 @@ import scala.xml.NodeSeq
 import blueeyes.json.JsonAST._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.http.HttpHeaderImplicits._
 import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
 import blueeyes.util.metrics.DataSize
@@ -193,8 +192,8 @@ trait HttpRequestHandlerCombinators{
       }
 
       def isDefinedAt(r: HttpRequest[T]): Boolean = {
-        if (r.headers.exists(_._1.toLowerCase == "range")) {
-          val range = extractRange(r.headers)
+        if (r.headers.raw.exists(_._1.toLowerCase == "range")) {
+          val range = extractRange(r.headers.raw)
 
           h(range._1, range._2).isDefinedAt(r)
         }
@@ -202,7 +201,7 @@ trait HttpRequestHandlerCombinators{
       }
 
       def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-        val range = extractRange(r.headers)
+        val range = extractRange(r.headers.raw)
 
         h(range._1, range._2).apply(r)
       }
@@ -278,7 +277,7 @@ trait HttpRequestHandlerCombinators{
   }
 
   private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
-    def cookies = (for (HttpHeaders.Cookie(value) <- request.headers) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
+    def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
     cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(sys.error("Expected cookie " + s.name))
   }
 
@@ -467,7 +466,7 @@ trait HttpRequestHandlerCombinators{
       (callback match {
         case Some(callback) =>
           val meta = compact(render(JObject(
-            JField("headers", r.headers.asInstanceOf[Map[String, String]].serialize) ::
+            JField("headers", r.headers.raw.serialize) ::
             JField("status",
               JObject(
                 JField("code",    r.status.code.value.serialize) ::

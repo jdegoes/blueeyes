@@ -70,7 +70,7 @@ class HttpRequestLoggerSpec extends Specification with ClockMock{
     log(HeaderIdentifier(ClientToServerPrefix, "content-language")).value must eventually (beSome("en"))
   }
   "HttpRequestLogger: logs response header" in {
-    log(HeaderIdentifier(ServerToClientPrefix, "age")).value must eventually (beSome("3"))
+    log(HeaderIdentifier(ServerToClientPrefix, "age")).value must eventually (beSome("3.0"))
   }
 
   private def log(fieldIdentifiers: FieldIdentifier*): Future[String] = HttpRequestLogger[String, String](FieldsDirective(List(fieldIdentifiers: _*)))(clockMock)(request, responseFuture)

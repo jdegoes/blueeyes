@@ -91,7 +91,7 @@ object HttpRequestLogger{
               import HttpHeaders._
               
               response.map { response =>
-                val contentLength = (for (`Content-Length`(length) <- response.headers) yield length).headOption.getOrElse(0L)
+                val contentLength = (for (`Content-Length`(length) <- response.headers.raw) yield length).headOption.getOrElse(0L)
                 
                 contentLength.toString
               }
@@ -100,7 +100,7 @@ object HttpRequestLogger{
               import HttpHeaders._
               
               response.map { response =>
-                val cached = (for (Age(age) <- response.headers) yield age).headOption.getOrElse(0.0) > 0
+                val cached = (for (Age(age) <- response.headers.raw) yield age).headOption.getOrElse(0.0) > 0
                 
                 if (cached) "1" else "0"
               }
@@ -142,8 +142,8 @@ object HttpRequestLogger{
             case HeaderIdentifier(prefix, header) =>
               def find(key: String, headers: Map[String, String]) = headers find {keyValue => keyValue._1.toLowerCase == key.toLowerCase} map {keyValue => keyValue._2} getOrElse ("")
               prefix match {
-                case ClientToServerPrefix => Future.sync(find(header, request.headers))
-                case ServerToClientPrefix => response map { response => find(header, response.headers) }
+                case ClientToServerPrefix => Future.sync(find(header, request.headers.raw))
+                case ServerToClientPrefix => response map { response => find(header, response.headers.raw) }
                 case _   => Future.sync("")
               }
             case CustomIdentifier(value) =>

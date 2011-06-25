@@ -23,7 +23,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Mo
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
 
-  private val request       = HttpRequest[ByteChunk](HttpMethods.GET, URI("/bar/1/adCode.html"), Map[Symbol, String](), HttpHeaders(), None, None, HttpVersions.`HTTP/1.0`)
+  private val request       = HttpRequest[ByteChunk](HttpMethods.GET, URI("/bar/1/adCode.html"), Map[Symbol, String](), HttpHeaders.Empty, None, None, HttpVersions.`HTTP/1.0`)
   private val response      = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunk("12")), HttpVersions.`HTTP/1.1`)
   private val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
 

@@ -41,7 +41,7 @@ trait NettyConverters{
   implicit def toNettyResponse(response: HttpResponse[ByteChunk], chunked: Boolean): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
-    response.headers.foreach(header => nettyResponse.setHeader(header._1, header._2))
+    response.headers.raw.foreach(header => nettyResponse.setHeader(header._1, header._2))
     val (header, value) = if (chunked) (NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked") else (NettyHttpHeaders.Names.CONTENT_LENGTH, response.content.map(_.data.length.toString).getOrElse("0"))
     nettyResponse.setHeader(header, value)
 
@@ -76,15 +76,12 @@ trait NettyConverters{
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
-    var headers = Map[String, String]()
+    nettyHeaders.foldLeft(Map.empty[String, String]) {
+      case (headers, header) => 
+        val key   = header.getKey()
+        val value = header.getValue()
 
-    nettyHeaders.foreach(header => {
-      val key   = header.getKey()
-      val value = header.getValue()
-
-      val values = headers.get(key).map(_ + "," + value).getOrElse(value)
-      headers = headers + Tuple2(key, values)
-    })
-    headers
+        headers + (key -> headers.get(key).map(_ + "," + value).getOrElse(value))
+    }
   }
 }

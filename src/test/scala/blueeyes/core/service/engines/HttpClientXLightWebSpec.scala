@@ -3,7 +3,6 @@ package blueeyes.core.service.engines
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.http.HttpHeaderImplicits
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
@@ -17,8 +16,6 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 
 class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader{
-  import HttpHeaderImplicits._
-
   val duration = 250
   val retries = 30
 
@@ -67,8 +64,10 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
     "Support GET to invalid URI/404 should cancel Future" in {
       val f = httpClient.get(uri + "bogus")
       f.isCanceled must eventually(retries, new Duration(duration))(beTrue)
-      f.error.isInstanceOf[Option[HttpException]] must  beTrue
-      f.error.get.asInstanceOf[HttpException].failure must be(NotFound)
+      f.error must beLike {
+        case Some(HttpException(NotFound, _)) => true
+        case None => false
+      }
     }
 
     "Support GET requests with status OK" in {
@@ -138,7 +137,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
     "Support GET requests with header" in {
       val f = httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get(uri + "?headers=true")
       f.value must eventually(retries, new Duration(duration))(beSomething)
-      f.value.get.content.get.trim must include("Fooblahblah: washere") and include("param2: 1")
+      f.value.get.content.get.trim must include("fooblahblah: washere") and include("param2: 1")
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 
@@ -177,7 +176,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
       val f = httpClient.get(uri)
       f.value must eventually(retries, new Duration(duration))(beSomething)
       f.value.get.status.code must be(HttpStatusCodes.OK)
-      f.value.get.headers must haveKey("kludgy")
+      f.value.get.headers.raw must haveKey("kludgy")
     }
 
     "Support GET requests of 1000 requests" in {
@@ -275,7 +274,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with
       l ++ List("%s=%s".format(p._1.name, p._2))
     }.mkString("&")
     val headers = request.parameters.get('headers).map { o =>
-      request.headers.toList.sorted.foldLeft(List[String]()) { (l, h) =>
+      request.headers.raw.toList.sorted.foldLeft(List[String]()) { (l, h) =>
     	l ++ List("%s: %s".format(h._1, h._2))
       }.mkString("&")
     }.getOrElse("")

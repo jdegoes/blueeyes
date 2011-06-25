@@ -1,714 +1,686 @@
 package blueeyes.core.http
 
 import blueeyes.util.ProductPrefixUnmangler
+import scalaz.Scalaz._
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
+sealed trait HttpHeaderField[T <: HttpHeader] extends ProductPrefixUnmangler {
+  lazy val name: String = unmangledName
 
-sealed trait HttpHeader extends Product2[String, String] with ProductPrefixUnmangler { self =>
-  def _1 = unmangledName
-  def _2 = value
+  def parse(s: String): Option[T]
+  def parse(t: (String, String)): Option[T] = 
+    if (t._1.equalsIgnoreCase(name)) parse(t._2) else None
 
-  def name: String = _1
+  override def toString = name
+}
 
+object HttpHeaderField {
+  import HttpHeaders._
+
+  val All: List[HttpHeaderField[_ <: HttpHeader]] = List(
+    Accept,
+    `Accept-Charset`,
+    `Accept-Encoding`,
+    `Accept-Language`,
+    `Accept-Ranges`,
+    Authorization,
+    Connection,
+    Cookie,
+    `Content-Length`,
+    `Content-Type`,
+    Date,
+    Expect,
+    From,
+    Host,
+    `If-Match`,
+    `If-Modified-Since`,
+    `If-None-Match`,
+    `If-Range`,
+    `If-Unmodified-Since`,
+    `Max-Forwards`,
+    Pragma,
+    `Proxy-Authorization`,
+    Range,
+    Referer,
+    TE,
+    Upgrade,
+    `User-Agent`,
+    Via,
+    Warning,
+
+    /** Responses **/
+    Age,
+    Allow,
+    `Cache-Control`,
+    `Content-Encoding`,
+    `Content-Language`,
+    `Content-Location`,
+    `Content-Disposition`,
+    `Content-MD5`,
+    `Content-Range`,
+    ETag,
+    Expires,
+    `Last-Modified`,
+    Location,
+    `Proxy-Authenticate`,
+    Refresh,
+    `Retry-After`,
+    Server,
+    `Set-Cookie`,
+    Trailer,
+    `Transfer-Encoding`,
+    Vary,
+    `WWW-Authenticate`,
+    `X-Frame-Options`,
+    `X-XSS-Protection`,
+    `X-Content-Type-Options`,
+    `X-Requested-With`,
+    `X-Forwarded-For`,
+    `X-Forwarded-Proto`,
+    `X-Powered-By`,
+    `Access-Control-Allow-Origin`,
+    `Access-Control-Request-Method`,
+    `Access-Control-Request-Headers`
+  )
+
+  val ByName: Map[String, HttpHeaderField[_]] = All.map(v => (v.name.toLowerCase -> v)).toMap
+
+  def parseAll(inString: String, parseType: String): List[HttpHeaderField[_]] = {
+    val fields = inString.toLowerCase.split("""\s*,\s*""").toList.flatMap(HttpHeaderField.ByName.get)
+
+    if (parseType == "trailer") fields.filterNot {
+      case Trailer => true
+      case `Transfer-Encoding` => true
+      case `Content-Length` => true
+      case NullHeader => true
+      case _ => false
+    } else fields.filterNot {
+      case NullHeader => true
+      case _ => false 
+    }
+  }
+}
+
+sealed trait HttpHeader extends ProductPrefixUnmangler {
+  def name: String = unmangledName
   def value: String
 
-  def header = name + ": " + _2
+  def header = name + ": " + value
 
   def canEqual(any: Any) = any match {
     case header: HttpHeader => true
     case _ => false
   }
 
-  override def productPrefix = self.getClass.getSimpleName
+  override def productPrefix = this.getClass.getSimpleName
 
   override def toString = header
 
+  def tuple = (name, value)
+
   override def equals(any: Any) = any match {
-    case that: HttpHeader => (self._1.toLowerCase == that._1.toLowerCase) &&
-                             (self._2.toLowerCase == that._2.toLowerCase)
+    case that: HttpHeader => name.equalsIgnoreCase(that.name) && value.equalsIgnoreCase(that.value)
     case _ => false
-  }
-}
-
-object HttpHeader {
-  import HttpHeaders._
-
-  implicit def tuple2HttpHeader(keyValue: (String, String)): HttpHeader = keyValue match {
-    case Accept(value) => new Accept(value: _*)
-    case `Accept-Charset`(value) => new `Accept-Charset`(value: _*)
-    case `Accept-Encoding`(value) => new `Accept-Encoding`(value: _*)
-    case `Accept-Language`(value) => new `Accept-Language`(value: _*)
-    case `Accept-Ranges`(value) => new `Accept-Ranges`(value)
-    case Authorization(value) => new Authorization(value)
-    case Connection(value) => new Connection(value)
-    case Cookie(value) => new Cookie(value)
-    case `Content-Length`(value) => new `Content-Length`(value)
-    case `Content-Type`(value) => new `Content-Type`(value: _*)
-    case Date(value) => new Date(value)
-    case Expect(value) => new Expect(value)
-    case From(value) => new From(value)
-    case Host(value) => new Host(value)
-    case `If-Match`(value) => new `If-Match`(value)
-    case `If-Modified-Since`(value) => new `If-Modified-Since`(value)
-    case `If-None-Match`(value) => new `If-None-Match`(value)
-    case `If-Range`(value) => new `If-Range`(value)
-    case `If-Unmodified-Since`(value) => new `If-Unmodified-Since`(value)
-    case `Max-Forwards`(value) => new `Max-Forwards`(value)
-    case Pragma(value) => new Pragma(value)
-    case `Proxy-Authorization`(value) => new `Proxy-Authorization`(value)
-    case Range(value) => new Range(value)
-    case Referer(value) => new Referer(value)
-    case TE(value) => new TE(value: _*)
-    case Upgrade(value) => new Upgrade(value: _*)
-    case `User-Agent`(value) => new `User-Agent`(value)
-    case Via(value) => new Via(value: _*)
-    case Warning(value) => new Warning(value: _*)
-
-    /** Responses **/
-    case Age(value) => new Age(value)
-    case Allow(value) => new Allow(value: _*)
-    case `Cache-Control`(value) => new `Cache-Control`(value: _*)
-    case `Content-Encoding`(value) => new `Content-Encoding`(value: _*)
-    case `Content-Language`(value) => new `Content-Language`(value: _*)
-    case `Content-Location`(value) => new `Content-Location`(value)
-    case `Content-Disposition`(value) => new `Content-Disposition`(value)
-    case `Content-MD5`(value) => new `Content-MD5`(value)
-    case `Content-Range`(value) => new `Content-Range`(value)
-    case ETag(value) => new ETag(value)
-    case Expires(value) => new Expires(value)
-    case `Last-Modified`(value) => new `Last-Modified`(value)
-    case Location(value) => new Location(value)
-    case `Proxy-Authenticate`(value) => new `Proxy-Authenticate`(value)
-    case Refresh(value) => new Refresh(value)
-    case `Retry-After`(value) => new `Retry-After`(value)
-    case Server(value) => new Server(value)
-    case `Set-Cookie`(value) => new `Set-Cookie`(value)
-    case Trailer(value) => new Trailer(value: _*)
-    case `Transfer-Encoding`(value) => new `Transfer-Encoding`(value: _*)
-    case Vary(value) => new Vary(value)
-    case `WWW-Authenticate`(value) => new `WWW-Authenticate`(value)
-    case `X-Frame-Options`(value) => new `X-Frame-Options`(value)
-    case `X-XSS-Protection`(value) => new `X-XSS-Protection`(value)
-    case `X-Content-Type-Options`(value) => new `X-Content-Type-Options`(value)
-    case `X-Requested-With`(value) => new `X-Requested-With`(value)
-    case `X-Forwarded-For`(value) => new `X-Forwarded-For`(value: _*)
-    case `X-Forwarded-Proto`(value) => new `X-Forwarded-Proto`(value)
-    case `X-Powered-By`(value) => new `X-Powered-By`(value: _*)
-    case `Access-Control-Allow-Origin`(value) => new `Access-Control-Allow-Origin`(value)
-    case `Access-Control-Request-Method`(value) => new `Access-Control-Request-Method`(value: _*)
-    case `Access-Control-Request-Headers`(value) => new `Access-Control-Request-Headers`(value: _*)
-    case (name, value) => new CustomHeader(name, value)
-  }
-}
-
-sealed trait HttpHeaderRequest extends HttpHeader
-sealed trait HttpHeaderResponse extends HttpHeader
-
-case class HttpHeaders (private val headers: Map[String, String]) extends Map[String, String] {
-  def this() = this(Map[String, String]())
-
-  override def empty: HttpHeaders = HttpHeaders.empty
-
-  def + [B1 >: String](kv: (String, B1)) = new HttpHeaders(headers + Tuple2(kv._1, kv._2.asInstanceOf[String]))
-
-  def - (key: String): HttpHeaders = new HttpHeaders(headers - key)
-
-  def iterator = headers.iterator
-
-  def get(key: String) = headers.get(key)
-
-  def header[T <: HttpHeader](implicit m: Manifest[T]) = headerOption(m).getOrElse(sys.error("Header % cannot be found.".format(m.erasure.getName)))
-
-  def headerOption[T <: HttpHeader](implicit m: Manifest[T]): Option[T] = {
-    val clazz        = Class.forName(m.erasure.getName + "$")
-    val applyMethod  = clazz.getMethods find {method => method.getName == "apply"} get
-    val headerObject = clazz.newInstance.asInstanceOf[{
-      def unapply(keyValue: (String, String)): Option[_]
-    }]
-
-    val headerValue  = headers map {headerObject.unapply(_) } headOption
-
-    headerValue map { header => applyMethod.invoke(headerObject, header.get.asInstanceOf[AnyRef]).asInstanceOf[T] }
-  }
-}
-
-object HttpHeaders {
-  implicit def iterableOfTuple2ToHttpHeaders(i: Iterable[(String, String)]) = new HttpHeaders(i.toMap)
-  implicit def iterableOfHttpHeaderToHttpHeaders[A <: HttpHeader](i: Iterable[A]): HttpHeaders = {
-    new HttpHeaders(i.map(h => (h.name, h.value)))
-  }
-
-  val empty: HttpHeaders = new HttpHeaders()
-
-  def apply() = new HttpHeaders()
-
-  /************ Requests ************/
-
-  class Accept(val mimeTypes: MimeType*) extends HttpHeaderRequest {
-    def value = mimeTypes.map(_.value).mkString(", ")
-  }
-  object Accept {
-    def apply(mimeTypes: MimeType*): Accept = new Accept(mimeTypes: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept")
-      Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
-  }
-
-  class `Accept-Charset`(val charSets: CharSet*) extends HttpHeaderRequest {
-    def value = charSets.map(_.value).mkString(", ")
-  }
-  object `Accept-Charset` {
-    def apply(charSets: CharSet*): `Accept-Charset` = new `Accept-Charset`(charSets: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-charset")
-      Some(CharSets.parseCharSets(keyValue._2)) else None
-  }
-
-  class `Accept-Encoding`(val encodings: Encoding*) extends HttpHeaderRequest  {
-    def value = encodings.map(_.value).mkString(", ")
-  }
-  object `Accept-Encoding` {
-    def apply(encodings: Encoding*) = new `Accept-Encoding`(encodings: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-encoding") Some(Encodings.parseEncodings(keyValue._2)) else None
-  }
-
-  class `Accept-Language`(val languageRanges: LanguageRange*) extends HttpHeaderRequest {
-    def value = languageRanges.map(_.value).mkString(", ");
-  }
-  object `Accept-Language` {
-    def apply(languageRanges: LanguageRange*) = new `Accept-Language`(languageRanges: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-language") Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
-  }
-
-  class `Accept-Ranges`(val rangeUnit: RangeUnit) extends HttpHeaderResponse {
-    def value = rangeUnit.toString
-  }
-  object `Accept-Ranges` {
-    def apply(rangeUnit: RangeUnit) = new `Accept-Ranges`(rangeUnit);
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "accept-ranges")
-      RangeUnits.parseRangeUnits(keyValue._2) else None
-  }
-
-  class Authorization(val credentials: String) extends HttpHeaderRequest {
-    def value = credentials
-  }
-  object Authorization {
-    def apply(credentials: String) = new Authorization(credentials)  // can we do better here?
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "authorization") Some(keyValue._2) else None
-  }
-
-  class Connection(val connectionToken: ConnectionToken) extends HttpHeaderRequest {
-    def value = connectionToken.toString
-  }
-  object Connection {
-    def apply(connectionToken: ConnectionToken) = new Connection(connectionToken)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "connection")
-      ConnectionTokens.parseConnectionTokens(keyValue._2) else None
-  }
-
-  class Cookie(val cookies: List[HttpCookie]) extends HttpHeaderRequest {
-    val value = cookies.mkString(";")
-  }
-  object Cookie {
-    def apply(cookies: List[HttpCookie]) = new Cookie(cookies)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cookie")
-      Some(CookiesPattern(keyValue._2)) else None
-  }
-
-  class `Content-Length`(val length: Long) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = length.toString
-  }
-  object `Content-Length` {
-    def apply(length: Long): `Content-Length` = new `Content-Length`(length)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-length")
-      Some(keyValue._2.toLong) else None
-  }
-
-  class `Content-Type`(val mimeTypes: MimeType*) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = mimeTypes.map(_.value).mkString(", ")
-  }
-  object `Content-Type` {
-    def apply(mimeTypes: MimeType*) = new `Content-Type`(mimeTypes :_*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-type")
-      Some(MimeTypes.parseMimeTypes(keyValue._2)) else None
-  }
-
-  class Date(val httpDate: HttpDateTime) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = httpDate.toString
-  }
-  object Date {
-    def apply(httpDate: HttpDateTime) = new Date(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "date")
-      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
-  }
-
-  class Expect(val expectation: Expectation) extends HttpHeaderRequest {
-    def value = expectation.toString
-  }
-  object Expect {
-    def apply(expectation: Expectation) = new Expect(expectation)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expect")
-      Expectations.parseExpectations(keyValue._2) else None
-  }
-
-  class From(val email: Email) extends HttpHeaderRequest {
-    def value = email.toString
-  }
-  object From {
-    def apply(email: Email) = new From(email)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "from")
-      Emails(keyValue._2) else None
-  }
-
-  class Host(val domain: URI) extends HttpHeaderRequest {
-    def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
-  }
-  object Host {
-    def apply(domain: URI) = new Host(domain)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "host")
-      URI.opt(keyValue._2) else None
-  }
-
-  /* Need to add parsing to array */
-  class `If-Match`(val tags: EntityTag) extends HttpHeaderRequest {
-    def value = tags.toString
-  }
-  object `If-Match` { // going to need a new type here
-    def apply(tags: EntityTag) = new `If-Match`(tags)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-match")
-      EntityTags.parseEntityTags(keyValue._2) else None
-  }
-
-  class `If-Modified-Since`(val httpDate: HttpDateTime) extends HttpHeaderRequest {
-    def value = httpDate.toString
-  }
-  object `If-Modified-Since` {
-    def apply(httpDate: HttpDateTime) = new `If-Modified-Since`(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-modified-since")
-      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
-  }
-
-  /* Need to add parsing to array */
-  class `If-None-Match`(val tags: EntityTag) extends HttpHeaderRequest {
-    def value = tags.toString
-  }
-  object `If-None-Match` {
-    def apply(tags: EntityTag) = new `If-None-Match`(tags)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-none-match")
-      EntityTags.parseEntityTags(keyValue._2) else None
-  }
-
-  /* If-Range needs to add a way to include the date -- probably need new class */
-  class `If-Range`(val tag: IfRange) extends HttpHeaderRequest {
-    def value = tag.toString
-  }
-  object `If-Range` {
-    def apply(tag: IfRange) = new `If-Range`(tag)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-range")
-      IfRanges.parseIfRanges(keyValue._2) else None
-  }
-
-
-  class `If-Unmodified-Since`(val httpDate: HttpDateTime) extends HttpHeaderRequest {
-    def value = httpDate.toString
-  }
-  object `If-Unmodified-Since` {
-    def apply(httpDate: HttpDateTime) = new `If-Unmodified-Since`(httpDate)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "if-unmodified-since")
-      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
-  }
-
-  class `Max-Forwards`(val maxf: HttpNumber) extends HttpHeaderRequest {
-    def value = maxf.toString
-  }
-  object `Max-Forwards` {
-    def apply(maxf: HttpNumber) = new `Max-Forwards`(maxf)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "max-forwards")
-      HttpNumbers.parseHttpNumbers(keyValue._2) else None
-  }
-
-  class Pragma(val primeDirective: PragmaDirective) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = primeDirective.toString
-  }
-  object Pragma {
-    def apply(primeDirective: PragmaDirective) = new Pragma(primeDirective)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "pragma")
-      PragmaDirectives.parsePragmaDirectives(keyValue._2) else None
-  }
-
-  class `Proxy-Authorization`(val auth: String) extends HttpHeaderRequest {
-    def value = auth
-  }
-  object `Proxy-Authorization` {
-    def apply(auth: String) = new `Proxy-Authorization`(auth)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authorization")
-      Some(keyValue._2) else None
-  }
-
-  class Range(val byteRange: ByteRange) extends HttpHeaderRequest {
-    def value = byteRange.toString
-  }
-  object Range {
-    def apply(byteRange: ByteRange) = new Range(byteRange)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "range")
-      ByteRanges.parseByteRanges(keyValue._2) else None
-  }
-
-  class Referer(val domain: URI) extends HttpHeaderRequest {
-    def value = domain.toString
-  }
-  object Referer {
-    def apply(domain: URI) = new Referer(domain)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "referer")
-      URI.opt(keyValue._2) else None
-  }
-
-  class TE(val tcodings: TCoding*) extends HttpHeaderRequest {
-    def value = tcodings.map(_.toString).mkString(", ")
-  }
-  object TE {
-    def apply(tcodings: TCoding*) = new TE(tcodings: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "te")
-      Some(TCodings.parseTCodings(keyValue._2)) else None
-  }
-
-  class Upgrade(val products: ProductType*) extends HttpHeaderRequest {
-    def value = products.map(_.toString).mkString(", ")
-  }
-  object Upgrade {
-    def apply(products: ProductType*) = new Upgrade(products: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "upgrade")
-      ProductTypes.parseProductTypes(keyValue._2) else None
-  }
-
-  class `User-Agent`(val product: String) extends HttpHeaderRequest {
-    def value = product
-  }
-  object `User-Agent` {
-    def apply(product: String) = new `User-Agent`(product)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "user-agent")
-      Some(keyValue._2) else None
-  }
-
-  class Via(val info: ViaInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = info.map(_.toString).mkString(", ")
-  }
-  object Via {
-    def apply(info: ViaInfo*) = new Via(info: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "via")
-      Some(ViaInfos.parseViaInfos(keyValue._2)) else None
-  }
-
-  class Warning(val warnings: WarningInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
-    def value = warnings.map(_.toString).mkString(", ")
-  }
-  object Warning {
-    def apply(warnings: WarningInfo*) = new Warning(warnings: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "warning")
-      Some(WarningInfos.parseWarnings(keyValue._2)) else None
-  }
-
-  /*********** Responses ************/
-
-  class Age(val age: Double) extends HttpHeaderResponse {
-    def value = age.toString
-  }
-  object Age {
-    def apply(age: Double) = new Age(age)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "age")
-      Some(keyValue._2.toDouble) else None
-  }
-
-  class Allow(val methods: HttpMethod*) extends HttpHeaderResponse {
-    def value = methods.map(_.value).mkString(",")
-  }
-  object Allow {
-    def apply(methods: HttpMethod*) = new Allow(methods: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "allow")
-      Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
-  }
-
-  class `Cache-Control`(val directives: CacheDirective*) extends HttpHeaderResponse {
-    def value = directives.map(_.toString).mkString(", ")
-  }
-  object `Cache-Control` {
-    def apply(directives: CacheDirective*) = new `Cache-Control`(directives: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "cache-control")
-      Some(CacheDirectives.parseCacheDirectives(keyValue._2)) else None
-  }
-
-  class `Content-Encoding`(val encodings: Encoding*) extends HttpHeaderResponse {
-    def value = encodings.map(_.toString).mkString(", ")
-  }
-  object `Content-Encoding` {
-    def apply(encodings: Encoding*) = new `Content-Encoding`(encodings: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-encoding")
-      Some(Encodings.parseEncodings(keyValue._2)) else None
-  }
-
-  class `Content-Language`(languageRanges: LanguageRange*) extends HttpHeaderResponse {
-    def value = languageRanges.map(_.toString).mkString(", ")
-  }
-  object `Content-Language` {
-    def apply(languageRanges: LanguageRange*) = new `Content-Language`(languageRanges: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-language")
-      Some(LanguageRanges.parseLanguageRanges(keyValue._2)) else None
-  }
-
-  /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?
-   * .. I Think this is referring to the path of the URL
-   */
-  class `Content-Location`(val value: String) extends HttpHeaderResponse {
-  }
-  object `Content-Location` {
-    def apply(location: String) = new `Content-Location`(location)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-location") Some(keyValue._2) else None
-  }
-
-  class `Content-Disposition`(val disposition: DispositionType) extends HttpHeaderResponse {
-    def value = disposition.toString
-  }
-  object `Content-Disposition` {
-    def apply(disposition: DispositionType) = new `Content-Disposition`(disposition)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-disposition")
-      Some(DispositionTypes.parseDispositionTypes(keyValue._2)) else None
-  }
-
-  class `Content-MD5`(val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
-  }
-  object `Content-MD5` {
-    def apply(hash: String) = new `Content-MD5`(hash)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-md5") Some(keyValue._2) else None
-  }
-
-  class `Content-Range`(val byteRange: ContentByteRange) extends HttpHeaderResponse {
-    def value = byteRange.toString
-  }
-  object `Content-Range` {
-    def apply(byteRange: ContentByteRange) = new `Content-Range`(byteRange)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "content-range")
-      ContentByteRanges.parseContentByteRanges(keyValue._2) else None
-  }
-
-  class ETag(val tag: EntityTag) extends HttpHeaderResponse {
-    def value = tag.toString
-  }
-  object ETag {
-    def apply(tag: EntityTag) = new ETag(tag)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "etag")
-      EntityTags.parseEntityTags(keyValue._2) else None
-  }
-
-  class Expires(val date: HttpDateTime) extends HttpHeaderResponse {
-    def value = date.toString
-  }
-  object Expires {
-    def apply(date: HttpDateTime) = new Expires(date)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "expires")
-      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
-  }
-
-  class `Last-Modified`(val date: HttpDateTime) extends HttpHeaderResponse {
-    def value = date.toString
-  }
-  object `Last-Modified` {
-    def apply(date: HttpDateTime) = new `Last-Modified`(date)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "last-modified")
-      HttpDateTimes.parseHttpDateTimes(keyValue._2) else None
-  }
-
-  class Location(val domain: URI) extends HttpHeaderResponse {
-    def value = domain.toString
-  }
-  object Location {
-    def apply(domain: URI) = new Location(domain)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "location")
-      URI.opt(keyValue._2) else None
-  }
-
-  class `Proxy-Authenticate`(val challenge: String) extends HttpHeaderResponse {
-    def value = challenge
-  }
-  object `Proxy-Authenticate` {
-    def apply(challenge: String) = new `Proxy-Authenticate`(challenge)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "proxy-authenticate")
-      Some(keyValue._2) else None
-  }
-
-  /* Sometimes contains a Url --  Will need to change this */
-  class Refresh(val time: HttpNumber) extends HttpHeaderResponse {
-    def value = time.toString
-  }
-  object Refresh {
-    def apply(time: HttpNumber) = new Refresh(time)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "refresh")
-      HttpNumbers.parseHttpNumbers(keyValue._2) else None
-  }
-
-  /* Could also be a date -- will need to change this */
-  class `Retry-After`(val num: HttpNumber) extends HttpHeaderResponse {
-    def value = num.toString
-  }
-  object `Retry-After` {
-    def apply(num: HttpNumber) = new `Retry-After`(num)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "retry-after")
-      HttpNumbers.parseHttpNumbers(keyValue._2) else None
-  }
-
-  /* Server comments can be almost anything */
-  class Server(val comment: String) extends HttpHeaderResponse {
-    def value = comment
-  }
-  object Server {
-    def apply(comment: String) = new Server(comment)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "server") Some(keyValue._2) else None
-  }
-
-  class `Set-Cookie`(val cookies: List[HttpCookie]) extends HttpHeaderResponse {
-    val value = cookies.mkString(";")
-  }
-  object `Set-Cookie` {
-    def apply(cookies: List[HttpCookie]) = new `Set-Cookie`(cookies)
-    def unapply(keyValue: (String, String)): Option[List[HttpCookie]] = if (keyValue._1.toLowerCase == "set-cookie")
-      Some(CookiesPattern(keyValue._2)) else None
-  }
-
-  /* Will take a while to implement */
-  class Trailer(val fields: HttpHeaderField*) extends HttpHeaderResponse {
-    def value = fields.map(_.toString).mkString(", ")
-  }
-  object Trailer {
-    def apply(fields: HttpHeaderField*) = new Trailer(fields: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "trailer")
-      Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "trailer")) else None
-  }
-
-  class `Transfer-Encoding`(val encodings: Encoding*) extends HttpHeaderResponse {
-    def value = encodings.map(_.toString).mkString(", ")
-  }
-  object `Transfer-Encoding` {
-    def apply(encodings: Encoding*) = new `Transfer-Encoding`(encodings: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "transfer-encoding")
-      Some(Encodings.parseEncodings(keyValue._2)) else None
-  }
-
-  /* There are problems with using Vary in IE.  */
-  class Vary(val value: String) extends HttpHeaderResponse {
-  }
-  object Vary {
-    def apply(value: String) = new Vary(value)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "vary") Some(keyValue._2) else None
-  }
-
-  class `WWW-Authenticate`(val challenge: String) extends HttpHeaderResponse {
-    def value = challenge
-  }
-  object `WWW-Authenticate` {
-    def apply(challenge: String) = new `WWW-Authenticate`(challenge)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "www-authenticate") Some(keyValue._2) else None
-  }
-
-  class `X-Frame-Options`(val option: FrameOption) extends HttpHeaderResponse {
-    def value = option.toString
-  }
-  object `X-Frame-Options` {
-    def apply(option: FrameOption) = new `X-Frame-Options`(option)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-frame-options")
-      FrameOptions.parseFrameOptions(keyValue._2) else None
-  }
-
-  /* X-XSS-Protection Seems to be primarily used by IE8 */
-  class `X-XSS-Protection`(val xss: String) extends HttpHeaderResponse {
-    def value = xss;
-  }
-  object `X-XSS-Protection` {
-    def apply(xss: String) = new `X-XSS-Protection`(xss)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-xss-protection")
-        Some(keyValue._2) else None
-  }
-
-  class `X-Content-Type-Options`(val option: ContentTypeOption) extends HttpHeaderResponse {
-    def value = option.toString
-  }
-  object `X-Content-Type-Options` {
-    def apply(option: ContentTypeOption) = new `X-Content-Type-Options`(option)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-content-type-options")
-      ContentTypeOptions.parseContentTypeOptions(keyValue._2) else None
-  }
-
-  class `X-Requested-With`(val requested: RequestedWith) extends HttpHeaderRequest {
-    def value = requested.toString
-  }
-  object `X-Requested-With` {
-    def apply(requested: RequestedWith) = new `X-Requested-With`(requested)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-requested-with")
-      RequestedWiths.parseRequestedWiths(keyValue._2) else None
-  }
-
-  class `X-Forwarded-For`(val ips: HttpIp*) extends HttpHeaderRequest {
-    def value = ips.map(_.toString).mkString(", ")
-  }
-  object `X-Forwarded-For` {
-    def apply (ips: HttpIp*) = new `X-Forwarded-For`(ips: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-for")
-      Some(HttpIps.parseHttpIps(keyValue._2)) else None
-  }
-
-  class `X-Forwarded-Proto`(val proto: String) extends HttpHeaderRequest {
-    def value = proto
-  }
-  object `X-Forwarded-Proto` {
-    def apply(proto: String) = new `X-Forwarded-Proto`(proto)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-forwarded-proto")
-      Some(keyValue._2) else None
-  }
-
-  class `X-Powered-By`(val products: ProductType*) extends HttpHeaderRequest{
-    def value = products.map(_.toString).mkString(",")
-  }
-  object `X-Powered-By` {
-    def apply(products: ProductType*) = new `X-Powered-By`(products: _*)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "x-powered-by")
-      ProductTypes.parseProductTypes(keyValue._2) else None
-  }
-
-  /* Very new headers */
-  class `Access-Control-Allow-Origin`(val origin: String) extends HttpHeaderResponse {
-    def value = origin
-  }
-  object `Access-Control-Allow-Origin` {
-    def apply(origin: String) = new `Access-Control-Allow-Origin`(origin)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-allow-origin")
-      Some(keyValue._2) else None
-  }
-
-  class `Access-Control-Request-Method`(val methods: HttpMethod*) extends HttpHeaderRequest {
-    def value = methods.map(_.toString).mkString(",")
-  }
-  object `Access-Control-Request-Method` {
-    def apply(methods: HttpMethod*) = new `Access-Control-Request-Method`(methods:_ *)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-request-method")
-      Some(HttpMethods.parseHttpMethods(keyValue._2)) else None
-  }
-
-  class `Access-Control-Request-Headers`(val fields: HttpHeaderField*) extends HttpHeaderRequest {
-    def value = fields.map(_.toString).mkString(",")
-  }
-  object `Access-Control-Request-Headers` {
-    def apply(fields: HttpHeaderField*) = new `Access-Control-Request-Headers`(fields:_ *)
-    def unapply(keyValue: (String, String)) = if (keyValue._1.toLowerCase == "access-control-request-headers")
-      Some(HttpHeaderFields.parseHttpHeaderFields(keyValue._2, "accessControl")) else None
-  }
-
-  case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse {
-    override def _1 = name
   }
 }
 
 trait HttpHeaderImplicits {
   import HttpHeaders._
 
-  implicit def httpHeader2Tuple(httpHeader: HttpHeader) = (httpHeader._1, httpHeader._2)
-
-  implicit def headersList2HeadersMap(headers: Seq[HttpHeader]): Map[String, String] = Map(headers.map(header => {header: (String, String)}): _*)
-
-  implicit def headersMap2Headers(headers: Map[String, String]): HttpHeaders = new HttpHeaders(headers)
+  implicit def tuple2HttpHeader(t: (String, String)): HttpHeader = HttpHeader(t)
 }
-object HttpHeaderImplicits extends HttpHeaderImplicits
+
+object HttpHeader {
+  def apply(t: (String, String)): HttpHeader = {
+    def extract(l: List[HttpHeaderField[_ <: HttpHeader]]): HttpHeader = l match {
+      case x :: xs => x.parse(t).getOrElse(extract(xs))
+      case Nil => HttpHeaders.CustomHeader(t._1, t._2)
+    }
+
+    extract(HttpHeaderField.All)
+  }
+}
+
+sealed trait HttpHeaderRequest extends HttpHeader
+sealed trait HttpHeaderResponse extends HttpHeader
+
+case class HttpHeaders private (val raw: Map[String, String]) {
+  def + (kv: (String, String)): HttpHeaders = new HttpHeaders(raw + HttpHeader(kv).tuple)
+  def + (header: HttpHeader): HttpHeaders = new HttpHeaders(raw + header.tuple)
+  def ++ (that: HttpHeaders) = new HttpHeaders(raw ++ that.raw)
+
+  def - (key: String): HttpHeaders = new HttpHeaders(raw - key)
+
+  def get(key: String): Option[String] = raw.get(key)
+
+  def header[T <: HttpHeader](implicit field: HttpHeaderField[T]): Option[T] = {
+    raw.get(field.name).flatMap(field.parse)
+  }
+}
+
+trait HttpHeadersImplicits extends HttpHeaderImplicits {
+  implicit def iterableOfTuple2ToHttpHeaders(i: Iterable[(String, String)]): HttpHeaders = HttpHeaders(i)
+  implicit def iterableToHttpHeaders[A <: HttpHeader](i: Iterable[A]): HttpHeaders = HttpHeaders(i)
+}
+
+object HttpHeaders {
+  def apply(i: Iterable[(String, String)]): HttpHeaders = {
+    new HttpHeaders(i.map(HttpHeader(_).tuple)(collection.breakOut))
+  }
+
+  def apply[A](i: Iterable[A])(implicit ev: A <:< HttpHeader): HttpHeaders = {
+    new HttpHeaders(i.map(ev(_).tuple)(collection.breakOut))
+  }
+
+  val Empty: HttpHeaders = new HttpHeaders(Map.empty[String, String])
+
+  /************ Requests ************/
+
+  case class Accept(mimeTypes: MimeType*) extends HttpHeaderRequest {
+    def value = mimeTypes.map(_.value).mkString(", ")
+  }
+  implicit case object Accept extends HttpHeaderField[Accept] {
+    override def parse(s: String) = Some(apply(MimeTypes.parseMimeTypes(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.mimeTypes)
+  }
+
+  case class `Accept-Charset`(charSets: CharSet*) extends HttpHeaderRequest {
+    def value = charSets.map(_.value).mkString(", ")
+  }
+  implicit case object `Accept-Charset` extends HttpHeaderField[`Accept-Charset`] {
+    override def parse(s: String) = Some(apply(CharSets.parseCharSets(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.charSets)
+  }
+
+  case class `Accept-Encoding`(encodings: Encoding*) extends HttpHeaderRequest  {
+    def value = encodings.map(_.value).mkString(", ")
+  }
+  implicit case object `Accept-Encoding` extends HttpHeaderField[`Accept-Encoding`] {
+    override def parse(s: String) = Some(apply(Encodings.parseEncodings(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.encodings)
+  }
+
+  case class `Accept-Language`(languageRanges: LanguageRange*) extends HttpHeaderRequest {
+    def value = languageRanges.map(_.value).mkString(", ");
+  }
+  implicit case object `Accept-Language` extends HttpHeaderField[`Accept-Language`] {
+    override def parse(s: String) = Some(apply(LanguageRanges.parseLanguageRanges(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.languageRanges)
+  }
+
+  case class `Accept-Ranges`(rangeUnit: RangeUnit) extends HttpHeaderResponse {
+    def value = rangeUnit.toString
+  }
+  implicit case object `Accept-Ranges` extends HttpHeaderField[`Accept-Ranges`] {
+    override def parse(s: String) = RangeUnits.parseRangeUnits(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.rangeUnit)
+  }
+
+  case class Authorization(credentials: String) extends HttpHeaderRequest {
+    def value = credentials
+  }
+  implicit case object Authorization extends HttpHeaderField[Authorization] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.credentials)
+  }
+
+  case class Connection(connectionToken: ConnectionToken) extends HttpHeaderRequest {
+    def value = connectionToken.toString
+  }
+  implicit case object Connection extends HttpHeaderField[Connection] {
+    override def parse(s: String) = ConnectionTokens.parseConnectionTokens(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.connectionToken)
+  }
+
+  case class Cookie(cookies: List[HttpCookie]) extends HttpHeaderRequest {
+    def value = cookies.mkString(";")
+  }
+  implicit case object Cookie extends HttpHeaderField[Cookie] {
+    override def parse(s: String) = Some(apply(CookiesPattern(s)))
+    def unapply(t: (String, String)) = parse(t).map(_.cookies)
+  }
+
+  case class `Content-Length`(length: Long) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = length.toString
+  }
+  implicit case object `Content-Length` extends HttpHeaderField[`Content-Length`] {
+    override def parse(s: String) = s.parseLong.toOption.map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.length)
+  }
+
+  case class `Content-Type`(mimeTypes: MimeType*) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = mimeTypes.map(_.value).mkString(", ")
+  }
+  implicit case object `Content-Type` extends HttpHeaderField[`Content-Type`] {
+    override def parse(s: String) = Some(apply(MimeTypes.parseMimeTypes(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.mimeTypes)
+  }
+
+  case class Date(httpDate: HttpDateTime) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = httpDate.toString
+  }
+  implicit case object Date extends HttpHeaderField[Date] {
+    override def parse(s: String) = HttpDateTimes.parseHttpDateTimes(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.httpDate)
+  }
+
+  case class Expect(expectation: Expectation) extends HttpHeaderRequest {
+    def value = expectation.toString
+  }
+  implicit case object Expect extends HttpHeaderField[Expect] {
+    override def parse(s: String) = Expectations.parseExpectations(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.expectation)
+  }
+
+  case class From(email: Email) extends HttpHeaderRequest {
+    def value = email.toString
+  }
+  implicit case object From extends HttpHeaderField[From] {
+    override def parse(s: String) = Emails(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.email)
+  }
+
+  case class Host(domain: URI) extends HttpHeaderRequest {
+    def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
+  }
+  implicit case object Host extends HttpHeaderField[Host] {
+    override def parse(s: String) = URI.opt(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.domain)
+  }
+
+  /* Need to add parsing to array */
+  case class `If-Match`(tags: EntityTag) extends HttpHeaderRequest {
+    def value = tags.toString
+  }
+  implicit case object `If-Match` extends HttpHeaderField[`If-Match`] { // going to need a new type here
+    override def parse(s: String) = EntityTags.parseEntityTags(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.tags)
+  }
+
+  case class `If-Modified-Since`(httpDate: HttpDateTime) extends HttpHeaderRequest {
+    def value = httpDate.toString
+  }
+  implicit case object `If-Modified-Since` extends HttpHeaderField[`If-Modified-Since`] {
+    override def parse(s: String) = HttpDateTimes.parseHttpDateTimes(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.httpDate)
+  }
+
+  /* Need to add parsing to array */
+  case class `If-None-Match`(tags: EntityTag) extends HttpHeaderRequest {
+    def value = tags.toString
+  }
+  implicit case object `If-None-Match` extends HttpHeaderField[`If-None-Match`] {
+    override def parse(s: String) = EntityTags.parseEntityTags(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.tags)
+  }
+
+  /* If-Range needs to add a way to include the date -- probably need new class */
+  case class `If-Range`(tag: IfRange) extends HttpHeaderRequest {
+    def value = tag.toString
+  }
+  implicit case object `If-Range` extends HttpHeaderField[`If-Range`] {
+    override def parse(s: String) = IfRanges.parseIfRanges(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.tag)
+  }
+
+  case class `If-Unmodified-Since`(httpDate: HttpDateTime) extends HttpHeaderRequest {
+    def value = httpDate.toString
+  }
+  implicit case object `If-Unmodified-Since` extends HttpHeaderField[`If-Unmodified-Since`] {
+    override def parse(s: String) = HttpDateTimes.parseHttpDateTimes(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.httpDate)
+  }
+
+  case class `Max-Forwards`(maxf: HttpNumber) extends HttpHeaderRequest {
+    def value = maxf.toString
+  }
+  implicit case object `Max-Forwards` extends HttpHeaderField[`Max-Forwards`] {
+    override def parse(s: String) = HttpNumbers.parseHttpNumbers(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.maxf)
+  }
+
+  case class Pragma(primeDirective: PragmaDirective) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = primeDirective.toString
+  }
+  implicit case object Pragma extends HttpHeaderField[Pragma] {
+    override def parse(s: String) = PragmaDirectives.parsePragmaDirectives(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.primeDirective)
+  }
+
+  case class `Proxy-Authorization`(auth: String) extends HttpHeaderRequest {
+    def value = auth
+  }
+  implicit case object `Proxy-Authorization` extends HttpHeaderField[`Proxy-Authorization`] {
+    override def parse(s: String) = Some(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.auth)
+  }
+
+  case class Range(byteRange: ByteRange) extends HttpHeaderRequest {
+    def value = byteRange.toString
+  }
+  implicit case object Range extends HttpHeaderField[Range] {
+    override def parse(s: String) = ByteRanges.parseByteRanges(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.byteRange)
+  }
+
+  case class Referer(domain: URI) extends HttpHeaderRequest {
+    def value = domain.toString
+  }
+  implicit case object Referer extends HttpHeaderField[Referer] {
+    override def parse(s: String) = URI.opt(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.domain)
+  }
+
+  case class TE(tcodings: TCoding*) extends HttpHeaderRequest {
+    def value = tcodings.map(_.toString).mkString(", ")
+  }
+  implicit case object TE extends HttpHeaderField[TE] {
+    override def parse(s: String) = Some(apply(TCodings.parseTCodings(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.tcodings)
+  }
+
+  case class Upgrade(products: ProductType*) extends HttpHeaderRequest {
+    def value = products.map(_.toString).mkString(", ")
+  }
+  implicit case object Upgrade extends HttpHeaderField[Upgrade] {
+    override def parse(s: String) = ProductTypes.parseProductTypes(s).map(apply(_: _*))
+    def unapply(t: (String, String)) = parse(t).map(_.products)
+  }
+
+  case class `User-Agent`(product: String) extends HttpHeaderRequest {
+    def value = product
+  }
+  implicit case object `User-Agent` extends HttpHeaderField[`User-Agent`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.product)
+  }
+
+  case class Via(info: ViaInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = info.map(_.toString).mkString(", ")
+  }
+  implicit case object Via extends HttpHeaderField[Via] {
+    override def parse(s: String) = Some(apply(ViaInfos.parseViaInfos(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.info)
+  }
+
+  case class Warning(warnings: WarningInfo*) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = warnings.map(_.toString).mkString(", ")
+  }
+  implicit case object Warning extends HttpHeaderField[Warning] {
+    override def parse(s: String) = Some(apply(WarningInfos.parseWarnings(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.warnings)
+  }
+
+  /*********** Responses ************/
+
+  case class Age(age: Double) extends HttpHeaderResponse {
+    def value = age.toString
+  }
+  implicit case object Age extends HttpHeaderField[Age] {
+    override def parse(s: String) = s.parseDouble.toOption.map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.age)
+  }
+
+  case class Allow(methods: HttpMethod*) extends HttpHeaderResponse {
+    def value = methods.map(_.value).mkString(",")
+  }
+  implicit case object Allow extends HttpHeaderField[Allow] {
+    override def parse(s: String) = Some(apply(HttpMethods.parseHttpMethods(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.methods)
+  }
+
+  case class `Cache-Control`(directives: CacheDirective*) extends HttpHeaderResponse {
+    def value = directives.map(_.toString).mkString(", ")
+  }
+  implicit case object `Cache-Control` extends HttpHeaderField[`Cache-Control`] {
+    override def parse(s: String) = Some(apply(CacheDirectives.parseCacheDirectives(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.directives)
+  }
+
+  case class `Content-Encoding`(encodings: Encoding*) extends HttpHeaderResponse {
+    def value = encodings.map(_.toString).mkString(", ")
+  }
+  implicit case object `Content-Encoding` extends HttpHeaderField[`Content-Encoding`] {
+    override def parse(s: String) = Some(apply(Encodings.parseEncodings(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.encodings)
+  }
+
+  case class `Content-Language`(languageRanges: LanguageRange*) extends HttpHeaderResponse {
+    def value = languageRanges.map(_.toString).mkString(", ")
+  }
+  implicit case object `Content-Language` extends HttpHeaderField[`Content-Language`] {
+    override def parse(s: String) = Some(apply(LanguageRanges.parseLanguageRanges(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.languageRanges)
+  }
+
+  /* Content-Location: An alternate location for the returned data -- maybe use a URI/URL parser?
+   * .. I Think this is referring to the path of the URL
+   */
+  case class `Content-Location`(value: String) extends HttpHeaderResponse {
+  }
+  implicit case object `Content-Location` extends HttpHeaderField[`Content-Location`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.value)
+  }
+
+  case class `Content-Disposition`(disposition: DispositionType) extends HttpHeaderResponse {
+    def value = disposition.toString
+  }
+  implicit case object `Content-Disposition` extends HttpHeaderField[`Content-Disposition`] {
+    override def parse(s: String) = Some(apply(DispositionTypes.parseDispositionTypes(s)))
+    def unapply(t: (String, String)) = parse(t).map(_.disposition)
+  }
+
+  case class `Content-MD5`(value: String) extends HttpHeaderRequest with HttpHeaderResponse 
+  implicit case object `Content-MD5` extends HttpHeaderField[`Content-MD5`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.value)
+  }
+
+  case class `Content-Range`(byteRange: ContentByteRange) extends HttpHeaderResponse {
+    def value = byteRange.toString
+  }
+  implicit case object `Content-Range` extends HttpHeaderField[`Content-Range`] {
+    override def parse(s: String) = ContentByteRanges.parseContentByteRanges(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.byteRange)
+  }
+
+  case class ETag(tag: EntityTag) extends HttpHeaderResponse {
+    def value = tag.toString
+  }
+  implicit case object ETag extends HttpHeaderField[ETag] {
+    override def parse(s: String) = EntityTags.parseEntityTags(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.tag)
+  }
+
+  case class Expires(date: HttpDateTime) extends HttpHeaderResponse {
+    def value = date.toString
+  }
+  implicit case object Expires extends HttpHeaderField[Expires] {
+    override def parse(s: String) = HttpDateTimes.parseHttpDateTimes(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.date)
+  }
+
+  case class `Last-Modified`(date: HttpDateTime) extends HttpHeaderResponse {
+    def value = date.toString
+  }
+  implicit case object `Last-Modified` extends HttpHeaderField[`Last-Modified`] {
+    override def parse(s: String) = HttpDateTimes.parseHttpDateTimes(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.date)
+  }
+
+  case class Location(domain: URI) extends HttpHeaderResponse {
+    def value = domain.toString
+  }
+  implicit case object Location extends HttpHeaderField[Location] {
+    override def parse(s: String) = URI.opt(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.domain)
+  }
+
+  case class `Proxy-Authenticate`(challenge: String) extends HttpHeaderResponse {
+    def value = challenge
+  }
+  implicit case object `Proxy-Authenticate` extends HttpHeaderField[`Proxy-Authenticate`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.challenge)
+  }
+
+  /* Sometimes contains a Url --  Will need to change this */
+  case class Refresh(time: HttpNumber) extends HttpHeaderResponse {
+    def value = time.toString
+  }
+  implicit case object Refresh extends HttpHeaderField[Refresh] {
+    override def parse(s: String) = HttpNumbers.parseHttpNumbers(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.time)
+  }
+
+  /* Could also be a date -- will need to change this */
+  case class `Retry-After`(num: HttpNumber) extends HttpHeaderResponse {
+    def value = num.toString
+  }
+  implicit case object `Retry-After` extends HttpHeaderField[`Retry-After`] {
+    override def parse(s: String) = HttpNumbers.parseHttpNumbers(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.num)
+  }
+
+  /* Server comments can be almost anything */
+  case class Server(comment: String) extends HttpHeaderResponse {
+    def value = comment
+  }
+  implicit case object Server extends HttpHeaderField[Server] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.comment)
+  }
+
+  case class `Set-Cookie`(cookies: List[HttpCookie]) extends HttpHeaderResponse {
+    def value = cookies.mkString(";")
+  }
+  implicit case object `Set-Cookie` extends HttpHeaderField[`Set-Cookie`] {
+    override def parse(s: String) = Some(apply(CookiesPattern(s)))
+    def unapply(t: (String, String)) = parse(t).map(_.cookies)
+  }
+
+  /* Will take a while to implement */
+  case class Trailer(fields: HttpHeaderField[_]*) extends HttpHeaderResponse {
+    def value = fields.map(_.toString).mkString(", ")
+  }
+  implicit case object Trailer extends HttpHeaderField[Trailer] {
+    override def parse(s: String) = Some(apply(HttpHeaderField.parseAll(s, "trailer"): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.fields)
+  }
+
+  case class `Transfer-Encoding`(encodings: Encoding*) extends HttpHeaderResponse {
+    def value = encodings.map(_.toString).mkString(", ")
+  }
+  implicit case object `Transfer-Encoding` extends HttpHeaderField[`Transfer-Encoding`] {
+    override def parse(s: String) = Some(apply(Encodings.parseEncodings(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.encodings)
+  }
+
+  /* There are problems with using Vary in IE.  */
+  case class Vary(value: String) extends HttpHeaderResponse 
+  implicit case object Vary extends HttpHeaderField[Vary] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.value)
+  }
+
+  case class `WWW-Authenticate`(challenge: String) extends HttpHeaderResponse {
+    def value = challenge
+  }
+  implicit case object `WWW-Authenticate` extends HttpHeaderField[`WWW-Authenticate`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.challenge)
+  }
+
+  case class `X-Frame-Options`(option: FrameOption) extends HttpHeaderResponse {
+    def value = option.toString
+  }
+  implicit case object `X-Frame-Options` extends HttpHeaderField[`X-Frame-Options`] {
+    override def parse(s: String) = FrameOptions.parseFrameOptions(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.option)
+  }
+
+  /* X-XSS-Protection Seems to be primarily used by IE8 */
+  case class `X-XSS-Protection`(xss: String) extends HttpHeaderResponse {
+    def value = xss;
+  }
+  implicit case object `X-XSS-Protection` extends HttpHeaderField[`X-XSS-Protection`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.xss)
+  }
+
+  case class `X-Content-Type-Options`(option: ContentTypeOption) extends HttpHeaderResponse {
+    def value = option.toString
+  }
+  implicit case object `X-Content-Type-Options` extends HttpHeaderField[`X-Content-Type-Options`] {
+    override def parse(s: String) = ContentTypeOptions.parseContentTypeOptions(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.option)
+  }
+
+  case class `X-Requested-With`(requested: RequestedWith) extends HttpHeaderRequest {
+    def value = requested.toString
+  }
+  implicit case object `X-Requested-With` extends HttpHeaderField[`X-Requested-With`] {
+    override def parse(s: String) = RequestedWiths.parseRequestedWiths(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.requested)
+  }
+
+  case class `X-Forwarded-For`(ips: HttpIp*) extends HttpHeaderRequest {
+    def value = ips.map(_.toString).mkString(", ")
+  }
+  implicit case object `X-Forwarded-For` extends HttpHeaderField[`X-Forwarded-For`] {
+    override def parse(s: String) = Some(apply(HttpIps.parseHttpIps(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.ips)
+  }
+
+  case class `X-Forwarded-Proto`(proto: String) extends HttpHeaderRequest {
+    def value = proto
+  }
+  implicit case object `X-Forwarded-Proto` extends HttpHeaderField[`X-Forwarded-Proto`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.proto)
+  }
+
+  case class `X-Powered-By`(products: ProductType*) extends HttpHeaderRequest {
+    def value = products.map(_.toString).mkString(",")
+  }
+  implicit case object `X-Powered-By` extends HttpHeaderField[`X-Powered-By`] {
+    override def parse(s: String) = ProductTypes.parseProductTypes(s).map(apply(_: _*))
+    def unapply(t: (String, String)) = parse(t).map(_.products)
+  }
+
+  /* Very new headers */
+  case class `Access-Control-Allow-Origin`(origin: String) extends HttpHeaderResponse {
+    def value = origin
+  }
+  implicit case object `Access-Control-Allow-Origin` extends HttpHeaderField[`Access-Control-Allow-Origin`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.origin)
+  }
+
+  case class `Access-Control-Request-Method`(methods: HttpMethod*) extends HttpHeaderRequest {
+    def value = methods.map(_.toString).mkString(",")
+  }
+  implicit case object `Access-Control-Request-Method` extends HttpHeaderField[`Access-Control-Request-Method`] {
+    override def parse(s: String) = Some(apply(HttpMethods.parseHttpMethods(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.methods)
+  }
+
+  case class `Access-Control-Request-Headers`(fields: HttpHeaderField[_]*) extends HttpHeaderRequest {
+    def value = fields.map(_.toString).mkString(",")
+  }
+  implicit case object `Access-Control-Request-Headers` extends HttpHeaderField[`Access-Control-Request-Headers`] {
+    override def parse(s: String) = Some(apply(HttpHeaderField.parseAll(s, "accessControl"): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.fields)
+  }
+
+  case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse 
+
+  class NullHeader extends HttpHeader {
+    def value = ""
+  }
+  case object NullHeader extends HttpHeaderField[NullHeader] {
+    override def parse(s: String) = Some(new NullHeader)
+  }
+}

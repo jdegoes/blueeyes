@@ -7,7 +7,7 @@ import java.net.InetAddress
 
 sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameters: Map[Symbol, String], headers: HttpHeaders, content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
 
-  lazy val mimeTypes: List[MimeType] = (for (`Content-Type`(mimeTypes) <- headers) yield mimeTypes.toList).toList.flatten
+  lazy val mimeTypes: List[MimeType] = (for (`Content-Type`(mimeTypes) <- headers.raw) yield mimeTypes.toList).toList.flatten
 
   def withSubpath(p: String) = copy(subpath = p)
 
@@ -19,7 +19,7 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameter
 }
 
 object HttpRequest{
-  def apply[T](method: HttpMethod, uri: URI, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders(), content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
+  def apply[T](method: HttpMethod, uri: URI, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders.Empty, content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
     val subpath   = uri.path.getOrElse("")
     val query     = uri.query
     val allParameters = parameters ++ query.map(v => blueeyes.util.QueryParser.parseQuery(v)).getOrElse(Map[Symbol, String]())

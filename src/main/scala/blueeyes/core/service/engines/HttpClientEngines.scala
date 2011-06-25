@@ -187,7 +187,7 @@ trait HttpClientXLightWebEngines extends HttpClientByteChunk{
     val newHeaders  = requestContentLength(request).foldLeft(request.headers){(headers, contentLength) => headers + contentLength}
     val xlRequest   = createXLRequest(request, uri)
 
-    for (pair <- newHeaders)
+    for (pair <- newHeaders.raw)
       yield xlRequest.addHeader(pair._1, pair._2)
 
     xlRequest

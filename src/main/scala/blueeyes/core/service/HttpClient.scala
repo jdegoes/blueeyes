@@ -59,7 +59,7 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
     request => request.copy(headers = request.headers + h)
   }
 
-  def headers(h: Iterable[HttpHeader]): HttpClient[A] = buildClient { request => request.copy(headers = request.headers ++ (h: HttpHeaders)) }
+  def headers(h: Iterable[HttpHeader]): HttpClient[A] = buildClient { request => request.copy(headers = request.headers ++ h) }
 
   def version(version: HttpVersion) = buildClient { request => HttpRequest(request.method, request.uri, request.parameters, request.headers, request.content, request.remoteHost, version)}
 

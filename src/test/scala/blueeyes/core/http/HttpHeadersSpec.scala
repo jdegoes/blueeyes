@@ -1,21 +1,26 @@
 package blueeyes.core.http
 
 import org.specs.Specification
+import HttpHeaders._
 
 class HttpHeadersSpec extends Specification {
-  "HttpHeaders: headerOption return header by class" in{
-    val headers = new HttpHeaders(Map("authorization" -> "foo"))
+  "HttpHeaders" should {
+    "find headers by type" in{
+      val headers = HttpHeaders(List("authorization" -> "foo"))
+      headers.header[Authorization] must beSome(Authorization("foo"))
+    }
 
-    headers.headerOption[HttpHeaders.Authorization] must beSome(HttpHeaders.Authorization("foo"))
-  }
-  "HttpHeaders: header return header by class" in{
-    val headers = new HttpHeaders(Map("authorization" -> "foo"))
+    "extract known header types" in {
+      val headers = Map("authorization" -> "foo")
 
-    headers.header[HttpHeaders.Authorization] mustEqual(HttpHeaders.Authorization("foo"))
-  }
-  "HttpHeaders: header throws error when header is missing" in{
-    val headers = new HttpHeaders(Map())
+      val auths = for (Authorization(auth) <- headers) yield auth
+      auths must_== List("foo") 
+    }
 
-    headers.header[HttpHeaders.Authorization] must throwA[RuntimeException]
+    "parse custom tuples" in {
+      val headers = 
+
+      HttpHeader(("Blargh" -> "foo")) must_== CustomHeader("Blargh", "foo")
+    }
   }
 }
