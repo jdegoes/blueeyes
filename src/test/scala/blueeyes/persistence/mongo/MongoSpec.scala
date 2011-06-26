@@ -32,6 +32,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
   "Mongo" should{
+    skip("run manually")
     "Select the same value with hints" in{
       val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
       val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
