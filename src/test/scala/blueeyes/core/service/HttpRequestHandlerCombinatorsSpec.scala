@@ -229,6 +229,19 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       f.value must eventually(beSomething)
       f.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
     }
+    "extract decoded parameter" in {
+      val f = path("/foo/'bar") {
+        produce(application/json) {
+          parameter[String, JValue]('bar) { bar =>
+            get { (request: HttpRequest[String]) =>
+              Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
+            }
+          }
+        }
+      }(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah"))
+      f.value must eventually(beSomething)
+      f.value.get.content.map(JString(_)) must beSome(JString(""""blah blah""""))
+    }
   }
 
   "path combinator" should {
@@ -277,6 +290,22 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("12")
+    }
+  }
+
+  "decodeUrl combinator" should{
+    "decode request URI" in{
+      val f = path("/foo/'bar") {
+        produce(application/json) {
+          decodeUrl {
+            get { (request: HttpRequest[String]) =>
+              Future.sync(HttpResponse[JValue](content=Some(JString(request.uri.toString))))
+            }
+          }
+        }
+      }(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah"))
+      f.value must eventually(beSomething)
+      f.value.get.content.map(JString(_)) must beSome(JString(""""/foo/blah blah""""))
     }
   }
 }

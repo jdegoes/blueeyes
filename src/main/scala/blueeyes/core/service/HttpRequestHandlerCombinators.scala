@@ -9,6 +9,7 @@ import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
 import blueeyes.util.metrics.DataSize
 import java.io.ByteArrayOutputStream
+import java.net.URLDecoder._
 
 trait HttpRequestHandlerCombinators{
   /** The path combinator creates a handler that is defined only for suffixes
@@ -24,7 +25,7 @@ trait HttpRequestHandlerCombinators{
     def isDefinedAt(r: HttpRequest[T]): Boolean = path.isDefinedAt(r.subpath) && h.isDefinedAt(path.shift(r))
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val pathParameters = path(r.subpath)
+      val pathParameters = path(r.subpath).map(parameter => (parameter._1, decode(parameter._2, "UTF-8")))
 
       val shiftedRequest = path.shift(r)
 
@@ -500,6 +501,14 @@ trait HttpRequestHandlerCombinators{
    * Requires an implicit bijection used for transcoding.
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+
+  /** The decodeUrl combinator creates a handler that decode HttpRequest URI.
+   */
+  def decodeUrl[T, S](h: HttpRequestHandler2[T, S]) = new HttpRequestHandler2[T, S] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = h.isDefinedAt(r)
+
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h(r.copy(uri = r.uri.decode))
+  }
 }
 
 

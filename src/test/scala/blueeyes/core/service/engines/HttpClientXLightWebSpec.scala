@@ -137,7 +137,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
     "Support GET requests with header" in {
       val f = httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get(uri + "?headers=true")
       f.value must eventually(retries, new Duration(duration))(beSomething)
-      f.value.get.content.get.trim must include("fooblahblah: washere") and include("param2: 1")
+      f.value.get.content.get.trim must include("Fooblahblah: washere") and include("param2: 1")
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
 

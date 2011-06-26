@@ -56,7 +56,7 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
 
     request.method       mustEqual(HttpMethods.GET)
     request.parameters   mustEqual(Map('param1 -> "foo bar"))
-    request.uri          mustEqual(URI("http://foo/bar foo?param1=foo bar"))
+    request.uri          mustEqual(URI("http://foo/bar%20foo?param1=foo%20bar"))
     request.headers.raw  mustEqual(Map("Retry-After" -> "1"))
     request.version      mustEqual(`HTTP/1.0`)
     request.remoteHost   mustEqual(Some(address.getAddress()))
