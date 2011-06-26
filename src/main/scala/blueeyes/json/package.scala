@@ -5,12 +5,12 @@ import scalaz.Monoid
 package object json{
   import JsonAST.{JValue, JNothing, JObject}
 
-  implicit val MergeMonoid = new Monoid[JValue] {
+  val MergeMonoid = new Monoid[JValue] {
     val zero = JNothing
 
     def append(v1: JValue, v2: => JValue): JValue = v1.merge(v2)
   }
-  implicit val ConcatMonoid = new Monoid[JValue] {
+  val ConcatMonoid = new Monoid[JValue] {
     val zero = JNothing
 
     def append(v1: JValue, v2: => JValue): JValue = v1 ++ v2
