@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.immutable.ListSet
-import blueeyes.json.{JPath, JPathIndex, JPathField}
+import blueeyes.json.{JPath, JPathIndex, JPathField, MergeMonoid, ConcatMonoid}
 import blueeyes.json.JsonAST._
 import blueeyes.util.ProductPrefixUnmangler
 
@@ -101,12 +101,12 @@ sealed case class MongoAndFilter(queries: ListSet[MongoFilter]) extends MongoFil
   }
 
   private def notEqsQuery(queries: ListSet[MongoFilter]) = {
-    import blueeyes.json.MergeMonoid
+    implicit val mergeMonoid = MergeMonoid
     val objects = queries.map(_.filter).toList
     (JObject(Nil) :: objects).asMA.sum.asInstanceOf[JObject]
   }
   private def eqsQuery(queries: ListSet[MongoFilter]) = {
-    import blueeyes.json.ConcatMonoid
+    implicit val concatMonoid = ConcatMonoid
     val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue]).toList
     (JObject(Nil) :: fields).asMA.sum.asInstanceOf[JObject]
   }
