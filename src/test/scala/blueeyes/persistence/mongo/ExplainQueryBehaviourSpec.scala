@@ -28,12 +28,12 @@ class ExplainQueryBehaviourSpec extends Specification with MocksCreation{
 
   "Call collection method" in{
     when(collection.getLastError).thenReturn(None)
-    when(collection.explain(keys, None, None, None, None, None)).thenReturn(explanation)
+    when(collection.explain(keys, None, None, None, None, None, false)).thenReturn(explanation)
 
     val query  = select("foo", "bar").from("collection").explain
     val result: JObject = query(collection)
 
-    Mockito.verify(collection, times(1)).explain(keys, None, None, None, None, None)
+    Mockito.verify(collection, times(1)).explain(keys, None, None, None, None, None, false)
 
     result mustEqual(explanation)
   }

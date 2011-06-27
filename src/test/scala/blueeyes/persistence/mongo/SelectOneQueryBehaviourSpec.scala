@@ -17,12 +17,12 @@ class SelectOneQueryBehaviourSpec extends Specification with MocksCreation{
 
   "Call collection method" in{
     when(collection.getLastError).thenReturn(None)
-    when(collection.select(keys, None, None, None, Some(1), None)).thenReturn(new IterableViewImpl[JObject](List(jObject1).iterator))
+    when(collection.select(keys, None, None, None, Some(1), None, false)).thenReturn(new IterableViewImpl[JObject](List(jObject1).iterator))
 
     val query  = selectOne("foo", "bar").from("collection")
     val result: Option[JObject] = query(collection)
 
-    Mockito.verify(collection, times(1)).select(keys, None, None, None, Some(1), None)
+    Mockito.verify(collection, times(1)).select(keys, None, None, None, Some(1), None, false)
 
     result must (beSome(jObject1))
   }

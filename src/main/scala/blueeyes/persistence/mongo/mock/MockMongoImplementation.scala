@@ -101,19 +101,21 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
     }
   }
 
-  def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = explanation
+  def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) = explanation
 
-  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = {
+  def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) = {
     safeProcess(filter, {objects: List[JObject] =>
+      if (isSnapshot && (sort.isDefined || hint.isDefined)) throw new MongoException("Hint and sorting cannot be used with $snapshot")
       checkHint(hint)
 
       val sorted  = sort.map(v => objects.sorted(new JObjectOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 
-      val jObjectIterator = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject]).iterator
+      val found  = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject])
+      val result = if (isSnapshot) found.distinct else found
 
-      new IterableViewImpl[JObject](jObjectIterator)
+      new IterableViewImpl[JObject](result.iterator)
     })
   }
   private def checkHint(hint: Option[Hint]) = hint match{

@@ -100,19 +100,20 @@ private[mongo] object QueryBehaviours{
 
   trait SelectQueryBehaviour extends MongoQueryBehaviour[IterableView[JObject, Iterator[JObject]]]{
     def query(collection: DatabaseCollection) = {
-      collection.select(selection, filter, sort, skip, limit, hint)
+      collection.select(selection, filter, sort, skip, limit, hint, isSnapshot)
     }
 
-    def selection : MongoSelection
-    def filter    : Option[MongoFilter]
-    def sort      : Option[MongoSort]
-    def skip      : Option[Int]
-    def limit     : Option[Int]
-    def hint      : Option[Hint]
+    def selection  : MongoSelection
+    def filter     : Option[MongoFilter]
+    def sort       : Option[MongoSort]
+    def skip       : Option[Int]
+    def limit      : Option[Int]
+    def hint       : Option[Hint]
+    def isSnapshot : Boolean
   }
   trait ExplainQueryBehaviour  extends MongoQueryBehaviour[JObject]{
     def query(collection: DatabaseCollection) = {
-      collection.explain(selection, filter, sort, skip, limit, hint)
+      collection.explain(selection, filter, sort, skip, limit, hint, isSnapshot)
     }
 
     def selection : MongoSelection
@@ -121,6 +122,7 @@ private[mongo] object QueryBehaviours{
     def skip      : Option[Int]
     def limit     : Option[Int]
     def hint      : Option[Hint]
+    def isSnapshot : Boolean
   }
   trait GroupQueryBehaviour extends MongoQueryBehaviour[JArray]{
     def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
@@ -145,6 +147,7 @@ private[mongo] object QueryBehaviours{
       def filter    = self.filter
       def selection = self.selection
       def hint      = self.hint
+      def isSnapshot = false
     }
 
     def query(collection: DatabaseCollection): Option[JObject] = {

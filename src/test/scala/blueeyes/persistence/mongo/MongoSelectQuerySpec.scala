@@ -21,6 +21,9 @@ class MongoSelectQuerySpec extends Specification{
   "'skip' method sets new skip" in {
     query.skip(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, Some(10)))
   }
+  "'snapshot' method sets snapshot mode" in {
+    query.snapshot mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, None, true))
+  }
   "'limit' method sets new limit" in {
     query.limit(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, Some(10)))
   }
