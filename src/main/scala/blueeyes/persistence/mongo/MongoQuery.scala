@@ -45,6 +45,9 @@ sealed trait MongoQuery[T] extends QueryBehaviour[T]{
   def collection: MongoCollection;
 }
 
+case class MongoExplainQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None) extends MongoQuery[JObject] with ExplainQueryBehaviour
+
 case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None, hint: Option[Hint] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
   def where (newFilter: MongoFilter): MongoDistinctQuery = copy(filter = Some(newFilter))
   def hint  (newHint: Hint)         : MongoDistinctQuery = copy(hint = Some(newHint))
@@ -59,13 +62,15 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def skip  (newSkip: Int)          : MongoSelectQuery = copy(skip = Some(newSkip))
   def limit (newLimit: Int)         : MongoSelectQuery = copy(limit = Some(newLimit))
   def hint  (newHint: Hint)         : MongoSelectQuery = copy(hint = Some(newHint))
+  def explain                       : MongoExplainQuery = MongoExplainQuery(selection, collection, filter, sort, skip, limit, hint)
 }
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                              sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
+                              sort: Option[MongoSort] = None, hint: Option[Hint] = None, isExplain: Boolean = false) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = copy(sort = Some(newSort))
   def hint(newHint: Hint)           : MongoSelectOneQuery = copy(hint = Some(newHint))
   def hint  (keys: JPath*)          : MongoSelectOneQuery = copy(hint = Some(KeyedHint(ListSet(keys: _*))))
+  def explain                       : MongoSelectOneQuery = copy(isExplain = true)
 }
 case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = copy(filter = Some(newFilter))

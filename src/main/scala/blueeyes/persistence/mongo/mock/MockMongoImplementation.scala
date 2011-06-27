@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo.mock
 
 import blueeyes.concurrent.ReadWriteLock
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JPath}
+import blueeyes.json.{JPath, JsonParser}
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import collection.mutable.ConcurrentMap
@@ -43,6 +43,20 @@ private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
 
 private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
   private var container = JArray(Nil)
+  private val explanation = JsonParser.parse("""{
+        "cursor" : "BasicCursor",
+        "nscanned" : 3,
+        "nscannedObjects" : 3,
+        "n" : 3,
+        "millis" : 38,
+        "nYields" : 0,
+        "nChunkSkips" : 0,
+        "isMultiKey" : false,
+        "indexOnly" : false,
+        "indexBounds" : {
+
+        }
+}""").asInstanceOf[JObject]
 
   def insert(objects: List[JObject]): Unit = {
     writeLock{
@@ -86,6 +100,8 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       insert0(updated)
     }
   }
+
+  def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = explanation
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]) = {
     safeProcess(filter, {objects: List[JObject] =>

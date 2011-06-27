@@ -110,6 +110,18 @@ private[mongo] object QueryBehaviours{
     def limit     : Option[Int]
     def hint      : Option[Hint]
   }
+  trait ExplainQueryBehaviour  extends MongoQueryBehaviour[JObject]{
+    def query(collection: DatabaseCollection) = {
+      collection.explain(selection, filter, sort, skip, limit, hint)
+    }
+
+    def selection : MongoSelection
+    def filter    : Option[MongoFilter]
+    def sort      : Option[MongoSort]
+    def skip      : Option[Int]
+    def limit     : Option[Int]
+    def hint      : Option[Hint]
+  }
   trait GroupQueryBehaviour extends MongoQueryBehaviour[JArray]{
     def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
 
@@ -143,6 +155,7 @@ private[mongo] object QueryBehaviours{
     def filter    : Option[MongoFilter]
     def sort      : Option[MongoSort]
     def hint      : Option[Hint]
+    def isExplain : Boolean
   }
 
 

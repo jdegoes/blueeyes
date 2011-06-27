@@ -84,6 +84,7 @@ abstract class MongoDatabase {
 private[mongo] trait DatabaseCollection{
   def insert(objects: List[JObject])
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]): IterableView[JObject, Iterator[JObject]]
+  def explain(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint]): JObject
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])

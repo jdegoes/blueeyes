@@ -33,6 +33,22 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
   "Mongo" should{
     skip("run manually")
+    "Explain query" in{
+      val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
+      val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
+      val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
+      val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
+
+      query[JNothing.type](insert(jObject, jObject1, jObject2, jObject3).into(collection))
+      query[JNothing.type](ensureIndex("myindex").on("address.city", "address.street").in(collection))
+
+      val explanation = oneQuery(select().from(collection).where("address.city" === "B").hint("myindex").explain, realDatabase)
+
+      explanation \ "cursor" must notEq(JNothing)
+      explanation \ "nscannedObjects" must notEq(JNothing)
+      explanation \ "nscanned" must notEq(JNothing)
+    }
+    skip("run manually")
     "Select the same value with hints" in{
       val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
       val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)

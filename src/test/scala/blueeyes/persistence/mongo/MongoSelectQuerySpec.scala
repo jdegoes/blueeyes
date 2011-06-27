@@ -30,4 +30,7 @@ class MongoSelectQuerySpec extends Specification{
   "'hint' with keys sets new hint" in {
     query.hint(JPath("foo") :: JPath("bar") :: Nil) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(ListSet(JPath("foo"), JPath("bar"))))))
   }
+  "'explain' creates Explain query" in {
+    query.hint(JPath("foo") :: JPath("bar") :: Nil).explain mustEqual (MongoExplainQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(ListSet(JPath("foo"), JPath("bar"))))))
+  }
 }
