@@ -6,9 +6,8 @@ trait Bijection[T, S] { self =>
       apply(t)
       
       true
-    }
-    catch {
-      case _ => false
+    } catch {
+      case ex => false
     }
   }
   
