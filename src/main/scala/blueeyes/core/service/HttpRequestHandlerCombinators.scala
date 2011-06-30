@@ -1,15 +1,18 @@
-package blueeyes.core.service
+package blueeyes
+package core.service
 
-import scala.xml.NodeSeq
-
-import blueeyes.json.JsonAST._
+import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
+import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
+
 import java.io.ByteArrayOutputStream
 import java.net.URLDecoder._
+
+import scala.xml.NodeSeq
+import scalaz.Scalaz._
 
 trait HttpRequestHandlerCombinators{
   /** The path combinator creates a handler that is defined only for suffixes
@@ -73,12 +76,19 @@ trait HttpRequestHandlerCombinators{
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      val fail = h(r)
-
-      Future.dead(HttpException(fail._1, fail._2))
+      Future.dead(h(r).fold(HttpException(_, _)))
     }
   }
 
+  /**
+   * <pre>
+   * path("/foo") {
+   *   ...
+   * } ~ orFail(HttpStatusCodes.NotFound, "No handler found that could handle this request.")
+   * </pre>
+   */
+  def orFail[T, S](code: HttpFailure, msg: String): HttpRequestHandler2[T, S] = orFail { request => code -> msg }
+  
   /**
    * <pre>
    * path("/foo") {
@@ -106,12 +116,7 @@ trait HttpRequestHandlerCombinators{
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      if (!h.isDefinedAt(r)) {
-        val (statusCode, reason) = msgGen(r)
-
-        Future.dead(HttpException(statusCode, reason))
-      }
-      else h.apply(r)
+      if (h.isDefinedAt(r)) h(r) else Future.dead(msgGen(r).fold(HttpException(_, _)))
     }
   }
 
@@ -123,9 +128,7 @@ trait HttpRequestHandlerCombinators{
   implicit def commitFull[T, S](h: HttpRequest[T] => Future[HttpResponse[S]]): HttpRequestHandler2[T, S] = new HttpRequestHandler2[T, S] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = true
 
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-      h.apply(r)
-    }
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h(r)
   }
 
   /** Attemps to peek to see if a particular handler will handle a request.
@@ -142,13 +145,12 @@ trait HttpRequestHandlerCombinators{
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
       try {
         h.isDefinedAt(r)
-      }
-      catch {
+      } catch {
         case _ => false
       }
     }
 
-    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h.apply(r)
+    def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = h(r)
   }
 
   def get     [T, S](h: HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = $ { method(HttpMethods.GET)      { commitFull { h } } }
@@ -415,28 +417,18 @@ trait HttpRequestHandlerCombinators{
    * HTTP method and content using the query string parameters "method" and
    * "content", respectively.
    */
-  def jsonp[T](h: HttpRequestHandler[JValue])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
+  def jsonp[T](delegateHandler: HttpRequestHandler[JValue])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpRequestHandler[T] = new HttpRequestHandler[T] {
     implicit val b2 = b1.inverse
 
     def isDefinedAt(r: HttpRequest[T]): Boolean = {
-      r.content.map(b1.isDefinedAt _).getOrElse(true) && {
-        val r2 = convert(r)
-
-        h.isDefinedAt(r2)
-      }
+      r.content.forall(b1.isDefinedAt _) && delegateHandler.isDefinedAt(convertRequest(r))
     }
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
-      val r2 = convert(r)
-
-      h(r2).map { response =>
-        val callback = r.parameters.get('callback)
-
-        convert(response, callback)
-      }
+      delegateHandler(convertRequest(r)).map(convertResponse(_, r.parameters.get('callback)))
     }
 
-    private def convert(r: HttpRequest[T]): HttpRequest[JValue] = {
+    private def convertRequest(r: HttpRequest[T]): HttpRequest[JValue] = {
       import blueeyes.json.JsonParser.parse
       import blueeyes.json.xschema.DefaultSerialization._
 
@@ -460,7 +452,7 @@ trait HttpRequestHandlerCombinators{
       }
     }
 
-    private def convert(r: HttpResponse[JValue], callback: Option[String]): HttpResponse[T] = {
+    private def convertResponse(r: HttpResponse[JValue], callback: Option[String]): HttpResponse[T] = {
       import blueeyes.json.xschema.DefaultSerialization._
       import blueeyes.json.Printer._
 
