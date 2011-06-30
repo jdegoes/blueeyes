@@ -27,7 +27,7 @@ If you have bugs to report, please use the GitHub issues tracker. If you have qu
 
 Repositories:
 
- * http://oss.sonatype.org/content/repositories/releases/
+ * http://nexus.scala-tools.org/content/repositories/
  * http://scala-tools.org/repo-snapshots/
  * http://repository.jboss.org/nexus/content/groups/public/
  * http://akka.io/repository/
@@ -83,17 +83,13 @@ The following code builds an e-mail service, together with a server capable of r
              contentType(application/json) {
                 get { request =>
                   ...
-                  HttpResponse(content = Some(JArray(emailIds)))
-                } ~
-                post { request =>
-                  ...
-                  HttpResponse(status = OK)
+                  Future.sync(HttpResponse(content = Some(JArray(emailIds))))
                 } ~
                 path('emailId) {
                   get { request =>
                     val emailId = request.parameters('emailId)
                     ...
-                    HttpResponse(content = Some(emailObj))
+                    Future.sync(HttpResponse(content = Some(emailObj)))
                   }
                 }
              }
@@ -243,7 +239,7 @@ The testing framework is currently compatible with *Specs*, and extends the *Spe
 
 To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a helper "service" method to create service client.
 
-    class EmailServicesSpec extends BlueEyesServiceSpecification[ChunkReader] with EmailServices {
+    class EmailServicesSpec extends BlueEyesServiceSpecification with EmailServices {
       "EmailService" should {
         "get emails" in {
           val f = service.contentType[JValue](application/json).get("/emails")

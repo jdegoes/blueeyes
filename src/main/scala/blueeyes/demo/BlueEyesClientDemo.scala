@@ -55,11 +55,13 @@ trait BlueEyesDemoFacade extends BijectionsChunkJson{
 
   def port: Int
 
-  private def jsonHttpClient = httpClient.contentType[JValue](application/json).protocol("http").port(port)
+  private def jsonHttpClient = httpClient.contentType[JValue](application/json).host("localhost").protocol("http").port(port)
 
   def create(contact: Contact)  = jsonHttpClient.post("/contacts")(contact.serialize).map(_.content)
 
-  def health()  = jsonHttpClient.get("/blueeyes/services/contactlist/v1/health").map(_.content)
+  def health  = jsonHttpClient.get("/blueeyes/services/contactlist/v1/health").map(_.content)
+
+  def serverHealth  = jsonHttpClient.get("/blueeyes/server/health").map(_.content)
 
   def list = jsonHttpClient.get("/contacts").map(response => namesFromJValue(response.content))
 

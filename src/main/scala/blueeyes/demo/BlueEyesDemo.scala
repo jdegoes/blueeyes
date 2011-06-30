@@ -8,15 +8,16 @@ import blueeyes.concurrent.Future._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
-import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
 import blueeyes.json.{JPathField, JPath}
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.persistence.mongo.MockMongo
+import blueeyes.core.service.ServerHealthMonitorService
+import blueeyes.core.http.{HttpStatus, HttpRequest, HttpResponse}
 
-object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService {
+object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
   lazy val mongo = new MockMongo()
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
@@ -42,13 +43,12 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-          jvalue{
-            post {
-              refineContentType[JValue, JObject] { request =>
-                database[JNothing.type](insert(request.content.get).into(collection)) map {
-                  _ => HttpResponse[JNothing.type]()
-                }
-              }
+          aggregate(None){
+            post { request =>
+              val contact = request.content.map(ChunkToJValue(_))
+              contact.map{value =>
+                database[JNothing.type](insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[ByteChunk]() }
+              }.getOrElse(Future.sync(HttpResponse[ByteChunk](status = HttpStatus(BadRequest))))
             }
           } ~
           path("/'name") {

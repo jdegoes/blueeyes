@@ -2,24 +2,21 @@ package blueeyes.benchmark
 
 import blueeyes.core.service.engines.HttpClientXLightWebEngines
 import blueeyes.core.service.HttpClient
-import blueeyes.demo.{BlueEyesDemo, Contact, BlueEyesDemoFacade}
 import blueeyes.concurrent.Future
 import net.lag.configgy.Configgy
 import blueeyes.health.metrics.Timer
-import java.util.concurrent.{TimeUnit, CountDownLatch}
-import blueeyes.json.JsonParser.{parse => j}
+import java.util.concurrent.{CountDownLatch, ThreadPoolExecutor, SynchronousQueue, TimeUnit}
+import blueeyes.json.JsonAST.JValue
+import blueeyes.demo.{Contact, BlueEyesDemoFacade}
 
 object Benchmark extends ServerStart{ self =>
 
-  class BlueEyesDemoFacadeImpl extends BlueEyesDemoFacade{
-    def port = self.port
-    val httpClient = new HttpClientXLightWebEngines{}
-  }
+  val executorService = new ThreadPoolExecutor(20, 100, 10*60, TimeUnit.SECONDS, new SynchronousQueue())
 
   def main(args: Array[String]){
-    startServer
+    startServer(if (args.size > 2) args(2).toBoolean else false)
 
-    benchmark(1, report _, args(0).toInt)
+    benchmark(args(0).toInt, report _, args(1).toInt)
 
     stopServer
 
@@ -41,17 +38,27 @@ object Benchmark extends ServerStart{ self =>
   }
 
   private def healthReport{
-    val blueEyesDemoFacade = new BlueEyesDemoFacadeImpl{}
-    val future = blueEyesDemoFacade.health()
+    val blueEyesDemoFacade = new BlueEyesDemoFacadeImpl()
 
+    val serviceHealthTitle =
+"""********************************
+*     Service Health report    *
+********************************"""
+    val serverHealthTitle =
+"""********************************
+*     Server Health report     *
+********************************"""
+
+    responseReport(blueEyesDemoFacade.health, serviceHealthTitle)
+    responseReport(blueEyesDemoFacade.serverHealth, serverHealthTitle)
+  }
+
+  private def responseReport(future: Future[Option[JValue]], title: String) = {
     val taskCounDown  = new CountDownLatch(1)
 
     future.deliverTo(response =>{
-      println("********************************")
-      println("*     Server Health report     *")
-      println("********************************")
+      println(title)
       println(blueeyes.json.Printer.pretty(blueeyes.json.JsonDSL.render(response.get)))
-
       taskCounDown.countDown
     })
     future.ifCanceled{v =>
@@ -60,31 +67,33 @@ object Benchmark extends ServerStart{ self =>
     taskCounDown.await
   }
 
-  private def benchmark[T](connectionCount: Int, f: Timer => T, duration: Int): T= f(benchmark(new ContactStream().apply().take(connectionCount), duration))
+  private def benchmark[T](connectionCount: Int, f: Timer => T, duration: Int): T= f(benchmark(new ContactStream().apply().take(connectionCount).toList, duration))
 
-  private def benchmark(stream: Stream[Contact], duration: Int): Timer = {
+  private def benchmark(contacts: List[Contact], duration: Int): Timer = {
     val timer = new Timer()
 
-    runBenchmarkTasks(stream, timer, duration)
+    runBenchmarkTasks(contacts, timer, duration)
 
     timer
   }
 
-  private def runBenchmarkTasks(stream: Stream[Contact], timer: Timer, duration: Int){
-    val benchmarkTasks = stream.map(startBenchmarkTask(_, timer, duration))
+  private def runBenchmarkTasks(contacts: List[Contact], timer: Timer, duration: Int){
+    val benchmarkFutures = Future[Unit](contacts.map(startBenchmarkTask(_, timer, duration).future): _*)
 
-    benchmarkTasks.foreach(_.taskCounDown.await)
+    val countDownLatch = new CountDownLatch(1)
+    benchmarkFutures.deliverTo(v => countDownLatch.countDown)
+    countDownLatch.await
   }
 
   private def startBenchmarkTask(contact: Contact, timer: Timer, duration: Int) = {
     val benchmarkTask = new BenchmarkTask(new BlueEyesDemoFacadeImpl(), contact, timer, duration)
-    new Thread(benchmarkTask).start
+    executorService.submit(benchmarkTask)
     benchmarkTask
   }
 }
 
 class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, val timer: Timer, durationInSecs: Int) extends Runnable with HttpClientXLightWebEngines{
-  val taskCounDown  = new CountDownLatch(1)
+  val future  = new Future[Unit]()
   def run = {
     val start = System.currentTimeMillis
 
@@ -93,7 +102,7 @@ class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, 
       process({c: Contact => clientFacade.remove(c.name)})
     }
 
-    taskCounDown.countDown
+    future.deliver(())
   }
 
   private def process[T](f: Contact => Future[T]) = {
@@ -136,35 +145,4 @@ class ContactStream(){
   def baseCity    = "London_"
 
   def baseAddress = "Streat "
-}
-
-trait ServerStart{
-  var port = 8585
-  private val configPattern = """server{
-  port = %d
-  sslPort = %d
-}"""
-  def startServer{
-    var error: Option[Throwable] = None
-    do{
-      val doneSignal   = new CountDownLatch(1)
-
-      Configgy.configureFromString(configPattern.format(port, port + 1))
-
-      val startFuture = BlueEyesDemo.start
-      startFuture.deliverTo { _ =>
-        error = None
-        doneSignal.countDown()
-      }
-      startFuture.ifCanceled{v =>
-        error = v
-        port  = port + 2
-        doneSignal.countDown()
-      }
-    }while(error != None)
-
-    error.foreach(throw _)
-  }
-
-  def stopServer = BlueEyesDemo.stop
 }
