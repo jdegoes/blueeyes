@@ -42,7 +42,7 @@ function checkRate {
   if [ $RATE -ge  $currentRate ]; then 
     
     echo -e '\E[47;31m'"\033[1m*******************************************\033[0m"
-    echo -e '\E[47;31m'"\033[1mFAILED                           \033[0m"
+    echo -e '\E[47;31m'"\033[1mFAILED                                     \033[0m"
     echo -e '\E[47;31m'"\033[1mEXPECTED REQUESTS = "$RATE"                   \033[0m"
     echo -e '\E[47;31m'"\033[1mACTUAL REQUESTS   = "$currentRate"                   \033[0m"
     echo -e '\E[47;31m'"\033[1m*******************************************\033[0m"
@@ -55,12 +55,46 @@ function checkRate {
   fi   
 }
 
+function checkMemory {
+  start=$(($1+1000))
+  end=$2
+  if [ $end -gt  $start ]; then 
+    
+    echo -e '\E[47;31m'"\033[1m*******************************************\033[0m"
+    echo -e '\E[47;31m'"\033[1mMEMORY LEAK                                \033[0m"
+    echo -e '\E[47;31m'"\033[1mSTART MEMORY = "$1"                   \033[0m"
+    echo -e '\E[47;31m'"\033[1mEND MEMORY   = "$end"                   \033[0m"
+    echo -e '\E[47;31m'"\033[1m*******************************************\033[0m"
+  else
+    echo -e '\E[37;44m'"\033[1m*******************************************\033[0m" 
+    echo -e '\E[37;44m'"\033[1mMEMORY IS OK\033[0m" 
+    echo -e '\E[37;44m'"\033[1mSTART MEMORY = "$1"\033[0m" 
+    echo -e '\E[37;44m'"\033[1mEND MEMORY   = "$end"\033[0m" 
+    echo -e '\E[37;44m'"\033[1m*******************************************\033[0m" 
+  fi  
+}
+
+function memoryUsage {
+  curl -X GET http://localhost:8585/blueeyes/server/health > health.txt
+  memoryLine=`grep "used" health.txt`
+  memory=`echo $memoryLine|sed 's/.*"used":\([[:digit:]]\{1,\}\).*/\1/'`
+  eval $1=$memory
+}
+
+startMemory=0
+endMemory=0
+memoryUsage startMemory
+
 benchmark "ab -c $CONCURRENCY -n $REQUESTS -p contact.txt http://localhost:8585/contacts > ab.txt"
 echo ""
 echo ""
 benchmark "ab -c $CONCURRENCY -n $REQUESTS http://localhost:8585/contacts > ab.txt"
 
+memoryUsage endMemory
+checkMemory $startMemory $endMemory
+
 rm ab.txt
 rm contact.txt
 rm tmp.txt
+rm health.txt
 
