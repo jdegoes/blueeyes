@@ -42,7 +42,7 @@ Library dependency:
       <scope>compile</scope>
     </dependency>
 
-### SBT
+### SBT before 0.10
 
     val sonatype_repo     = MavenRepository("Sonatype",     "http://nexus.scala-tools.org/content/repositories/")
     val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
@@ -50,6 +50,21 @@ Library dependency:
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
     val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.4" % "compile"
+
+
+### SBT 0.10
+
+    resolvers ++= Seq(
+      "Sonatype"    at "http://nexus.scala-tools.org/content/repositories/public",
+      "Scala Tools" at "http://scala-tools.org/repo-snapshots/",
+      "JBoss"       at "http://repository.jboss.org/nexus/content/groups/public/",
+      "Akka"        at "http://akka.io/repository/"
+    )
+
+    libraryDependencies ++= Seq(
+      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.4" % "compile"
+    )
+
 
 ## Origins
 
