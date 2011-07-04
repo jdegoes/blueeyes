@@ -4,6 +4,7 @@ import blueeyes.concurrent.ReadWriteLock
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath, JsonParser}
 import blueeyes.persistence.mongo._
+import blueeyes.persistence.mongo.IterableViewImpl._
 import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import collection.mutable.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
@@ -115,7 +116,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       val found  = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject])
       val result = if (isSnapshot) found.distinct else found
 
-      new IterableViewImpl[JObject](result.iterator)
+      new IterableViewImpl[JObject, Iterator[JObject]](result.iterator)
     })
   }
   private def checkHint(hint: Option[Hint]) = hint match{

@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
-import blueeyes.json.{JPathIndex, JPath}
+import blueeyes.json.JPath
 import util.matching.Regex
 
 private[mongo] object MongoFilterEvaluator{

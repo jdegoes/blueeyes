@@ -5,6 +5,8 @@ import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo.json.MongoJson._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
+import IterableViewImpl._
+
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
@@ -78,6 +80,7 @@ private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends M
   }
 
   protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]  =
+//    Future.sync(query(query.collection, isVerified))
     mongoActor.!!![T](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
 }
 
@@ -121,7 +124,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
       def hasNext = dbObjectsIterator.hasNext
     }
 
-    new IterableViewImpl[JObject](jObjectIterator)
+    new IterableViewImpl[JObject, Iterator[JObject]](jObjectIterator)
   }
 
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
@@ -172,8 +175,13 @@ private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database:
   def drop = output.drop
 }
 
-class IterableViewImpl[+A](delegate: scala.collection.Iterator[A]) extends scala.collection.IterableView[A, Iterator[A]]{
-  def iterator: scala.collection.Iterator[A] = delegate
+import scala.collection.Iterator
+object IterableViewImpl{
+  implicit def iteratorToIterator[A](iterator: Iterator[A]): Iterator[A] = iterator
+  implicit def seqToIterator[A](seq: Seq[A]): Iterator[A] = seq.iterator
+}
+class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A]) extends scala.collection.IterableView[A, Coll]{
+  def iterator: Iterator[A] = delegate
 
   protected def underlying = delegate
 }

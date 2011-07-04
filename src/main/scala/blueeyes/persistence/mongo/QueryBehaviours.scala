@@ -158,9 +158,37 @@ private[mongo] object QueryBehaviours{
     def filter    : Option[MongoFilter]
     def sort      : Option[MongoSort]
     def hint      : Option[Hint]
-    def isExplain : Boolean
   }
+  trait MultiSelectQuery extends MongoQueryBehaviour[IterableView[Option[JObject], Seq[Option[JObject]]]]{ self =>
+    import MongoFilterEvaluator._
+    import IterableViewImpl._
+    private val selectQuery = new SelectQueryBehaviour() {
+      def limit     = None
+      def skip      = None
+      def sort      = self.sort
+      def filter    = Some(MongoOrFilter(self.filters))
+      def selection = MongoSelection(Set())
+      def hint      = self.hint
+      def isSnapshot = false
+    }
 
+    def query(collection: DatabaseCollection) = {
+      val allObjects = selectQuery.query(collection)
+      var result     = filters.toList.map(filter => (filter, None: Option[JObject]))
+
+      allObjects.exists{jObject =>
+        result = result.map{filterAndObject => filterAndObject match {
+          case (filter, None) => (filter, List(jObject).filter(filter).headOption.asInstanceOf[Option[JObject]])
+          case _ => filterAndObject
+        }}
+        result.find(_._2 == None).map(_ => false).getOrElse(true)
+      }
+      new IterableViewImpl[Option[JObject], Seq[Option[JObject]]](result.unzip._2.toSeq)
+    }
+    def filters   : ListSet[MongoFilter]
+    def sort      : Option[MongoSort]
+    def hint      : Option[Hint]
+  }
 
   trait UpdateQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
     def query(collection: DatabaseCollection) = {

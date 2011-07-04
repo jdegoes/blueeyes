@@ -9,7 +9,7 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
 import collection.immutable.ListSet
 
-class MongoSelectQuerySpec extends Specification{
+class MongoSelectQuerySpec extends Specification with MongoImplicits{
   private val query = select("foo", "bar").from(MongoCollectionReference("collection"))
 
   "'where' method sets new filter" in {
