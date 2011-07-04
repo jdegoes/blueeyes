@@ -274,6 +274,21 @@ A single server can run any number of services, although the recommended practic
 
 #### Server Configuration Options
 
+Server Configuration included the following options: 
+
+- port: the port the server is started on, which defaults to 8888".
+- sslPort: the port the ssl server is started on, which defaults to 8889.
+- address:  the local addres the server will bind to, which defaults to "localhost". 
+- sslEnable: sets if the ssl should be running, which defaults to true.
+- chunkSize: the chunk size in bytes of a request/response content, which defaults to 1048576. 
+
+The minimal configuration looks like:
+
+    server{
+      port = 8585
+      sslPort = 8586
+    }
+
 ### Augmentation
 
 Services can be augmented in a variety of ways -- for example, with loggers, health monitors, and service locators. The augmentation facility is based on composition of so-called *service descriptor factories*, which are functions that accept a service context and return a service descriptor.
@@ -628,7 +643,7 @@ BlueEyes provides support for both pillars:
       <td>Kris Nuttycome</td>    <td>Core platform</td>                                                             <td><a href="http://twitter.com/nuttycom">@nuttycom</a></td>
     </tr>
     <tr>
-      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td></td>
+      <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td><a href="http://twitter.com/mlagutko">@mlagutko</a></td>
     </tr>
     <tr>
       <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
