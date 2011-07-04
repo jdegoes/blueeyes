@@ -1,6 +1,6 @@
 name := "blueeyes"
 
-version := "0.4.3"
+version := "0.4.5"
 
 organization := "com.reportgrid"
 
