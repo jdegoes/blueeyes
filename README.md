@@ -35,21 +35,21 @@ Repositories:
 Library dependency:
 
     <dependency>
-      <groupId>com.github.blueeyes</groupId>
+      <groupId>com.reportgrid</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.4.3</version>
+      <version>0.4.4</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
 
 ### SBT
 
-    val sonatype_repo     = MavenRepository("Sonatype",     "http://oss.sonatype.org/content/repositories/releases/")
+    val sonatype_repo     = MavenRepository("Sonatype",     "http://nexus.scala-tools.org/content/repositories/")
     val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
-    val blueeyesRelease = "com.github.blueeyes" % "blueeyes" % "0.4.3" % "compile"
+    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.4" % "compile"
 
 ## Origins
 
