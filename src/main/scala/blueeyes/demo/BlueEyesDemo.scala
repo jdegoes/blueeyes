@@ -9,26 +9,22 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkJson}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
-import blueeyes.json.{JPathField, JPath}
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
-import blueeyes.persistence.mongo.{MongoFilterAll, Mongo, MongoFilter}
-import blueeyes.persistence.mongo.MockMongo
+import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.core.service.ServerHealthMonitorService
 import blueeyes.core.http.{HttpStatus, HttpRequest, HttpResponse}
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
-  lazy val mongo = new MockMongo()
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson{
-  def mongo: Mongo
-
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson with ConfigurableMongo{
   val contactListService = service("contactlist", "1.0.0") {
     healthMonitor { monitor => context =>
       startup {
-        BlueEyesDemoConfig(context.config, mongo).future
+        val mongoConfig = context.config.configMap("mongo")
+        BlueEyesDemoConfig(mongoConfig, mongo(mongoConfig)).future
       } ->
       request { demoConfig: BlueEyesDemoConfig =>
         import demoConfig._
@@ -104,6 +100,6 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
 }
 
 case class BlueEyesDemoConfig(config: ConfigMap, mongo: Mongo){
-  val database    = mongo.database(config.getString("mongo.database.contacts").getOrElse("contacts"))
-  val collection  = config.getString("mongo.collection.contacts").getOrElse("contacts")
+  val database    = mongo.database(config("database"))
+  val collection  = config("collection")
 }

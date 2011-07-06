@@ -6,11 +6,14 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import QueryBehaviours._
 
+
 sealed trait MongoCollection{
   def name: String
 }
 case class MongoCollectionReference(name: String) extends MongoCollection
-case class MongoCollectionHolder(private[mongo] collection: DatabaseCollection, name: String, database: MongoDatabase) extends MongoCollection
+case class MongoCollectionHolder(private[mongo] collection: DatabaseCollection, name: String, database: Database) extends MongoCollection
+
+case class MongoDatabase(name: String)
 
 sealed abstract class MongoSortOrder(val order: Int)
 case object MongoSortOrderAscending extends MongoSortOrder(1)

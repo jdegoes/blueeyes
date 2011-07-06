@@ -48,7 +48,7 @@ object GroupFunction extends JObjectFields{
 }
 
 private[mongo] object MapReduceFunction extends RhinoJsonImplicits{
-  def apply(map: String, reduce: String, outputCollection: Option[String], objects: List[JObject], database: MockMongoDatabase) = {
+  def apply(map: String, reduce: String, outputCollection: Option[String], objects: List[JObject], database: MockDatabase) = {
     val mapped  = mapObjects(map, objects)
     val reduced = reduceObjects(reduce, mapped)
 

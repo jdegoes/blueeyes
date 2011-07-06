@@ -4,15 +4,17 @@ import org.specs.Specification
 import blueeyes.concurrent.Future
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.service._
-import blueeyes.core.data.{BijectionsIdentity, ByteChunk}
+import blueeyes.core.data.{ByteChunk}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
+import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
 class BlueEyesServiceSpecification extends Specification with HttpServer with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self: HttpServer =>
   shareVariables()
 
   doBeforeSpec {
+    setMongoCongiguration
     startServer
   }
 
@@ -23,6 +25,8 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def configuration  = ""
+
+  def setMongoCongiguration = sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
 
   def service: HttpClient[ByteChunk] = new SpecClient()
 

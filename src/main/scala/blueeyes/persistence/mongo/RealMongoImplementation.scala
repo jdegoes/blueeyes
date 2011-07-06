@@ -47,7 +47,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
     mongo
   }
 
-  def database(databaseName: String) = new RealMongoDatabase(this, mongo.getDB(databaseName))
+  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName))
 }
 
 object RealMongoActor {
@@ -64,7 +64,7 @@ class RealMongoActor extends Actor {
   }
 }
 
-private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends MongoDatabase {
+private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Database {
   private val poolSize = 10
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
@@ -84,7 +84,7 @@ private[mongo] class RealMongoDatabase(val mongo: Mongo, database: DB) extends M
     mongoActor.!!![T](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
 }
 
-private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealMongoDatabase) extends DatabaseCollection{
+private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
   def requestDone = collection.getDB.requestDone
 
   def requestStart = collection.getDB.requestStart
@@ -170,7 +170,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 }
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
-private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealMongoDatabase) extends MapReduceOutput{
+private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput{
   override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
   def drop = output.drop
 }

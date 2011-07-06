@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.reportgrid</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.4.5</version>
+      <version>0.4.6</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
-    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.5" % "compile"
+    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.6" % "compile"
 
 
 ### SBT 0.10
@@ -62,7 +62,7 @@ Library dependency:
     )
 
     libraryDependencies ++= Seq(
-      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.5" % "compile"
+      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.6" % "compile"
     )
 
 
@@ -267,6 +267,16 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
     }
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
+
+If a service uses mongo facade then it is convinient to use factory trait ConfigurableMongo to create a Mongo facade. The factor creates either RealMongo or MockMongo deppending on "mongo.mock" JVM parameter. If the JVM parameter is set to "true" then MockMongo is created otherwise RealMongo is created. Using "mongo.mock" switch allows easy change Mock Mongo and Real Mongo to test. If the JVM parameter "mongo.moc" is not set then BlueEyesServiceSpecification sets the parameter
+to "true" and MockMongo is used in tests. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
+Sample configuration is:
+
+    dropBeforeStart {
+      mydb = ["mycollection"]
+    } 
+
+Using 
 
 ### Execution
 
@@ -505,6 +515,15 @@ All caches support user-defined expiration policy and eviction handlers.
 BlueEyes has a full-featured Scala facade to MongoDB.
 
 First of all, you need to create an instance to the Mongo facade. You have your choice of RealMongo or MockMongo. The latter is a memory-only Mongo facade that is designed for automated testing.
+
+Factory trait ConfigurableMongo can be used to create a Mongo facade. The factor creates either RealMongo or MockMongo deppending on "mongo.mock" JVM parameter. If the parameter is set to "true"
+then MockMongo is created otherwise RealMongo is created. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section 
+dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
+Sample configuration is:
+
+    dropBeforeStart {
+      mydb = ["mycollection"]
+    } 
 
 Once you have access to Mongo, you can then create references to databases:
 

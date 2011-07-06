@@ -85,5 +85,5 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 //    future3.value.get.iterator.toList mustEqual (JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil)
 //  }
 
-  private def database = mongo.database("foo").asInstanceOf[MockMongoDatabase]
+  private def database = mongo.database("foo").asInstanceOf[MockDatabase]
 }

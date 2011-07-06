@@ -16,16 +16,16 @@ import Scalaz._
 import com.mongodb.MongoException
 
 class MockMongo() extends Mongo {
-  private val databases: ConcurrentMap[String, MockMongoDatabase]     = new ConcurrentHashMap[String, MockMongoDatabase]()
+  private val databases: ConcurrentMap[String, MockDatabase]     = new ConcurrentHashMap[String, MockDatabase]()
   def database(databaseName: String) = {
     databases.get(databaseName).getOrElse({
-      val mongoDatabase  = new MockMongoDatabase(this)
+      val mongoDatabase  = new MockDatabase(this)
       databases.putIfAbsent(databaseName, mongoDatabase).getOrElse(mongoDatabase)
     })
   }
 }
 
-private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
+private[mongo] class MockDatabase(val mongo: Mongo) extends Database {
   private val databaseCollections: ConcurrentMap[String, MockDatabaseCollection]   = new ConcurrentHashMap[String, MockDatabaseCollection]()
 
   def collection(collectionName: String) = {
@@ -42,7 +42,7 @@ private[mongo] class MockMongoDatabase(val mongo: Mongo) extends MongoDatabase {
   def disconnect() = {}
 }
 
-private[mongo] class MockDatabaseCollection(val name: String, val database: MockMongoDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
+private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
   private var container = JArray(Nil)
   private val explanation = JsonParser.parse("""{
         "cursor" : "BasicCursor",

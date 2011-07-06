@@ -49,6 +49,8 @@ sealed trait MongoFilter { self =>
 
   def & (that: MongoFilter)  = &&(that)
 
+  def & (collection: MongoCollection) = MongoFilterCollection(self, collection)
+
   def && (that: MongoFilter) = MongoFilterAndMonoid.append(self, that)
 
   def | (that: MongoFilter)  = ||(that)
@@ -62,6 +64,12 @@ object MongoFilter extends MongoFilterImplicits {
     case rhs => MongoFieldFilter(lhs, operator, rhs)
   }
 }
+
+case class MongoFilterCollection(filter: MongoFilter, collection: MongoCollection){ self =>
+  def & (database: MongoDatabase) = MongoFilterCollectionDatabase(self, database)
+}
+
+case class MongoFilterCollectionDatabase(filter: MongoFilterCollection, database: MongoDatabase)
 
 case object MongoFilterAll extends MongoFilter {
   def filter: JValue = JObject(Nil)

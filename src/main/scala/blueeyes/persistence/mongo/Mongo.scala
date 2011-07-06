@@ -12,7 +12,7 @@ import blueeyes.concurrent.Future._
  * <p>
  */
 trait Mongo {
-  def database(databaseName: String): MongoDatabase
+  def database(databaseName: String): Database
 }
 
 case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
@@ -38,7 +38,7 @@ case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, 
  *
  * val query =  verified(selectOne().from("mycollection").where("foo.bar" === "blahblah").sortBy("foo.bar" &lt;&lt;))
  */
-abstract class MongoDatabase {
+abstract class Database {
   def mongo: Mongo
 
   def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)

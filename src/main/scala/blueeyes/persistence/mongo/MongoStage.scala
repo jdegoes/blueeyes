@@ -7,11 +7,10 @@ case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacit
 
 /** A stage for updates to Mongo.
  */
-class MongoStage (val database: MongoDatabase, val collection: MongoCollection, mongoStageSettings: MongoStageSettings)
-extends Stage[MongoFilter, MongoUpdate] {
-  def flush(filter: MongoFilter, update: MongoUpdate) = {
+class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings) extends Stage[MongoFilterCollection, MongoUpdate] {
+  def flush(filter: MongoFilterCollection, update: MongoUpdate) = {
     database.unverified[JNothing.type] {
-      upsert(collection).set(update).where(filter)
+      upsert(filter.collection).set(update).where(filter.filter)
     }
   }
 
@@ -21,8 +20,8 @@ extends Stage[MongoFilter, MongoUpdate] {
 }
 
 object MongoStage {
-  def apply(database: MongoDatabase, collection: MongoCollection, mongoStageSettings: MongoStageSettings) = {
-    new MongoStage(database, collection, mongoStageSettings)
+  def apply(database: Database, mongoStageSettings: MongoStageSettings) = {
+    new MongoStage(database, mongoStageSettings)
   }
 }
 

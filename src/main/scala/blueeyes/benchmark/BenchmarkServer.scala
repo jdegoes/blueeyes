@@ -13,10 +13,6 @@ object BenchmarkServerStart extends ServerStart{
 }
 
 object LiveBlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
-  lazy val mongo = {
-    Configgy.configure("/etc/default/blueeyes.conf")
-    new RealMongo(Configgy.config.configMap("mongo"))
-  }
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 

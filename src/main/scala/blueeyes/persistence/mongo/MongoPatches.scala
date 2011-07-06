@@ -27,7 +27,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
     */
-  def commit(database: MongoDatabase, collection: MongoCollection): Future[Unit] = {
+  def commit(database: Database, collection: MongoCollection): Future[Unit] = {
     val futures = patches.toList.map { 
       case (filter, update) =>
         database[JNothing.type] {

@@ -49,11 +49,11 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         val mockDatabase     = mockMongo.database( "mydb" )
         val collection       = "mycollection"
 
-        val mongStage   = MongoStage(mockDatabase, collection, MongoStageSettings(ExpirationPolicy(Some(100), Some(100), MILLISECONDS), 500))
+        val mongStage   = MongoStage(mockDatabase, MongoStageSettings(ExpirationPolicy(Some(100), Some(100), MILLISECONDS), 500))
         val actorsCount = 10
         val sendCount   = 20
         val actors      = Array.fill(actorsCount){
-          val actor = Actor.actorOf(new MessageActor(mongStage, updates, sendCount))
+          val actor = Actor.actorOf(new MessageActor(mongStage, updates.map(v => (v._1 & collection, v._2)), sendCount))
           actor.start()
           actor
         }
@@ -85,7 +85,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
   }
 }
 
-class MessageActor(stage: MongoStage, updates: List[(MongoFilter, MongoUpdate)], size: Int) extends Actor{
+class MessageActor(stage: MongoStage, updates: List[(MongoFilterCollection, MongoUpdate)], size: Int) extends Actor{
   private val random    = new Random()
   def receive = {
     case "Send" =>
