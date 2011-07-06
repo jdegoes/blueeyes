@@ -37,7 +37,7 @@ Library dependency:
     <dependency>
       <groupId>com.reportgrid</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.4.6</version>
+      <version>0.4.7</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -49,7 +49,7 @@ Library dependency:
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 
-    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.6" % "compile"
+    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.7" % "compile"
 
 
 ### SBT 0.10
@@ -62,7 +62,7 @@ Library dependency:
     )
 
     libraryDependencies ++= Seq(
-      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.6" % "compile"
+      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.7" % "compile"
     )
 
 
@@ -268,7 +268,7 @@ To test your services with *Specs*, you should extend *BlueEyesServiceSpecificat
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
 
-If a service uses mongo facade then it is convinient to use factory trait ConfigurableMongo to create a Mongo facade. The factor creates either RealMongo or MockMongo deppending on "mongo.mock" JVM parameter. If the JVM parameter is set to "true" then MockMongo is created otherwise RealMongo is created. Using "mongo.mock" switch allows easy change Mock Mongo and Real Mongo to test. If the JVM parameter "mongo.moc" is not set then BlueEyesServiceSpecification sets the parameter
+If a service uses mongo facade then it is convinient to use factory trait ConfigurableMongo to create a Mongo facade. The factor creates either RealMongo or MockMongo deppending on "mongo.mock" JVM parameter. If the JVM parameter is set to "true" then MockMongo is created otherwise RealMongo is created. Using "mongo.mock" switch allows easy change Mock Mongo and Real Mongo in tests. If the JVM parameter "mongo.moc" is not set then BlueEyesServiceSpecification sets the parameter
 to "true" and MockMongo is used in tests. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
 Sample configuration is:
 

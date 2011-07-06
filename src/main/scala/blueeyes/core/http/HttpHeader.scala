@@ -285,7 +285,7 @@ object HttpHeaders {
     def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
   }
   implicit case object Host extends HttpHeaderField[Host] {
-    override def parse(s: String) = URI.opt(s).map(apply)
+    override def parse(s: String) = URI.opt("http://" + s).map(apply)
     def unapply(t: (String, String)) = parse(t).map(_.domain)
   }
 

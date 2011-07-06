@@ -16,6 +16,12 @@ class HttpHeadersSpec extends Specification {
       val auths = for (Authorization(auth) <- headers) yield auth
       auths must_== List("foo") 
     }
+    "extract Host header types without scheme" in {
+      val headers = Map("Host" -> "localhost:8585")
+
+      val hosts = for (Host(host) <- headers) yield host
+      hosts.map(Host(_).value) must_== List("localhost:8585")
+    }
 
     "parse custom tuples" in {
       val headers = 
