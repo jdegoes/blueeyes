@@ -9,3 +9,14 @@ sealed case class HttpResponse[+T](
   content: Option[T] = None, 
   version: HttpVersion = `HTTP/1.1`
 )
+
+object HttpResponse {
+  def empty[T] = HttpResponse[T](content = None)
+}
+
+trait HttpResponseImplicits {
+  implicit def any2ResponseOk[T](content: T) = new ResponseOk[T](content)
+  class ResponseOk[+T](content: T) { self => 
+    def ok[TT >: T]: HttpResponse[TT] = HttpResponse(content = Some(self.content))
+  }
+}

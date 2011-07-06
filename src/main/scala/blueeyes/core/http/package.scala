@@ -5,4 +5,5 @@ package object http extends
   HttpStatusImplicits with 
   HttpStatusCodeImplicits with 
   HttpDateImplicits with 
-  HttpNumberImplicits 
+  HttpNumberImplicits with
+  HttpResponseImplicits
