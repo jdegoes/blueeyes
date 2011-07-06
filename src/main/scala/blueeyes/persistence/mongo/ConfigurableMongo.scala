@@ -38,5 +38,5 @@ trait ConfigurableMongo extends MongoImplicits{
 }
 
 object ConfigurableMongo{
-  val MongoSwitch = " "
+  val MongoSwitch = "mongo.mock"
 }
