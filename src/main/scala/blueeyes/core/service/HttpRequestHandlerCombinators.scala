@@ -484,7 +484,7 @@ trait HttpRequestHandlerCombinators{
     }
   }
 
-  /** The json combinator creates a handler that accepts and produces JSON.
+  /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
    */
   def jvalue[T](h: HttpRequestHandler[JValue])(implicit b: Bijection[T, JValue]): HttpRequestHandler[T] = contentType(MimeTypes.application/MimeTypes.json) { h }
@@ -493,6 +493,15 @@ trait HttpRequestHandlerCombinators{
    * Requires an implicit bijection used for transcoding.
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+
+  def forwarding[T](f: HttpRequest[T] => HttpRequest[T])(implicit httpClient: HttpClient[T]) = (h: HttpRequestHandler[T]) => new HttpRequestHandler[T] {
+    def isDefinedAt(r: HttpRequest[T]): Boolean = h.isDefinedAt(r)
+
+    def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
+      Future.async(httpClient(f(r)))
+      h(r)
+    }
+  }
 
   /** The decodeUrl combinator creates a handler that decode HttpRequest URI.
    */

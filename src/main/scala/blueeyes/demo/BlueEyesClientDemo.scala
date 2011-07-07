@@ -1,6 +1,6 @@
 package blueeyes.demo
 
-import blueeyes.core.service.engines.HttpClientXLightWebEngines
+import blueeyes.core.service.engines.HttpClientXLightWeb
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
@@ -18,7 +18,7 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
   val port = Configgy.config.configMap("server").getInt("port", 8888)
 
-  val httpClient = new HttpClientXLightWebEngines{}
+  val httpClient = new HttpClientXLightWeb
 
   def main(args: Array[String]){
 
