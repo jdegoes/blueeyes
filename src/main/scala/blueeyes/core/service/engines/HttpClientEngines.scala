@@ -15,8 +15,7 @@ import scala.collection.JavaConversions._
 import blueeyes.concurrent.Future
 import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
-trait HttpClientXLightWebEngines extends HttpClientByteChunk{
-
+class HttpClientXLightWeb extends HttpClientByteChunk {
   private val logger = Logger.get
 
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
@@ -238,4 +237,8 @@ trait HttpClientXLightWebEngines extends HttpClientByteChunk{
       }
     }
   }
+}
+
+object HttpClientXLightWeb {
+  def apply = new HttpClientXLightWeb()
 }

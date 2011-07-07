@@ -181,7 +181,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
 class SampleServer extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
 
-class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWebEngines{
+class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWeb {
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())

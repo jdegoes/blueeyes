@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch
 import blueeyes.BlueEyesServer
 import blueeyes.core.service.ServerHealthMonitorService
 import blueeyes.persistence.mongo.RealMongo
-import blueeyes.core.service.engines.HttpClientXLightWebEngines
+import blueeyes.core.service.engines.HttpClientXLightWeb
 import blueeyes.demo.{BlueEyesDemoFacade, BlueEyesDemoService, BlueEyesDemo}
 
 object BenchmarkServerStart extends ServerStart{
@@ -50,6 +50,6 @@ trait ServerStart{ self =>
 
   class BlueEyesDemoFacadeImpl extends BlueEyesDemoFacade{
     def port = self.port
-    val httpClient = new HttpClientXLightWebEngines{}
+    val httpClient = new HttpClientXLightWeb
   }
 }

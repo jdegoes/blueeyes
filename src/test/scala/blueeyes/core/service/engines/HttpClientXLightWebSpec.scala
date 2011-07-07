@@ -19,7 +19,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
   val duration = 250
   val retries = 30
 
-  private val httpClient = new HttpClientXLightWebEngines { }
+  private val httpClient = new HttpClientXLightWeb
 
   private val configPattern = """server {
     port = %d

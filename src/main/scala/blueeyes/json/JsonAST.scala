@@ -276,8 +276,8 @@ object JsonAST {
       def rec(acc: A, p: JPath, v: JValue): A = {
         val newAcc = f(acc, p, v)
         v match {
-          case JObject(l)   => l.foldLeft(newAcc) { (a, f) => rec(a, p, f) }
-          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { (a, t) => val (e, idx) = t; rec(a, p \ idx, e) }
+          case JObject(l)   => l.foldLeft(newAcc) { rec(_, p, _) }
+          case JArray(l)    => l.zipWithIndex.foldLeft(newAcc) { case (a, (e, idx)) => rec(a, p \ idx, e) }
           case JField(n, v) => rec(newAcc, p \ n, v)
           case _ => newAcc
         }

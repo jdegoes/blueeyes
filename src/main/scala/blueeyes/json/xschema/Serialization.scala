@@ -1,4 +1,4 @@
-package blueeyes.json.xschema {
+package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 
@@ -42,7 +42,5 @@ object SerializationImplicits extends SerializationImplicits
 /** Bundles default extractors, default decomposers, and serialization 
  * implicits for natural serialization of core supported types.
  */
-object DefaultSerialization extends DefaultExtractors with DefaultDecomposers with SerializationImplicits {
-}
+object DefaultSerialization extends DefaultExtractors with DefaultDecomposers with SerializationImplicits 
 
-}
