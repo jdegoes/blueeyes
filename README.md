@@ -31,6 +31,7 @@ Repositories:
  * http://scala-tools.org/repo-snapshots/
  * http://repository.jboss.org/nexus/content/groups/public/
  * http://akka.io/repository/
+ * http://guiceyfruit.googlecode.com/svn/repo/release/
 
 Library dependency:
 
@@ -48,6 +49,7 @@ Library dependency:
     val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
     val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
+    val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
 
     val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.7" % "compile"
 
@@ -58,7 +60,8 @@ Library dependency:
       "Sonatype"    at "http://nexus.scala-tools.org/content/repositories/public",
       "Scala Tools" at "http://scala-tools.org/repo-snapshots/",
       "JBoss"       at "http://repository.jboss.org/nexus/content/groups/public/",
-      "Akka"        at "http://akka.io/repository/"
+      "Akka"        at "http://akka.io/repository/",
+      "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
     )
 
     libraryDependencies ++= Seq(
