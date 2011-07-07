@@ -103,12 +103,6 @@ object JsonAST {
       breadthFirst0(Nil, Queue.empty.enqueue(this)).reverse
     }
 
-    private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
-      case JObject(l) => l.filter(x => p(x.value))
-      case JArray(l) => findDirect(l, p)
-      case x => if (p(x)) List(x) else Nil
-    }
-
     /** XPath-like expression to query JSON fields by name. Returns all matching fields.
      * <p>
      * Example:<pre>
@@ -138,7 +132,7 @@ object JsonAST {
      * </pre>
      */
     def \[A <: JValue](implicit m: JManifest[A]): List[A] = this match {
-      case JArray(values)  => values.flatMap(m)
+      case JArray(values)  => values.flatMap(m(_))
       case JObject(fields) => fields.flatMap(f => m(f.value))
       case _ => Nil
     }
@@ -289,9 +283,9 @@ object JsonAST {
      */
     def mapUpWithPath(f: (JPath, JValue) => JValue): JValue = {
       def rec(p: JPath, v: JValue): JValue = v match {
-        case JObject(l) => f(p, JObject(l.flatMap(f => rec(p, f) match {
+        case JObject(l) => f(p, JObject(l.flatMap(field => rec(p, field.value) match {
           case JNothing => Nil
-          case x => JField(f.name, x) :: Nil
+          case x => JField(field.name, x) :: Nil
         })))
 
         case JArray(l) => f(p, JArray(l.zipWithIndex.flatMap(t => rec(p \ t._2, t._1) match {
@@ -690,8 +684,8 @@ trait Printer {
         case JString(null) => text("null")
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
-        case JObject(obj)  =>
-          val nested = break :: fold(intersperse(intersperse(obj.map(renderScala) ::: List(text("Nil")), text("::")), break))
+        case JObject(fields)  =>
+          val nested = break :: fold(intersperse(intersperse(fields.map(renderField) ::: List(text("Nil")), text("::")), break))
 
           nest(2, nested)
       }) :: text(")")
@@ -785,14 +779,12 @@ trait Printer {
     out
   }
 
-  def normalize[T <: JValue](jvalue: T): T = {
+  def normalize(jvalue: JValue): JValue = {
     import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
 
     jvalue match {
-      case JObject(fields) => JObject(fields.map(normalize _).sorted(JValueOrdering)).asInstanceOf[T]
-      case JArray(elements) => JArray(elements.map(normalize _).sorted(JValueOrdering)).asInstanceOf[T]
-      case JField(name, value) => JField(name, normalize(value)).asInstanceOf[T]
-
+      case JObject(fields) => JObject(fields.map(f => JField(f.name, normalize(f.value))).sorted(JFieldOrdering))
+      case JArray(elements) => JArray(elements.map(normalize _).sorted(JValueOrdering))
       case _ => jvalue
     }
   }

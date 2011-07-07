@@ -32,7 +32,6 @@ object Merge {
   def merge(val1: JValue, val2: JValue): JValue = (val1, val2) match {
     case (JObject(xs), JObject(ys)) => JObject(mergeFields(xs, ys))
     case (JArray(xs), JArray(ys)) => JArray(mergeVals(xs, ys))
-    case (JField(n1, v1), JField(n2, v2)) if n1 == n2 => JField(n1, merge(v1, v2))
     case (f1: JField, f2: JField) => f2
     case (JNothing, x) => x
     case (x, JNothing) => x

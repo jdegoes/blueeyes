@@ -35,18 +35,15 @@ object Validation {
       case JNothing => None
       case x @ _ => Some(JPathValue(path + "." + name, x))
     }
+
+    def as[A <: JValue](implicit manifest: JManifest[A]): Option[A] = manifest(value)
     
     /**
      * Returns the element as a JValue of the specified class, throwing a 
      * ValidationError as necessary.
      */
     def --> [A <: JValue](clazz: Class[A]): A = {
-      def extractTyped(value: JValue) = if (value.getClass == clazz) value.asInstanceOf[A] else failType(path, clazz, value.getClass)
-      
-      value match {
-        case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
-        case _ => extractTyped(value)
-      }
+      if (value.getClass == clazz) value.asInstanceOf[A] else failType(path, clazz, value.getClass)
     }
     
     /**
@@ -75,7 +72,7 @@ object Validation {
     val field = json \ name 
     val array = field --> classOf[JArray]
     
-    array.values.foldLeft[(Int, List[A])]((0, Nil)) { (cur, e) =>
+    array.elements.foldLeft[(Int, List[A])]((0, Nil)) { (cur, e) =>
       (cur._1 + 1, f(field !! cur._1) :: cur._2)
     }._2.reverse
   }
@@ -84,7 +81,7 @@ object Validation {
    * Utility function to extract the specified field as a JString, then return 
    * the string.
    */
-  def stringField(name: String, json: JPathValue) = (json \ name --> classOf[JString]).values
+  def stringField(name: String, json: JPathValue) = (json \ name --> classOf[JString]).value
   
   /**
    * Utility function to extract the specified field as a JInt or JDouble, then
@@ -100,13 +97,13 @@ object Validation {
    * Utility function to extract the specified field as a JInt, then return the
    * integer as a BigInt.
    */
-  def integerField(name: String, json: JPathValue) = (json \ name --> classOf[JInt]).values
+  def integerField(name: String, json: JPathValue) = (json \ name --> classOf[JInt]).value
   
   /**
    * Utility function to extract the specified field as a JDouble, then return 
    * the double as a Double.
    */
-  def doubleField(name: String, json: JPathValue) = (json \ name --> classOf[JDouble]).values
+  def doubleField(name: String, json: JPathValue) = (json \ name --> classOf[JDouble]).value
   
   /**
    * Utility operator to convert a JValue into a validated JPathValue.
