@@ -29,6 +29,10 @@ class HttpCookieSpec extends Specification{
   "HttpCookies: Should parse several cookies" in{
     check("version;Cat=Mittens; Dog=Noel", CookieData("Cat", "Mittens"), CookieData("Dog", "Noel"))
   }
+  "HttpCookies: Should parse cookies with '_' character" in{
+    check("_gads=39d84b1ece008558", CookieData("_gads", "39d84b1ece008558"))
+    check("_livingsocial_sessionid=a8f08366-42d7-4e19-bc65-d9f08f536ff5", CookieData("_livingsocial_sessionid", "a8f08366-42d7-4e19-bc65-d9f08f536ff5"))
+  }
 
   private def check(cookieStr: String, cookie: HttpCookie*){
     CookiesPattern.isDefinedAt(cookieStr)  must be (true)
