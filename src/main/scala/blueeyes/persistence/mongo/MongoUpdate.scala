@@ -1,12 +1,15 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.immutable.ListSet
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JPath
+import blueeyes.json.JsonAST.{JField, JObject}
 import MongoImplicits._
 import MongoFilterOperators._
+
 import com.mongodb.MongoException
-import blueeyes.json.JsonAST.{JField, JObject}
+
+import scala.collection.immutable.ListSet
+import scala.math.BigInt._
 
 import scalaz._
 import Scalaz._
@@ -157,6 +160,10 @@ private[mongo] object UpdateFieldFunctions{
       case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => x1 + x2
       case (MongoPrimitiveLong(x1),    MongoPrimitiveInt(x2))    => x1 + x2
       case (MongoPrimitiveLong(x1),    MongoPrimitiveDouble(x2)) => x1 + x2
+
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveBigInt(x2))   => x1 + x2
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveInt(x2))    => x1 + x2
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveDouble(x2)) => x1.doubleValue + x2
 
       case _ => throw new MongoException("Modifier $inc allowed for numbers only")
     }

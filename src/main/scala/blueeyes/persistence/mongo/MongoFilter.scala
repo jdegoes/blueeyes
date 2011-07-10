@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.immutable.ListSet
+import scala.math.BigInt
 import blueeyes.json.{JPath, JPathIndex, JPathField, MergeMonoid, ConcatMonoid}
 import blueeyes.json.JsonAST._
 import blueeyes.util.ProductPrefixUnmangler
@@ -152,6 +153,9 @@ case class MongoPrimitiveLong(value: Long) extends MongoPrimitive {
 case class MongoPrimitiveInt(value: Int) extends MongoPrimitive {
   def toJValue = JInt(value)
 }
+case class MongoPrimitiveBigInt(value: BigInt) extends MongoPrimitive {
+  def toJValue = JInt(value)
+}
 case class MongoPrimitiveDouble(value: Double) extends MongoPrimitive {
   def toJValue = JDouble(value)
 }
@@ -190,13 +194,14 @@ trait MongoFilterImplicits {
     case JField(_, _) => sys.error("Cannot convert JField to Mongo primitive")
   }
 
-  implicit def optionToMongoPrimitiveOption(value: Option[MongoPrimitive]) = MongoPrimitiveOption(value)
-  implicit def stringToMongoPrimitiveString(value: String)    = MongoPrimitiveString(value)
-  implicit def longToMongoPrimitiveLong(value: Long)          = MongoPrimitiveLong(value)
-  implicit def intToMongoPrimitiveInt(value: Int)             = MongoPrimitiveInt(value)
-  implicit def doubleToMongoPrimitiveDouble(value: Double)    = MongoPrimitiveDouble(value)
-  implicit def booleanToMongoPrimitiveBoolean(value: Boolean) = MongoPrimitiveBoolean(value)
-  implicit def arrayToMongoPrimitiveArray(value: List[MongoPrimitive]) = MongoPrimitiveArray(value)
+  implicit def optionToMongoPrimitive[T <% MongoPrimitive](value: Option[T]) = MongoPrimitiveOption(value.map(a => a : MongoPrimitive))
+  implicit def stringToMongoPrimitive(value: String)   = MongoPrimitiveString(value)
+  implicit def longToMongoPrimitive(value: Long)       = MongoPrimitiveLong(value)
+  implicit def intToMongoPrimitive(value: Int)         = MongoPrimitiveInt(value)
+  implicit def bigIntToMongoPrimitive(value: BigInt)   = MongoPrimitiveBigInt(value)
+  implicit def doubleToMongoPrimitive(value: Double)   = MongoPrimitiveDouble(value)
+  implicit def booleanToMongoPrimitive(value: Boolean) = MongoPrimitiveBoolean(value)
+  implicit def arrayToMongoPrimitive(value: List[MongoPrimitive]) = MongoPrimitiveArray(value)
 
   /*
   Double	 1

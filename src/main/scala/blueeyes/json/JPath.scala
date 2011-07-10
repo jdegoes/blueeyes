@@ -4,10 +4,10 @@ import util.matching.Regex
 
 import JsonAST._
 
-sealed trait JPath{ self =>
+sealed trait JPath { self =>
   def nodes: List[JPathNode]
 
-  def parent: Option[JPath] = if (nodes.length == 0) None else Some(JPath(nodes.take(nodes.length - 1): _*))
+  def parent: Option[JPath] = if (nodes.isEmpty) None else Some(JPath(nodes.take(nodes.length - 1): _*))
 
   def ancestors: List[JPath] = {
     def ancestors0(path: JPath, acc: List[JPath]): List[JPath] = {
@@ -21,11 +21,9 @@ sealed trait JPath{ self =>
     ancestors0(this, Nil).reverse
   }
 
-  def \ (that: JPath): JPath = JPath(self.nodes ++ that.nodes)
-
-  def \ (that: String): JPath = this \ JPath(that)
-
-  def \ (that: Int): JPath = this \ JPathIndex(that)
+  def \ (that: JPath):  JPath = JPath(self.nodes ++ that.nodes)
+  def \ (that: String): JPath = JPath(self.nodes :+ JPathField(that))
+  def \ (that: Int):    JPath = JPath(self.nodes :+ JPathIndex(that))
 
   def apply(index: Int): JPathNode = nodes(index)
 
@@ -41,6 +39,10 @@ sealed trait JPath{ self =>
 
     extract0(nodes, jvalue)
   }
+
+  def head: Option[JPathNode] = nodes.headOption
+
+  def tail: JPath = JPath(nodes.tail: _*)
 
   def expand(jvalue: JValue): List[JPath] = {
     def isRegex(s: String) = s.startsWith("(") && s.endsWith(")")
@@ -81,6 +83,11 @@ sealed trait JPath{ self =>
 }
 
 sealed trait JPathNode
+object JPathNode {
+  implicit def s2PathNode(name: String): JPathNode = JPathField(name)
+  implicit def i2PathNode(index: Int): JPathNode = JPathIndex(index)
+}
+
 sealed case class JPathField(name: String) extends JPathNode {
   override def toString = "." + name
 }

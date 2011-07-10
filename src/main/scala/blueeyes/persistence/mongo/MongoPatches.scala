@@ -24,6 +24,8 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
     patches = this.patches <+> Map(patch)
   )
 
+  def + (popt: Option[(MongoFilter, MongoUpdate)]): MongoPatches = popt.map(this + _).getOrElse(this)
+
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
     */
@@ -42,9 +44,15 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
 object MongoPatches {
   val empty: MongoPatches = MongoPatches(Map.empty[MongoFilter, MongoUpdate])
 
+  implicit def any2MongoPatchBuilder[A](a: A): MongoPatchBuilder[A] = new MongoPatchBuilder(a)
+
   def apply(patch: (MongoFilter, MongoUpdate)): MongoPatches = MongoPatches(Map(patch))
 
   def apply(iter: Iterable[(MongoFilter, MongoUpdate)]): MongoPatches = iter.foldLeft(empty) { _ + _ }
 
   def apply(varargs: (MongoFilter, MongoUpdate)*): MongoPatches = apply(varargs: Iterable[(MongoFilter, MongoUpdate)])
+}
+
+class MongoPatchBuilder[A](a: A) {
+  def patch(pf: PartialFunction[A, (MongoFilter, MongoUpdate)]) = pf.lift.apply(a)
 }
