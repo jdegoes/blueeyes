@@ -64,7 +64,7 @@ object CookiesPatternParsers extends RegexParsers {
 
   def keysParser :       Parser[String]                 = ("expires" | "path" | "domain")
   def secureParser :     Parser[Any]                    = ";" ~ "secure"
-  def nameParser :       Parser[String]                 = """[a-zA-Z0-9]+""".r
+  def nameParser :       Parser[String]                 = """[^;=\s]+""".r
   def valueParser:       Parser[String]                 = """[^;]+""".r
   def cookieValueParser: Parser[Option[HttpCookie]]     =  nameParser ~ "=" ~ valueParser ^^ {case n~equal~v => Some(CookieData(n, v))} | (valueParser ^^ (v => None))
   def parameterParser:   Parser[Tuple2[String, String]] = ";" ~ keysParser  ~ "=" ~ valueParser   ^^ {case sep~k~equal~v => Tuple2[String, String](k, v)}
