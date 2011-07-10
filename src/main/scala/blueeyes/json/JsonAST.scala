@@ -81,6 +81,13 @@ object JsonAST {
       }
     }
 
+    def \? (nameToFind: String): Option[JValue] = {
+      (this \ nameToFind) match {
+        case JNothing | JNull => None
+        case x => Some(x)
+      }
+    }
+
     /**
      * Returns the element as a JValue of the specified class.
      * <p>
