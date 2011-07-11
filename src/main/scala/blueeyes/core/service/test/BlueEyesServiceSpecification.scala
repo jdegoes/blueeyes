@@ -14,7 +14,7 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
   shareVariables()
 
   doBeforeSpec {
-    setMongoCongiguration
+    setMockCongiguration
     startServer
   }
 
@@ -26,7 +26,10 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
   def stopTimeOut    = 60000
   def configuration  = ""
 
-  def setMongoCongiguration = sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
+  def setMockCongiguration = {
+    sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
+    sys.props.getOrElseUpdate (ConfigurableHttpClient.HttpClientSwitch, "true")
+  }
 
   def service: HttpClient[ByteChunk] = new SpecClient()
 
