@@ -53,10 +53,13 @@ trait NettyConverters{
     val headers             = buildHeaders(request.getHeaders())
     val content             = fromNettyContent(request.getContent(), () => None)
 
-    val xforwarded: Option[HttpHeaders.`X-Forwarded-For`] = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
-    val remoteHost = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
+    val xforwarded  = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
+    val remoteHost  = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
+    val host        = (for (Host (value) <- headers) yield Host(value)).headOption
+    val originalUri = URI(request.getUri())
+    val uri         = host.map(h => originalUri.copy(host = h.domain.host)).getOrElse(originalUri)
 
-    HttpRequest(request.getMethod, URI(request.getUri()), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+    HttpRequest(request.getMethod, uri, parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
   }
 
   def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[ByteChunk]]): Option[ByteChunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
