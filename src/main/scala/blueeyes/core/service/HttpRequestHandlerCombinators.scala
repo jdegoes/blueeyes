@@ -177,36 +177,31 @@ trait HttpRequestHandlerCombinators{
    */
   def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull2[T, S]): HttpRequestHandler2[T, S] = method(HttpMethods.GET) {
     new HttpRequestHandler2[T, S] {
-      private def extractRange(headers: Map[String, String]): (List[(Long, Long)], String) = {
-        val rangeStr = headers.find(_._1.toLowerCase == "range").map(_._2).getOrElse("")
+      private def extractRange(headers: Map[String, String]): Option[(List[(Long, Long)], String)] = {
+        headers.collect {
+          case (name, value) if name.toLowerCase == "range" => 
+            value.split("=").toList match {
+              case unit :: specifiers :: Nil => Tuple2(
+                specifiers.split(",").toList.map { 
+                  _.split("-").toList.map(_.trim.toLong) match {
+                    case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
+                    case _ => sys.error("missing upper and/or lower bound for range")
+                  }
+                }, 
+                unit.trim.toLowerCase
+              )
 
-        rangeStr.split("=").toList match {
-          case unit :: specifiers :: Nil =>
-            (specifiers.split(",").toList.map { range =>
-              range.split("-").toList.map(_.trim.toLong) match {
-                case lowerBound :: upperBound :: Nil => (lowerBound, upperBound)
-
-                case _ => sys.error("missing upper and/or lower bound for range")
-              }
-            }, unit.trim.toLowerCase)
-
-          case _ => sys.error("missing range specifier")
-        }
+              case _ => sys.error("missing range specifier")
+            }
+        }.headOption
       }
 
       def isDefinedAt(r: HttpRequest[T]): Boolean = {
-        if (r.headers.raw.exists(_._1.toLowerCase == "range")) {
-          val range = extractRange(r.headers.raw)
-
-          h(range._1, range._2).isDefinedAt(r)
-        }
-        else false
+        (extractRange(r.headers.raw)).map(h.tupled).exists(_.isDefinedAt(r))
       }
 
       def apply(r: HttpRequest[T]): Future[HttpResponse[S]] = {
-        val range = extractRange(r.headers.raw)
-
-        h(range._1, range._2).apply(r)
+        extractRange(r.headers.raw).map(h.tupled).get.apply(r)
       }
     }
   }
