@@ -80,6 +80,15 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
     request.remoteHost  mustEqual(Some(forwardedAddress.getAddress()))
   }
 
+  "use host name from Host header" in {
+    val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
+    nettyRequest.addHeader("Host", "google.com")
+
+    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
+
+    request.uri mustEqual(URI("http://google.com/bar?param1=value1"))
+  }
+
   "convert netty NettyHttpRequest with multiple headers values to service HttpRequest" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
     nettyRequest.addHeader("Retry-After", "1")
