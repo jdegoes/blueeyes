@@ -21,7 +21,8 @@ import net.lag.configgy.ConfigMap
 trait ConfigurableMongo extends MongoImplicits{
   private lazy val mockMongo = new MockMongo()
   def mongo(mongoConfig: ConfigMap): Mongo =  {
-    val mongo = if (sys.props.getOrElse(ConfigurableMongo.MongoSwitch, "true").toBoolean) mockMongo else new RealMongo(mongoConfig)
+    val isMock = sys.props.getOrElse(ConfigurableMongo.MongoSwitch, "false").toBoolean
+    val mongo  = if (isMock) mockMongo else new RealMongo(mongoConfig)
 
     drop(mongo, mongoConfig.configMap("dropBeforeStart"))
 
