@@ -11,6 +11,8 @@ import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 
 class BlueEyesServiceSpecification extends Specification with HttpServer with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self: HttpServer =>
+  private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
+  private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
   shareVariables()
 
   doBeforeSpec {
@@ -19,6 +21,7 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
   }
 
   doAfterSpec {
+    resetMockCongiguration
     stopServer
   }
 
@@ -29,6 +32,11 @@ class BlueEyesServiceSpecification extends Specification with HttpServer with bl
   def setMockCongiguration = {
     sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
     sys.props.getOrElseUpdate (ConfigurableHttpClient.HttpClientSwitch, "true")
+  }
+
+  def resetMockCongiguration = {
+    sys.props.put(ConfigurableMongo.MongoSwitch, mongoSwitch.getOrElse(null))
+    sys.props.put(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch.getOrElse(null))
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()

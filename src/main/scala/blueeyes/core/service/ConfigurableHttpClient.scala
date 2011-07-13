@@ -7,12 +7,12 @@ import engines.HttpClientXLightWeb
 
 trait ConfigurableHttpClient{
 
-  private val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "true").toBoolean
-  lazy val httpClient: HttpClient[ByteChunk] = if (isMock) mockClient(mockServer) else realClient
+  private val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "false").toBoolean
+  lazy val httpClient: HttpClientByteChunk = if (isMock) mockClient(mockServer) else realClient
 
-  protected def realClient: HttpClient[ByteChunk] = new HttpClientXLightWeb{}
+  protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb{}
 
-  private def mockClient(h: HttpRequestHandler[ByteChunk]): HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
+  private def mockClient(h: HttpRequestHandler[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
     def isDefinedAt(r: HttpRequest[ByteChunk]) = h.isDefinedAt(r)
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.apply(r)
   }
