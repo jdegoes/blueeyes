@@ -255,29 +255,29 @@ object MongoFilterImplicits extends MongoFilterImplicits
  */
 case class MongoFilterBuilder(jpath: JPath) {
   import MongoFilterImplicits._
-  def === [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $eq, value)
+  def === [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $eq, value)
 
-  def !== [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $ne, value)
+  def !== [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $ne, value)
 
-  def > [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $gt, value)
+  def >  [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $gt, value)
 
-  def >= [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $gte, value)
+  def >= [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $gte, value)
 
-  def < [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $lt, value)
+  def <  [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $lt, value)
 
-  def <= [T](value: MongoPrimitive): MongoFilter = MongoFieldFilter(jpath, $lte, value)
+  def <= [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $lte, value)
 
-  def anyOf[T <: MongoPrimitive](items: T*): MongoFilter = MongoFieldFilter(jpath, $in, List(items: _*))
+  def anyOf[T <: MongoPrimitive](items: T*) = MongoFieldFilter(jpath, $in, List(items: _*))
 
-  def contains[T <: MongoPrimitive](items: T*): MongoFilter = MongoFieldFilter(jpath, $all, List(items: _*))
+  def contains[T <: MongoPrimitive](items: T*) = MongoFieldFilter(jpath, $all, List(items: _*))
 
-  def hasSize(length: Int): MongoFilter =  MongoFieldFilter(jpath, $size, length)
+  def hasSize(length: Int) =  MongoFieldFilter(jpath, $size, length)
 
-  def isDefined: MongoFilter = MongoFieldFilter(jpath, $exists, true)
+  def isDefined = MongoFieldFilter(jpath, $exists, true)
 
   def regex(regex: String, options: String = "") = MongoFieldFilter(jpath, $regex, JObject(List(JField("$regex", JString(regex)), JField("$options", JString(options)))))
 
-  def hasType[T](implicit witness: MongoPrimitiveWitness[T]): MongoFilter = MongoFieldFilter(jpath, $type, witness.typeNumber)
+  def hasType[T](implicit witness: MongoPrimitiveWitness[T]) = MongoFieldFilter(jpath, $type, witness.typeNumber)
 }
 
 private[mongo] object JPathExtension{

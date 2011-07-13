@@ -51,8 +51,8 @@ class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicit
       (orFilter).unary_! mustEqual (filter1.unary_! && filter2.unary_!)
     }
     "several or does not create recursion" in{
-      ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(ListSet.empty + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
-      ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(ListSet.empty + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
+      ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(ListSet.empty[MongoFilter] + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
+      ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(ListSet.empty[MongoFilter] + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
     }
 
     "2 unary_! results to the same filter" in{
