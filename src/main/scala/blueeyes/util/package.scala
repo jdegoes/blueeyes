@@ -1,6 +1,6 @@
 package blueeyes
 
-import org.joda.time.{DateTime, Instant}
+import org.joda.time.{DateTime, Instant, ReadableDuration}
 import scala.math.Ordering
 
 package object util {
@@ -10,6 +10,10 @@ package object util {
 
   implicit object InstantOrdering extends Ordering[Instant] {
     override def compare(d1: Instant, d2: Instant) = d1.compareTo(d2)
+  }
+
+  implicit object ReadableDurationOrdering extends Ordering[ReadableDuration] {
+    override def compare(d1: ReadableDuration, d2: ReadableDuration) = d1.compareTo(d2)
   }
 }
 
