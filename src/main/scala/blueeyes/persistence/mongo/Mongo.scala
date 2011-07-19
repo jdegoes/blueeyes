@@ -69,14 +69,14 @@ abstract class Database {
     }
   }
 
+  def disconnect()
+
   implicit protected def databaseCollection(mongoCollection: MongoCollection) = mongoCollection match{
     case MongoCollectionReference(name)         => collection(name)
     case MongoCollectionHolder(realCollection, name, database)  => realCollection
   }
 
   protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]
-
-  protected def disconnect()
 
   protected def collection(collectionName: String): DatabaseCollection
 }
