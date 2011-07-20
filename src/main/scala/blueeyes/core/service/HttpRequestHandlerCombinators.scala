@@ -489,11 +489,11 @@ trait HttpRequestHandlerCombinators{
    */
   def xml[T](h: HttpRequestHandler[NodeSeq])(implicit b: Bijection[T, NodeSeq]): HttpRequestHandler[T] = contentType(MimeTypes.text/MimeTypes.xml) { h }
 
-  def forwarding[T](f: HttpRequest[T] => HttpRequest[T])(implicit httpClient: HttpClient[T]) = (h: HttpRequestHandler[T]) => new HttpRequestHandler[T] {
+  def forwarding[T](f: HttpRequest[T] => Option[HttpRequest[T]])(implicit httpClient: HttpClient[T]) = (h: HttpRequestHandler[T]) => new HttpRequestHandler[T] {
     def isDefinedAt(r: HttpRequest[T]): Boolean = h.isDefinedAt(r)
 
     def apply(r: HttpRequest[T]): Future[HttpResponse[T]] = {
-      Future.async(httpClient(f(r)))
+      Future.async(f(r).foreach(httpClient))
       h(r)
     }
   }

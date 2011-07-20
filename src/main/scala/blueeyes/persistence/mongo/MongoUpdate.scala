@@ -84,6 +84,10 @@ sealed trait MongoUpdate { self =>
   def toJValue: JObject;
 }
 
+object MongoUpdate {
+  val Empty: MongoUpdate = MongoUpdateNothing
+}
+
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
   def toJValue = value
 }
