@@ -7,7 +7,7 @@ import engines.HttpClientXLightWeb
 
 trait ConfigurableHttpClient{
 
-  lazy val httpClient: HttpClientByteChunk = {
+  lazy implicit val httpClient: HttpClientByteChunk = {
     val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "false").toBoolean
     if (isMock) mockClient(mockServer) else realClient
   }

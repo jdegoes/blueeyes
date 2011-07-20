@@ -21,7 +21,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Adds a single patch to this collection of patches.
    */
   def + (patch: (MongoFilter, MongoUpdate)): MongoPatches = copy(
-    patches = this.patches <+> Map(patch)
+    patches = this.patches |+| Map(patch)
   )
 
   def + (popt: Option[(MongoFilter, MongoUpdate)]): MongoPatches = popt.map(this + _).getOrElse(this)
