@@ -656,26 +656,26 @@ class BaseHaXeCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
 
-  private def renderHaXe(jvalue: JValue): String = {
-    def escapeHaXeString(s: String): String = {
-      val buf = new StringBuilder
-      for (i <- 0 until s.length) {
-        val c = s.charAt(i)
-        buf.append(c match {
-          case '"'  => "\\\""
-          case '\\' => "\\\\"
-          case '\b' => "\\b"
-          case '\f' => "\\f"
-          case '\n' => "\\n"
-          case '\r' => "\\r"
-          case '\t' => "\\t"
-          case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
-          case c => c
-        })
-      }
-      buf.toString
+  private def escapeHaXeString(s: String): String = {
+    val buf = new StringBuilder
+    for (i <- 0 until s.length) {
+      val c = s.charAt(i)
+      buf.append(c match {
+        case '"'  => "\\\""
+        case '\\' => "\\\\"
+        case '\b' => "\\b"
+        case '\f' => "\\f"
+        case '\n' => "\\n"
+        case '\r' => "\\r"
+        case '\t' => "\\t"
+        case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
+        case c => c
+      })
     }
+    buf.toString
+  }
 
+  private def renderHaXe(jvalue: JValue): String = {
     jvalue match {
       case JNothing     => "JNull"
       case JNull        => "JNull"

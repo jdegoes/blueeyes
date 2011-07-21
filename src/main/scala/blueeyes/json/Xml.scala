@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes 
+package json 
 
 /** Functions to convert between JSON and XML.
  */
@@ -169,28 +169,24 @@ object Xml {
    * </pre>
    */
   def toXml(json: JValue): NodeSeq = {
-    def toXml(name: String, f: JField) = new XmlNode(name, toXml(f.name, f.value))
-
-    def toXml(name: String, json: JValue): NodeSeq = json match {
-      case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
-      case JArray(xs) => xs flatMap { v => toXml(name, v) }
+    def toJValueXml(name: String, json: JValue): NodeSeq = json match {
+      case JObject(fields) => new XmlNode(name, fields flatMap { f => toJValueXml(f.name, f.value) })
+      case JArray(xs) => xs flatMap { v => toJValueXml(name, v) }
       case JDouble(x) => new XmlElem(name, x.toString)
       case JString(x) => new XmlElem(name, x)
       case JBool(x) => new XmlElem(name, x.toString)
+      case JInt(x) => new XmlElem(name, x.toString)
       case JNull => new XmlElem(name, "null")
       case JNothing => Text("")
     }
 
     json match {
-      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
-      case x => toXml("root", x)
+      case JObject(fields) => fields flatMap { f => toJValueXml(f.name, f.value) }
+      case x => toJValueXml("root", x)
     }
   }
 
   private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, xml.Null, TopScope, children :_*)
 
   private[json] class XmlElem(name: String, value: String) extends Elem(null, name, xml.Null, TopScope, Text(value))
-}
-
-}
 }

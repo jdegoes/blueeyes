@@ -151,51 +151,82 @@ object JsonParser {
       case x => x
     }
 
-    def closeBlock(v: JValue) {
-      vals.peekOption match {
-        case Some(f: JField) =>
-          val field = vals.pop(classOf[JField])
-          val newField = JField(field.name, v)
-          val obj = vals.peek(classOf[JObject])
-          vals.replace(JObject(newField :: obj.fields))
-        case Some(o: JObject) => v match {
-          case x: JField => vals.replace(JObject(x :: o.fields))
-          case _ => p.fail("expected field but got " + v)
+    def closeBlock(v: Either[JValue, JField]) {
+      vals.popOption map {
+        case Right(topField @ JField(name, _)) => v match {
+          case Left(jvalue) => vals.push(JObject(JField(name, jvalue) :: vals.pop(JObject).fields))
+          case Right(jfield) => p.fail("Two consecutive JFields on parser stack: " + topField + ", " + jfield)
         }
-        case Some(a: JArray) => vals.replace(JArray(v :: a.elements))
-        case Some(x) => p.fail("expected field, array or object but got " + x)
-        case None => root = Some(reverse(v))
+        case Left(JObject(fields)) => v match {
+          case Left(jvalue) => p.fail("Expected JField but got " + jvalue)
+          case Right(jfield) => vals.push(JObject(jfield :: fields))
+        }
+
+        case Left(JArray(elements)) => v match {
+          case Left(jvalue) => vals.push(JArray(jvalue :: elements))
+          case Right(jfield) => p.fail("Cannot add " + jfield + " to JArray")
+        }
+
+        case Left(jvalue) => p.fail("Expected JArray, JObject, or JField but got " + jvalue)
+      } getOrElse {
+        root = v match {
+          case Left(jvalue) => Some(reverse(jvalue))
+          case Right(jfield) => p.fail("Root of tree cannot be a JField.")
+        }
       }
+          
+//      vals.peekOption match {
+//        case Some(Left(f: JField) =>
+//          val field = vals.pop(classOf[JField])
+//          val newField = JField(field.name, v)
+//          val obj = vals.peek(classOf[JObject])
+//          vals.replace(JObject(newField :: obj.fields))
+//        case Some(o: JObject) => v match {
+//          case x: JField => vals.replace(JObject(x :: o.fields))
+//          case _ => p.fail("expected field but got " + v)
+//        }
+//        case Some(a: JArray) => vals.replace(JArray(v :: a.elements))
+//        case Some(x) => p.fail("expected field, array or object but got " + x)
+//        case None => root = Some(reverse(v))
+//      }
     }
 
-    def newValue(v: JValue) {
-      if (vals.peekOption.isEmpty) root = Some(v)
-      else {
-        vals.peek(classOf[JValue]) match {
-          case f: JField =>
-            vals.pop(classOf[JField])
-            val newField = JField(f.name, v)
-            val obj = vals.peek(classOf[JObject])
-            vals.replace(JObject(newField :: obj.fields))
-          case a: JArray => vals.replace(JArray(v :: a.elements))
-          case _ => p.fail("expected field or array")
-        }
+    def newValue(jvalue: JValue) {
+      vals.popOption map {
+        case Right(JField(name, _)) => vals.pushField(JField(name, jvalue))
+        case Left(JArray(elements)) => vals.push(JArray(jvalue :: elements))
+        case Left(jvalue) => p.fail("Expected JArray or JField but got " + jvalue)
+      } getOrElse {
+        root = Some(jvalue)
       }
+
+//      if (vals.peekOption.isEmpty) root = Some(v)
+//      else {
+//        vals.peek(classOf[JValue]) match {
+//          case f: JField =>
+//            vals.pop(classOf[JField])
+//            val newField = JField(f.name, v)
+//            val obj = vals.peek(classOf[JObject])
+//            vals.replace(JObject(newField :: obj.fields))
+//          case a: JArray => vals.replace(JArray(v :: a.elements))
+//          case _ => p.fail("expected field or array")
+//        }
+//      }
     }
 
     do {
       token = p.nextToken
       token match {
         case OpenObj          => vals.push(JObject(Nil))
-        case FieldStart(name) => vals.push(JField(name, null))
+        case FieldStart(name) => vals.pushField(JField(name, null))
         case StringVal(x)     => newValue(JString(x))
         case IntVal(x)        => newValue(JInt(x))
         case DoubleVal(x)     => newValue(JDouble(x))
         case BoolVal(x)       => newValue(JBool(x))
         case NullVal          => newValue(JNull)
-        case CloseObj         => closeBlock(vals.pop(classOf[JValue]))
+        case CloseObj         => closeBlock(vals.pop)
         case OpenArr          => vals.push(JArray(Nil))
-        case CloseArr         => closeBlock(vals.pop(classOf[JArray]))
+        case CloseArr         => closeBlock(vals.pop)
         case End              =>
       }
     } while (token != End)
@@ -205,19 +236,18 @@ object JsonParser {
 
   private class ValStack(parser: Parser) {
     import java.util.LinkedList
-    private[this] val stack = new LinkedList[JValue]()
+    private[this] val stack = new LinkedList[Either[JValue, JField]]()
 
-    def pop[A <: JValue](expectedType: Class[A]) = convert(stack.poll, expectedType)
-    def push(v: JValue) = stack.addFirst(v)
-    def peek[A <: JValue](expectedType: Class[A]) = convert(stack.peek, expectedType)
-    def replace[A <: JValue](newTop: JValue) = stack.set(0, newTop)
+    def pop = stack.poll
 
-    private def convert[A <: JValue](x: JValue, expectedType: Class[A]): A = {
-      if (x == null) parser.fail("expected object or array")
-      try { x.asInstanceOf[A] } catch { case _: ClassCastException => parser.fail("unexpected " + x) }
+    def popOption = if (stack.isEmpty) None else Some(stack.poll)
+
+    def pop[A <: JValue](expectedType: JManifest[A]): A = (stack.poll.left.toOption.flatMap(_ as expectedType)) getOrElse {
+      parser.fail("Expected " + expectedType)
     }
 
-    def peekOption = if (stack isEmpty) None else Some(stack.peek)
+    def push(v: JValue) = stack.addFirst(Left(v))
+    def pushField(v: JField) = stack.addFirst(Right(v))
   }
 
   class Parser(buf: Buffer) {

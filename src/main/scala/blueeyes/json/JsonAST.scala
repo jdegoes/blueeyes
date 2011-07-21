@@ -74,6 +74,10 @@ object JsonAST {
      */
     def as[A <: JValue](implicit m : JManifest[A]): Option[A] = m(this)
 
+    def asUnsafe[A <: JValue](implicit m: JManifest[A]): A = m(this).getOrElse {
+      sys.error("Expected " + m + " but got " + this)
+    }
+
     /** 
      * Does a breadth-first traversal of all descendant JValues, beginning
      * with this one.
