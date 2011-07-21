@@ -33,15 +33,26 @@ object XmlExamples extends Specification {
 
   "Conversion transformation example 1" in {
     val json = toJson(users1).transform {
-      case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+      case JObject(fields) => JObject(
+        fields.map {
+          case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+          case field => field
+        }
+      )
     }
+    
     compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":1,"name":"Harry"},{"id":2,"name":"David","nickname":"Dave"}]}}"""
   }
 
   "Conversion transformation example 2" in {
     val json = toJson(users2).transform {
-      case JField("id", JString(s)) => JField("id", JInt(s.toInt))
-      case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
+      case JObject(fields) => JObject(
+        fields map {
+          case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+          case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
+          case field => field
+        }
+      )
     }
     compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"}]}}"""
   }
@@ -52,14 +63,15 @@ object XmlExamples extends Specification {
   }
 
   "Lotto example which flattens number arrays into encoded string arrays" in {
-    def flattenArray(nums: List[JValue]) = JString(nums.map(_.values).mkString(","))
+    def flattenArray(nums: List[JValue]) = JString(nums.collect{case JInt(v) => v}.mkString(","))
 
     val printer = new scala.xml.PrettyPrinter(100,2)
     val lotto: JObject = LottoExampleJson
-    val xml = toXml(lotto.transform {
+    val xml = toXml(JObject(lotto.fields.map {
       case JField("winning-numbers", JArray(nums)) => JField("winning-numbers", flattenArray(nums))
       case JField("numbers", JArray(nums)) => JField("numbers", flattenArray(nums))
-    })
+      case jfield => jfield
+    }))
 
     printer.format(xml(0)) mustEqual printer.format(
       <lotto>
@@ -151,10 +163,20 @@ object XmlExamples extends Specification {
   // { ..., "fieldName": "", "attrName":"someValue", ...}      ->
   // { ..., "fieldName": { "attrName": f("someValue") }, ... }
   def attrToObject(fieldName: String, attrName: String, f: JString => JValue)(json: JValue) = json.transform {
-    case JField(n, v: JString) if n == attrName => JObject(JField(n, f(v)) :: Nil)
-    case JField(n, JString("")) if n == fieldName => JNothing
+    case JObject(fields) => JObject(
+      fields.flatMap {
+        case JField(n, v: JString) if n == attrName => Some(JField(n, f(v)))
+        case JField(n, JString("")) if n == fieldName => None
+        case field => Some(field)
+      }
+    )
   } transform {
-    case JField(n, x: JObject) if n == attrName => JField(fieldName, x)
+    case JObject(fields) => JObject(
+      fields.map {
+        case JField(n, x: JObject) if n == attrName => JField(fieldName, x)
+        case field => field
+      }
+    )
   }
 
   "Example with multiple attributes, multiple nested elements " in  {

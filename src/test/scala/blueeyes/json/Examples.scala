@@ -39,30 +39,33 @@ object Examples extends Specification {
   }
 
   "Transformation example" in {
-    val uppercased = parse(person).transform { case JField(n, v) => JField(n.toUpperCase, v) }
+    val uppercased = parse(person).transform { 
+      case JObject(fields) => JObject(fields.map(field => JField(field.name.toUpperCase, field.value))) 
+    }
+
     val rendered = compact(render(uppercased))
     rendered mustEqual
       """{"PERSON":{"NAME":"Joe","AGE":35,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33}}}}"""
   }
 
   "Remove example" in {
-    val json = parse(person) remove { _ == JField("name", "Marilyn") }
+    val json = parse(person) removeField { _ == JField("name", "Marilyn") }
     compact(render(json \\ "name")) mustEqual "\"Joe\""
   }
 
   "Queries on person example" in {
     val json = parse(person)
     val filtered = json filter {
-      case JField("name", _) => true
+      case JObject(fields) => fields.exists(_.name == "name")
       case _ => false
     }
-    filtered mustEqual List(JField("name", JString("Joe")), JField("name", JString("Marilyn")))
+    filtered.map(_ \ "name") mustEqual List(JString("Joe"), JString("Marilyn"))
 
     val found = json find {
-      case JField("name", _) => true
+      case JObject(fields) => fields.exists(_.name == "name")
       case _ => false
     }
-    found mustEqual Some(JField("name", JString("Joe")))
+    found.map(_ \ "name") mustEqual Some(JString("Joe"))
   }
 
   "Object array example" in {
@@ -70,18 +73,18 @@ object Examples extends Specification {
     compact(render(json \ "children" \ "name")) mustEqual """["Mary","Mazy"]"""
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"Mazy\""
-    (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
+    (for (JObject(fields) <- json; JField("name", JString(y)) <- fields) yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
   "Unbox values using XPath-like type expression" in {
-    parse(objArray) \ "children" \\ classOf[JInt] mustEqual List(5, 3)
-    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
-    parse(lotto) \\ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    parse(objArray) \ "children" \\ JInt mustEqual List(5, 3)
+    parse(lotto) \ "lotto" \ "winning-numbers" \ JInt mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    parse(lotto) \\ "winning-numbers" \ JInt mustEqual List(2, 45, 34, 23, 7, 5, 3)
   }
 
   "Quoted example" in {
     val json = parse(quoted)
-    List("foo \" \n \t \r bar") mustEqual json.values
+    (json asUnsafe JArray).elements mustEqual List(JString("foo \" \n \t \r bar"))
   }
 
   "Null example" in {
@@ -108,13 +111,16 @@ object Examples extends Specification {
   }
 
   "JSON building example" in {
-    val json = concat(JField("name", JString("joe")), JField("age", JInt(34))) ++ concat(JField("name", JString("mazy")), JField("age", JInt(31)))
+    val json = concat(JObject(JField("name", JString("joe")) :: JField("age", JInt(34)) :: Nil)) ++ 
+               concat(JObject(JField("name", JString("mazy")) :: JField("age", JInt(31)) :: Nil))
     compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
   }
 
   "JSON building with implicit primitive conversions example" in {
     import Implicits._
-    val json = concat(JField("name", "joe"), JField("age", 34)) ++ concat(JField("name", "mazy"), JField("age", 31))
+    val json = concat(JObject(JField("name", "joe") :: JField("age", 34) :: Nil)) ++ 
+               concat(JObject(JField("name", "mazy") :: JField("age", 31) :: Nil))
+
     compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
   }
 

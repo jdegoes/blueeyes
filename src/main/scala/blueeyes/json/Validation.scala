@@ -36,13 +36,13 @@ object Validation {
       case x @ _ => Some(JPathValue(path + "." + name, x))
     }
 
-    def as[A <: JValue](implicit manifest: JManifest[A]): Option[A] = manifest(value)
+    def as[A <: JValue](implicit manifest: JManifest{type JType = A}): Option[A] = manifest(value)
     
     /**
      * Returns the element as a JValue of the specified class, throwing a 
      * ValidationError as necessary.
      */
-    def asUnsafe[A <: JValue](implicit manifest: JManifest[A]): A = manifest(value).getOrElse {
+    def asUnsafe[A <: JValue](implicit manifest: JManifest{type JType = A}): A = manifest(value).getOrElse {
       throw ValidationError("Expected ${path} to have type " + manifest + " but was: " + value, path)
     }
     

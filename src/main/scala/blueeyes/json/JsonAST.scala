@@ -32,6 +32,12 @@ object JsonAST {
   def concat(xs: JValue*) = xs.foldLeft(JNothing: JValue)(_ ++ _)
 
   /**
+   * Typesafe casting for jvalues via a partial function. This is here mostly to help
+   * out type inference in the JManifest implementations
+   */
+  def cast[A <: JValue](jvalue: JValue, pf: PartialFunction[JValue, A]) = pf.lift.apply(jvalue)
+
+  /**
    * Data type for Json AST.
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable {
@@ -72,9 +78,9 @@ object JsonAST {
       * (json \ "foo" as JString).map(_.value).getOrElse(defaultFieldValue)
       * </pre>
      */
-    def as[A <: JValue](implicit m : JManifest[A]): Option[A] = m(this)
+    def as[A <: JValue](implicit m : JManifest{type JType = A}): Option[A] = m(this)
 
-    def asUnsafe[A <: JValue](implicit m: JManifest[A]): A = m(this).getOrElse {
+    def asUnsafe[A <: JValue](implicit m: JManifest{type JType = A}): A = m(this).getOrElse {
       sys.error("Expected " + m + " but got " + this)
     }
 
@@ -135,13 +141,13 @@ object JsonAST {
      * json \ classOf[JInt]
      * </pre>
      */
-    def \[A <: JValue](implicit m: JManifest[A]): List[A] = this match {
+    def \[A <: JValue](implicit m: JManifest{type JType = A}): List[A] = this match {
       case JArray(values)  => values.flatMap(m(_))
       case JObject(fields) => fields.flatMap(f => m(f.value))
       case _ => Nil
     }
 
-    def \[A <: JValue](clazz: Class[A])(implicit m: JManifest[A]): List[A] = this \ m
+    def \[A <: JValue](clazz: Class[A])(implicit m: JManifest{type JType = A}): List[A] = this \ m
       
     /** XPath-like expression to query JSON fields by type. Returns all matching fields.
      * <p>
@@ -149,7 +155,7 @@ object JsonAST {
      * json \\ classOf[JInt]
      * </pre>
      */
-    def \\[A <: JValue](implicit m: JManifest[A]): List[A] = m(this).toList ::: (
+    def \\[A <: JValue](implicit m: JManifest{type JType = A}): List[A] = m(this).toList ::: (
       this match {
         case JArray(values)  => values.flatMap(_ \\ m)  
         case JObject(fields) => fields.map(_.value).flatMap(_ \\ m)
@@ -158,7 +164,7 @@ object JsonAST {
     )
 
     // legacy syntax support
-    def \\[A <: JValue](clazz: Class[A])(implicit m: JManifest[A]): List[A] = this \\ m
+    def \\[A <: JValue](clazz: Class[A])(implicit m: JManifest{type JType = A}): List[A] = this \\ m
 
     /** Gets the specified value located at the terminal of the specified path.
      * <p>
@@ -484,15 +490,22 @@ object JsonAST {
     def remove(p: JValue => Boolean): JValue = this mapUp {
       x => if (p(x)) JNothing else x
     }
+
+    def removeField(f: JField => Boolean): JValue = this mapUp {
+      case JObject(fields) => JObject(fields.filter(v => !f(v)))
+      case x => x
+    }
   }
 
-  sealed class JManifest[A <: JValue](f: PartialFunction[JValue, A]) extends (JValue => Option[A]) {
-    def apply(v: JValue): Option[A] = f.lift(v)
+
+  sealed trait JManifest {
+    type JType <: JValue
+    def apply(v: JValue): Option[JType] 
   }
 
   object JManifest {
-    implicit val JNothingM = new JManifest[JNothing.type]({ case JNothing => JNothing })
-    implicit val JNullM    = new JManifest[JNull.type]({ case JNull => JNull })
+    implicit val JNothingM = JNothing
+    implicit val JNullM    = JNull
     implicit val JBoolM    = JBool
     implicit val JIntM     = JInt
     implicit val JDoubleM  = JDouble
@@ -501,39 +514,57 @@ object JsonAST {
     implicit val JObjectM  = JObject
   }
 
-  implicit case object JNothing extends JValue {
+  case object JNothing extends JValue with JManifest {
+    type JType = JNothing.type
+    override def apply(v: JValue) = cast[JNothing.type](v, {case JNothing => JNothing})
     override def sort: JNothing.type = this
   }
 
-  implicit case object JNull extends JValue {
+  case object JNull extends JValue with JManifest{
+    type JType = JNull.type
+    override def apply(v: JValue) = cast[JNull.type](v, {case JNull => JNull})
     override def sort: JNull.type = this
   }
 
   case class JBool(value: Boolean) extends JValue {
     override def sort: JBool = this
   }
-  object JBool extends JManifest[JBool]({ case v: JBool => v })
+  object JBool extends JManifest {
+    type JType = JBool
+    override def apply(v: JValue) = cast(v, {case v: JBool => v})
+  }
 
   case class JInt(value: BigInt) extends JValue {
     override def sort: JInt = this  
   }
-  object JInt extends JManifest[JInt]({ case v: JInt => v })
+  object JInt extends JManifest {
+    type JType = JInt
+    override def apply(v: JValue) = cast(v, {case v: JInt => v})
+  }
 
   case class JDouble(value: Double) extends JValue {
     override def sort: JDouble = this
   }
-  object JDouble extends JManifest[JDouble]({ case v: JDouble => v })
+  object JDouble extends JManifest {
+    type JType = JDouble 
+    override def apply(v: JValue) = cast(v, {case v: JDouble => v})
+  }
 
   case class JString(value: String) extends JValue {
     override def sort: JString = this
   }
-  object JString extends JManifest[JString]({ case v: JString => v })
+  object JString extends JManifest {
+    type JType = JString
+    override def apply(v: JValue) = cast(v, {case v: JString => v})
+  }
 
   case class JArray(elements: List[JValue]) extends JValue {
     override def sort: JArray = JArray(elements.map(_.sort).sorted(JValueOrdering))
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
-  object JArray extends JManifest[JArray]({ case v: JArray => v}) {
+  object JArray extends JManifest {
+    type JType = JArray
+    override def apply(v: JValue) = cast(v, {case v: JArray => v})
     lazy val empty = JArray(Nil)
   }
 
@@ -548,7 +579,9 @@ object JsonAST {
       case _ => false
     }
   }
-  object JObject extends JManifest[JObject]({ case v: JObject => v}) {
+  object JObject extends JManifest {
+    type JType = JObject
+    override def apply(v: JValue) = cast(v, {case v: JObject => v})
     lazy val empty = JObject(Nil)
   }
 

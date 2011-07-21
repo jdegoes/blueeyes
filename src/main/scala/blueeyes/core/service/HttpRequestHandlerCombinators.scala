@@ -300,15 +300,11 @@ trait HttpRequestHandlerCombinators{
     extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
   } { h }
 
-  private def extractField[F <: JValue : JManifest](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F]): F = {
-    ((content \ s1AndDefault.identifier.name).as[F]).getOrElse(s1AndDefault.default)
-  }
-
-  def field[S, F1 <: JValue : JManifest](s1AndDefault: IdentifierWithDefault[Symbol, F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
-    extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
+  def field[S, F <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit m: JManifest{type JType = F}) = (h: F => HttpRequestHandler2[JValue, S]) => {
+    extract[JValue, S, F] { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
 
-      extractField(content, s1AndDefault)
+      ((content \ s1AndDefault.identifier.name).as[F]).getOrElse(s1AndDefault.default)
     } (h)
   }
 

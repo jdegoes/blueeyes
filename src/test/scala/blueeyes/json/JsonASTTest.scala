@@ -96,11 +96,11 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "Remove removes only matching elements (in case of a field, the field is removed)" in {
-    val removeProp = (json: JValue, x: Class[_ <: JValue]) => {
+    val removeProp = (json: JValue, x: JManifest) => {
       val removed = json remove typePredicate(x)
       val Diff(c, a, d) = json diff removed
 
-      removed.flatten.forall(_.getClass != x)
+      removed.flatten.forall(v => !x(v).isDefined)
     }
     forAll(removeProp) must pass
   }
@@ -163,8 +163,5 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     case x => x
   }
 
-  private def typePredicate(clazz: Class[_])(json: JValue) = json match {
-    case x if x.getClass == clazz => true
-    case _ => false
-  }
+  private def typePredicate(manifest: JManifest)(json: JValue) = manifest(json).isDefined
 }

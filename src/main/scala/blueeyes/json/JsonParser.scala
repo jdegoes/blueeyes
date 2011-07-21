@@ -242,7 +242,7 @@ object JsonParser {
 
     def popOption = if (stack.isEmpty) None else Some(stack.poll)
 
-    def pop[A <: JValue](expectedType: JManifest[A]): A = (stack.poll.left.toOption.flatMap(_ as expectedType)) getOrElse {
+    def pop[A <: JValue](expectedType: JManifest{type JType = A}): A = (stack.poll.left.toOption.flatMap(_ as expectedType)) getOrElse {
       parser.fail("Expected " + expectedType)
     }
 

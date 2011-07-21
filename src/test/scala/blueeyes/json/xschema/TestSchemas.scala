@@ -581,7 +581,7 @@ package data.fringe {
   trait Extractors {
     protected def extractField[T](jvalue: JValue, name: String, default: JValue, e: Extractor[T]): T = {
       try {
-        e.extract((jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default))
+        e.extract((jvalue \? name).getOrElse(default))
       }
       catch {
         case _ => e.extract(default)
@@ -609,7 +609,7 @@ package data.fringe {
     val UnionOfStringAndProductExtractor: Extractor[Any] = new Extractor[Any] {
       def extract(jvalue: JValue): Any = {
         def extract0(jvalue: JValue): Option[Any] = {
-          (jvalue --> classOf[JObject]).fields.filter(UnionOfStringAndProductExtractorFunction.isDefinedAt _) match {
+          (jvalue asUnsafe JObject).fields.filter(UnionOfStringAndProductExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(UnionOfStringAndProductExtractorFunction(field))
             case Nil => None
           }
