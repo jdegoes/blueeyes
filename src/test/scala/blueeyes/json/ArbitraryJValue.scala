@@ -43,14 +43,21 @@ trait ArbitraryJValue {
   def genFieldList = Gen.containerOfN[List, JField](listSize, genField)
   def genField = for (name <- alphaStr; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
 
-  def genJValueClass: Gen[Class[_ <: JValue]] = oneOf(
-    JNull.getClass.asInstanceOf[Class[JValue]], JNothing.getClass.asInstanceOf[Class[JValue]], classOf[JInt], 
-    classOf[JDouble], classOf[JBool], classOf[JString], classOf[JField], classOf[JArray], classOf[JObject])
+  def genJManifest: Gen[Manifest[_ <: JValue]] = oneOf(
+    JManifest.JNothingM
+    JManifest.JNullM   
+    JManifest.JBoolM   
+    JManifest.JIntM    
+    JManifest.JDoubleM 
+    JManifest.JStringM 
+    JManifest.JArrayM  
+    JManifest.JObjectM 
+  )
 
   def listSize = choose(0, 5).sample.get
 
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
   implicit def arbJObject: Arbitrary[JObject] = Arbitrary(genObject)
-  implicit def arbJValueClass: Arbitrary[Class[_ <: JValue]] = Arbitrary(genJValueClass)
+  implicit def arbJManifest: Arbitrary[JManifest[_ <: JValue]] = Arbitrary(genJManifest)
   implicit def shrinkJValueClass[T]: Shrink[T] = Shrink(x => Stream.empty)
 }
