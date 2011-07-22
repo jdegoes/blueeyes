@@ -41,6 +41,13 @@ object JsonAST {
    * Data type for Json AST.
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable {
+    type Unboxed
+
+    /**
+     * Returns an unboxed primitive representation of this data
+     */
+    def unbox: Unboxed
+
     /** Sorts the JValue according to natural ordering. This can be considered a
      * form of "normalization" to aid comparisons between different JValues.
      *
@@ -131,7 +138,7 @@ object JsonAST {
         case _ => acc
       }
 
-      JArray(find(this, Nil).map(_.value))
+      JArray(find(this, Nil).map(_.value).reverse)
     }
 
     /** XPath-like expression to query JSON fields by type. Matches only fields on
@@ -420,12 +427,15 @@ object JsonAST {
      * </pre>
      */
     def find(p: JValue => Boolean): Option[JValue] = {
-      def find(values: List[JValue]): Option[JValue] = values.find(_.find(p).isDefined)
+      def find(values: List[JValue]): Option[JValue] = values match {
+        case x :: xs => x.find(p).orElse(find(xs)) //depth first search
+        case Nil => None
+      }
 
       this match {
+        case x if p(x)  => Some(x)
         case JObject(l) => find(l.map(_.value))
         case JArray(l)  => find(l)
-        case x if p(x)  => Some(x)
         case _          => None
       }
     }
@@ -470,15 +480,13 @@ object JsonAST {
      * JArray(List(JInt(1), JInt(2), JInt(3)))
      * </pre>
      */
-    def ++(other: JValue) = {
-      (this, other) match {
-        case (JNothing, x) => x
-        case (x, JNothing) => x
-        case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
-        case (JArray(xs), v: JValue) => JArray(xs :+ v)
-        case (v: JValue, JArray(xs)) => JArray(v :: xs)
-        case (x, y) => JArray(x :: y :: Nil)
-      }
+    def ++(other: JValue) = (this, other) match {
+      case (JNothing, x) => x
+      case (x, JNothing) => x
+      case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
+      case (JArray(xs), v: JValue)  => JArray(xs :+ v)
+      case (v: JValue, JArray(xs))  => JArray(v :: xs)
+      case (x, y) => JArray(x :: y :: Nil)
     }
 
     /** Return a JSON where all elements matching the given predicate are removed.
@@ -497,7 +505,6 @@ object JsonAST {
     }
   }
 
-
   sealed trait JManifest {
     type JType <: JValue
     def apply(v: JValue): Option[JType] 
@@ -515,60 +522,78 @@ object JsonAST {
   }
 
   case object JNothing extends JValue with JManifest {
+    type Unboxed = Nothing
+    override def unbox = sys.error("Cannot unbox JNothing")
+    override def sort: JNothing.type = this
+
     type JType = JNothing.type
     override def apply(v: JValue) = cast[JNothing.type](v, {case JNothing => JNothing})
-    override def sort: JNothing.type = this
   }
 
   case object JNull extends JValue with JManifest{
+    type Unboxed = None.type
+    override def unbox = None
+    override def sort: JNull.type = this
+
     type JType = JNull.type
     override def apply(v: JValue) = cast[JNull.type](v, {case JNull => JNull})
-    override def sort: JNull.type = this
   }
 
   case class JBool(value: Boolean) extends JValue {
+    type Unboxed = Boolean
+    override def unbox = value
     override def sort: JBool = this
   }
-  object JBool extends JManifest {
+  case object JBool extends JManifest {
     type JType = JBool
     override def apply(v: JValue) = cast(v, {case v: JBool => v})
   }
 
   case class JInt(value: BigInt) extends JValue {
+    type Unboxed = BigInt
+    override def unbox = value
     override def sort: JInt = this  
   }
-  object JInt extends JManifest {
+  case object JInt extends JManifest {
     type JType = JInt
     override def apply(v: JValue) = cast(v, {case v: JInt => v})
   }
 
   case class JDouble(value: Double) extends JValue {
+    type Unboxed = Double
+    override def unbox = value
     override def sort: JDouble = this
   }
-  object JDouble extends JManifest {
+  case object JDouble extends JManifest {
     type JType = JDouble 
     override def apply(v: JValue) = cast(v, {case v: JDouble => v})
   }
 
   case class JString(value: String) extends JValue {
+    type Unboxed = String
+    override def unbox = value
     override def sort: JString = this
   }
-  object JString extends JManifest {
+  case object JString extends JManifest {
     type JType = JString
     override def apply(v: JValue) = cast(v, {case v: JString => v})
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
+    type Unboxed = List[Any]
+    override lazy val unbox = elements.map(_.unbox)
     override def sort: JArray = JArray(elements.map(_.sort).sorted(JValueOrdering))
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
-  object JArray extends JManifest {
+  case object JArray extends JManifest {
     type JType = JArray
     override def apply(v: JValue) = cast(v, {case v: JArray => v})
     lazy val empty = JArray(Nil)
   }
 
   case class JObject(fields: List[JField]) extends JValue {
+    type Unboxed = Map[String, Any]
+    override lazy val unbox = fields.map[(String, Any), Map[String, Any]](f => (f.name, f.value.unbox))(collection.breakOut)
     override def sort: JObject = JObject(fields.map(_.sort).sorted(JFieldOrdering))
 
     override lazy val hashCode = Set(this.fields: _*).hashCode
@@ -579,7 +604,7 @@ object JsonAST {
       case _ => false
     }
   }
-  object JObject extends JManifest {
+  case object JObject extends JManifest {
     type JType = JObject
     override def apply(v: JValue) = cast(v, {case v: JObject => v})
     lazy val empty = JObject(Nil)
@@ -663,12 +688,14 @@ trait JsonDSL extends Implicits {
  */
 object Printer extends Printer
 trait Printer {
+  import JsonAST._
+
+  import scala.text.Document._
+  import scala.text.{Document, DocText, DocCons, DocBreak, DocNest, DocGroup, DocNil}
+  import scala.collection.immutable.Stack
+
   import java.io._
   import java.util.IdentityHashMap
-  import scala.text.{Document, DocText, DocCons, DocBreak, DocNest, DocGroup, DocNil}
-  import scala.text.Document._
-  import scala.collection.immutable.Stack
-  import JsonAST._
 
   /** Renders JSON.
    * @see Printer#compact
@@ -686,11 +713,11 @@ trait Printer {
     case JString(s)    => text("\"" + quote(s) + "\"")
     case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
     case JObject(obj)  =>
-      val nested = break :: fields(trimObj(obj).map(render _))
+      val nested = break :: fields(trimObj(obj).map(renderField))
       text("{") :: nest(2, nested) :: break :: text("}")
   }
 
-  def render(field: JField): Document = text("\"" + quote(field.name) + "\":") :: render(field.value)
+  def renderField(field: JField): Document = text("\"" + quote(field.name) + "\":") :: render(field.value)
 
   /** Renders as Scala code, which can be copy/pasted into a lift-json scala
    * application.
@@ -704,7 +731,7 @@ trait Printer {
 
     def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
 
-    def renderField(f: JField) = text(scalaQuote(f.name) + ",") :: renderScala(f.value)
+    def renderScalaField(f: JField) = text(scalaQuote(f.name) + ",") :: renderScala(f.value)
 
     value match {
       case null => text("null")
@@ -722,8 +749,7 @@ trait Printer {
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
         case JObject(fields)  =>
-          val nested = break :: fold(intersperse(intersperse(fields.map(renderField) ::: List(text("Nil")), text("::")), break))
-
+          val nested = break :: fold(intersperse(intersperse(fields.map(renderScalaField) ::: List(text("Nil")), text("::")), break))
           nest(2, nested)
       }) :: text(")")
     }

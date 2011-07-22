@@ -29,6 +29,7 @@ trait SerializationImplicits {
   case class DeserializableJValue(jvalue: JValue) {
     def deserialize[T](implicit e: Extractor[T]): T = e(jvalue)
   }
+
   case class SerializableTValue[T](tvalue: T) {
     def serialize(implicit d: Decomposer[T]): JValue = d(tvalue)
   }

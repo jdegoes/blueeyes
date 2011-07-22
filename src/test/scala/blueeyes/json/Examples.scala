@@ -23,6 +23,66 @@ object Examples extends Specification {
   import JsonDSL._
   import JsonParser._
 
+  val lotto = """{
+    "lotto":{
+      "lotto-id":5,
+      "winning-numbers":[2,45,34,23,7,5,3],
+      "winners":[ {
+        "winner-id":23,
+        "numbers":[2,45,34,23,3, 5]
+      },{
+        "winner-id" : 54 ,
+        "numbers":[ 52,3, 12,11,18,22 ]
+      }]
+    }
+  }"""
+
+  val person = """{
+    "person": {
+      "name": "Joe",
+      "age": 35,
+      "spouse": {
+        "person": {
+          "name": "Marilyn",
+          "age": 33
+        }
+      }
+    }
+  }"""
+
+  val personDSL =
+    ("person" ->
+      ("name" -> "Joe") ~
+      ("age" -> 35) ~
+      ("spouse" ->
+        ("person" ->
+          ("name" -> "Marilyn") ~
+          ("age" -> 33)
+        )
+      )
+    )
+
+  val objArray = """{ 
+    "name": "joe",
+    "address": {
+      "street": "Bulevard",
+      "city": "Helsinki"
+    },
+    "children": [
+      {
+        "name": "Mary",
+        "age": 5
+      },
+      {
+        "name": "Mazy",
+        "age": 3
+      }
+    ]
+  }"""
+
+  val nulls = ("f1" -> null) ~ ("f2" -> List(null, "s"))
+  val quoted = """["foo \" \n \t \r bar"]"""
+  val symbols = ("f1" -> 'foo) ~ ("f2" -> 'bar)
   "Lotto example" in {
     val json = parse(lotto)
     val renderedLotto = compact(render(json))
@@ -35,6 +95,7 @@ object Examples extends Specification {
     json mustEqual parse(renderedPerson)
     render(json) mustEqual render(personDSL)
     compact(render(json \\ "name")) mustEqual """["Joe","Marilyn"]"""
+    (json \ "person" \ "name") mustEqual JString("Joe")
     compact(render(json \ "person" \ "name")) mustEqual "\"Joe\""
   }
 
@@ -70,16 +131,16 @@ object Examples extends Specification {
 
   "Object array example" in {
     val json = parse(objArray)
-    compact(render(json \ "children" \ "name")) mustEqual """["Mary","Mazy"]"""
+    compact(render(json \ "children" \\ "name")) mustEqual """["Mary","Mazy"]"""
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"Mazy\""
     (for (JObject(fields) <- json; JField("name", JString(y)) <- fields) yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
   "Unbox values using XPath-like type expression" in {
-    parse(objArray) \ "children" \\ JInt mustEqual List(5, 3)
-    parse(lotto) \ "lotto" \ "winning-numbers" \ JInt mustEqual List(2, 45, 34, 23, 7, 5, 3)
-    parse(lotto) \\ "winning-numbers" \ JInt mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    (parse(objArray) \ "children" \ JInt).map(_.unbox) mustEqual List(5, 3)
+    (parse(lotto) \ "lotto" \ "winning-numbers" \ JInt).map(_.unbox) mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    (parse(lotto) \\ "winning-numbers" \ JInt).map(_.unbox) mustEqual List(2, 45, 34, 23, 7, 5, 3)
   }
 
   "Quoted example" in {
@@ -164,70 +225,4 @@ object Examples extends Specification {
     Printer.compact(renderScala(json)) mustEqual """JObject(JField("lotto",JObject(JField("lotto-id",JInt(5))::JField("winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil))::JField("winners",JArray(JObject(JField("winner-id",JInt(23))::JField("numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil))::Nil)::JObject(JField("winner-id",JInt(54))::JField("numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil))::Nil)::Nil))::Nil))::Nil)"""
   }
 
-  val lotto = """
-{
-  "lotto":{
-    "lotto-id":5,
-    "winning-numbers":[2,45,34,23,7,5,3],
-    "winners":[ {
-      "winner-id":23,
-      "numbers":[2,45,34,23,3, 5]
-    },{
-      "winner-id" : 54 ,
-      "numbers":[ 52,3, 12,11,18,22 ]
-    }]
-  }
-}
-"""
-
-  val person = """
-{
-  "person": {
-    "name": "Joe",
-    "age": 35,
-    "spouse": {
-      "person": {
-        "name": "Marilyn",
-        "age": 33
-      }
-    }
-  }
-}
-"""
-
-  val personDSL =
-    ("person" ->
-      ("name" -> "Joe") ~
-      ("age" -> 35) ~
-      ("spouse" ->
-        ("person" ->
-          ("name" -> "Marilyn") ~
-          ("age" -> 33)
-        )
-      )
-    )
-
-  val objArray =
-"""
-{ "name": "joe",
-  "address": {
-    "street": "Bulevard",
-    "city": "Helsinki"
-  },
-  "children": [
-    {
-      "name": "Mary",
-      "age": 5
-    },
-    {
-      "name": "Mazy",
-      "age": 3
-    }
-  ]
-}
-"""
-
-  val nulls = ("f1" -> null) ~ ("f2" -> List(null, "s"))
-  val quoted = """["foo \" \n \t \r bar"]"""
-  val symbols = ("f1" -> 'foo) ~ ("f2" -> 'bar)
 }

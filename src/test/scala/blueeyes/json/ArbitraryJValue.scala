@@ -28,12 +28,13 @@ trait ArbitraryJValue {
   def genJDouble: Gen[JDouble] = arbitrary[Double].map(JDouble(_))
   def genJBool:   Gen[JBool]   = arbitrary[Boolean].map(JBool(_))
   def genJString: Gen[JString] = alphaStr.map(JString(_))
-  def genSimple: Gen[JValue] = oneOf(
-    value(JNull), 
+  def genSimple:  Gen[JValue] = oneOf(
+    Gen.value[JValue](JNull), 
     genJInt,
     genJDouble,
     genJBool,
-    genJString)
+    genJString
+  )
 
 
   def genArray: Gen[JValue] = for (l <- genList) yield JArray(l)
