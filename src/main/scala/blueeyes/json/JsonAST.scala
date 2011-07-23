@@ -16,8 +16,10 @@
 
 package blueeyes.json
 
-import scalaz.NonEmptyList
 import blueeyes.json.xschema.DefaultOrderings._
+
+import scala.annotation.tailrec
+import scalaz.NonEmptyList
 
 object JsonAST {
   import scala.text.{Document, DocText}
@@ -40,7 +42,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable {
+  sealed abstract class JValue extends Product with Merge.Mergeable with Diff.Diffable {
     type Unboxed
 
     /**
@@ -701,57 +703,57 @@ trait Printer {
    * @see Printer#compact
    * @see Printer#pretty
    */
-  def render(value: JValue): Document = value match {
-    case null          => text("null")
-    case JBool(true)   => text("true")
-    case JBool(false)  => text("false")
-    case JDouble(n)    => text(n.toString)
-    case JInt(n)       => text(n.toString)
-    case JNull         => text("null")
-    case JNothing      => sys.error("can't render 'nothing'")
-    case JString(null) => text("null")
-    case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
-    case JObject(obj)  =>
-      val nested = break :: fields(trimObj(obj).map(renderField))
-      text("{") :: nest(2, nested) :: break :: text("}")
+  def render(value: JValue): Document = {
+    def renderField(field: JField): Document = text("\"" + quote(field.name) + "\":") :: render(field.value)
+
+    value match {
+      case null          => text("null")
+      case JBool(true)   => text("true")
+      case JBool(false)  => text("false")
+      case JDouble(n)    => text(n.toString)
+      case JInt(n)       => text(n.toString)
+      case JNull         => text("null")
+      case JNothing      => sys.error("can't render 'nothing'")
+      case JString(null) => text("null")
+      case JString(s)    => text("\"" + quote(s) + "\"")
+      case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
+      case JObject(obj)  =>
+        val nested = break :: fields(trimObj(obj).map(renderField))
+        text("{") :: nest(2, nested) :: break :: text("}")
+    }
   }
 
-  def renderField(field: JField): Document = text("\"" + quote(field.name) + "\":") :: render(field.value)
 
   /** Renders as Scala code, which can be copy/pasted into a lift-json scala
    * application.
    */
   def renderScala(value: JValue): Document = {
     val Quote = "\""
+    val Escaped = List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\")
 
-    def scalaQuote(s: String) = Quote + List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\").foldLeft(s) { (str, pair) =>
-      str.replaceAll(pair._1, pair._2)
-    } + Quote
+    def scalaQuote(s: String) = Quote + (Escaped.foldLeft(s) { case (str, (a, b)) => str.replaceAll(a, b) }) + Quote
 
-    def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
+    @tailrec def intersperse(l: List[Document], i: Document): Document = l match {
+      case x :: y :: xs => intersperse((x :: i :: y) :: xs, i)
+      case x :: Nil => x
+      case Nil => DocNil
+    }
+    
+    def renderScalaField(f: JField) = text("JField") :: text("(") :: text(scalaQuote(f.name)) :: text(",") :: renderScala(f.value) :: text(")")
 
-    def renderScalaField(f: JField) = text(scalaQuote(f.name) + ",") :: renderScala(f.value)
+    def t(p: Product, doc: Document) = text(p.productPrefix) :: text("(") :: doc :: text(")")
 
     value match {
       case null => text("null")
-
-      case JNothing => text("JNothing")
-      case JNull => text("JNull")
-
-      case _ => text(value.productPrefix + "(") :: (value match {
-        case JNull | JNothing => sys.error("impossible")
-
-        case JBool(value)  => text(value.toString)
-        case JDouble(n)    => text(n.toString)
-        case JInt(n)       => text(n.toString)
-        case JString(null) => text("null")
-        case JString(s)    => text(scalaQuote(s))
-        case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
-        case JObject(fields)  =>
-          val nested = break :: fold(intersperse(intersperse(fields.map(renderScalaField) ::: List(text("Nil")), text("::")), break))
-          nest(2, nested)
-      }) :: text(")")
+      case JNothing         => text("JNothing")
+      case JNull            => text("JNull")
+      case JBool(b)         => t(value, text(b.toString))
+      case JDouble(n)       => t(value, text(n.toString))
+      case JInt(n)          => t(value, text(n.toString))
+      case JString(null)    => t(value, text("null"))
+      case JString(s)       => t(value, text(scalaQuote(s)))
+      case JArray(elements) => t(value, intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
+      case JObject(fields)  => t(value, nest(2, break :: intersperse(fields.map(renderScalaField) ::: List(text("Nil")), text("::") :: break)))
     }
   }
 
@@ -802,10 +804,9 @@ trait Printer {
    */
   def compact(d: Document): String = compact(d, new StringWriter).toString
 
-  /** Compact printing (no whitespace etc.)
-   */
-  def compact[A <: Writer](d: Document, out: A): A = {
+  def compact[A <: Writer](d: Document, out: A): A = { 
     // Non-recursive implementation to support serialization of big structures.
+    // careful - this will break if you reuse any components of the document tree
     var nodes = Stack.empty.push(d)
     val visited = new IdentityHashMap[Document, Unit]()
     while (!nodes.isEmpty) {
@@ -815,20 +816,20 @@ trait Printer {
         case DocText(s)      => out.write(s)
         case DocCons(d1, d2) =>
           if (!visited.containsKey(cur)) {
-            visited.put(cur, ())
+            visited.put(cur, ()) 
             nodes = nodes.push(cur)
             nodes = nodes.push(d1)
           } else {
             nodes = nodes.push(d2)
-          }
-        case DocBreak        =>
+          }   
+        case DocBreak        =>  
         case DocNest(_, d)   => nodes = nodes.push(d)
         case DocGroup(d)     => nodes = nodes.push(d)
-        case DocNil          =>
-      }
-    }
+        case DocNil          =>  
+      }   
+    }   
     out.flush
-    out
+    out 
   }
 
   /** Pretty printing.

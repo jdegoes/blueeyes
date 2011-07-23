@@ -10,7 +10,7 @@ package object blueeyes {
 
   def lpf[T](label: String)(f: T => Any) = (t: T) => println(label + ": " + f(t))
 
-  implicit def K[A](a: A): util.K[A] = new util.K(a)
+  implicit def KCombinator[A](a: A): util.KCombinator[A] = new util.KCombinator(a)
 }
 
 package blueeyes.util {
@@ -18,7 +18,7 @@ package blueeyes.util {
     def close(a: A): Unit
   }
 
-  case class K[A](a: A) {
+  case class KCombinator[A](a: A) {
     def ->-(f: A => Any): A = { f(a); a }
   }
 }

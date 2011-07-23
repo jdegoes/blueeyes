@@ -111,7 +111,7 @@ object Examples extends Specification {
 
   "Remove example" in {
     val json = parse(person) removeField { _ == JField("name", "Marilyn") }
-    compact(render(json \\ "name")) mustEqual "\"Joe\""
+    compact(render(json \\ "name")) mustEqual "[\"Joe\"]"
   }
 
   "Queries on person example" in {
@@ -138,9 +138,9 @@ object Examples extends Specification {
   }
 
   "Unbox values using XPath-like type expression" in {
-    (parse(objArray) \ "children" \ JInt).map(_.unbox) mustEqual List(5, 3)
+    (parse(objArray) \ "children" \\ JInt).map(_.unbox) mustEqual List(5, 3)
     (parse(lotto) \ "lotto" \ "winning-numbers" \ JInt).map(_.unbox) mustEqual List(2, 45, 34, 23, 7, 5, 3)
-    (parse(lotto) \\ "winning-numbers" \ JInt).map(_.unbox) mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    (parse(lotto) \\ "winning-numbers" \\ JInt).map(_.unbox) mustEqual List(2, 45, 34, 23, 7, 5, 3)
   }
 
   "Quoted example" in {
@@ -221,8 +221,11 @@ object Examples extends Specification {
 
   "Renders JSON as Scala code" in {
     val json = parse(lotto)
-
-    Printer.compact(renderScala(json)) mustEqual """JObject(JField("lotto",JObject(JField("lotto-id",JInt(5))::JField("winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil))::JField("winners",JArray(JObject(JField("winner-id",JInt(23))::JField("numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil))::Nil)::JObject(JField("winner-id",JInt(54))::JField("numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil))::Nil)::Nil))::Nil))::Nil)"""
+    println("json:" + json)
+    val scalaDoc = renderScala(json)
+    val rendered = Printer.compact(scalaDoc)
+    println("rendered: " + Printer.pretty(scalaDoc))
+    rendered mustEqual """JObject(JField("lotto",JObject(JField("lotto-id",JInt(5))::JField("winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil))::JField("winners",JArray(JObject(JField("winner-id",JInt(23))::JField("numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil))::Nil)::JObject(JField("winner-id",JInt(54))::JField("numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil))::Nil)::Nil))::Nil))::Nil)"""
   }
 
 }
