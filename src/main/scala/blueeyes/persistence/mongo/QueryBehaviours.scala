@@ -9,10 +9,13 @@ import scala.collection.immutable.ListSet
 import scalaz.{Validation, Success, Failure}
 
 private[mongo] object QueryBehaviours{
-  trait QueryBehaviour[T] extends Function2[DatabaseCollection, Boolean, T]
+  trait QueryBehaviour {
+    type QueryResult
+    def apply(collection: DatabaseCollection, isVerified: Boolean): QueryResult
+  }
 
-  trait MongoQueryBehaviour[T] extends QueryBehaviour[T]{
-    def apply(collection: DatabaseCollection, isVerified: Boolean = true) = {
+  trait MongoQueryBehaviour extends QueryBehaviour {
+    override def apply(collection: DatabaseCollection, isVerified: Boolean = true) = {
       val result = try{
         if (isVerified) verifiedQuery(collection) else unverifiedQuery(collection)
       } catch {
@@ -25,9 +28,9 @@ private[mongo] object QueryBehaviours{
       }
     }
 
-    private def unverifiedQuery(collection: DatabaseCollection): Validation[Throwable, T] = Success(query(collection))
+    private def unverifiedQuery(collection: DatabaseCollection): Validation[Throwable, QueryResult] = Success(query(collection))
 
-    private def verifiedQuery(collection: DatabaseCollection): Validation[Throwable, T] = try {
+    private def verifiedQuery(collection: DatabaseCollection): Validation[Throwable, QueryResult] = try {
       collection.requestStart
       val answer    = query(collection)
       val lastError = collection.getLastError
@@ -37,43 +40,36 @@ private[mongo] object QueryBehaviours{
       collection.requestDone
     }
 
-    def query(collection: DatabaseCollection): T
+    def query(collection: DatabaseCollection): QueryResult
   }
 
-  trait EnsureIndexQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection): JNothing.type = {
-      collection.ensureIndex(name, keys, unique)
-      JNothing
-    }
+  trait EnsureIndexQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection): Unit = collection.ensureIndex(name, keys, unique)
 
     def keys: ListSet[JPath]
     def name: String
     def unique: Boolean
   }
 
-  trait DropIndexQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection): JNothing.type = {
-      collection.dropIndex(name)
-      JNothing
-    }
+  trait DropIndexQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection): Unit = collection.dropIndex(name)
 
     def name: String
   }
-  trait DropIndexesQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection): JNothing.type = {
-      collection.dropIndexes
-      JNothing
-    }
+  trait DropIndexesQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection): Unit = collection.dropIndexes
   }
 
-  trait InsertQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection): JNothing.type = {
-      collection.insert(objects)
-      JNothing
-    }
+  trait InsertQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection): Unit = collection.insert(objects)
     def objects: List[JObject]
   }
-  trait MapReduceQueryBehaviour extends MongoQueryBehaviour[MapReduceOutput]{
+  trait MapReduceQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = MapReduceOutput
     def query(collection: DatabaseCollection): MapReduceOutput = {
       collection.mapReduce(map, reduce, outputCollection, filter)
     }
@@ -84,21 +80,21 @@ private[mongo] object QueryBehaviours{
     def outputCollection: Option[String]
   }
 
-  trait RemoveQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection) = {
-      collection.remove(filter)
-      JNothing
-    }
+  trait RemoveQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection) = collection.remove(filter)
 
     def filter: Option[MongoFilter]
   }
-  trait CountQueryBehaviour extends MongoQueryBehaviour[JInt]{
-    def query(collection: DatabaseCollection): JInt = JInt(collection.count(filter))
+  trait CountQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = JInt
+    def query(collection: DatabaseCollection) = JInt(collection.count(filter))
 
     def filter: Option[MongoFilter]
   }
 
-  trait SelectQueryBehaviour extends MongoQueryBehaviour[IterableView[JObject, Iterator[JObject]]]{
+  trait SelectQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = IterableView[JObject, Iterator[JObject]]
     def query(collection: DatabaseCollection) = {
       collection.select(selection, filter, sort, skip, limit, hint, isSnapshot)
     }
@@ -111,7 +107,8 @@ private[mongo] object QueryBehaviours{
     def hint       : Option[Hint]
     def isSnapshot : Boolean
   }
-  trait ExplainQueryBehaviour  extends MongoQueryBehaviour[JObject]{
+  trait ExplainQueryBehaviour  extends MongoQueryBehaviour {
+    type QueryResult = JObject
     def query(collection: DatabaseCollection) = {
       collection.explain(selection, filter, sort, skip, limit, hint, isSnapshot)
     }
@@ -124,7 +121,8 @@ private[mongo] object QueryBehaviours{
     def hint      : Option[Hint]
     def isSnapshot : Boolean
   }
-  trait GroupQueryBehaviour extends MongoQueryBehaviour[JArray]{
+  trait GroupQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = JArray
     def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
 
     def selection : MongoSelection
@@ -132,14 +130,16 @@ private[mongo] object QueryBehaviours{
     def initial   : JObject
     def filter    : Option[MongoFilter]
   }
-  trait DistinctQueryBehaviour extends MongoQueryBehaviour[List[JValue]]{
+  trait DistinctQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = List[JValue]
     def query(collection: DatabaseCollection) = collection.distinct(selection, filter)
 
     def selection : JPath
     def filter    : Option[MongoFilter]
   }
 
-  trait SelectOneQueryBehaviour extends MongoQueryBehaviour[Option[JObject]]{ self =>
+  trait SelectOneQueryBehaviour extends MongoQueryBehaviour { self =>
+    type QueryResult = Option[JObject]
     private val selectQuery = new SelectQueryBehaviour() {
       def limit     = Some(1)
       def skip      = None
@@ -159,7 +159,8 @@ private[mongo] object QueryBehaviours{
     def sort      : Option[MongoSort]
     def hint      : Option[Hint]
   }
-  trait MultiSelectQuery extends MongoQueryBehaviour[IterableView[Option[JObject], Seq[Option[JObject]]]]{ self =>
+  trait MultiSelectQuery extends MongoQueryBehaviour { self =>
+    type QueryResult = IterableView[Option[JObject], Seq[Option[JObject]]]
     import MongoFilterEvaluator._
     import IterableViewImpl._
     private val selectQuery = new SelectQueryBehaviour() {
@@ -190,13 +191,13 @@ private[mongo] object QueryBehaviours{
     def hint      : Option[Hint]
   }
 
-  trait UpdateQueryBehaviour extends MongoQueryBehaviour[JNothing.type]{
-    def query(collection: DatabaseCollection) = {
+  trait UpdateQueryBehaviour extends MongoQueryBehaviour {
+    type QueryResult = Unit
+    def query(collection: DatabaseCollection): Unit = {
       value match {
         case MongoUpdateNothing =>
         case _ => collection.update(filter, value, upsert, multi)
       }
-      JNothing
     }
 
     def value : MongoUpdate
@@ -204,5 +205,4 @@ private[mongo] object QueryBehaviours{
     def upsert: Boolean
     def multi : Boolean
   }
-
 }

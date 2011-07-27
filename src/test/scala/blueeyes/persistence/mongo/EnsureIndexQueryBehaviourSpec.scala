@@ -1,23 +1,21 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import org.specs.mock.{MocksCreation}
+import org.specs.mock.Mockito
 import MongoQueryBuilder._
-import org.mockito.Mockito
+import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import scala.collection.immutable.ListSet
 
-class EnsureIndexQueryBehaviourSpec extends Specification with MocksCreation{
+class EnsureIndexQueryBehaviourSpec extends Specification with Mockito {
   private val collection  = mock[DatabaseCollection]
-  "Call collection method" in{
-  Mockito.when(collection.getLastError).thenReturn(None)
+  "Call collection method" in {
+    collection.getLastError returns None
 
-    val query  = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")
-    val result: JValue = query(collection)
+    val query = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")
+    query(collection)
 
-    Mockito.verify(collection, Mockito.times(1)).ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
-
-    true must be (true)
+    there was one(collection).ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
   }
 }

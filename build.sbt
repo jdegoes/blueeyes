@@ -1,10 +1,10 @@
 name := "blueeyes"
 
-version := "0.4.16"
+version := "0.4.17"
 
 organization := "com.reportgrid"
 
-scalaVersion := "2.9.0-1"
+scalaVersion := "2.9.1.RC1"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 
@@ -15,14 +15,14 @@ libraryDependencies ++= Seq(
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.4.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.6.3",
-  "org.scalaz"                  %% "scalaz-core"        % "6.0.1",
+  "org.scalaz"                  % "scalaz-core_2.9.0-1"        % "6.0.1",
   "se.scalablesolutions.akka"   % "akka-actor"          % "1.1.2",
   "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.1.2",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
-  "org.scala-tools.testing"     %% "specs"              % "1.6.8"         % "provided",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"           % "provided",
+  "org.scala-tools.testing"     % "specs_2.9.0-1"              % "1.6.8"         % "provided",
+  "org.scala-tools.testing"     % "scalacheck_2.9.0-1"         % "1.9"           % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
 )
 

@@ -44,22 +44,22 @@ case class KeyedHint(keys: ListSet[JPath]) extends Hint
 
 /** Basic trait for mongo queries.
  */
-sealed trait MongoQuery[T] extends QueryBehaviour[T]{
+sealed trait MongoQuery extends QueryBehaviour {
   def collection: MongoCollection;
 }
 
 case class MongoExplainQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None, isSnapshot: Boolean = false) extends MongoQuery[JObject] with ExplainQueryBehaviour
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None, isSnapshot: Boolean = false) extends MongoQuery with ExplainQueryBehaviour
 
-case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None, hint: Option[Hint] = None) extends MongoQuery[List[JValue]] with DistinctQueryBehaviour{
+case class MongoDistinctQuery(selection: JPath, collection: MongoCollection, filter: Option[MongoFilter] = None, hint: Option[Hint] = None) extends MongoQuery with DistinctQueryBehaviour{
   def where (newFilter: MongoFilter): MongoDistinctQuery = copy(filter = Some(newFilter))
   def hint  (newHint: Hint)         : MongoDistinctQuery = copy(hint = Some(newHint))
 }
-case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery[JArray] with GroupQueryBehaviour{
+case class MongoGroupQuery(selection: MongoSelection, collection: MongoCollection, initial: JObject, reduce: String, filter: Option[MongoFilter] = None) extends MongoQuery with GroupQueryBehaviour{
   def where (newFilter: MongoFilter): MongoGroupQuery = copy(filter = Some(newFilter))
 }
 case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None, isSnapshot: Boolean = false) extends MongoQuery[IterableView[JObject, Iterator[JObject]]] with SelectQueryBehaviour{
+                            sort: Option[MongoSort] = None, skip: Option[Int] = None, limit: Option[Int] = None, hint: Option[Hint] = None, isSnapshot: Boolean = false) extends MongoQuery with SelectQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectQuery = copy(sort = Some(newSort))
   def skip  (newSkip: Int)          : MongoSelectQuery = copy(skip = Some(newSkip))
@@ -69,35 +69,35 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def explain                       : MongoExplainQuery = MongoExplainQuery(selection, collection, filter, sort, skip, limit, hint, isSnapshot)
 }
 case class MongoMultiSelectQuery(filters: ListSet[MongoFilter], collection: MongoCollection,
-                                sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery[IterableView[Option[JObject], Seq[Option[JObject]]]] with MultiSelectQuery{
+                                sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery with MultiSelectQuery{
   require(!filters.isEmpty)
   def hint(newHint: Hint)           : MongoMultiSelectQuery = copy(hint = Some(newHint))
   def sortBy(newSort: MongoSort)    : MongoMultiSelectQuery = copy(sort = Some(newSort))
   def explain                       : MongoExplainQuery = MongoExplainQuery(MongoSelection(Set()), collection, Some(MongoOrFilter(filters)), sort, None, None, hint, false)
 }
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
-                              sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery[Option[JObject]] with SelectOneQueryBehaviour{
+                              sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery with SelectOneQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
   def sortBy(newSort: MongoSort)    : MongoSelectOneQuery = copy(sort = Some(newSort))
   def hint(newHint: Hint)           : MongoSelectOneQuery = copy(hint = Some(newHint))
   def explain                       : MongoExplainQuery = MongoExplainQuery(selection, collection, filter, sort, None, None, hint, false)
 }
-case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JNothing.type] with RemoveQueryBehaviour{
+case class MongoRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery with RemoveQueryBehaviour{
   def where (newFilter: MongoFilter): MongoRemoveQuery = copy(filter = Some(newFilter))
 }
-case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery[JInt] with CountQueryBehaviour{
+case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilter] = None) extends MongoQuery with CountQueryBehaviour{
   def where (newFilter: MongoFilter): MongoCountQuery = copy(filter = Some(newFilter))
 }
-case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery[JNothing.type] with InsertQueryBehaviour
-case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[JPath], unique: Boolean) extends MongoQuery[JNothing.type] with EnsureIndexQueryBehaviour
-case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery[JNothing.type] with DropIndexQueryBehaviour
-case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery[JNothing.type] with DropIndexesQueryBehaviour
+case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery with InsertQueryBehaviour
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[JPath], unique: Boolean) extends MongoQuery with EnsureIndexQueryBehaviour
+case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery with DropIndexQueryBehaviour
+case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery with DropIndexesQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdate, filter: Option[MongoFilter] = None, upsert: Boolean = false,
-                            multi: Boolean = false) extends MongoQuery[JNothing.type] with UpdateQueryBehaviour{
+                            multi: Boolean = false) extends MongoQuery with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = copy(filter = Some(newFilter))
 }
 case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCollection, outputCollection: Option[String] = None, filter: Option[MongoFilter] = None)
-                            extends MongoQuery[MapReduceOutput] with MapReduceQueryBehaviour{
+                            extends MongoQuery with MapReduceQueryBehaviour{
   def where (newFilter: MongoFilter)    = copy(filter = Some(newFilter))
   def into(newOutputCollection: String) = copy(outputCollection = Some(newOutputCollection))
 }
@@ -118,19 +118,19 @@ trait MapReduceOutput {
  */
 
 trait MongoQueryBuilder{
-  class FromQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
+  class FromQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def from (collection: MongoCollection): T = f(collection)
   }
-  class IntoQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
+  class IntoQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def into (collection: MongoCollection): T = f(collection)
   }
   class OnKeysQueryEntryPoint[T](f: ListSet[JPath] => T){
     def on(keys: JPath*): T = f(ListSet.empty ++ keys.reverse)
   }
-  class InQueryEntryPoint[T <: MongoQuery[_]](f: MongoCollection => T){
+  class InQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def in(collection: MongoCollection): T = f(collection)
   }
-  class SetQueryEntryPoint[T <: MongoQuery[_]](f: MongoUpdate => T){
+  class SetQueryEntryPoint[T <: MongoQuery](f: MongoUpdate => T){
     def set(value: MongoUpdate): T = f(value)
   }
 

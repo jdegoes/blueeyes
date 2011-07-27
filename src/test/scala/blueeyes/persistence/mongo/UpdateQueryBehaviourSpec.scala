@@ -1,37 +1,31 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import org.specs.mock.MocksCreation
+import org.specs.mock.Mockito
 import MongoQueryBuilder._
-import org.mockito.Mockito.{times, when}
-import org.mockito.Mockito
+import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
 
-class UpdateQueryBehaviourSpec  extends Specification with MocksCreation{
-  private val collection  = mock[DatabaseCollection]
+class UpdateQueryBehaviourSpec  extends Specification with Mockito{
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
-  "Call collection method" in{
-    when(collection.getLastError).thenReturn(None)
 
-    val filter   = Some("name" === "Joe")
+  "Call collection method" in{
+    val collection  = mock[DatabaseCollection]
+    collection.getLastError returns None
 
     val query  = update("collection").set(jObject).where("name" === "Joe")
-    val result: JValue = query(collection)
+    query(collection)
 
-    Mockito.verify(collection, times(1)).update(filter, jObject, false, false)
-
-    result must be (JNothing)
+    there was one(collection).update(Some("name" === "Joe"), jObject, false, false)
   }
-  "Does not call collection method when update is MongoUpdateNothing" in{
-    when(collection.getLastError).thenReturn(None)
 
-    val filter   = Some("name" === "Joe")
+  "Does not call collection method when update is MongoUpdateNothing" in{
+    val collection  = mock[DatabaseCollection]
+    collection.getLastError returns None
 
     val query  = update("collection").set(MongoUpdateNothing).where("name" === "Joe")
-    val result: JValue = query(collection)
+    query(collection)
 
-    Mockito.verify(collection, times(0)).update(filter, MongoUpdateNothing, false, false)
-
-    result must be (JNothing)
+    there was no(collection).update(Some("name" === "Joe"), MongoUpdateNothing, false, false)
   }
 }

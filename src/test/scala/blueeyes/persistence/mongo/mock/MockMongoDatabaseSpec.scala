@@ -31,7 +31,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   "dump not empty collections content" in{
     val jobject  = JObject(JField("foo", JArray(List(JString("1")))) :: JField("baz", JString("foo")) :: Nil)
     val jobject2 = JObject(JField("bar", JArray(List(JString("1")))) :: JField("foo", JString("baz")) :: Nil)
-    val future1  = database[JNothing.type](insert(jobject, jobject2).into("bar"))
+    val future1  = database(insert(jobject, jobject2).into("bar"))
     future1.value must eventually (beSomething)
 
     val b = new StringBuilder()
@@ -41,7 +41,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   }
 
   "adToSet really adds to set for not existsing object" in{
-    val future1 = database[JNothing.type](upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))
+    val future1 = database(upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))
     future1.value must eventually (beSomething)
 
     val future2 = database(select().from("bar"))

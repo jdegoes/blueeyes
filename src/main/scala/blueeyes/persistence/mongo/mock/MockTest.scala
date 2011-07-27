@@ -18,8 +18,8 @@ object MockTest extends MongoImplicits{
   def main(args: Array[String]){
     val jObjects = List.range(0, 50000) map {i => parse(short.format(i))}
 
-    val future = database[JNothing.type](insert(jObjects: _*).into(collection))
-    awaitFuture[JNothing.type](future)
+    val future = database(insert(jObjects: _*).into(collection))
+    awaitFuture(future)
 
     println("START SELECT")
     Thread.sleep(20000)

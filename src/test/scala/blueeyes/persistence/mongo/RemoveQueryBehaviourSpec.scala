@@ -1,35 +1,30 @@
 package blueeyes.persistence.mongo
 
 import org.specs.Specification
-import org.specs.mock.MocksCreation
+import org.specs.mock.Mockito
 import MongoQueryBuilder._
-import org.mockito.Mockito.{times, when}
-import org.mockito.Mockito
+import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
 
-class RemoveQueryBehaviourSpec extends Specification with MocksCreation{
+class RemoveQueryBehaviourSpec extends Specification with Mockito {
   private val collection  = mock[DatabaseCollection]
 
   "Call collection method" in{
-    when(collection.getLastError).thenReturn(None)
+    collection.getLastError returns None
 
     val filter = Some("name" === "Joe")
 
     val query  = remove.from("collection").where("name" === "Joe")
-    val result: JValue = query(collection)
+    query(collection)
 
-    Mockito.verify(collection, times(1)).remove(filter)
-
-    result must be (JNothing)
+    there was one(collection).remove(filter)
   }
   "Call collection method with dummy JObject when filter is not specified" in{
-    when(collection.getLastError).thenReturn(None)
+    collection.getLastError returns None
 
     val query = remove.from("collection")
-    val result: JValue = query(collection)
+    query(collection)
 
-    Mockito.verify(collection, times(1)).remove(None)
-    
-    result must be (JNothing)
+    there was one(collection).remove(None)
   }
 }

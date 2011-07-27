@@ -46,7 +46,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
         selectFuture.value.get.get \ name mustEqual(JString(value))
       }
 
-      val removeFuture = database[JNothing.type](remove.from(collection))
+      val removeFuture = database(remove.from(collection))
       removeFuture.value must eventually (beSomething)
 
       println("Execution time = " + (System.currentTimeMillis - start))
@@ -64,7 +64,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
       case "send" => {
         val filter = "bucketId" === index && "entityId"    === index && "variationId" === index
 
-        val insertFuture = database[JNothing.type](upsert(collection).set(name set value).where(filter))
+        val insertFuture = database(upsert(collection).set(name set value).where(filter))
         val selectFuture = insertFuture.flatMap{v => database(selectOne().from(collection).where(filter))}
 
         self.reply((selectFuture, name, value))

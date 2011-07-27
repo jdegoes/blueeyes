@@ -15,7 +15,7 @@ trait Mongo {
   def database(databaseName: String): Database
 }
 
-case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, isVerified: Boolean)
+case class MongoQueryTask(query: MongoQuery, collection: DatabaseCollection, isVerified: Boolean)
 
 /** The MongoDatabase executes MongoQuery.
  * <p>
@@ -41,9 +41,9 @@ case class MongoQueryTask(query: MongoQuery[_], collection: DatabaseCollection, 
 abstract class Database {
   def mongo: Mongo
 
-  def apply[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, true)
+  def apply[T <: MongoQuery](query: T): Future[T#QueryResult]  = applyQuery(query, true)
 
-  def unverified[T](query: MongoQuery[T]): Future[T]  = applyQuery(query, false)
+  def unverified[T <: MongoQuery](query: T): Future[T#QueryResult]  = applyQuery(query, false)
 
   def collections: Set[MongoCollectionHolder]
 
@@ -76,7 +76,7 @@ abstract class Database {
     case MongoCollectionHolder(realCollection, name, database)  => realCollection
   }
 
-  protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]
 
   protected def collection(collectionName: String): DatabaseCollection
 }

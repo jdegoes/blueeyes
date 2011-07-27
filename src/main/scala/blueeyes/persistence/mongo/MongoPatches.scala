@@ -32,9 +32,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   def commit(database: Database, collection: MongoCollection): Future[Unit] = {
     val futures = patches.toList.map { 
       case (filter, update) =>
-        database[JNothing.type] {
-          upsert(collection).set(update).where(filter)
-        }.toUnit
+        database(upsert(collection).set(update).where(filter)).toUnit
     }
 
     Future(futures: _*).toUnit

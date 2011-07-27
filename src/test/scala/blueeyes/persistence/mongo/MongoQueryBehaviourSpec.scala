@@ -9,7 +9,8 @@ import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
 
 class MongoQueryBehaviourSpec extends Specification with MocksCreation{
-  private val query       = new QueryBehaviours.MongoQueryBehaviour[Int]{
+  private object query extends QueryBehaviours.MongoQueryBehaviour {
+    type QueryResult = Int
     def query(collection: DatabaseCollection): Int = 1
   }
 

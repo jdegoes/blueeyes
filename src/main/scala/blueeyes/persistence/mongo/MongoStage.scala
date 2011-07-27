@@ -9,7 +9,7 @@ case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacit
  */
 class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings) extends Stage[MongoFilterCollection, MongoUpdate] {
   def flush(filter: MongoFilterCollection, update: MongoUpdate) = {
-    database.unverified[JNothing.type] {
+    database.unverified {
       upsert(filter.collection).set(update).where(filter.filter)
     }
   }

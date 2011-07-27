@@ -79,9 +79,9 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
     mongoActor.stop
   }
 
-  protected def applyQuery[T](query: MongoQuery[T], isVerified: Boolean): Future[T]  =
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]  =
 //    Future.sync(query(query.collection, isVerified))
-    mongoActor.!!![T](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
+    mongoActor.!!![T#QueryResult](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{

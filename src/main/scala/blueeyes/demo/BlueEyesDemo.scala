@@ -43,7 +43,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             post { request =>
               val contact = request.content.map(ChunkToJValue(_))
               contact.map{value =>
-                database[JNothing.type](insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[ByteChunk]() }
+                database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[ByteChunk]() }
               }.getOrElse(Future.sync(HttpResponse[ByteChunk](status = HttpStatus(BadRequest))))
             }
           } ~
@@ -55,7 +55,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 }
               } ~
               delete { request: HttpRequest[ByteChunk] =>
-                database[JNothing.type](remove.from(collection).where("name" === request.parameters('name))) map {
+                database(remove.from(collection).where("name" === request.parameters('name))) map {
                   _ => HttpResponse[JNothing.type]()
                 }
               }
