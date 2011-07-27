@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import org.joda.time.DateTime
-import java.util.regex.Pattern
 
 sealed trait MongoValue{
   type Values;

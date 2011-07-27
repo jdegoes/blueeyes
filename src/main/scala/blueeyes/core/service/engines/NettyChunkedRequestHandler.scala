@@ -20,14 +20,14 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
-    def buffer  = ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory())
+    def buffer  = ChannelBuffers.dynamicBuffer(e.getChannel.getConfig.getBufferFactory)
     val current = delivery
 
-    e.getMessage() match {
+    e.getMessage match {
       case m: NettyHttpRequest => {
-        if (is100ContinueExpected(m)) write(ctx, succeededFuture(ctx.getChannel()), CONTINUE.duplicate())
+        if (is100ContinueExpected(m)) write(ctx, succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
-        if (m.isChunked()) {
+        if (m.isChunked) {
           List[String]() ++ m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING) match {
             case HttpHeaders.Values.CHUNKED :: Nil => m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING)
             case _ =>
@@ -36,13 +36,13 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
           delivery = Some(Left(fromNettyRequest(m, e.getRemoteAddress)), buffer)
         } else {
           delivery = None
-          Channels.fireMessageReceived(ctx, fromNettyRequest(m, e.getRemoteAddress), e.getRemoteAddress())
+          Channels.fireMessageReceived(ctx, fromNettyRequest(m, e.getRemoteAddress), e.getRemoteAddress)
         }
       }
       case chunk: HttpChunk =>  {
         current.foreach{ value =>
           val (nextDelivery, content) = value
-          content.writeBytes(chunk.getContent())
+          content.writeBytes(chunk.getContent)
           if (chunk.isLast || content.capacity >= chunkSize) {
             val nextChunkFuture = if (!chunk.isLast){
               val future = new Future[ByteChunk]()
@@ -55,30 +55,30 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
             }
             val chunkToSend = fromNettyContent(content, () => nextChunkFuture)
             nextDelivery match {
-              case Left(x)  => Channels.fireMessageReceived(ctx, x.copy(content = chunkToSend), e.getRemoteAddress())
+              case Left(x)  => Channels.fireMessageReceived(ctx, x.copy(content = chunkToSend), e.getRemoteAddress)
               case Right(x) => x.deliver(chunkToSend.getOrElse(new MemoryChunk(Array[Byte]())))
             }
           }
         }
       }
-      case _ => write(ctx, succeededFuture(ctx.getChannel()), BAD_REQUEST.duplicate())
+      case _ => write(ctx, succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
     }
   }
 
-  override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+  override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
     super.channelClosed(ctx, e)
-    killPending
+    killPending()
   }
 
-  override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+  override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
     super.channelDisconnected(ctx, e)
-    killPending
+    killPending()
   }
 
-  private def killPending = {
+  private def killPending() {
     delivery.foreach{ value =>
       value._1 match {
-        case Right(x) => x.cancel
+        case Right(x) => x.cancel()
         case Left(x)  =>
       }
     }

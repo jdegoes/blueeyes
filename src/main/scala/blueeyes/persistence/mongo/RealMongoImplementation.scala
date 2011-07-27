@@ -75,9 +75,9 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  def disconnect() = {
+  def disconnect() {
     actors.foreach(_.stop())
-    mongoActor.stop
+    mongoActor.stop()
   }
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]  =
@@ -86,20 +86,20 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
-  def requestDone = collection.getDB.requestDone
+  def requestDone() { collection.getDB.requestDone() }
 
-  def requestStart = collection.getDB.requestStart
+  def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject])      = collection.insert(objects.map(MongoToJson.unapply(_)))
+  def insert(objects: List[JObject])      { collection.insert(objects.map(MongoToJson.unapply(_))) }
 
-  def remove(filter: Option[MongoFilter]) = collection.remove(toMongoFilter(filter))
+  def remove(filter: Option[MongoFilter]) { collection.remove(toMongoFilter(filter)) }
 
   def count(filter: Option[MongoFilter])  = collection.getCount(toMongoFilter(filter))
 
-  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = 
-    collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
+  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) {
+    collection.update(toMongoFilter(filter), value.toJValue, upsert, multi) }
 
-  def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) {
     val options = JObject(
       JField("name", JString(name)) :: 
       JField("background", JBool(true)) :: 
@@ -109,9 +109,9 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     collection.ensureIndex(toMongoKeys(keysPaths), options)
   }
 
-  def dropIndex(name: String) = collection.dropIndex(name)
+  def dropIndex(name: String) { collection.dropIndex(name) }
 
-  def dropIndexes = collection.dropIndexes()
+  def dropIndexes() { collection.dropIndexes() }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): JObject =
     find(selection, filter, sort, skip, limit, hint, isSnapshot).explain()
@@ -146,8 +146,8 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   }
 
   def getLastError: Option[BasicDBObject] = {
-      val error  = collection.getDB.getLastError
-      if (error != null && error.get("err") != null) Some(error) else None
+    val error  = collection.getDB.getLastError
+    if (error != null && error.get("err") != null) Some(error) else None
   }
 
   private def find(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): DBCursor = {
@@ -172,7 +172,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
 private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput{
   override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
-  def drop = output.drop
+  def drop() { output.drop() }
 }
 
 import scala.collection.Iterator
