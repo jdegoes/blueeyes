@@ -1,13 +1,19 @@
 package blueeyes.persistence.mongo
 
 import blueeyes.core.data.Bijection
+import json.BijectionsMongoJson
 import scalaz.Validation
 import blueeyes.json.JsonAST.JValue
 
-
-//trait BijectionsMongoValueJson {
-//  implicit val MongoValueToJson = new Bijection[MongoValue, Validation[String, JValue]]{
-//    def apply(mongoValue: MongoValue) = null
+//
+//trait BijectionsMongoValueJson extends BijectionsMongoValue with BijectionsMongoJson{
+//  implicit val MongoValueToJson = new Bijection[MongoValue, Validation[Throwable, JValue]]{
+//    def apply(mongoValue: MongoValue) = try {
+//      MongoToJson(MongoValueToMongo(mongoValue))
+//    }
+//    catch {
+//      case e: Throwable =>
+//    }
 //
 //    def unapply(s: Validation[String, JValue]) = null
 //  }

@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import MongoValueBijection._
+import BijectionsMongoValue._
 import blueeyes.json.JsonAST._
 import org.specs.Specification
 import org.joda.time.DateTime
@@ -80,9 +80,8 @@ class MongoValueBijectionSpec extends Specification {
     "remove reserved mongo keys" in {
       val dbObject = new BasicDBObject()
       dbObject.put("_id", "4b7d91799790c34331062bc0")
-      val jObject =
 
-      converter.apply(dbObject) mustEqual (MongoObject(Nil))
+      MongoToMongoValue(dbObject) mustEqual (MongoObject(Nil))
     }
   }
 
@@ -94,7 +93,7 @@ class MongoValueBijectionSpec extends Specification {
     val dbObject = new BasicDBObject()
     dbObject.put(key, mongoValue)
 
-    converter.apply(dbObject)
+    MongoToMongoValue(dbObject)
   }
 
   "toDBObject" should {
@@ -162,5 +161,5 @@ class MongoValueBijectionSpec extends Specification {
 
   private def toMongo(key: String, value: MongoValue) = toMongoObject(key, value).get(key)
 
-  private def toMongoObject(key: String, value: MongoValue): DBObject = converter.unapply(MongoObject(List(MongoField(key, value))))
+  private def toMongoObject(key: String, value: MongoValue): DBObject = MongoValueToMongo(MongoObject(List(MongoField(key, value))))
 }

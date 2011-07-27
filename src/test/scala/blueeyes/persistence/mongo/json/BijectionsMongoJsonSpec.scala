@@ -2,11 +2,12 @@ package blueeyes.persistence.mongo.json
 
 import java.util.ArrayList
 import blueeyes.json.JsonAST._
-import MongoJsonBijection._
+import BijectionsMongoJson._
+import BijectionsMongoJson.MongoToJson._
 import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
 import org.specs.Specification
 
-class MongoJsonBijectionSpec extends Specification {
+class BijectionsMongoJsonSpec extends Specification {
   "MongoToJValue" should{
     "convert string type" in {
       toJson("string", "foo") mustEqual (JString("foo"))
