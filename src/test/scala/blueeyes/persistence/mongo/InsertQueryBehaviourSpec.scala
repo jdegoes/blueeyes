@@ -5,7 +5,7 @@ import org.specs.mock.Mockito
 import org.specs.util.TimeConversions._
 import MongoQueryBuilder._
 import org.mockito.Matchers._
-import blueeyes.persistence.mongo.json.MongoJson._
+import blueeyes.persistence.mongo.json.MongoJsonBijection._
 import blueeyes.json.JsonAST._
 
 class InsertQueryBehaviourSpec extends Specification with Mockito {
@@ -18,6 +18,6 @@ class InsertQueryBehaviourSpec extends Specification with Mockito {
     val query  = insert(jObject).into("collection")
     query(collection)
 
-    there was one(collection).insert(jObject2MongoObject(jObject) :: Nil)
+    there was one(collection).insert(unapply(jObject) :: Nil)
   }
 }

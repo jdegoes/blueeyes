@@ -87,8 +87,8 @@ private[mongo] object QueryBehaviours{
     def filter: Option[MongoFilter]
   }
   trait CountQueryBehaviour extends MongoQueryBehaviour {
-    type QueryResult = JInt
-    def query(collection: DatabaseCollection) = JInt(collection.count(filter))
+    type QueryResult = Long
+    def query(collection: DatabaseCollection) = collection.count(filter)
 
     def filter: Option[MongoFilter]
   }
