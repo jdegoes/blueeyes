@@ -93,7 +93,7 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
       pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
       pipeline.addLast("encoder",       new HttpResponseEncoder())
-      pipeline.addLast("deflater",      new HttpContentCompressor())
+//      pipeline.addLast("deflater",      new HttpContentCompressor())
       pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
       pipeline.addLast("aggregator",    new NettyChunkedRequestHandler(chunkSize))
       pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))
