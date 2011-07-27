@@ -102,22 +102,23 @@ sealed case class MongoOrFilter(queries: ListSet[MongoFilter]) extends MongoFilt
 
 sealed case class MongoAndFilter(queries: ListSet[MongoFilter]) extends MongoFilter { self =>
   def filter: JValue = {
-    val (notEqs, eqs) = queries partition { filter => filter match {
-      case MongoFieldFilter(lhs, e @ $eq, rhs) => false
+    val (notEqs, eqs) = queries partition { 
+      case MongoFieldFilter(lhs, $eq, rhs) => false
       case _ => true
-    }}
+    }
+
     JObject(notEqsQuery(notEqs).fields ::: eqsQuery(eqs).fields)
   }
 
   private def notEqsQuery(queries: ListSet[MongoFilter]) = {
     implicit val mergeMonoid = MergeMonoid
     val objects = queries.map(_.filter).toList
-    (JObject(Nil) :: objects).asMA.sum.asInstanceOf[JObject]
+    (JObject(Nil) :: objects).asMA.sum asUnsafe JObject
   }
   private def eqsQuery(queries: ListSet[MongoFilter]) = {
     implicit val concatMonoid = ConcatMonoid
-    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue]).toList
-    (JObject(Nil) :: fields).asMA.sum.asInstanceOf[JObject]
+    val fields = queries.collect{ case MongoFieldFilter(lhs, _, rhs) => JField(JPathExtension.toMongoField(lhs), rhs.toJValue) }.toList
+    JObject(fields)
   }
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))

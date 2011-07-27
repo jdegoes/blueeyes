@@ -281,7 +281,7 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val feeds = collection.select(MongoSelection(Set()), None, None, None, None, None, false).head \\ "feeds"
 
-    feeds.asInstanceOf[JObject].fields.length mustEqual (1)
+    (feeds(0) asUnsafe JObject).fields.length mustEqual (1)
   }
   "insert by update field when upsert is true" in{
     val collection = newCollection
