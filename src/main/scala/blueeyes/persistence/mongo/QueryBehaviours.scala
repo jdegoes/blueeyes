@@ -45,7 +45,7 @@ private[mongo] object QueryBehaviours{
 
   trait EnsureIndexQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection): Unit = collection.ensureIndex(name, keys, unique)
+    def query(collection: DatabaseCollection) { collection.ensureIndex(name, keys, unique) }
 
     def keys: ListSet[JPath]
     def name: String
@@ -54,18 +54,18 @@ private[mongo] object QueryBehaviours{
 
   trait DropIndexQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection): Unit = collection.dropIndex(name)
+    def query(collection: DatabaseCollection) { collection.dropIndex(name) }
 
     def name: String
   }
   trait DropIndexesQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection): Unit = collection.dropIndexes
+    def query(collection: DatabaseCollection) { collection.dropIndexes }
   }
 
   trait InsertQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection): Unit = collection.insert(objects)
+    def query(collection: DatabaseCollection) { collection.insert(objects) }
     def objects: List[JObject]
   }
   trait MapReduceQueryBehaviour extends MongoQueryBehaviour {
@@ -82,13 +82,13 @@ private[mongo] object QueryBehaviours{
 
   trait RemoveQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection) = collection.remove(filter)
+    def query(collection: DatabaseCollection) { collection.remove(filter) }
 
     def filter: Option[MongoFilter]
   }
   trait CountQueryBehaviour extends MongoQueryBehaviour {
-    type QueryResult = JInt
-    def query(collection: DatabaseCollection) = JInt(collection.count(filter))
+    type QueryResult = Long
+    def query(collection: DatabaseCollection) = collection.count(filter)
 
     def filter: Option[MongoFilter]
   }
@@ -193,7 +193,7 @@ private[mongo] object QueryBehaviours{
 
   trait UpdateQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection): Unit = {
+    def query(collection: DatabaseCollection) {
       value match {
         case MongoUpdateNothing =>
         case _ => collection.update(filter, value, upsert, multi)

@@ -24,12 +24,12 @@ class FileSource(file: File, private[FileSource] var offset: Long, length: Long,
         Some(Future.sync(new MemoryChunk(chunk, apply _)))
       } catch {
         case th: Throwable =>
-          accessFile.close
+          accessFile.close()
           throw th
       }
     }
     else {
-      accessFile.close
+      accessFile.close()
       None
     }
   }

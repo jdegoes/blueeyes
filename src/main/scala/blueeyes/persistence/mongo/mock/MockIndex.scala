@@ -16,16 +16,16 @@ private[mock] trait MockIndex extends JObjectFields{
     } else indexes
   }
 
-  def dropIndex(name: String) = {
+  def dropIndex(name: String) {
     indexes = indexes - name
   }
 
   def indexExists(name: String): Boolean = indexes.contains(name)
   def indexExists(keys: Set[JPath]): Boolean = indexes.find(keyAndValue => keys.toSet == keyAndValue._2.toSet) != None
 
-  def dropIndexes = indexes = Map[String, Set[JPath]]()
+  def dropIndexes() {indexes = Map[String, Set[JPath]]()}
 
-  def index(newObjects: List[JObject]) = {
+  def index(newObjects: List[JObject]) {
     indexes.foreach(index => {
       val selection = MongoSelection(index._2)
       val newFields = selectExistingFields(newObjects, selection.selection)

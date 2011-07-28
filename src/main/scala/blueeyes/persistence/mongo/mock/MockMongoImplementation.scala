@@ -39,7 +39,7 @@ private[mongo] class MockDatabase(val mongo: Mongo) extends Database {
 
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 
-  def disconnect() = {}
+  def disconnect() {}
 }
 
 private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
@@ -59,14 +59,14 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
         }
 }""").asInstanceOf[JObject]
 
-  def insert(objects: List[JObject]): Unit = {
+  def insert(objects: List[JObject]) {
     writeLock{
       index(objects)
       insert0(objects)
     }
   }
 
-  def remove(filter: Option[MongoFilter]) : Unit = {
+  def remove(filter: Option[MongoFilter]) {
     writeLock{
       process(filter, remove _)
     }
@@ -125,9 +125,9 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
     case _ =>
   }
 
-  def requestStart: Unit = ()
+  def requestStart() {}
 
-  def requestDone: Unit = ()
+  def requestDone() {}
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
 
@@ -137,9 +137,9 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
     }
   }
 
-  override def dropIndexes = {
+  override def dropIndexes() {
     writeLock{
-      super.dropIndexes
+      super.dropIndexes()
     }
   }
 

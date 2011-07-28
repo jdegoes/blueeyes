@@ -74,7 +74,7 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
       try {
         servers.foreach(server => {
           ExecutorUtil.terminate(server._1)
-          server._2.releaseExternalResources
+          server._2.releaseExternalResources()
         })
         servers = Nil
       }
@@ -88,12 +88,12 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
   }
 
   class HttpServerPipelineFactory(val protocol: String, host: String, port: Int, chunkSize: Int) extends ChannelPipelineFactory {
-    def getPipeline(): ChannelPipeline = {
+    def getPipeline: ChannelPipeline = {
       val pipeline = Channels.pipeline()
 
       pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
       pipeline.addLast("encoder",       new HttpResponseEncoder())
-      pipeline.addLast("deflater",      new HttpContentCompressor())
+//      pipeline.addLast("deflater",      new HttpContentCompressor())
       pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
       pipeline.addLast("aggregator",    new NettyChunkedRequestHandler(chunkSize))
       pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))
@@ -105,8 +105,8 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
   class HttpsServerPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int) extends HttpServerPipelineFactory(protocol: String, host, port, chunkSize) {
     private val keyStore = BlueEyesKeyStoreFactory(config)
 
-    override def getPipeline(): ChannelPipeline = {
-      val pipeline = super.getPipeline
+    override def getPipeline: ChannelPipeline = {
+      val pipeline = super.getPipeline()
 
       val engine = SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password).createSSLEngine()
       
@@ -120,7 +120,7 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 }
 
 private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler{
-  override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
+  override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
     e.getChannel.getConfig.setOption("backlog", backlog)
     super.channelOpen(ctx, e)
   }
@@ -129,7 +129,7 @@ private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpst
 private[engines] object InetInterfaceLookup {
   def socketAddres(config: ConfigMap, port: Int) = config.getString("address").map(v => new InetSocketAddress(v, port)).getOrElse(new InetSocketAddress(port))
 
-  def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
+  def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost.getHostName)
 }
 
 private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int, chunkSize: Int) extends HttpRequestDecoder(4096, 8192, 2){

@@ -2,7 +2,8 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
-import blueeyes.persistence.mongo.json.MongoJson._
+import blueeyes.persistence.mongo.json.BijectionsMongoJson._
+import blueeyes.persistence.mongo.json.BijectionsMongoJson.MongoToJson._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import IterableViewImpl._
@@ -74,9 +75,9 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  def disconnect() = {
+  def disconnect() {
     actors.foreach(_.stop())
-    mongoActor.stop
+    mongoActor.stop()
   }
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]  =
@@ -85,20 +86,20 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
-  def requestDone = collection.getDB.requestDone
+  def requestDone() { collection.getDB.requestDone() }
 
-  def requestStart = collection.getDB.requestStart
+  def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject])      = collection.insert(objects.map(jObject2MongoObject(_)))
+  def insert(objects: List[JObject])      { collection.insert(objects.map(MongoToJson.unapply(_))) }
 
-  def remove(filter: Option[MongoFilter]) = collection.remove(toMongoFilter(filter))
+  def remove(filter: Option[MongoFilter]) { collection.remove(toMongoFilter(filter)) }
 
   def count(filter: Option[MongoFilter])  = collection.getCount(toMongoFilter(filter))
 
-  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) = 
-    collection.update(toMongoFilter(filter), value.toJValue, upsert, multi)
+  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) {
+    collection.update(toMongoFilter(filter), value.toJValue, upsert, multi) }
 
-  def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keysPaths: ListSet[JPath], unique: Boolean) {
     val options = JObject(
       JField("name", JString(name)) :: 
       JField("background", JBool(true)) :: 
@@ -108,9 +109,9 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     collection.ensureIndex(toMongoKeys(keysPaths), options)
   }
 
-  def dropIndex(name: String) = collection.dropIndex(name)
+  def dropIndex(name: String) { collection.dropIndex(name) }
 
-  def dropIndexes = collection.dropIndexes()
+  def dropIndexes() { collection.dropIndexes() }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): JObject =
     find(selection, filter, sort, skip, limit, hint, isSnapshot).explain()
@@ -120,7 +121,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   private def iterator(dbObjectsIterator: java.util.Iterator[com.mongodb.DBObject]): scala.collection.IterableView[JObject, Iterator[JObject]] = {
     val jObjectIterator = new Iterator[JObject]{
-      def next()  = mongoObject2JObject(dbObjectsIterator.next)
+      def next()  = MongoToJson(dbObjectsIterator.next)
       def hasNext = dbObjectsIterator.hasNext
     }
 
@@ -130,7 +131,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
     val result = collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
 
-    JArray(mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value))
+    JArray(MongoToJson(result.asInstanceOf[DBObject]).fields.map(_.value))
   }
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
@@ -141,18 +142,17 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     val key    = JPathExtension.toMongoField(selection)
     val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
 
-    mongoObject2JObject(result.asInstanceOf[DBObject]).fields.map(_.value)
+    MongoToJson(result.asInstanceOf[DBObject]).fields.map(_.value)
   }
 
   def getLastError: Option[BasicDBObject] = {
-      val error  = collection.getDB.getLastError
-      if (error != null && error.get("err") != null) Some(error) else None
+    val error  = collection.getDB.getLastError
+    if (error != null && error.get("err") != null) Some(error) else None
   }
 
   private def find(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): DBCursor = {
-    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(jObject2MongoObject(_))
+    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(MongoToJson(_))
 
-    val index = collection.getIndexInfo()
     val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))
     val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
     val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
@@ -164,15 +164,15 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     if (isSnapshot) hintedCursor.snapshot() else hintedCursor
   }
 
-  private def toMongoKeys(selection : MongoSelection):    JObject = toMongoKeys(selection.selection)
-  private def toMongoKeys(keysPaths: Set[JPath]):         JObject = JObject(keysPaths.toList.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
-  private def toMongoFilter(filter: Option[MongoFilter]): JObject = jObject2MongoObject(filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil)))
+  private def toMongoKeys(selection : MongoSelection): JObject = toMongoKeys(selection.selection)
+  private def toMongoKeys(keysPaths: Set[JPath]): JObject      = JObject(keysPaths.toList.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+  private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 }
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
 private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput{
   override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
-  def drop = output.drop
+  def drop() { output.drop() }
 }
 
 import scala.collection.Iterator

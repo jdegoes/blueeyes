@@ -2,11 +2,12 @@ package blueeyes.persistence.mongo.json
 
 import java.util.ArrayList
 import blueeyes.json.JsonAST._
-import MongoJson._
+import BijectionsMongoJson._
+import BijectionsMongoJson.MongoToJson._
 import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
 import org.specs.Specification
 
-class MongoJsonSpec extends Specification {
+class BijectionsMongoJsonSpec extends Specification {
   "MongoToJValue" should{
     "convert string type" in {
       toJson("string", "foo") mustEqual (JString("foo"))
@@ -120,45 +121,6 @@ class MongoJsonSpec extends Specification {
       array.add("1")
       array.add("2")
       toMongo("array", jArray) mustEqual (array)
-    }
-  }
-  "JavaToScala" should {
-    "convert String to JString" in {
-      val v  = "Foo"
-      val jVal: JString = v.toJValue
-      jVal mustEqual (JString(v))
-    }
-    "convert Long to JInt" in {
-      val v: java.lang.Long = 1l
-      val jVal: JInt = v.toJValue
-      jVal mustEqual (JInt(v.longValue))
-    }
-    "convert Integer to JInt" in {
-      val v: java.lang.Integer = 1
-      val jVal: JInt = v.toJValue
-      jVal mustEqual (JInt(v.intValue))
-    }
-    "convert Double to JDouble" in {
-      val v: java.lang.Double = 1.0
-      val jVal: JDouble = v.toJValue
-      jVal mustEqual (JDouble(v.doubleValue))
-    }
-    "convert Float to JDouble" in {
-      val v: java.lang.Float = 1.0f
-      val jVal: JDouble = v.toJValue
-      jVal mustEqual (JDouble(v.floatValue.doubleValue))
-    }
-    "convert Boolean to JBool" in {
-      val v: java.lang.Boolean = true
-      val jVal: JBool = v.toJValue
-      jVal mustEqual (JBool(v.booleanValue))
-    }
-    "convert ArrayList to JArray" in {
-      val v: ArrayList[AnyRef] = new ArrayList()
-      v.add(1.asInstanceOf[AnyRef])
-      v.add(2.asInstanceOf[AnyRef])
-      val jVal: JArray = v.toJValue
-      jVal mustEqual (JArray(List(JInt(1), JInt(2))))
     }
   }
 

@@ -3,17 +3,16 @@ package blueeyes.core.service.engines
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 
-import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import org.jboss.netty.handler.codec.http.{HttpRequest => NettyHttpRequest}
-
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
+import org.jboss.netty.handler.codec.http.{HttpChunk, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 
 /** This handler is not thread safe, it's assumed a new one will be created 
  * for each client connection.
@@ -34,9 +33,9 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[By
       }
       else chunkedContent.chunk.map(content => new NettyChunkedInput(content, e.getChannel))
 
-      if (e.getChannel().isConnected){
-        val messageFuture = e.getChannel().write(message)
-        val contentFuture = content.map(value => e.getChannel().write(value))
+      if (e.getChannel.isConnected){
+        val messageFuture = e.getChannel.write(message)
+        val contentFuture = content.map(value => e.getChannel.write(value))
         val future        = contentFuture.getOrElse(messageFuture)
 
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
@@ -83,7 +82,7 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[By
     // e.getChannel.close    
   }
   
-  private def killPending(why: Option[Throwable]) = {
+  private def killPending(why: Option[Throwable]) {
     // Kill all pending responses to this channel:
     pendingResponses.foreach(_.cancel(why))
     pendingResponses.clear()
@@ -101,7 +100,7 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
 
   setNextChunkFuture(Future.sync(chunk))
 
-  def close = {nextChunkFuture.cancel}
+  def close() {nextChunkFuture.cancel()}
 
   def isEndOfInput = !hasNextChunk()
 
@@ -111,7 +110,7 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
       ChannelBuffers.wrappedBuffer(Integer.toHexString(data.length).getBytes ++ CRLF ++ data ++ CRLF)
     }.orElse{
       nextChunkFuture.deliverTo{nextChunk =>
-        channel.getPipeline().get(classOf[ChunkedWriteHandler]).resumeTransfer
+        channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
         channel.write(new NettyChunkedInput(nextChunk, channel))
       }
       None

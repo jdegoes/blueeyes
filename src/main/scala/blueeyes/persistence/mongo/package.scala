@@ -4,6 +4,7 @@ import scala.collection.immutable.ListSet
 import scalaz.Monoid
 
 package object mongo extends blueeyes.persistence.mongo.MongoImplicits {
+  type MongoValueRepr = AnyRef {type Values; def values: Values}
   type MockMongo = mock.MockMongo
 
   implicit val MongoUpdateMonoid = new Monoid[MongoUpdate] {

@@ -5,14 +5,11 @@ import scala.annotation.tailrec
 import org.specs.matcher.Matcher
 import org.specs.specification.FailureExceptionWithResult
 
-import java.util.concurrent.{TimeoutException,  TimeUnit, CountDownLatch}
+import java.util.concurrent.{TimeoutException,  CountDownLatch}
 
 import blueeyes.util.metrics.Duration
 import blueeyes.util.metrics.Duration._
 import blueeyes.util.RichThrowableImplicits._
-
-import scalaz.Scalaz._
-import scalaz.{Validation, Success, Failure}
 
 trait FutureMatchers {
   case class FutureTimeouts(retries: Int, duration: Duration)

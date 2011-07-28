@@ -92,11 +92,11 @@ private[mongo] trait DatabaseCollection{
   def remove(filter: Option[MongoFilter])
   def count(filter: Option[MongoFilter]): Long
   def ensureIndex(name: String, keys: ListSet[JPath], unique: Boolean)
-  def dropIndexes
+  def dropIndexes()
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter] = None): MapReduceOutput
-  def requestStart: Unit
-  def requestDone: Unit
+  def requestStart(): Unit
+  def requestDone(): Unit
   def getLastError: Option[com.mongodb.BasicDBObject]
 }
