@@ -77,12 +77,14 @@ trait DefaultDecomposers {
     def decompose(tvalue: Set[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
   
-  implicit def ListDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[List[T]] = new Decomposer[List[T]] {
-    def decompose(tvalue: List[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
+  implicit def SeqDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[Seq[T]] = new Decomposer[Seq[T]] {
+    def decompose(tvalue: Seq[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
+
+  implicit def ListDecomposer[T: Decomposer]: Decomposer[List[T]] = SeqDecomposer[T].contramap((_: List[T]).toSeq)
   
   implicit def MapDecomposer[K, V](implicit keyDecomposer: Decomposer[K], valueDecomposer: Decomposer[V]): Decomposer[Map[K, V]] = new Decomposer[Map[K, V]] {
-    def decompose(tvalue: Map[K, V]): JValue = ListDecomposer(Tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
+    def decompose(tvalue: Map[K, V]): JValue = SeqDecomposer(Tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
   }
   
   implicit def StringMapDecomposer[V](implicit valueDecomposer: Decomposer[V]): Decomposer[Map[String, V]] = new Decomposer[Map[String, V]] {

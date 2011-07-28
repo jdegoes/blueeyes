@@ -4,18 +4,26 @@ import blueeyes.json.JsonAST._
 
 /** Extracts the value from a JSON object.
  */
-trait Extractor[T] extends Function[JValue, T] {
-  def extract(jvalue: JValue): T
+trait Extractor[+A] extends Function[JValue, A] { self =>
+  def extract(jvalue: JValue): A
+
+  def map[B](f: A => B): Extractor[B] = new Extractor[B] {
+    override def extract(jvalue: JValue): B = f(self.extract(jvalue))
+  }
   
-  def apply(jvalue: JValue): T = extract(jvalue)
+  def apply(jvalue: JValue): A = extract(jvalue)
 }
 
 /** Decomposes the value into a JSON object.
  */
-trait Decomposer[T] extends Function[T, JValue] {
-  def decompose(tvalue: T): JValue
+trait Decomposer[-A] extends Function[A, JValue] { self => 
+  def decompose(tvalue: A): JValue
+
+  def contramap[B](f: B => A): Decomposer[B] = new Decomposer[B] {
+    override def decompose(b: B) = self.decompose(f(b))
+  }
   
-  def apply(tvalue: T): JValue = decompose(tvalue)
+  def apply(tvalue: A): JValue = decompose(tvalue)
 }
 
 /** Serialization implicits allow a convenient syntax for serialization and 
