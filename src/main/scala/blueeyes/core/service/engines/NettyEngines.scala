@@ -9,7 +9,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.util.internal.ExecutorUtil
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
-import org.jboss.netty.handler.codec.http.{HttpContentCompressor, HttpResponseEncoder, HttpRequestDecoder}
+import org.jboss.netty.handler.codec.http.{HttpResponseEncoder, HttpRequestDecoder}
 import org.jboss.netty.handler.ssl.SslHandler
 import security.BlueEyesKeyStoreFactory
 import util.matching.Regex
@@ -93,7 +93,6 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
       pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
       pipeline.addLast("encoder",       new HttpResponseEncoder())
-//      pipeline.addLast("deflater",      new HttpContentCompressor())
       pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
       pipeline.addLast("aggregator",    new NettyChunkedRequestHandler(chunkSize))
       pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))

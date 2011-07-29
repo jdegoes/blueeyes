@@ -5,16 +5,15 @@ import scala.collection.mutable.{HashSet, SynchronizedSet}
 
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import net.lag.logging.Logger
-import org.jboss.netty.handler.codec.http.{HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
+import blueeyes.core.data.{GZIPByteChunk, ByteChunk, MemoryChunk}
 
-/** This handler is not thread safe, it's assumed a new one will be created 
+/** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.

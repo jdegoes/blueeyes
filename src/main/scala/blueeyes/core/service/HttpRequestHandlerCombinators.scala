@@ -4,7 +4,7 @@ package core.service
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.data.{MemoryChunk, ByteChunk, Bijection}
+import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
 
@@ -15,6 +15,8 @@ import scala.xml.NodeSeq
 import scalaz.Scalaz._
 
 trait HttpRequestHandlerCombinators{
+  private val supportedCompressions = Map[Encoding, CompressedByteChunk](Encodings.gzip -> GZIPByteChunk, Encodings.deflate -> ZLIBByteChunk)
+
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
    *
@@ -366,6 +368,25 @@ trait HttpRequestHandlerCombinators{
     }
   }
 
+  /**
+   *  The compress combinator creates a handler that compresses content by encoding supported by client
+   *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
+   */
+  def compress(h: HttpRequestHandler[ByteChunk]): HttpRequestHandler[ByteChunk] = new HttpRequestHandler[ByteChunk] {
+    def isDefinedAt(r: HttpRequest[ByteChunk]) = h.isDefinedAt(r)
+
+    def apply(r: HttpRequest[ByteChunk]) = {
+      h(r).map{response =>
+        val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
+        val supported  = supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
+        (supported, response.content) match{
+          case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
+          case _ => response
+        }
+      }
+    }
+  }
+
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
@@ -373,36 +394,21 @@ trait HttpRequestHandlerCombinators{
     val chunkSizeInBytes = chunkSize.map(_.bytes)
     def isDefinedAt(r: HttpRequest[ByteChunk]) = h.isDefinedAt(r)
 
-    def apply(r: HttpRequest[ByteChunk]) = {
-      def aggregateContent(chunk: ByteChunk, buffer: ByteArrayOutputStream, result: Future[HttpResponse[ByteChunk]]) {
-        def done = {
-          val content = new MemoryChunk(buffer.toByteArray){
-            override def next = chunk.next
-          }
-          val f = h(r.copy(content = Some(content)))
+    def apply(r: HttpRequest[ByteChunk]) = r.content match {
+      case Some(chunk) =>
+        val result = new Future[HttpResponse[ByteChunk]]()
+        val aggregatedFuture = AggregatedByteChunk(chunk, chunkSize)
+        aggregatedFuture.deliverTo{aggregated =>
+          val f = h(r.copy(content = Some(aggregated)))
 
           f.deliverTo(response => result.deliver(response))
           f.ifCanceled(th => result.cancel(th))
           result.ifCanceled(th => f.cancel(th))
         }
-
-        buffer.write(chunk.data)
-        chunkSizeInBytes match {
-          case Some(x) if (buffer.size >= x.size) => done
-          case _ => chunk.next match{
-            case None    => done
-            case Some(e) => e.deliverTo(nextChunk => aggregateContent(nextChunk, buffer, result))
-          }
-        }
-      }
-
-      r.content match {
-        case Some(chunk) =>
-          val response = new Future[HttpResponse[ByteChunk]]()
-          aggregateContent(chunk, new ByteArrayOutputStream(), response)
-          response
-        case None        => h(r)
-      }
+        aggregatedFuture.ifCanceled(th => result.cancel(th))
+        result.ifCanceled(th => aggregatedFuture.cancel(th))
+        result
+      case None        => h(r)
     }
   }
 
