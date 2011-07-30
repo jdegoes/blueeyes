@@ -11,6 +11,7 @@ import org.specs.matcher.Matchers._
 import blueeyes.core.http._
 import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.HttpHeaders._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
@@ -20,7 +21,7 @@ import DataSize._
 
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
-import blueeyes.core.data.{ByteMemoryChunk, MemoryChunk, ByteChunk, BijectionsIdentity, Bijection}
+import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsIdentity, Bijection, GZIPByteChunk}
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity with FutureMatchers {
   implicit val JValueToString = new Bijection[JValue, String] {
@@ -272,6 +273,28 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     }
   }
 
+  "compress combinator" should {
+    "compress content if request contains accept encoding header" in{
+      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
+      (compress{
+        path("/foo"){
+          get { (request: HttpRequest[ByteChunk]) =>
+            Future.sync(HttpResponse[ByteChunk](content=request.content))
+          }
+        }
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress))).value.get.content.map(v => new String(v.data)) must beSome(new String(GZIPByteChunk(chunk).data))
+    }
+    "does not compress content if request does not contain accept appropriate encoding header" in{
+      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
+      (compress{
+        path("/foo"){
+          get { (request: HttpRequest[ByteChunk]) =>
+            Future.sync(HttpResponse[ByteChunk](content=request.content))
+          }
+        }
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.compress))).value.get.content.map(v => new String(v.data)) must beSome("12")
+    }
+  }
   "aggregate combinator" should {
     "aggregate full content when size is not specified" in{
       (aggregate(None){
