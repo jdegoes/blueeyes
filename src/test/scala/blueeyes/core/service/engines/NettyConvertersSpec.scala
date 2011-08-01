@@ -34,7 +34,7 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
 
     message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
-    Map(message.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("Retry-After" -> "1", "Transfer-Encoding" -> "chunked"))
+    Map(message.getHeaders.map(header => (header.getKey, header.getValue)): _*)  mustEqual(Map("Retry-After" -> "1", "Transfer-Encoding" -> "chunked"))
 
   }
   "convert service HttpResponse to netty HttpResponse with not chunked content" in {
@@ -43,7 +43,7 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
 
     message.getStatus                               mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, ""))
     message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
-    Map(message.getHeaders.map(header => (header.getKey(), header.getValue())): _*)  mustEqual(Map("Content-Length" -> "0"))
+    Map(message.getHeaders.map(header => (header.getKey, header.getValue)): _*)  mustEqual(Map("Content-Length" -> "0"))
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {
@@ -59,7 +59,7 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
     request.uri          mustEqual(URI("http://foo/bar%20foo?param1=foo%20bar"))
     request.headers.raw  mustEqual(Map("Retry-After" -> "1"))
     request.version      mustEqual(`HTTP/1.0`)
-    request.remoteHost   mustEqual(Some(address.getAddress()))
+    request.remoteHost   mustEqual(Some(address.getAddress))
   }
 
   "convert netty NettyHttpRequest to service NettyHttpRequest, modifying ip if X-Forwarded-For header present" in {
@@ -77,16 +77,16 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
     request.parameters  mustEqual(Map('param1 -> "value1"))
     request.headers.raw mustEqual(Map("Retry-After" -> "1", "X-Forwarded-For" -> "111.11.11.1, 121.21.2.2"))
     request.version     mustEqual(`HTTP/1.0`)
-    request.remoteHost  mustEqual(Some(forwardedAddress.getAddress()))
+    request.remoteHost  mustEqual(Some(forwardedAddress.getAddress))
   }
 
-  "use host name from Host header" in {
+  "does not use host name from Host header" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
     nettyRequest.addHeader("Host", "google.com")
 
     val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
 
-    request.uri mustEqual(URI("http://google.com/bar?param1=value1"))
+    request.uri mustEqual(URI("http://foo/bar?param1=value1"))
   }
 
   "convert netty NettyHttpRequest with multiple headers values to service HttpRequest" in {

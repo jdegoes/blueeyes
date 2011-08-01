@@ -49,17 +49,14 @@ trait NettyConverters{
   }
 
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {
-    val parameters          = getParameters(request.getUri())
-    val headers             = buildHeaders(request.getHeaders())
-    val content             = fromNettyContent(request.getContent(), () => None)
+    val parameters          = getParameters(request.getUri)
+    val headers             = buildHeaders(request.getHeaders)
+    val content             = fromNettyContent(request.getContent, () => None)
 
-    val xforwarded  = (for (`X-Forwarded-For`(value) <- headers) yield `X-Forwarded-For`(value: _*)).headOption
+    val xforwarded  = headers.header(`X-Forwarded-For`)
     val remoteHost  = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
-    val host        = (for (Host (value) <- headers) yield Host(value)).headOption
-    val originalUri = URI(request.getUri())
-    val uri         = host.map(h => originalUri.copy(host = h.domain.host)).getOrElse(originalUri)
 
-    HttpRequest(request.getMethod, uri, parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion()))
+    HttpRequest(request.getMethod, URI(request.getUri), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion))
   }
 
   def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[ByteChunk]]): Option[ByteChunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
@@ -70,19 +67,19 @@ trait NettyConverters{
       content.readBytes(stream, content.readableBytes)
       stream.toByteArray
     }
-    finally stream.close
+    finally stream.close()
   }
 
   private def getParameters(uri: String) = {
     val queryStringDecoder  = new QueryStringDecoder(uri)
-    queryStringDecoder.getParameters().map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
+    queryStringDecoder.getParameters.map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
     nettyHeaders.foldLeft(Map.empty[String, String]) {
       case (headers, header) => 
-        val key   = header.getKey()
-        val value = header.getValue()
+        val key   = header.getKey
+        val value = header.getValue
 
         headers + (key -> headers.get(key).map(_ + "," + value).getOrElse(value))
     }
