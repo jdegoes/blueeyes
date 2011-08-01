@@ -63,5 +63,6 @@ object GZIPByteChunk extends CompressedByteChunk{
 }
 
 object ZLIBByteChunk extends CompressedByteChunk{
-  def apply(dataChunk: ByteChunk) = create(dataChunk, {dataStream => new DeflaterOutputStream(dataStream, new Deflater(Deflater.BEST_SPEED))})
+  def apply(dataChunk: ByteChunk): ByteChunk = apply(dataChunk, Deflater.BEST_SPEED)
+  def apply(dataChunk: ByteChunk, level: Int): ByteChunk = create(dataChunk, {dataStream => new DeflaterOutputStream(dataStream, new Deflater(level))})
 }

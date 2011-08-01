@@ -5,7 +5,7 @@ import blueeyes.persistence.mongo.{MongoBijectionFactory, MongoBijection}
 import org.joda.time.DateTime
 
 trait BijectionsMongoJson{
-  implicit val MongoToJson = new MongoBijection[JValue, JField, JObject]{ val factory = MongoJsonBijectionFactory}
+  implicit val MongoToJson = new MongoBijection[JValue, JField, JObject](MongoJsonBijectionFactory)
   implicit val JsonToMongo = MongoToJson.inverse
 }
 

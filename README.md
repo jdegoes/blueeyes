@@ -38,7 +38,7 @@ Library dependency:
     <dependency>
       <groupId>com.reportgrid</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.4.16</version>
+      <version>0.4.17</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -51,7 +51,7 @@ Library dependency:
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
     val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
 
-    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.16" % "compile"
+    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.17" % "compile"
 
 
 ### SBT 0.10
