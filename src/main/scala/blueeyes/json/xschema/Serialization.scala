@@ -4,7 +4,7 @@ import blueeyes.json.JsonAST._
 
 /** Extracts the value from a JSON object.
  */
-trait Extractor[+A] extends Function[JValue, A] { self =>
+trait Extractor[A] extends Function[JValue, A] { self =>
   def extract(jvalue: JValue): A
 
   def map[B](f: A => B): Extractor[B] = new Extractor[B] {
@@ -16,7 +16,7 @@ trait Extractor[+A] extends Function[JValue, A] { self =>
 
 /** Decomposes the value into a JSON object.
  */
-trait Decomposer[-A] extends Function[A, JValue] { self => 
+trait Decomposer[A] extends Function[A, JValue] { self =>
   def decompose(tvalue: A): JValue
 
   def contramap[B](f: B => A): Decomposer[B] = new Decomposer[B] {
