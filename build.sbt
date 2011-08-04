@@ -1,6 +1,6 @@
 name := "blueeyes"
 
-version := "0.4.17"
+version := "0.4.18"
 
 organization := "com.reportgrid"
 
@@ -25,6 +25,7 @@ libraryDependencies ++= Seq(
   "org.scala-tools.testing"     % "scalacheck_2.9.0-1"         % "1.9"           % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
 )
+
 
 ivyXML :=
   <dependencies>

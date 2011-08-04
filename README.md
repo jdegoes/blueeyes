@@ -38,7 +38,7 @@ Library dependency:
     <dependency>
       <groupId>com.reportgrid</groupId>
       <artifactId>blueeyes</artifactId>
-      <version>0.4.17</version>
+      <version>0.4.18</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -51,7 +51,7 @@ Library dependency:
     val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
     val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
 
-    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.17" % "compile"
+    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.18" % "compile"
 
 
 ### SBT 0.10
@@ -404,19 +404,27 @@ A service's request logger is configured through a *requestLog* block inside the
 
 The following values can be configured for request logging:
 
-   "enabled           = true | false" ( default = true )
-   "fields            = see W3C Extended Log format"
-   "roll              = "never" | "hourly" | "daily" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" " ( default = "never")
-   "file              = path to log file"
-   "writeDelaySeconds = delay between flush to file" ( default = 1 )
+   enabled           = true | false ( default = true )
+   fields            = "W3C Extended Log format fields", "sc-content", "sc-content" 
+   cs-content        = request content encoded by Base64 encoding and wrapped by double quotes
+   sc-content        = response content encoded by Base64 encoding and wrapped by double quotes
+   roll              = "never" | "hourly" | "daily" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" " ( default = "never")
+   file              = path to log file
+   includePaths      = list of paths (regualar expressions) for which requests/responses must be logged
+   excludePaths      = list of paths (regualar expressions) for which requests/responses must not be logged   
+   writeDelaySeconds = delay between flush to file ( default = 1 )
+   
+   If neither "includePaths" nor "excludePaths" are specified then all requests/responses are logged. 
+   If both "includePaths" and "excludePaths" are specified then only "includePaths" are taken into account.  
 
     services {
       requestlogdemo {
         v1 {
           requestLog {
-            fields            = "cs-method cs-uri"
+            fields            = "cs-method cs-uri cs-content sc-content"
             roll              = "never"
             file              = "./logs"
+            includePaths      = ["/foo/.*", "/bar/.*"]
             writeDelaySeconds = 5
           }
         }
