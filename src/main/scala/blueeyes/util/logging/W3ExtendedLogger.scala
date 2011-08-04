@@ -2,7 +2,7 @@ package blueeyes.util.logging
 
 import blueeyes.concurrent.Future
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
-import blueeyes.persistence.cache.{ExpirationPolicy, CacheSettings, Stage}
+import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 import blueeyes.util.RichThrowableImplicits
 
 import java.io.{FileOutputStream, OutputStreamWriter, File, Writer}
@@ -38,22 +38,22 @@ object W3ExtendedLogger{
 
 class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
-  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 100, write)
+  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 1000, write)
 
   implicit val LogLineSemigroup = new Semigroup[String] {
     def append(l1: String, l2: => String): String = l1 + "\n" + l2
   }
 
-  def apply(logEntry: String) = logStage += ("log", logEntry)
+  def apply(logEntry: String) { logStage += ("log", logEntry) }
 
   def close: Future[Unit] = {
-    val flushFuture = logStage.flushAll
-    flushFuture.map((v: Unit) => fileHandler.close)
+    val flushFuture = logStage.flushAll()
+    flushFuture.map((v: Unit) => fileHandler.close())
   }
 
   def fileName: Option[String] = fileHandler.fileName
 
-  private def write(key: String, record: String) = fileHandler.publish(record)
+  private def write(key: String, record: String) {fileHandler.publish(record)}
 }
 
 class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective) extends RichThrowableImplicits with NameFormat with Roll{
@@ -64,22 +64,22 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
   private var _openTime: Long            = System.currentTimeMillis
   private var _nextRollTime: Long        = 0
 
-  roll
+  roll()
 
   def fileName = _fileName
 
-  def flush = _stream.foreach(_.flush())
+  def flush() {_stream.foreach(_.flush())}
 
-  def close = {
-    flush
+  def close() {
+    flush()
     try {
       _stream.foreach(_.close())
       _stream = None
     } catch { case _ => () }
   }
 
-  def publish(record: String) = {
-    rollIfNecessary
+  def publish(record: String) {
+    rollIfNecessary()
     writeRecord(record)
   }
 
@@ -87,15 +87,14 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
     _stream foreach { streamValue =>
       try {
         streamValue.write(record + "\n")
-        streamValue.flush
+        streamValue.flush()
       } catch {
         case e => System.err.println(e.fullStackTrace)
       }
     }
   }
 
-  private def rollIfNecessary = {
-
+  private def rollIfNecessary() {
     lock.readLock.lock()
     val shouldBeRolled = System.currentTimeMillis > _nextRollTime
     lock.readLock.unlock()
@@ -104,7 +103,7 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
       lock.writeLock.lock()
       try {
         if (System.currentTimeMillis > _nextRollTime) {
-            roll
+          roll()
         }
       }
       finally {
@@ -113,7 +112,7 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
     }
   }
 
-  private def openLog = {
+  private def openLog() {
     _stream = _fileName map { fileNameValue =>
       val dir = new File(fileNameValue).getParentFile
       if ((dir ne null) && !dir.exists) dir.mkdirs
@@ -125,15 +124,15 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
         stream.write("#Version: 1.0\n")
         stream.write("#Date: %s\n".format(new SimpleDateFormat("dd-MMM-yyyy HH:MM:SS").format(new Date())))
         stream.write(fieldsDirective.toString+ "\n")
-        stream.flush
+        stream.flush()
       }
       stream
     }
   }
 
 
-  private def roll = {
-    close
+  private def roll() {
+    close()
 
     val newFileName = timedName(baseFileName, policy, _openTime)
 
@@ -141,7 +140,7 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
 
     _fileName  = Some(newFileName)
 
-    openLog
+    openLog()
   }
 }
 

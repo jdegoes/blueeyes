@@ -4,15 +4,15 @@ import blueeyes.health.HealthMonitor
 import net.lag.logging.Logger
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST._
-import blueeyes.core.data.Bijection
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
-import net.lag.configgy.{Config, ConfigMap, Configgy}
+import net.lag.configgy.{Config, Configgy}
 import blueeyes.parsers.W3ExtendedLog
 import blueeyes.concurrent._
 import blueeyes.util._
 import blueeyes.util.logging._
 import java.util.Calendar
+import blueeyes.core.data._
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -83,7 +83,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def requestLogging[T, S](f: => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
+  def requestLogging[T, S](f: => HttpServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): HttpServiceDescriptorFactory[T, S] = {
     import RollPolicies._
     (context: HttpServiceContext) => {
       val underlying = f(context)
@@ -189,15 +189,15 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
-  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, log: W3ExtendedLogger, underlying: HttpRequestHandler[T]) extends HttpRequestHandler[T] with ClockSystem{
+  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, log: W3ExtendedLogger, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
     private val requestLogger = HttpRequestLogger[T, T](fieldsDirective)
     def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
 
     def apply(request: HttpRequest[T]) = {
+
       val response = underlying(request)
 
       val logRecord = requestLogger(request, response)
-
       logRecord foreach { log(_)}
 
       response

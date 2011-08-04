@@ -1,27 +1,29 @@
 package blueeyes.core.service
 
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.format.DateTimeFormatter
+import java.net.InetAddress
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
 import blueeyes.util.Clock
-import java.net.InetAddress
 import blueeyes.concurrent.Future
 
-/** A request logger is a function from (request/future of response) to future 
+import org.joda.time.format.DateTimeFormat
+import org.apache.commons.codec.binary.Base64
+import blueeyes.core.data.{AggregatedByteChunk, Bijection, ByteChunk}
+
+/** A request logger is a function from (request/future of response) to future
  * of log line. Request loggers do not have side effects.
  */
 trait HttpRequestLogger[T, S] extends ((HttpRequest[T], Future[HttpResponse[S]]) => Future[String]) { self =>
   /** Combines this logger with the specified logger to produce another logger.
    * If necessary, the items are separated by a single space character.
    */
-  def :+ (logger: HttpRequestLogger[T, S]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
+  def :+ (logger: HttpRequestLogger[T, S]): HttpRequestLogger[T, S] = new CompositeHttpRequestLogger(logger)
+
+  private[HttpRequestLogger] class CompositeHttpRequestLogger(logger: HttpRequestLogger[T, S]) extends HttpRequestLogger[T, S]{
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[String] = {
       self(request, response).zip(logger(request, response)).map { t =>
         val (prefix, suffix) = t
-        
+
         val infix = if (suffix.length == 0) "" else (if (prefix.endsWith(" ")) "" else " ")
 
         prefix + infix + suffix
@@ -41,20 +43,22 @@ object HttpRequestLogger{
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")
 
   private val IpIdentifierValue = try {
-    InetAddress.getLocalHost().getHostAddress()
+    InetAddress.getLocalHost.getHostAddress
   }
   catch {
    case error: Throwable => "127.0.0.1"
   }
 
   private val DnsNameIdentifierValue = try {
-    InetAddress.getLocalHost().getHostName()
+    InetAddress.getLocalHost.getHostName
   }
   catch {
    case error: Throwable => "localhost"
   }
 
-  private def lift[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[String]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
+  private def lift[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[String]): HttpRequestLogger[T, S] = new HttpRequestLoggerImpl[T, S] (f)
+
+  private[HttpRequestLogger] class HttpRequestLoggerImpl[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[String]) extends HttpRequestLogger[T, S]{
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[String] = f(request, response)
   }
   
@@ -62,7 +66,8 @@ object HttpRequestLogger{
    *
    * #Fields: time cs-method cs-uri
    */
-  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock): HttpRequestLogger[T, S] = {
+  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = {
+    def encodeBase64(chunk: Option[ByteChunk]) = chunk.map(AggregatedByteChunk(_).map(aggregated => new String(Base64.encodeBase64(aggregated.data), "UTF-8"))).getOrElse(Future.sync(""))
     def apply0(identifiers: List[FieldIdentifier]): HttpRequestLogger[T, S] = identifiers match {
       case Nil =>
         lift((rq, rs) => Future.sync(""))
@@ -113,6 +118,11 @@ object HttpRequestLogger{
             case DnsNameIdentifier(prefix) => prefix match {
               case ClientPrefix => Future.sync(request.remoteHost.map(_.getHostName).getOrElse(""))
               case ServerPrefix => Future.sync(DnsNameIdentifierValue)
+              case _   => Future.sync("")
+            }
+            case ContentIdentifier(prefix) => prefix match {
+              case ClientToServerPrefix => encodeBase64(request.content.map(requestBijection(_)))
+              case ServerToClientPrefix => response flatMap { response => encodeBase64(response.content.map(responseBijection(_))) }
               case _   => Future.sync("")
             }
             case StatusIdentifier(prefix) => prefix match {

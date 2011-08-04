@@ -125,6 +125,9 @@ object W3ExtendedLogAST {
   case class UriQueryIdentifier (prefix: Prefix) extends PredefinedIdentifierPrefix{
     def identifier = "uri-query"
   }
+  case class ContentIdentifier   (prefix: Prefix) extends PredefinedIdentifierPrefix{
+    def identifier = "content"
+  }
   
   case class LogEntry(fields: List[Field])
   
@@ -222,7 +225,8 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
       ("method"     ^^^ MethodIdentifier(prefix))  |
       ("uri-stem"   ^^^ UriStemIdentifier(prefix)) |
       ("uri-query"  ^^^ UriQueryIdentifier(prefix)) |
-      ("uri"        ^^^ UriIdentifier(prefix))
+      ("uri"        ^^^ UriIdentifier(prefix))     |
+      ("content"    ^^^ ContentIdentifier(prefix))
     }
   }
 

@@ -5,7 +5,7 @@ import blueeyes.BlueEyesServer
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkJson}
+import blueeyes.core.http.HttpHeaders
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
@@ -13,7 +13,10 @@ import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.core.service.ServerHealthMonitorService
-import blueeyes.core.http.{HttpStatus, HttpRequest, HttpResponse}
+import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
+import blueeyes.core.data.FileSource._
+import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson}
+import java.io.File
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
@@ -21,6 +24,8 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
 
 trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson with ConfigurableMongo{
   val contactListService = service("contactlist", "1.0.0") {
+    requestLogging{
+
     healthMonitor { monitor => context =>
       startup {
         val mongoConfig = context.config.configMap("mongo")
@@ -71,14 +76,31 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 }
               }
             }
+          }~
+          path("/file/read"){
+            compress{
+              produce(image / jpeg){
+                get { request: HttpRequest[ByteChunk] =>
+                  val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("/Users/mlagutko/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
+                  Future.sync[HttpResponse[ByteChunk]](response)
+                }
+              }
+            }
+          }
+        }~
+        path("/ping") {
+          produce(text/plain) {
+            get { request: HttpRequest[ByteChunk] =>
+              Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
+            }
           }
         }
-      } ->
+      }->
       shutdown { demoConfig: BlueEyesDemoConfig =>
         ().future
       }
     }
-  }
+    }}
 
   private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): Future[List[JString]] = {
     createFilter(filterJObject) map { filter =>

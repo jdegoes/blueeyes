@@ -348,11 +348,13 @@ class Future[T]{
   def zip[A](f2: Future[A]): Future[(T, A)] = {
     val f1 = this
 
-    val zipped = new Future[(T, A)] {
+    class ZippedFuture extends Future[(T, A)] {
       override def cancel(why: Option[Throwable]): Boolean = {
         f1.cancel(why) || f2.cancel(why)
       }
     }
+
+    val zipped = new ZippedFuture()
 
     def deliverZip = {
       if (f1.isDelivered && f2.isDelivered && !zipped.isDone) {

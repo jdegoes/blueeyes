@@ -8,14 +8,16 @@ import blueeyes.util.ClockMock
 import org.joda.time.format.DateTimeFormat
 import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.data.BijectionsChunkString._
+import org.apache.commons.codec.binary.Base64
 
 class HttpRequestLoggerSpec extends Specification with ClockMock{
 
   private val DateFormatter = DateTimeFormat.forPattern("yyyy-MM-dd")
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")
 
-  private val request        = HttpRequest[String](method = HttpMethods.GET, uri = "/foo/bar?param=value", remoteHost = Some(InetAddress.getLocalHost), headers = Map[String, String]("content-language" -> "en"))
-  private val response       = HttpResponse[String](status = HttpStatus(Created), headers = Map[String, String]("content-length" -> "1000", "age" -> "3"))
+  private val request        = HttpRequest[String](content = Some("request content"), method = HttpMethods.GET, uri = "/foo/bar?param=value", remoteHost = Some(InetAddress.getLocalHost), headers = Map[String, String]("content-language" -> "en"))
+  private val response       = HttpResponse[String](content = Some("response content"), status = HttpStatus(Created), headers = Map[String, String]("content-length" -> "1000", "age" -> "3"))
   private val responseFuture = Future.sync(response)
 
   "HttpRequestLogger: logs multiple values" in {
@@ -72,6 +74,13 @@ class HttpRequestLoggerSpec extends Specification with ClockMock{
   "HttpRequestLogger: logs response header" in {
     log(HeaderIdentifier(ServerToClientPrefix, "age")).value must eventually (beSome("3.0"))
   }
+  "HttpRequestLogger: logs request content" in {
+    log(ContentIdentifier(ClientToServerPrefix)).value.map(decodeBase64(_)) must eventually (beEqual(request.content))
+  }
+  "HttpRequestLogger: logs response content" in {
+    log(ContentIdentifier(ServerToClientPrefix)).value.map(decodeBase64(_)) must eventually (beEqual(response.content))
+  }
+  private def log(fieldIdentifiers: FieldIdentifier*): Future[String] = HttpRequestLogger[String, String](FieldsDirective(List(fieldIdentifiers: _*))).apply(request, responseFuture)
 
-  private def log(fieldIdentifiers: FieldIdentifier*): Future[String] = HttpRequestLogger[String, String](FieldsDirective(List(fieldIdentifiers: _*)))(clockMock)(request, responseFuture)
+  private def decodeBase64(data: String) = new String(Base64.decodeBase64(data), "UTF-8")
 }

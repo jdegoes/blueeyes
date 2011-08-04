@@ -38,7 +38,7 @@ object W3ExtendedLogGen{
   def prefixedIdentifier  = {
     for {
       prefix    <- prefix
-      prefixed  <- oneOf("ip", "dns", "status", "comment", "method", "uri", "uri-stem", "uri-query")
+      prefixed  <- oneOf("ip", "dns", "status", "comment", "method", "uri", "uri-stem", "uri-query", "content")
     } yield (prefix + "-" + prefixed)
   }
 
