@@ -67,7 +67,7 @@ object HttpRequestLogger{
    * #Fields: time cs-method cs-uri
    */
   def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = {
-    def encodeBase64(chunk: Option[ByteChunk]) = chunk.map(AggregatedByteChunk(_).map(aggregated => new String(Base64.encodeBase64(aggregated.data), "UTF-8"))).getOrElse(Future.sync(""))
+    def encodeBase64(chunk: Option[ByteChunk]) = chunk.map(AggregatedByteChunk(_).map(aggregated => "\"" + new String(Base64.encodeBase64(aggregated.data), "UTF-8") + "\"")).getOrElse(Future.sync("\"\""))
     def apply0(identifiers: List[FieldIdentifier]): HttpRequestLogger[T, S] = identifiers match {
       case Nil =>
         lift((rq, rs) => Future.sync(""))

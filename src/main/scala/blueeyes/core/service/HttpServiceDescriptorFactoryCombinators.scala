@@ -13,6 +13,7 @@ import blueeyes.util._
 import blueeyes.util.logging._
 import java.util.Calendar
 import blueeyes.core.data._
+import util.matching.Regex
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -117,10 +118,12 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         val fileName = configMap.getString("file", context.toString + "-request.log")
 
         val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 1)
+        val includePaths      = configMap.getList("includePaths").map(new Regex(_)).toList
+        val excludePaths      = configMap.getList("excludePaths").map(new Regex(_)).toList
 
         val log = W3ExtendedLogger.get(fileName, policy, fieldsDirective, writeDelaySeconds)
 
-        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, log, underlying.request(state))},
+        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, includePaths, excludePaths, log, underlying.request(state))},
                         shutdown = (state: S) => {
                           log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
                         })
@@ -189,19 +192,23 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
-  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, log: W3ExtendedLogger, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
-    private val requestLogger = HttpRequestLogger[T, T](fieldsDirective)
+  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, includePaths: List[Regex], excludePaths: List[Regex], log: W3ExtendedLogger, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
+    private val includeExcludeLogic = new IncludeExcludeLogic(includePaths, excludePaths)
+    private val requestLogger       = HttpRequestLogger[T, T](fieldsDirective)
     def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
 
     def apply(request: HttpRequest[T]) = {
-
       val response = underlying(request)
 
-      val logRecord = requestLogger(request, response)
-      logRecord foreach { log(_)}
+      if (includeExcludeLogic(request.subpath)){
+        val logRecord = requestLogger(request, response)
+        logRecord foreach { log(_)}
+      }
 
       response
     }
+
+
   }
 
   private[service] class MonitorHttpRequestHandler[T](underlying: HttpRequestHandler[T], healthMonitor: HealthMonitor) extends HttpRequestHandler[T] with JPathImplicits{
@@ -231,6 +238,23 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       }
 
       monitor(healthMonitor.trap(errorPath){underlying.apply(request)})
+    }
+  }
+}
+
+private[service] class IncludeExcludeLogic(includePaths: List[Regex], excludePaths: List[Regex]){
+  def apply(path: String) = (includePaths, excludePaths) match {
+    case (Nil, Nil) => true
+    case _ => includePaths match {
+      case x :: xs => includePaths.foldLeft(false){(result, regex) =>
+        {
+          val pattern = regex.pattern
+          val matcher = pattern.matcher(path)
+          val matches = matcher.matches
+          result || matches
+        }
+      }
+      case Nil => !excludePaths.foldLeft(false){(result, regex) => result || regex.pattern.matcher(path).matches}
     }
   }
 }

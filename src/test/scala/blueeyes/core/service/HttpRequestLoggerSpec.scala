@@ -82,5 +82,5 @@ class HttpRequestLoggerSpec extends Specification with ClockMock{
   }
   private def log(fieldIdentifiers: FieldIdentifier*): Future[String] = HttpRequestLogger[String, String](FieldsDirective(List(fieldIdentifiers: _*))).apply(request, responseFuture)
 
-  private def decodeBase64(data: String) = new String(Base64.decodeBase64(data), "UTF-8")
+  private def decodeBase64(data: String) = new String(Base64.decodeBase64(data.substring(1, data.length - 1)), "UTF-8")
 }
