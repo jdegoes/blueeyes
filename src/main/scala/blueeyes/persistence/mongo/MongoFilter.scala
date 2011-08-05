@@ -280,9 +280,9 @@ case class MongoFilterBuilder(jpath: JPath) {
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]) = MongoFieldFilter(jpath, $type, witness.typeNumber)
 
-  def near(x: Int, y: Int, maxDistance: Option[Int] = None) = {
-    val nearField = JField("$near", JArray(List(JInt(x), JInt(y))))
-    val fields    = maxDistance.map(v => List(JField("$maxDistance", JInt(v)))).getOrElse(Nil)
+  def near(x: Double, y: Double, maxDistance: Option[Double] = None) = {
+    val nearField = JField("$near", JArray(List(JDouble(x), JDouble(y))))
+    val fields    = maxDistance.map(v => List(JField("$maxDistance", JDouble(v)))).getOrElse(Nil)
     MongoFieldFilter(jpath, $near, JObject(nearField :: fields))
   }
 }
