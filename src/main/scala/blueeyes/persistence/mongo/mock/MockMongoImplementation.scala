@@ -131,9 +131,9 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
 
-  override def ensureIndex(name: String, keys: ListSet[JPath], unique: Boolean) = {
+  override def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject) {
     writeLock {
-      super.ensureIndex(name, keys, unique)
+      super.ensureIndex(name, keys, unique, options)
     }
   }
 
@@ -160,11 +160,11 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   private def search(filter: Option[MongoFilter]) = filter.map(all.filter(_).map(_.asInstanceOf[JObject])).getOrElse(all)
 
-  private def insert0(objects: List[JObject]) = container = JArray(container.elements ++ objects)
+  private def insert0(objects: List[JObject]) {container = JArray(container.elements ++ objects)}
 
   private def all: List[JObject] = container.elements.map(_.asInstanceOf[JObject])
 
-  private def remove(objects: List[JObject]): Unit = container = JArray(all filterNot (objects contains))
+  private def remove(objects: List[JObject]) {container = JArray(all filterNot (objects contains))}
 }
 
 private[mock] object FilterToUpdateConvert{
@@ -184,5 +184,5 @@ private[mock] object FilterToUpdateConvert{
 
 private[mongo] class MockMapReduceOutput(output: MockDatabaseCollection) extends MapReduceOutput {
   override def outputCollection = MongoCollectionHolder(output, output.name, output.database)
-  override def drop = {}
+  override def drop() {}
 }

@@ -39,6 +39,7 @@ object MongoFilterOperators {
   case object $type       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
   case object $or         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
   case object $each       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
+  case object $near       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $near operator does not have a negation"); }
 }
 
 import MongoFilterOperators._
@@ -81,7 +82,7 @@ case object MongoFilterAll extends MongoFilter {
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive) extends MongoFilter { self =>
   def filter: JValue = {
     val value = operator match {
-      case $eq | $regex => rhs.toJValue
+      case $eq | $regex | $near => rhs.toJValue
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
@@ -278,6 +279,12 @@ case class MongoFilterBuilder(jpath: JPath) {
   def regex(regex: String, options: String = "") = MongoFieldFilter(jpath, $regex, JObject(List(JField("$regex", JString(regex)), JField("$options", JString(options)))))
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]) = MongoFieldFilter(jpath, $type, witness.typeNumber)
+
+  def near(x: Int, y: Int, maxDistance: Option[Int] = None) = {
+    val nearField = JField("$near", JArray(List(JInt(x), JInt(y))))
+    val fields    = maxDistance.map(v => List(JField("$maxDistance", JInt(v)))).getOrElse(Nil)
+    MongoFieldFilter(jpath, $near, JObject(nearField :: fields))
+  }
 }
 
 private[mongo] object JPathExtension{

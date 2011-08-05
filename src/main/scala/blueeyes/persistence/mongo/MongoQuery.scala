@@ -42,6 +42,10 @@ sealed trait Hint
 case class NamedHint(indexName: String) extends Hint
 case class KeyedHint(keys: ListSet[JPath]) extends Hint
 
+sealed trait IndexType
+case object OrdinaryIndex extends IndexType
+case object GeospatialIndex extends IndexType
+
 /** Basic trait for mongo queries.
  */
 sealed trait MongoQuery extends QueryBehaviour {
@@ -89,7 +93,10 @@ case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilt
   def where (newFilter: MongoFilter): MongoCountQuery = copy(filter = Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery with InsertQueryBehaviour
-case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[JPath], unique: Boolean) extends MongoQuery with EnsureIndexQueryBehaviour
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject = JObject(Nil)) extends MongoQuery with EnsureIndexQueryBehaviour{
+  def geospatial(path: JPath) = copy(keys = keys.map(key => if (key._1 == path) (path, GeospatialIndex) else key))
+  def options(newOptions: JObject) = copy(options = newOptions)
+}
 case class MongoDropIndexQuery(collection: MongoCollection, name: String) extends MongoQuery with DropIndexQueryBehaviour
 case class MongoDropIndexesQuery(collection: MongoCollection) extends MongoQuery with DropIndexesQueryBehaviour
 case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdate, filter: Option[MongoFilter] = None, upsert: Boolean = false,
@@ -104,7 +111,7 @@ case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCol
 
 trait MapReduceOutput {
   def outputCollection: MongoCollection
-  def drop: Unit
+  def drop(): Unit
 }
 
 /** The MongoQueryBuilder creates mongo queries.
@@ -142,8 +149,8 @@ trait MongoQueryBuilder{
   def remove                                    = new FromQueryEntryPoint(MongoRemoveQuery(_))
   def count                                     = new FromQueryEntryPoint(MongoCountQuery(_))
   def insert(value: JObject*)                   = new IntoQueryEntryPoint(MongoInsertQuery(_, List(value: _*)))
-  def ensureIndex(name: String)                 = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys, false)))
-  def ensureUniqueIndex(name: String)           = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys, true)))
+  def ensureIndex(name: String)                 = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys.map((_, OrdinaryIndex)), false)))
+  def ensureUniqueIndex(name: String)           = new OnKeysQueryEntryPoint(keys => new InQueryEntryPoint(MongoEnsureIndexQuery(_, name, keys.map((_, OrdinaryIndex)), true)))
 
   def dropIndex(name: String)                   = new InQueryEntryPoint(MongoDropIndexQuery(_, name))
   def dropIndexes                               = new InQueryEntryPoint(MongoDropIndexesQuery(_))

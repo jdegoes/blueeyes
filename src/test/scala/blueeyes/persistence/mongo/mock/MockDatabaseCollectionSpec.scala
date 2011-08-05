@@ -74,7 +74,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not store jobject when unique index exists and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex) + Tuple2(JPath("address.street"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject :: jObject :: Nil) must throwA[MongoException]
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
@@ -82,7 +82,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when index is dropped and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex) + Tuple2(JPath("address.street"), OrdinaryIndex), true, JObject(Nil))
     collection.dropIndex("index")
     collection.insert(jObject :: jObject :: Nil)
 
@@ -91,8 +91,8 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when indexes are dropped and objects are the same" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
-    collection.dropIndexes
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex) + Tuple2(JPath("address.street"), OrdinaryIndex), true, JObject(Nil))
+    collection.dropIndexes()
     collection.insert(jObject :: jObject :: Nil)
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: jObject :: Nil)
@@ -100,7 +100,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
     collection.insert(jObject2 :: Nil) must throwA[MongoException]
 
@@ -109,7 +109,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
     collection.insert(jObject2 :: Nil) must throwA[MongoException]
 
@@ -118,7 +118,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not throw an error when the hint refers to not a existing index (by name)" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
     collection.insert(jObject2 :: Nil) must throwA[MongoException]
 
@@ -127,7 +127,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "does not throw an error when the hint refers to not a existing index (by keys)" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
     collection.insert(jObject2 :: Nil) must throwA[MongoException]
 
@@ -136,7 +136,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "throw an error when hint refers to not existing index (by name)" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
 
     collection.select(MongoSelection(Set()), None, None, None, None, Some(NamedHint("foo")), false) must throwA[MongoException]
@@ -144,7 +144,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "throw an error when hint refers to not existing index (by keys)" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject1 :: Nil)
 
     collection.select(MongoSelection(Set()), None, None, None, None, Some(KeyedHint(ListSet.empty + JPath("address"))), false) must throwA[MongoException]
@@ -152,7 +152,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "store jobject when unique index exists and objects are different" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex) + Tuple2(JPath("address.street"), OrdinaryIndex), true, JObject(Nil))
     collection.insert(jObject :: jObject1 :: Nil)
     collection.insert(jObject2 :: jObject3 :: Nil)
 
@@ -314,7 +314,7 @@ class MockDatabaseCollectionSpec extends Specification{
   "update by update when upsert is true and index exist" in{
     val collection = newCollection
 
-    collection.ensureIndex("index", ListSet.empty + JPath("address.city"), true)
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true, JObject(Nil))
     collection.update(None, MongoUpdateObject(jObject2), true, false)
     collection.update(None, MongoUpdateObject(jObject2), true, false)
 

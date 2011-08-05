@@ -45,4 +45,7 @@ class MongoFilterBuilderSpec extends Specification{
   "builds $regex operation with options" in {
     ("foo" regex ("bar", "i")) mustEqual (MongoFieldFilter("foo", $regex, MongoPrimitiveJObject(JObject(List(JField("$regex", JString("bar")), JField("$options", JString("i")))))))
   }
+  "builds $near " in {
+    ("foo" near (50, 60)) mustEqual (MongoFieldFilter("foo", $near, MongoPrimitiveArray(List(MongoPrimitiveInt(50), MongoPrimitiveInt(60)))))
+  }
 }

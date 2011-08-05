@@ -16,6 +16,6 @@ class EnsureIndexQueryBehaviourSpec extends Specification with Mockito {
     val query = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")
     query(collection)
 
-    there was one(collection).ensureIndex("index", ListSet.empty + JPath("address.city") + JPath("address.street"), true)
+    there was one(collection).ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex) + Tuple2(JPath("address.street"), OrdinaryIndex), true, JObject(Nil))
   }
 }

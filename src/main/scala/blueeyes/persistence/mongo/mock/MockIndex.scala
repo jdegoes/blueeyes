@@ -2,16 +2,16 @@ package blueeyes.persistence.mongo.mock
 
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST.JObject
-import blueeyes.persistence.mongo.MongoSelection
 import com.mongodb.MongoException
 import scala.collection.immutable.ListSet
+import blueeyes.persistence.mongo.{IndexType, MongoSelection}
 
 private[mock] trait MockIndex extends JObjectFields{
   private var indexes   = Map[String, Set[JPath]]()
 
-  def ensureIndex(name: String, keys: ListSet[JPath], unique: Boolean) = {
+  def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject){
     indexes = if (unique) indexes.get(name) match{
-      case None    => indexes + Tuple2(name, keys)
+      case None    => indexes + Tuple2(name, keys.map(_._1))
       case Some(x) => indexes
     } else indexes
   }

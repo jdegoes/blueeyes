@@ -91,7 +91,7 @@ private[mongo] trait DatabaseCollection{
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])
   def count(filter: Option[MongoFilter]): Long
-  def ensureIndex(name: String, keys: ListSet[JPath], unique: Boolean)
+  def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject)
   def dropIndexes()
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)

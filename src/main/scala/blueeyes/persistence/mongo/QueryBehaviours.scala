@@ -31,13 +31,13 @@ private[mongo] object QueryBehaviours{
     private def unverifiedQuery(collection: DatabaseCollection): Validation[Throwable, QueryResult] = Success(query(collection))
 
     private def verifiedQuery(collection: DatabaseCollection): Validation[Throwable, QueryResult] = try {
-      collection.requestStart
+      collection.requestStart()
       val answer    = query(collection)
       val lastError = collection.getLastError
 
       lastError.map(why => Failure(new MongoException(why))).getOrElse(Success(answer))
     } finally {
-      collection.requestDone
+      collection.requestDone()
     }
 
     def query(collection: DatabaseCollection): QueryResult
@@ -45,11 +45,12 @@ private[mongo] object QueryBehaviours{
 
   trait EnsureIndexQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection) { collection.ensureIndex(name, keys, unique) }
+    def query(collection: DatabaseCollection) { collection.ensureIndex(name, keys, unique, options) }
 
-    def keys: ListSet[JPath]
+    def keys: ListSet[(JPath, IndexType)]
     def name: String
     def unique: Boolean
+    def options: JObject
   }
 
   trait DropIndexQueryBehaviour extends MongoQueryBehaviour {
@@ -60,7 +61,7 @@ private[mongo] object QueryBehaviours{
   }
   trait DropIndexesQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection) { collection.dropIndexes }
+    def query(collection: DatabaseCollection) { collection.dropIndexes() }
   }
 
   trait InsertQueryBehaviour extends MongoQueryBehaviour {
