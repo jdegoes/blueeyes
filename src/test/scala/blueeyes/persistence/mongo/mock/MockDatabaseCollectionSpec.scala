@@ -6,16 +6,16 @@ import blueeyes.persistence.mongo.MongoFilterOperators._
 import com.mongodb.MongoException
 import blueeyes.persistence.mongo._
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, JPath, Printer}
+import blueeyes.json.{JsonParser, JPath}
 import scala.collection.immutable.ListSet
 
 import scalaz._
 import Scalaz._
 
 class MockDatabaseCollectionSpec extends Specification{
-  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
-  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
-  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: Nil)
+  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
+  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
+  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
 //  private val jObjectWithArray = JObject(JField("array", JArray( JString("C") :: Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
@@ -97,6 +97,31 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: jObject :: Nil)
   }
+  "does not store jobject when Geospatial unique index exists and the same object exists" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
+    collection.insert(jObject :: Nil)
+    collection.insert(jObject1 :: Nil) must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: Nil)
+  }
+//  "does not store jobject when Geospatial unique index exists and geo field is out of range" in{
+//    val collection = newCollection
+//
+//    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
+//    collection.insert(JObject(List(JField("location", JArray(List(JInt(-181), JInt(40)))))) :: Nil)  must throwA[MongoException]
+//
+//    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
+//  }
+//  "does not store jobject when Geospatial unique index exists and geo field has 1 element" in{
+//    val collection = newCollection
+//
+//    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
+//    collection.insert(JObject(List(JField("location", JArray(List(JInt(40)))))) :: Nil)  must throwA[MongoException]
+//
+//    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
+//  }
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 
@@ -374,6 +399,13 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.insert(jobjects)
     collection.select(MongoSelection(Set()), Some(MongoFieldFilter("address.city", $eq,"A")), None, None, None, None, false).toList mustEqual(jObject :: Nil)
+  }
+  "select jobjects by filter with near filter" in{
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject3 :: Nil)
+    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))) :: Nil))), None, None, None, None, false).toList
+    select mustEqual(jObject :: Nil)
   }
   "select jobjects by filter with exists" in{
     val collection = newCollection
