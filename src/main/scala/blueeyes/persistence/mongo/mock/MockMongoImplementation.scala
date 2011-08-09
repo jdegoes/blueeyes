@@ -109,7 +109,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       if (isSnapshot && (sort.isDefined || hint.isDefined)) throw new MongoException("Hint and sorting cannot be used with $snapshot")
       checkHint(hint)
 
-      val sorted  = sort.map(v => objects.sorted(new JObjectOrdering(v.sortField, v.sortOrder.order))).getOrElse(objects)
+      val sorted  = JObjectOrderingFactory(filter, sort).map(sorting => objects.sorted(sorting)).getOrElse(objects)
       val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
       val limited = limit.map(skipped.take(_)).getOrElse(skipped)
 

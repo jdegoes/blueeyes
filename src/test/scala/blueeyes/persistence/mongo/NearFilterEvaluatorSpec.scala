@@ -15,6 +15,9 @@ class NearFilterEvaluatorSpec extends Specification{
     "return true when object has double array geo fields and maxDistance is not specified" in {
       NearFilterEvaluator(JArray(JDouble(10.0) :: JDouble(11.0) :: Nil), near) must be (true)
     }
+    "return true when object has double and int array geo fields and maxDistance is not specified" in {
+      NearFilterEvaluator(JArray(JDouble(10.0) :: JInt(11) :: Nil), near) must be (true)
+    }
     "return true when object has 'int' JObject geo fields and maxDistance is not specified" in {
       NearFilterEvaluator(JObject(JField("x", JInt(10)) :: JField("y", JInt(10)) :: Nil), near) must be (true)
     }

@@ -14,8 +14,8 @@ import Scalaz._
 
 class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
-  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
-  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
+  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(50), JInt(50)))) :: Nil)
+  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(60), JInt(60)))) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
 //  private val jObjectWithArray = JObject(JField("array", JArray( JString("C") :: Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
@@ -102,26 +102,26 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
     collection.insert(jObject :: Nil)
-    collection.insert(jObject1 :: Nil) must throwA[MongoException]
+    collection.insert(jObject :: Nil) must throwA[MongoException]
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: Nil)
   }
-//  "does not store jobject when Geospatial unique index exists and geo field is out of range" in{
-//    val collection = newCollection
-//
-//    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
-//    collection.insert(JObject(List(JField("location", JArray(List(JInt(-181), JInt(40)))))) :: Nil)  must throwA[MongoException]
-//
-//    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
-//  }
-//  "does not store jobject when Geospatial unique index exists and geo field has 1 element" in{
-//    val collection = newCollection
-//
-//    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
-//    collection.insert(JObject(List(JField("location", JArray(List(JInt(40)))))) :: Nil)  must throwA[MongoException]
-//
-//    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
-//  }
+  "does not store jobject when Geospatial unique index exists and geo field is out of range" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
+    collection.insert(JObject(List(JField("location", JArray(List(JInt(-181), JInt(40)))))) :: Nil)  must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
+  }
+  "does not store jobject when Geospatial unique index exists and geo field has 1 element" in{
+    val collection = newCollection
+
+    collection.ensureIndex("index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("location"), GeospatialIndex), true, JObject(Nil))
+    collection.insert(JObject(List(JField("location", JArray(List(JInt(40)))))) :: Nil)  must throwA[MongoException]
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
+  }
   "does not store jobject when unique index exists and the same object exists" in{
     val collection = newCollection
 
@@ -189,7 +189,7 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject1 :: Nil)
     collection.update(None, "address.street" set ("3"), false, false)
 
-    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject2 :: Nil).toStream)
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject1.set("address.street", JString("3")) :: Nil).toStream)
   }
   "update not existing jobject field" in{
     val collection = newCollection
@@ -205,7 +205,9 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject :: Nil)
     collection.update(None, ("address.city" set ("B")) |+| ("address.street" set ("3")), false, false)
 
-    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject2 :: Nil).toStream)
+    val value = jObject.set("address.street", JString("3")).set(JPath("address.city"), JString("B"))
+    val toList = collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList
+    toList mustEqual(value :: Nil)
   }
   "pull jobject by field query" in{
     val collection = newCollection
@@ -406,6 +408,13 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jObject :: jObject3 :: Nil)
     val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))) :: Nil))), None, None, None, None, false).toList
     select mustEqual(jObject :: Nil)
+  }
+  "select jobjects by filter with near filter and order result by distance" in{
+    val collection = newCollection
+
+    collection.insert(jObject2 :: jObject :: jObject1 :: Nil)
+    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))) :: Nil))), None, None, None, None, false).toList
+    select mustEqual(jObject :: jObject1 :: jObject2 :: Nil)
   }
   "select jobjects by filter with exists" in{
     val collection = newCollection

@@ -182,7 +182,7 @@ private[mongo] object Evaluators{
 
   case object TypeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v2 match {
-      case JInt(x) => (v1, x.intValue) match{
+      case JInt(x) => (v1, x.intValue()) match{
         case (JString(_), 2)  => true
         case (JDouble(_), 1)  => true
         case (JObject(_), 3)  => true
@@ -198,17 +198,32 @@ private[mongo] object Evaluators{
   }
 
   case object NearFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = (v1, v2) match {
-      case (JArray(JInt(x) :: JInt(y) :: xs),                               JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil)) => true
-      case (JArray(JDouble(x) :: JDouble(y) :: xs),                         JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil)) => true
-      case (JObject(JField(_, JInt(x)) :: JField(_, JInt(y)) :: xs),        JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil)) => true
-      case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs),  JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil)) => true
-      case (JArray(JInt(x) :: JInt(y) :: xs),                               JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil)) => isNear(nearX, nearY, x.toDouble, y.toDouble, maxDistance)
-      case (JArray(JDouble(x) :: JDouble(y) :: xs),                         JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil)) => isNear(nearX, nearY, x, y, maxDistance)
-      case (JObject(JField(_, JInt(x)) :: JField(_, JInt(y)) :: xs),        JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil)) => isNear(nearX, nearY, x.toDouble, y.toDouble, maxDistance)
-      case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs),  JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil)) => isNear(nearX, nearY, x, y, maxDistance)
-      case _ => false
+    def apply(v1: JValue, v2: JValue) = {
+      def evaluate(x: Double, y: Double) = v2 match{
+        case JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil) => true
+        case JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil) => isNear(nearX, nearY, x, y, maxDistance)
+        case _ => false
+      }
+      normalizeGeoField(v1) match {
+        case (JArray(JDouble(x) :: JDouble(y) :: xs)) => evaluate(x, y)
+        case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
+        case _ => false
+      }
     }
-    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = math.sqrt(math.pow(nearX - x, 2.0) + math.pow(nearY - y, 2.0)) <= maxDistance
+    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = distance(nearX, nearY, x, y) <= maxDistance
   }
+
+  def normalizeGeoField(v: JValue) = v match{
+    case JArray(elements) => JArray(elements.map{element => element match {
+      case JInt(x) => JDouble(x.toDouble)
+      case _ => element
+    }})
+    case JObject(fields) => JObject(fields.map{field => field match{
+      case JField(name, JInt(x)) => JField(name, JDouble(x.toDouble))
+      case _ => field
+    }})
+    case _ => v
+  }
+
+  def distance(x1: Double, y1: Double, x2: Double, y2: Double) = math.sqrt(math.pow(x1 - x2, 2.0) + math.pow(y1 - y2, 2.0))
 }
