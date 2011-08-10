@@ -31,11 +31,7 @@ private[mongo] object Changes {
 
     def flatten = ListSet.empty + this
 
-    final def commuteWith(older: Change1): Option[Tuple2[Change1, Change1]] = if (older.path != this.path) Some((older, this)) else commuteWithImpl(older)
-
     final def fuseWith(change: Change1): Option[Change1] = if (change.path != this.path) None else fuseWithImpl(change)
-
-    protected def commuteWithImpl(older: Change1): Option[Tuple2[Change1, Change1]] = None
 
     protected def fuseWithImpl(older: Change1): Option[Change1]
   }
@@ -50,19 +46,24 @@ private[mongo] object Changes {
     implicit def setToChangelist[T <: Change1](list: ListSet[T]): Changelist[T] = Changelist[T](list)
   }
 
-  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = 
-    if (newer.isEmpty) older 
-    else compose(_compose(newer.last, older), newer.take(newer.size - 1))
+  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = {
+    val sortedOlder = older.foldLeft(Map[JPath, List[Change1]]()){(result, change) =>
+      val changes = result.get(change.path).getOrElse(List[Change1]())
+      result + Tuple2(change.path, changes ::: List(change))
+    }
 
-  private def _compose(c: Change1, cs: ListSet[Change1]): ListSet[Change1] = {
-    if (cs.isEmpty) ListSet(c)
+    val newChanges = newer.foldLeft(sortedOlder){(result, change) =>
+      val changes = result.get(change.path).getOrElse(List[Change1]())
+      result + Tuple2(change.path, _compose(change, changes) )
+    }
+    ListSet.empty ++ newChanges.values.flatten
+  }
+
+  private def _compose(c: Change1, cs: List[Change1]): List[Change1] = {
+    if (cs.isEmpty) List(c)
     else c.fuseWith(cs.head) match {
-      case None => c.commuteWith(cs.head) match {
-        case None => ListSet(c) ++ cs
-        case Some(t) => ListSet(t._1) ++ _compose(t._2, cs.tail)
-      }
-
-      case Some(f) => ListSet(f) ++ cs.tail
+      case Some(t) => cs.tail ::: List(t)
+      case None    => _compose(c, cs.tail) ::: List(cs.head)
     }
   }
 }
