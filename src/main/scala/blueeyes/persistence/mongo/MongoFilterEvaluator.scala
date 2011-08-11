@@ -206,7 +206,7 @@ private[mongo] object Evaluators{
         case _ => false
       }
       normalizeGeoField(v1) match {
-        case (JArray(JDouble(x) :: JDouble(y) :: xs)) => evaluate(x, y)
+        case (JArray(JDouble(x) :: JDouble(y) :: xs))                        => evaluate(x, y)
         case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
         case _ => false
       }
@@ -216,14 +216,15 @@ private[mongo] object Evaluators{
 
   case object WithinFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = {
+      def extractPoints(points: List[JValue]) = points.collect{case JArray(JDouble(x) :: JDouble(y) :: Nil) => (x, y)}
       def evaluate(x: Double, y: Double) = v2 match{
-        case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(lowerLeftX) :: JDouble(lowerLeftY) :: Nil) :: JArray(JDouble(upperRightX) :: JDouble(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => false
+        case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(lowerLeftX) :: JDouble(lowerLeftY) :: Nil) :: JArray(JDouble(upperRightX) :: JDouble(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => x >= lowerLeftX && x <= upperRightX && y >= lowerLeftY && y <= upperRightY
         case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radius) :: Nil)) :: Nil)) :: Nil) => distance(centerX, centerY, x, y) <= radius
-        case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => false
+        case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => inPolygon((x, y), extractPoints(points).toArray)
         case _ => false
       }
       normalizeGeoField(v1) match {
-        case (JArray(JDouble(x) :: JDouble(y) :: xs)) => evaluate(x, y)
+        case (JArray(JDouble(x) :: JDouble(y) :: xs))                        => evaluate(x, y)
         case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
         case _ => false
       }
@@ -243,4 +244,19 @@ private[mongo] object Evaluators{
   }
 
   def distance(x1: Double, y1: Double, x2: Double, y2: Double) = math.sqrt(math.pow(x1 - x2, 2.0) + math.pow(y1 - y2, 2.0))
+
+  def inPolygon(point: (Double, Double), polygon: Array[(Double, Double)]): Boolean = {
+    var oddNodes = false
+
+    var j = polygon.length - 1
+    for (i <- 0 to polygon.length - 1)
+    {
+      if (polygon(i)._2 < point._2 && polygon(j)._2 >= point._2 || polygon(j)._2 < point._2 && polygon(i)._2 >= point._2)
+        if (polygon(i)._1 + (point._2 - polygon(i)._2)/(polygon(j)._2 - polygon(i)._2)*(polygon(j)._1 - polygon(i)._1) < point._1)
+          oddNodes = !oddNodes
+      j = i
+    }
+
+    oddNodes
+  }
 }
