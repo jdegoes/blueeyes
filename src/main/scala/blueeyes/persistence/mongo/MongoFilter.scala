@@ -40,6 +40,7 @@ object MongoFilterOperators {
   case object $or         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
   case object $each       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
   case object $near       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $near operator does not have a negation"); }
+  case object $within     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $within operator does not have a negation"); }
 }
 
 import MongoFilterOperators._
@@ -63,7 +64,7 @@ sealed trait MongoFilter { self =>
 object MongoFilter extends MongoFilterImplicits {
   def apply(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive): MongoFilter = rhs match {
     case opt @ MongoPrimitiveOption(value) => value.map(MongoFieldFilter(lhs, operator, _)).getOrElse(MongoFilterAll)
-    case rhs => MongoFieldFilter(lhs, operator, rhs)
+    case _ => MongoFieldFilter(lhs, operator, rhs)
   }
 }
 
@@ -82,7 +83,7 @@ case object MongoFilterAll extends MongoFilter {
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive) extends MongoFilter { self =>
   def filter: JValue = {
     val value = operator match {
-      case $eq | $regex | $near => rhs.toJValue
+      case $eq | $regex | $near | $within => rhs.toJValue
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
@@ -186,7 +187,7 @@ trait MongoFilterImplicits {
 
   implicit def jvalueToMongoPrimitive(value: JValue): MongoPrimitive = value match {
     case x: JString => MongoPrimitiveString(x.value)
-    case x: JInt    => MongoPrimitiveLong(x.value.longValue)
+    case x: JInt    => MongoPrimitiveLong(x.value.longValue())
     case x: JDouble => MongoPrimitiveDouble(x.value)
     case x: JBool   => MongoPrimitiveBoolean(x.value)
     case x: JObject => MongoPrimitiveJObject(x)
@@ -233,6 +234,11 @@ trait MongoFilterImplicits {
   implicit val MongoPrimitiveJIntWitness    = new MongoPrimitiveWitness[JInt](18)
 }
 object MongoFilterImplicits extends MongoFilterImplicits
+
+sealed trait WithinShape
+case class Box(lowerLeft: (Double, Double), upperRight: (Double, Double)) extends WithinShape
+case class Circle(center: (Double, Double), radius: Double)    extends WithinShape
+case class Polygon(points: (Double, Double) *)                 extends WithinShape
 
 /** The MongoFilterBuilder creates mongo filters. Filters can be used in MongoQuery in where clause.
  * <p>
@@ -284,6 +290,15 @@ case class MongoFilterBuilder(jpath: JPath) {
     val nearField = JField("$near", JArray(List(JDouble(x), JDouble(y))))
     val fields    = maxDistance.map(v => List(JField("$maxDistance", JDouble(v)))).getOrElse(Nil)
     MongoFieldFilter(jpath, $near, JObject(nearField :: fields))
+  }
+
+  def within(shape: WithinShape) = {
+    val withinValue = shape match{
+      case x: Box     => JField("$box",     JArray(JArray(JDouble(x.lowerLeft._1) :: JDouble(x.lowerLeft._2) :: Nil) :: JArray(JDouble(x.upperRight._1) :: JDouble(x.upperRight._2) :: Nil) :: Nil))
+      case x: Circle  => JField("$center",  JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radius) :: Nil))
+      case x: Polygon => JField("$polygon", JArray(x.points.toList.map(point => JArray(JDouble(point._1) :: JDouble(point._2) :: Nil))))
+    }
+    MongoFieldFilter(jpath, $within, JObject(JField("$within", JObject(withinValue :: Nil)) :: Nil))
   }
 }
 

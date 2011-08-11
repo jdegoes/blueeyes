@@ -84,6 +84,7 @@ private[mongo] object Evaluators{
       case $type    => TypeFieldFilterEvaluator
       case $regex   => RegexFilterEvaluator
       case $near    => NearFilterEvaluator
+      case $within  => WithinFilterEvaluator
       case $or      => sys.error("'or' is not supported")
       case $each    => sys.error("'or' is not supported")
     }
@@ -211,6 +212,22 @@ private[mongo] object Evaluators{
       }
     }
     private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = distance(nearX, nearY, x, y) <= maxDistance
+  }
+
+  case object WithinFilterEvaluator extends FieldFilterEvaluator{
+    def apply(v1: JValue, v2: JValue) = {
+      def evaluate(x: Double, y: Double) = v2 match{
+        case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(lowerLeftX) :: JDouble(lowerLeftY) :: Nil) :: JArray(JDouble(upperRightX) :: JDouble(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => false
+        case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radius) :: Nil)) :: Nil)) :: Nil) => distance(centerX, centerY, x, y) <= radius
+        case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => false
+        case _ => false
+      }
+      normalizeGeoField(v1) match {
+        case (JArray(JDouble(x) :: JDouble(y) :: xs)) => evaluate(x, y)
+        case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
+        case _ => false
+      }
+    }
   }
 
   def normalizeGeoField(v: JValue) = v match{

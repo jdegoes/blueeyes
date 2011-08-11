@@ -45,7 +45,16 @@ class MongoFilterBuilderSpec extends Specification{
   "builds $regex operation with options" in {
     ("foo" regex ("bar", "i")) mustEqual (MongoFieldFilter("foo", $regex, MongoPrimitiveJObject(JObject(List(JField("$regex", JString("bar")), JField("$options", JString("i")))))))
   }
-  "builds $near " in {
+  "builds $near" in {
     ("foo" near (50, 60)) mustEqual (MongoFieldFilter("foo", $near, MongoPrimitiveJObject(JObject(List(JField("$near", JArray(List(JDouble(50.0), JDouble(60.0)))))))))
+  }
+  "builds $within for box" in {
+    ("foo" within Box((10, 20), (30, 40))) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$box", JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JArray(JDouble(30.0) :: JDouble(40.0) :: Nil) :: Nil)) :: Nil)) :: Nil))))
+  }
+  "builds $within for circe" in {
+    ("foo" within Circle((10, 20), 30)) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JDouble(30.0) :: Nil)) :: Nil)) :: Nil))))
+  }
+  "builds $within for polygon" in {
+    ("foo" within Polygon((10, 20), (30, 40))) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$polygon", JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JArray(JDouble(30.0) :: JDouble(40.0) :: Nil) :: Nil)) :: Nil)) :: Nil))))
   }
 }
