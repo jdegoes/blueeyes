@@ -53,8 +53,9 @@ trait NettyConverters{
     val headers             = buildHeaders(request.getHeaders)
     val content             = fromNettyContent(request.getContent, () => None)
 
-    val xforwarded  = headers.header(`X-Forwarded-For`)
-    val remoteHost  = xforwarded.flatMap(_.ips.toList.headOption.map(_.ip)).orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
+    val xforwarded  = headers.header(`X-Forwarded-For`).flatMap(_.ips.toList.headOption.map(_.ip))
+    val remoteIp    = xforwarded.orElse(headers.header(`X-Cluster-Client-Ip`).flatMap(_.ips.toList.headOption.map(_.ip)))
+    val remoteHost  = remoteIp.orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
 
     HttpRequest(request.getMethod, URI(request.getUri), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion))
   }

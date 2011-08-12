@@ -77,6 +77,7 @@ object HttpHeaderField {
     `X-Content-Type-Options`,
     `X-Requested-With`,
     `X-Forwarded-For`,
+    `X-Cluster-Client-Ip`,
     `X-Forwarded-Proto`,
     `X-Powered-By`,
     `Access-Control-Allow-Origin`,
@@ -630,6 +631,14 @@ object HttpHeaders {
     def value = ips.map(_.toString).mkString(", ")
   }
   implicit case object `X-Forwarded-For` extends HttpHeaderField[`X-Forwarded-For`] {
+    override def parse(s: String) = Some(apply(HttpIps.parseHttpIps(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.ips)
+  }
+
+  case class `X-Cluster-Client-Ip`(ips: HttpIp*) extends HttpHeaderRequest {
+    def value = ips.map(_.toString).mkString(", ")
+  }
+  implicit case object `X-Cluster-Client-Ip` extends HttpHeaderField[`X-Cluster-Client-Ip`] {
     override def parse(s: String) = Some(apply(HttpIps.parseHttpIps(s): _*))
     def unapply(t: (String, String)) = parse(t).map(_.ips)
   }

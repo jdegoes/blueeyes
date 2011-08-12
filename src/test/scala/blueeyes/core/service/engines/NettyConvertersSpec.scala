@@ -79,6 +79,19 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
     request.version     mustEqual(`HTTP/1.0`)
     request.remoteHost  mustEqual(Some(forwardedAddress.getAddress))
   }
+  "convert netty NettyHttpRequest to service NettyHttpRequest, modifying ip if X-Cluster-Client-Ip header present" in {
+    val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
+    nettyRequest.setHeader("X-Cluster-Client-Ip", "111.11.11.1, 121.21.2.2")
+
+    val address = new InetSocketAddress("127.0.0.0", 8080)
+    val forwardedAddress = new InetSocketAddress("111.11.11.1", 8080)
+    val request = fromNettyRequest(nettyRequest, address)
+
+    request.method      mustEqual(HttpMethods.GET)
+    request.uri         mustEqual(URI("http://foo/bar?param1=value1"))
+    request.headers.raw mustEqual(Map("X-Cluster-Client-Ip" -> "111.11.11.1, 121.21.2.2"))
+    request.remoteHost  mustEqual(Some(forwardedAddress.getAddress))
+  }
 
   "does not use host name from Host header" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")

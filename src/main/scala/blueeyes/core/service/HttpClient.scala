@@ -51,7 +51,7 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
     request.copy(headers = request.headers + Tuple2("Cookie", cookieEncoder.encode()))
   }
 
-  def remoteHost(host: InetAddress) = buildClient { request => HttpRequest(request.method, request.uri, request.parameters, request.headers + Tuple2("X-Forwarded-For", host.getHostAddress()), request.content, Some(host), request.version)}
+  def remoteHost(host: InetAddress) = buildClient { request => HttpRequest(request.method, request.uri, request.parameters, request.headers + Tuple2("X-Forwarded-For", host.getHostAddress) + Tuple2("X-Cluster-Client-Ip", host.getHostAddress) , request.content, Some(host), request.version)}
 
   def header(name: String, value: String): HttpClient[A] = header((name, value))
 
