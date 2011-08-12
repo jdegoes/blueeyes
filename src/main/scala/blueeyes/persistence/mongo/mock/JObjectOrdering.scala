@@ -4,31 +4,21 @@ import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo._
 import blueeyes.persistence.mongo.Evaluators._
-import collection.immutable.ListSet
+import blueeyes.util.GeoTools
 
-private[mongo] object JObjectOrderingFactory{
+private[mock] object JObjectOrderingFactory extends MongoFilters{
   def apply(filter: Option[MongoFilter], sort: Option[MongoSort]): Option[Ordering[JObject]] = {
     sort.map(v => JObjectOrdering(v.sortField, v.sortOrder.order): Ordering[JObject]).orElse{filter.flatMap{ filterValue =>
       nearFilter(filterValue) match {
-        case Some(MongoFieldFilter(lhs, MongoFilterOperators.$near, MongoPrimitiveJObject(JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: xs)))) => Some(GeoFieldOrdering(lhs, nearX, nearY): Ordering[JObject])
+        case Some(MongoFieldFilter(lhs, _, MongoPrimitiveJObject(JObject(JField(_, JArray(List(JDouble(nearX), JDouble(nearY)))) :: xs)))) => Some(GeoFieldOrdering(lhs, nearX, nearY): Ordering[JObject])
         case _ => None
       }
     }}
   }
-
-  private def nearFilter(mongoFilter: MongoFilter): Option[MongoFieldFilter] = {
-    def findNearFilter(filters: ListSet[MongoFilter]) = filters.find(nearFilter(_) != None).map(_.asInstanceOf[MongoFieldFilter])
-    mongoFilter match {
-      case e @ MongoFieldFilter(lhs, MongoFilterOperators.$near, _) => Some(e)
-      case MongoOrFilter(filters)  => findNearFilter(filters)
-      case MongoAndFilter(filters) => findNearFilter(filters)
-      case _ => None
-    }
-  }
 }
 
-private[mongo] case class GeoFieldOrdering(path: JPath, x: Double, y: Double) extends Ordering[JObject]{
-  private def compareDistance(x1: Double, y1: Double, x2: Double, y2: Double) = distance(x1.doubleValue(), y1.doubleValue(), x, y) - distance(x2.doubleValue(), y2.doubleValue(), x, y) match{
+private[mongo] case class GeoFieldOrdering(path: JPath, x: Double, y: Double) extends Ordering[JObject] with GeoTools{
+  private def compareDistance(x1: Double, y1: Double, x2: Double, y2: Double) = distanceInMiles(x1.doubleValue(), y1.doubleValue(), x, y) - distanceInMiles(x2.doubleValue(), y2.doubleValue(), x, y) match{
     case 0 => 0
     case x => if (x < 0) -1 else 1
   }

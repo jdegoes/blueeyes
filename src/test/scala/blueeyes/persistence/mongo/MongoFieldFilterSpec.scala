@@ -23,6 +23,14 @@ class MongoFieldFilterSpec extends Specification{
     import MongoFilterImplicits._
     MongoFieldFilter("foo", $near, JObject(List(JField("$near", JArray(List(JInt(1), JInt(2)))), JField("$maxDistance", JInt(10))))).filter mustEqual (JObject(JField("foo", JObject(List(JField("$near", JArray(List(JInt(1), JInt(2)))), JField("$maxDistance", JInt(10))))) :: Nil))
   }
+  "creates valid json for $nearSphere operator" in{
+    import MongoFilterImplicits._
+    MongoFieldFilter("foo", $nearSphere, JObject(List(JField("$nearSphere", JArray(List(JInt(1), JInt(2))))))).filter mustEqual (JObject(JField("foo", JObject(List(JField("$nearSphere", JArray(List(JInt(1), JInt(2))))))) :: Nil))
+  }
+  "creates valid json for $nearSphere operator with $maxDistance" in{
+    import MongoFilterImplicits._
+    MongoFieldFilter("foo", $nearSphere, JObject(List(JField("$nearSphere", JArray(List(JInt(1), JInt(2)))), JField("$maxDistance", JInt(10))))).filter mustEqual (JObject(JField("foo", JObject(List(JField("$nearSphere", JArray(List(JInt(1), JInt(2)))), JField("$maxDistance", JInt(10))))) :: Nil))
+  }
   "creates valid json for $eq operator for empty path" in{
     import MongoFilterImplicits._
     MongoFieldFilter("", $eq, "bar").filter mustEqual (JString("bar"))

@@ -32,15 +32,18 @@ object MongoFilterOperators {
   case object $in    extends MongoFilterOperatorContainment { def unary_! = $nin; }
   case object $nin   extends MongoFilterOperatorContainment { def unary_! = $in; }
 
-  case object $mod        extends MongoFilterOperator { def unary_! : MongoFilterOperator = sys.error("The $mod operator does not have a negation"); }
-  case object $all        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $all operator does not have a negation"); }
-  case object $size       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $size operator does not have a negation"); }
-  case object $exists     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $exists operator does not have a negation"); }
-  case object $type       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
-  case object $or         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
-  case object $each       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
-  case object $near       extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $near operator does not have a negation"); }
-  case object $within     extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $within operator does not have a negation"); }
+  case object $mod         extends MongoFilterOperator { def unary_! : MongoFilterOperator = sys.error("The $mod operator does not have a negation"); }
+  case object $all         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $all operator does not have a negation"); }
+  case object $size        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $size operator does not have a negation"); }
+  case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $exists operator does not have a negation"); }
+  case object $type        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
+  case object $or          extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
+  case object $each        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
+
+  sealed trait MongoFilterOperatorGeo extends MongoFilterOperator
+  case object $near        extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $near operator does not have a negation"); }
+  case object $nearSphere  extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $nearSphere operator does not have a negation"); }
+  case object $within      extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $within operator does not have a negation"); }
 }
 
 import MongoFilterOperators._
@@ -83,7 +86,7 @@ case object MongoFilterAll extends MongoFilter {
 sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rhs: MongoPrimitive) extends MongoFilter { self =>
   def filter: JValue = {
     val value = operator match {
-      case $eq | $regex | $near | $within => rhs.toJValue
+      case $eq | $regex | $near | $nearSphere | $within => rhs.toJValue
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
@@ -236,9 +239,10 @@ trait MongoFilterImplicits {
 object MongoFilterImplicits extends MongoFilterImplicits
 
 sealed trait WithinShape
-case class Box(lowerLeft: (Double, Double), upperRight: (Double, Double)) extends WithinShape
+case class Box(lowerLeft: (Double, Double), upperRight: (Double, Double))  extends WithinShape
 case class Circle(center: (Double, Double), radius: Double)    extends WithinShape
 case class Polygon(points: (Double, Double) *)                 extends WithinShape
+case class CenterSphere(center: (Double, Double), radiusInRadians: Double) extends WithinShape
 
 /** The MongoFilterBuilder creates mongo filters. Filters can be used in MongoQuery in where clause.
  * <p>
@@ -286,17 +290,22 @@ case class MongoFilterBuilder(jpath: JPath) {
 
   def hasType[T](implicit witness: MongoPrimitiveWitness[T]) = MongoFieldFilter(jpath, $type, witness.typeNumber)
 
-  def near(x: Double, y: Double, maxDistance: Option[Double] = None) = {
-    val nearField = JField("$near", JArray(List(JDouble(x), JDouble(y))))
+  def near(x: Double, y: Double, maxDistance: Option[Double] = None) = nearQuery($near, x, y, maxDistance)
+
+  def nearSphere(x: Double, y: Double, maxDistance: Option[Double] = None) = nearQuery($nearSphere, x, y, maxDistance)
+
+  private def nearQuery(operator: MongoFilterOperator, x: Double, y: Double, maxDistance: Option[Double] = None) = {
+    val nearField = JField(operator.unmangledName, JArray(List(JDouble(x), JDouble(y))))
     val fields    = maxDistance.map(v => List(JField("$maxDistance", JDouble(v)))).getOrElse(Nil)
-    MongoFieldFilter(jpath, $near, JObject(nearField :: fields))
+    MongoFieldFilter(jpath, operator, JObject(nearField :: fields))
   }
 
   def within(shape: WithinShape) = {
     val withinValue = shape match{
-      case x: Box     => JField("$box",     JArray(JArray(JDouble(x.lowerLeft._1) :: JDouble(x.lowerLeft._2) :: Nil) :: JArray(JDouble(x.upperRight._1) :: JDouble(x.upperRight._2) :: Nil) :: Nil))
-      case x: Circle  => JField("$center",  JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radius) :: Nil))
-      case x: Polygon => JField("$polygon", JArray(x.points.toList.map(point => JArray(JDouble(point._1) :: JDouble(point._2) :: Nil))))
+      case x: Box          => JField("$box",     JArray(JArray(JDouble(x.lowerLeft._1) :: JDouble(x.lowerLeft._2) :: Nil) :: JArray(JDouble(x.upperRight._1) :: JDouble(x.upperRight._2) :: Nil) :: Nil))
+      case x: Circle       => JField("$center",  JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radius) :: Nil))
+      case x: Polygon      => JField("$polygon", JArray(x.points.toList.map(point => JArray(JDouble(point._1) :: JDouble(point._2) :: Nil))))
+      case x: CenterSphere => JField("$centerSphere", JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radiusInRadians) :: Nil))
     }
     MongoFieldFilter(jpath, $within, JObject(JField("$within", JObject(withinValue :: Nil)) :: Nil))
   }

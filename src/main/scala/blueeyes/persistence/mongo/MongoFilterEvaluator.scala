@@ -4,6 +4,8 @@ import blueeyes.json.JsonAST._
 import MongoFilterOperators._
 import blueeyes.json.JPath
 import util.matching.Regex
+import blueeyes.util.GeoTools
+import com.mongodb.MongoException
 
 private[mongo] object MongoFilterEvaluator{
   implicit def valuesToEvaluator(values: List[JValue]) = MongoFilterEvaluator(values)
@@ -69,24 +71,25 @@ private[mongo] object Evaluators{
 
   object FieldFilterEvaluatorFactory{
     def apply(lhs: JPath, operator: MongoFilterOperator): FieldFilterEvaluator = operator match{
-      case $gt      => GtFieldFilterEvaluator
-      case $gte     => GteFieldFilterEvaluator
-      case $lt      => LtFieldFilterEvaluator
-      case $lte     => LteFieldFilterEvaluator
-      case $eq      => EqFieldFilterEvaluator
-      case $ne      => NeFieldFilterEvaluator
-      case $in      => InFieldFilterEvaluator
-      case $nin     => NinFieldFilterEvaluator
-      case $mod     => ModFieldFilterEvaluator
-      case $all     => AllFieldFilterEvaluator
-      case $size    => SizeFieldFilterEvaluator
-      case $exists  => ExistsFieldFilterEvaluator
-      case $type    => TypeFieldFilterEvaluator
-      case $regex   => RegexFilterEvaluator
-      case $near    => NearFilterEvaluator
-      case $within  => WithinFilterEvaluator
-      case $or      => sys.error("'or' is not supported")
-      case $each    => sys.error("'or' is not supported")
+      case $gt          => GtFieldFilterEvaluator
+      case $gte         => GteFieldFilterEvaluator
+      case $lt          => LtFieldFilterEvaluator
+      case $lte         => LteFieldFilterEvaluator
+      case $eq          => EqFieldFilterEvaluator
+      case $ne          => NeFieldFilterEvaluator
+      case $in          => InFieldFilterEvaluator
+      case $nin         => NinFieldFilterEvaluator
+      case $mod         => ModFieldFilterEvaluator
+      case $all         => AllFieldFilterEvaluator
+      case $size        => SizeFieldFilterEvaluator
+      case $exists      => ExistsFieldFilterEvaluator
+      case $type        => TypeFieldFilterEvaluator
+      case $regex       => RegexFilterEvaluator
+      case $near        => NearFilterEvaluator
+      case $nearSphere  => NearSphereFilterEvaluator
+      case $within      => WithinFilterEvaluator
+      case $or          => sys.error("'or' is not supported")
+      case $each        => sys.error("'or' is not supported")
     }
   }
 
@@ -198,11 +201,11 @@ private[mongo] object Evaluators{
     }
   }
 
-  case object NearFilterEvaluator extends FieldFilterEvaluator{
+  trait NearFilterEvaluatorBase extends FieldFilterEvaluator with GeoTools{
     def apply(v1: JValue, v2: JValue) = {
       def evaluate(x: Double, y: Double) = v2 match{
-        case JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil) => true
-        case JObject(JField("$near", JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil) => isNear(nearX, nearY, x, y, maxDistance)
+        case JObject(JField(query, JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil) => true
+        case JObject(JField(query, JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil) => isNear(nearX, nearY, x, y, maxDistance)
         case _ => false
       }
       normalizeGeoField(v1) match {
@@ -211,15 +214,31 @@ private[mongo] object Evaluators{
         case _ => false
       }
     }
-    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = distance(nearX, nearY, x, y) <= maxDistance
+    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = distanceInMiles(nearX, nearY, x, y) <= realDistance(maxDistance)
+
+    protected def realDistance(distance: Double): Double
+    protected def query: String
   }
 
-  case object WithinFilterEvaluator extends FieldFilterEvaluator{
+  case object NearFilterEvaluator extends NearFilterEvaluatorBase{
+    protected val query = "$near"
+    protected def realDistance(distance: Double) = distance
+  }
+
+  case object NearSphereFilterEvaluator extends NearFilterEvaluatorBase{
+    protected val query = "$nearSphere"
+    protected def realDistance(distance: Double) = distance * earthRadiusInMiles
+  }
+
+  case object WithinFilterEvaluator extends FieldFilterEvaluator with GeoTools{
     def apply(v1: JValue, v2: JValue) = {
       def extractPoints(points: List[JValue]) = points.collect{case JArray(JDouble(x) :: JDouble(y) :: Nil) => (x, y)}
       def evaluate(x: Double, y: Double) = v2 match{
         case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(lowerLeftX) :: JDouble(lowerLeftY) :: Nil) :: JArray(JDouble(upperRightX) :: JDouble(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => x >= lowerLeftX && x <= upperRightX && y >= lowerLeftY && y <= upperRightY
-        case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radius) :: Nil)) :: Nil)) :: Nil) => distance(centerX, centerY, x, y) <= radius
+        case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radius) :: Nil)) :: Nil)) :: Nil) => distanceInMiles(centerX, centerY, x, y) <= radius
+        case JObject(JField("$within", JObject(JField("$centerSphere",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radiusInRadians) :: Nil)) :: Nil)) :: Nil) =>
+          if (radiusInRadians > 0.492) throw new MongoException(13462, "Spherical distance would require wrapping, which isn't implemented yet")
+          distanceInMiles(centerX, centerY, x, y) <= (radiusInRadians * earthRadiusInMiles)
         case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => inPolygon((x, y), extractPoints(points).toArray)
         case _ => false
       }
@@ -242,8 +261,6 @@ private[mongo] object Evaluators{
     }})
     case _ => v
   }
-
-  def distance(x1: Double, y1: Double, x2: Double, y2: Double) = math.sqrt(math.pow(x1 - x2, 2.0) + math.pow(y1 - y2, 2.0))
 
   def inPolygon(point: (Double, Double), polygon: Array[(Double, Double)]): Boolean = {
     var oddNodes = false

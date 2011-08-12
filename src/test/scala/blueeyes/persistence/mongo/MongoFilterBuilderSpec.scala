@@ -54,6 +54,9 @@ class MongoFilterBuilderSpec extends Specification{
   "builds $within for circe" in {
     ("foo" within Circle((10, 20), 30)) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JDouble(30.0) :: Nil)) :: Nil)) :: Nil))))
   }
+  "builds $within for CenterSphere" in {
+    ("foo" within CenterSphere((10, 20), 0.3)) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$centerSphere",  JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JDouble(0.3) :: Nil)) :: Nil)) :: Nil))))
+  }
   "builds $within for polygon" in {
     ("foo" within Polygon((10, 20), (30, 40))) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$polygon", JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JArray(JDouble(30.0) :: JDouble(40.0) :: Nil) :: Nil)) :: Nil)) :: Nil))))
   }
