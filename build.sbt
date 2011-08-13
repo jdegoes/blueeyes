@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "joda-time"                   % "joda-time"           % "1.6.2",
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.4.Final",
-  "org.mongodb"                 % "mongo-java-driver"   % "2.6.3",
+  "org.mongodb"                 % "mongo-java-driver"   % "2.6.5",
   "org.scalaz"                  % "scalaz-core_2.9.0-1"        % "6.0.1",
   "se.scalablesolutions.akka"   % "akka-actor"          % "1.1.2",
   "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.1.2",

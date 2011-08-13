@@ -42,7 +42,7 @@ private[mongo] class MockDatabase(val mongo: Mongo) extends Database {
   def disconnect() {}
 }
 
-private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock {
+private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock with MongoFilters {
   private var container = JArray(Nil)
   private val explanation = JsonParser.parse("""{
         "cursor" : "BasicCursor",
@@ -109,9 +109,10 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       if (isSnapshot && (sort.isDefined || hint.isDefined)) throw new MongoException("Hint and sorting cannot be used with $snapshot")
       checkHint(hint)
 
-      val sorted  = JObjectOrderingFactory(filter, sort).map(sorting => objects.sorted(sorting)).getOrElse(objects)
-      val skipped = skip.map(sorted.drop(_)).getOrElse(sorted)
-      val limited = limit.map(skipped.take(_)).getOrElse(skipped)
+      val sorted    = JObjectOrderingFactory(filter, sort).map(sorting => objects.sorted(sorting)).getOrElse(objects)
+      val skipped   = skip.map(sorted.drop(_)).getOrElse(sorted)
+      val realLimit = limit.orElse(filter.flatMap(nearFilter(_)).map(v => 100))
+      val limited   = realLimit.map(skipped.take(_)).getOrElse(skipped)
 
       val found  = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject])
       val result = if (isSnapshot) found.distinct else found

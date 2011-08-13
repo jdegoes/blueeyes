@@ -49,4 +49,13 @@ class FieldFilterEvaluatorFactorySpec extends Specification with JPathImplicits{
   "creates $regex Evaluator" in {
     FieldFilterEvaluatorFactory("foo", $regex) must be (RegexFilterEvaluator)
   }
+  "creates $nearSphere Evaluator" in {
+    FieldFilterEvaluatorFactory("foo", $nearSphere) must be (NearSphereFilterEvaluator)
+  }
+  "creates $near Evaluator" in {
+    FieldFilterEvaluatorFactory("foo", $near) must be (NearFilterEvaluator)
+  }
+  "creates $within Evaluator" in {
+    FieldFilterEvaluatorFactory("foo", $within) must be (WithinFilterEvaluator)
+  }
 }

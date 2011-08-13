@@ -58,12 +58,12 @@ trait OneJar { this: DefaultProject =>
 }
 
 class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repositories with Eclipsify with IdeaProject with PublishingProject with GpgPlugin with ChecksumPlugin{
-  val specs         = "org.scala-tools.testing"     %% "specs_2.9.0-1"              % "1.6.8"         % "provided"
-  val scala_check   = "org.scala-tools.testing"     %% "scalacheck_2.9.0-1"         % "1.9"           % "provided"
+  val specs         = "org.scala-tools.testing"     %% "specs"              % "1.6.8"         % "provided"
+  val scala_check   = "org.scala-tools.testing"     %% "scalacheck"         % "1.9"           % "provided"
   val mockito       = "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided"
   val javolution       = "javolution"                  % "javolution"                  % "5.5.1"
   val netty         = "org.jboss.netty"             % "netty"               % "3.2.4.Final"   % "compile"
-  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.6.3"         % "compile"
+  val mongo         = "org.mongodb"                 % "mongo-java-driver"   % "2.6.5"         % "compile"
   val joda_time     = "joda-time"                   % "joda-time"           % "1.6.2"         % "compile"
   val configgy      = "net.lag"                     % "configgy"            % "2.0.0"         % "compile" intransitive()
   val rhino         = "rhino"                       % "js"                  % "1.7R2"         % "compile"
@@ -72,7 +72,7 @@ class BlueEyesProject(info: ProjectInfo) extends DefaultProject(info) with Repos
   val xlightweb     = "org.xlightweb"               % "xlightweb"           % "2.13.2"        % "compile"
   val codec         = "commons-codec"               % "commons-codec"       % "1.5"           % "compile"
   val clhm_lru      = "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1" % "compile"
-  val scalaz_core   = "org.scalaz"                  %% "scalaz-core_2.9.0-1"        % "6.0.1"
+  val scalaz_core   = "org.scalaz"                  %% "scalaz-core"        % "6.0.1"
 
   lazy val benchmark = benchmarkTask
 

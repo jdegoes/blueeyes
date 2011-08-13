@@ -39,35 +39,37 @@ class MongoFilterEvaluatorSpec extends Specification{
 ] }""") :: Nil
 
 
-  "selects all objects by MongoFilterAll" in{
-    MongoFilterEvaluator(jobjects).filter(MongoFilterAll) mustEqual(jobjects)
-  }
-  "selects objects by field query" in{
-    MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B")) mustEqual(jObject1 :: jObject2 :: Nil)
-  }
-  "selects objects by 'or' query" in{
-    val result = jObject1 :: jObject2 :: jObject3 :: Nil
-    MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") || MongoFieldFilter("street.street", $eq,"4")).filterNot (result contains) mustEqual(Nil)
-  }
-  "selects objects by 'and' query" in{
-    val result = jObject2 :: Nil
-    MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") && MongoFieldFilter("street.street", $eq,"3")).filterNot (result contains) mustEqual(Nil)
-  }
+  "MongoFilterEvaluator" should{
+    "selects all objects by MongoFilterAll" in{
+      MongoFilterEvaluator(jobjects).filter(MongoFilterAll) mustEqual(jobjects)
+    }
+    "selects objects by field query" in{
+      MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B")) mustEqual(jObject1 :: jObject2 :: Nil)
+    }
+    "selects objects by 'or' query" in{
+      val result = jObject1 :: jObject2 :: jObject3 :: Nil
+      MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") || MongoFieldFilter("street.street", $eq,"4")).filterNot (result contains) mustEqual(Nil)
+    }
+    "selects objects by 'and' query" in{
+      val result = jObject2 :: Nil
+      MongoFilterEvaluator(jobjects).filter(MongoFieldFilter("address.city", $eq,"B") && MongoFieldFilter("street.street", $eq,"3")).filterNot (result contains) mustEqual(Nil)
+    }
 
-  "select object using elemeMatch" in {
-     MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"purple")))) mustEqual(jobjectsWithArray.head :: Nil)
-  }
-  "does not select object using elemeMatch and wrong query" in {
-     MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
-  }
-  "select element from array" in {
-     MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JInt(1) :: Nil)
-  }
+    "select object using elemeMatch" in {
+       MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"purple")))) mustEqual(jobjectsWithArray.head :: Nil)
+    }
+    "does not select object using elemeMatch and wrong query" in {
+       MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
+    }
+    "select element from array" in {
+       MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JInt(1) :: Nil)
+    }
 
-  "select element by complex filter " in {
-     MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
-  }
-  "select element from array by element match " in {
-     MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(ListSet.empty + MongoFieldFilter("foo", $eq, 1)).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+    "select element by complex filter " in {
+       MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+    }
+    "select element from array by element match " in {
+       MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(ListSet.empty + MongoFieldFilter("foo", $eq, 1)).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+    }
   }
 }
