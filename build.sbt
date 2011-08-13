@@ -1,10 +1,10 @@
 name := "blueeyes"
 
-version := "0.4.18"
+version := "0.4.19"
 
 organization := "com.reportgrid"
 
-scalaVersion := "2.9.1.RC1"
+scalaVersion := "2.9.1.RC2"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 

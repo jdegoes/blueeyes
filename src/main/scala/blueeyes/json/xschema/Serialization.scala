@@ -16,7 +16,7 @@ trait Extractor[A] extends Function[JValue, A] { self =>
 
 /** Decomposes the value into a JSON object.
  */
-trait Decomposer[A] extends Function[A, JValue] { self =>
+trait Decomposer[-A] extends Function[A, JValue] { self =>
   def decompose(tvalue: A): JValue
 
   def contramap[B](f: B => A): Decomposer[B] = new Decomposer[B] {

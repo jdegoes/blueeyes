@@ -1,10 +1,8 @@
-package blueeyes.json.xschema {
+package blueeyes.json.xschema 
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
 import scala.math.BigDecimal
-import org.joda.time.{DateTime, DateTimeZone}
-
 import org.joda.time.{DateTime, DateTimeZone}
 
 /** Decomposers for all basic types.
@@ -97,6 +95,5 @@ trait DefaultDecomposers {
     def decompose(dateTime: DateTime): JValue = JInt(dateTime.getMillis)
   }
 }
-object DefaultDecomposers extends DefaultDecomposers
 
-}
+object DefaultDecomposers extends DefaultDecomposers
