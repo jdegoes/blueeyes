@@ -53,7 +53,7 @@ trait FutureMatchers {
 
           case None => 
             if (countedDown) Retry("Delivery of future was canceled on retry " + (timeouts.retries - retries) + ": " + delivered.error.map(_.fullStackTrace))
-            else Retry("Retried " + (totalRetries - retries) + " times with interval of " + timeouts.duration)
+            else Retry("Retried " + (totalRetries - retries) + " times with interval of " + timeouts.duration + " but did not observe a result being returned.")
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
