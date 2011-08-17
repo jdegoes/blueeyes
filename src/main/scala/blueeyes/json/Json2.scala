@@ -119,32 +119,25 @@ object JsonLikeArray{
 object JValueProvider extends JsonProvider[JValue]{
   lazy val jArray = JArray.apply _
 
-  lazy val jNothing = JNothing.apply _
+  lazy val jNothing = () => JNothing
 }
 
-trait JValue extends JsonLike[JValue]{
+sealed trait JValue extends JsonLike[JValue]{
   def provider = JValueProvider
 }
 
-class JNothing extends JValue{
+case object JNothing extends JValue{
   type Self = JValue
   type Values = None.type
 
   def values = None
 }
-object JNothing{
-  def apply = new JNothing
-}
 
-class JField(name: String, value: JValue) extends JsonLikeField[JValue](name, value) with JValue {
+case class JField(override val name: String, override val value: JValue) extends JsonLikeField[JValue](name, value) with JValue {
   type Self = JField
 }
 
-object JField{
-  def apply(name: String, value: JValue) = new JField(name, value)
-}
-
-class JObject(fields: List[JField]) extends JsonLikeObject[JValue, JField](fields) with JValue {
+case class JObject(override val fields: List[JField]) extends JsonLikeObject[JValue, JField](fields) with JValue {
   type Self = JObject
 
   override def equals(that: Any) = that match{
@@ -154,64 +147,44 @@ class JObject(fields: List[JField]) extends JsonLikeObject[JValue, JField](field
 }
 object JObject{
   lazy val empty = JObject(Nil)
-
-  def apply(fields: List[JField]) = new JObject(fields)
 }
 
-class JArray(elements: List[JValue]) extends JsonLikeArray[JValue](elements) with JValue {
+case class JArray(override val elements: List[JValue]) extends JsonLikeArray[JValue](elements) with JValue {
   type Self = JArray
 }
 object JArray {
   lazy val empty = JArray(Nil)
-
-  def apply(elements: List[JValue]) = new JArray(elements)
 }
 
-class JString(val value: String) extends JValue {
+case class JString(value: String) extends JValue {
   type Values = String
   type Self = JValue
 
   def values = value
 }
 
-object JString{
-  def apply(value: String) = new JString(value)
-
-  def unapply(value: JValue): Option[String] = value match{
-    case e: JString => Some(e.value)
-    case _ => None
-  }
-}
-
 object MongoValueProvider extends JsonProvider[MongoValue]{
   lazy val jArray = MongoArray.apply _
 
-  lazy val jNothing = MongoNothing.apply _
+  lazy val jNothing = () => MongoNothing
 }
 
-trait MongoValue extends JsonLike[MongoValue]{
+sealed trait MongoValue extends JsonLike[MongoValue]{
   def provider = MongoValueProvider
 }
 
-class MongoNothing extends MongoValue{
+case object MongoNothing extends MongoValue{
   type Self = MongoValue
   type Values = None.type
 
   def values = None
 }
-object MongoNothing{
-  def apply = new MongoNothing
-}
 
-class MongoField(name: String, value: MongoValue) extends JsonLikeField[MongoValue](name, value) with MongoValue {
+case class MongoField(override val name: String, override val value: MongoValue) extends JsonLikeField[MongoValue](name, value) with MongoValue {
   type Self = MongoField
 }
 
-object MongoField{
-  def apply(name: String, value: MongoValue) = new MongoField(name, value)
-}
-
-class MongoObject(fields: List[MongoField]) extends JsonLikeObject[MongoValue, MongoField](fields) with MongoValue {
+case class MongoObject(override val fields: List[MongoField]) extends JsonLikeObject[MongoValue, MongoField](fields) with MongoValue {
   type Self = MongoObject
 
   override def equals(that: Any) = that match{
@@ -221,33 +194,20 @@ class MongoObject(fields: List[MongoField]) extends JsonLikeObject[MongoValue, M
 }
 object MongoObject{
   lazy val empty = MongoObject(Nil)
-
-  def apply(fields: List[MongoField]) = new MongoObject(fields)
 }
 
-class MongoArray(elements: List[MongoValue]) extends JsonLikeArray[MongoValue](elements) with MongoValue {
+case class MongoArray(override val elements: List[MongoValue]) extends JsonLikeArray[MongoValue](elements) with MongoValue {
   type Self = MongoArray
 }
 object MongoArray {
   lazy val empty = MongoArray(Nil)
-
-  def apply(elements: List[MongoValue]) = new MongoArray(elements)
 }
 
-class MongoString(val value: String) extends MongoValue {
+case class MongoString(value: String) extends MongoValue {
   type Values = String
   type Self = MongoValue
 
   def values = value
-}
-
-object MongoString{
-  def apply(value: String) = new MongoString(value)
-
-  def unapply(value: MongoValue): Option[String] = value match{
-    case e: MongoString => Some(e.value)
-    case _ => None
-  }
 }
 
 object TestJsonLike{
