@@ -38,13 +38,13 @@ object W3ExtendedLogger{
 
 class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
-  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000, write)
+  private val logStage    = Stage[String, StringBuilder](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000, write)
 
-  implicit val LogLineSemigroup = new Semigroup[String] {
-    def append(l1: String, l2: => String): String = l1 + "\n" + l2
+  implicit val LogLineSemigroup = new Semigroup[StringBuilder] {
+    def append(l1: StringBuilder, l2: => StringBuilder): StringBuilder = l1.append(l2)
   }
 
-  def apply(logEntry: String) { logStage += ("log", logEntry) }
+  def apply(logEntry: String) { logStage += ("log", new StringBuilder(logEntry).append("\n")) }
 
   def close: Future[Unit] = {
     val flushFuture = logStage.flushAll()
@@ -53,7 +53,7 @@ class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: Fi
 
   def fileName: Option[String] = fileHandler.fileName
 
-  private def write(key: String, record: String) {fileHandler.publish(record)}
+  private def write(key: String, record: StringBuilder) {fileHandler.publish(record)}
 }
 
 class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective) extends RichThrowableImplicits with NameFormat with Roll{
@@ -78,15 +78,15 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
     } catch { case _ => () }
   }
 
-  def publish(record: String) {
+  def publish(record: StringBuilder) {
     rollIfNecessary()
     writeRecord(record)
   }
 
-  private def writeRecord(record: String){
+  private def writeRecord(record: StringBuilder){
     _stream foreach { streamValue =>
       try {
-        streamValue.write(record + "\n")
+        streamValue.write(record.toArray)
         streamValue.flush()
       } catch {
         case e => System.err.println(e.fullStackTrace)
