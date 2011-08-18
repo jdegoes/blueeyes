@@ -298,7 +298,7 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject2 :: Nil)
   }
-  "update using uset" in{
+  "update using unset" in{
 
     val collection = newCollection
 

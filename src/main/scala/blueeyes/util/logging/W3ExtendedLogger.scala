@@ -38,7 +38,7 @@ object W3ExtendedLogger{
 
 class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
   private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
-  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 1000, write)
+  private val logStage    = Stage[String, String](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000, write)
 
   implicit val LogLineSemigroup = new Semigroup[String] {
     def append(l1: String, l2: => String): String = l1 + "\n" + l2

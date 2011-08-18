@@ -17,6 +17,14 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
   services {
     contactlist {
       v1 {
+        log {
+            level = "info"
+            console = true
+            use_parents = false
+        }
+        requestLog {
+          enabled = false
+        }
         mongo {
           servers    = ["localhost"]
           database   = "mydb"

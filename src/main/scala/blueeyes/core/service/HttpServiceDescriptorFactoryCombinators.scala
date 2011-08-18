@@ -90,7 +90,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       val underlying = f(context)
 
       val configMap = context.config.getConfigMap("requestLog").getOrElse(new Config())
-      val enabled   = configMap.getBool("enabled", true)
+      val enabled   = configMap.getBool("enabled", false)
 
       if (enabled){
         def fieldsDirective: FieldsDirective = {
@@ -117,7 +117,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
         val fileName = configMap.getString("file", context.toString + "-request.log")
 
-        val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 1)
+        val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 10)
         val includePaths      = configMap.getList("includePaths").map(new Regex(_)).toList
         val excludePaths      = configMap.getList("excludePaths").map(new Regex(_)).toList
 
