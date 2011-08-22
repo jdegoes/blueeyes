@@ -13,7 +13,7 @@ private[metrics] trait TimedSampleReport extends  Statistic[Long, Map[Long, Long
       case interval(length, count)  => (length.toString, count)
       case eternity => ("eternity", 1)
     }
-    val histogramJValue = details.toList.map(kv => JField(kv._1.toString, JInt(kv._2 / intervalLengthInSeconds)))
+    val histogramJValue = details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JField(kv._1.toString, JInt(kv._2 / intervalLengthInSeconds)))
     JObject(JField("interval", JObject(JField("length", JString(intervalLength)) :: JField("count", JInt(intervalCount)) :: Nil)) :: JField("perSecond", JObject(histogramJValue)) :: Nil)
   }
   protected def intervalLengthInSeconds: Long

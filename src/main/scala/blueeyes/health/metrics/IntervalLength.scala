@@ -1,5 +1,8 @@
 package blueeyes.health.metrics
 
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
+import blueeyes.util.ProductPrefixUnmangler
 import java.util.concurrent.TimeUnit
 
 case class IntervalLength(length: Int, unit: TimeUnit){
@@ -25,4 +28,23 @@ object IntervalLength {
   }
 
   implicit def toIntervalLength(length: Int): ToIntervalLength = new ToIntervalLength(length)
+}
+
+object IntervalLengthParser extends RegexParsers{
+  private def parser: Parser[Option[IntervalLength]] =
+  (
+    digitChar <~ (" "?) <~ "seconds" ^^ {case v => IntervalLength(v, TimeUnit.SECONDS)} |
+    digitChar <~ (" "?) <~ "minutes" ^^ {case v => IntervalLength(v, TimeUnit.MINUTES)} |
+    digitChar <~ (" "?) <~ "hours"   ^^ {case v => IntervalLength(v, TimeUnit.HOURS)}
+  )?
+
+  def parse(inString: String) = parser(new CharSequenceReader(inString)) match {
+    case Success(result, _) => result
+
+    case Failure(msg, _) => sys.error("The IntervalLength " + inString + " has a syntax error: " + msg)
+
+    case Error(msg, _) => sys.error("There was an error parsing \"" + inString + "\": " + msg)
+  }
+
+  private def digitChar = regex("[1-9]+".r) ^^ (v => v.toInt)
 }

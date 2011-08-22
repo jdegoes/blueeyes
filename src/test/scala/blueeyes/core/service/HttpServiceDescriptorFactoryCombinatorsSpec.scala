@@ -30,6 +30,14 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
             file    = "%s"
             enabled = true
           }
+          healthMonitor{
+            overage{
+              interval{
+                length = "1 seconds"
+                count  = 12
+              }
+            }
+          }
         }
       }
     }
@@ -70,9 +78,12 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       response.status  mustEqual(HttpStatus(OK))
 
       val content  = response.content.get
+      println(Printer.pretty(Printer.render(content)))
       content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
       content \ "requests" \ "GET" \ "overage" \ "perSecond"      mustNotEq(JNothing)
+      content \ "requests" \ "GET" \ "overage" \ "interval" \ "length"    mustEqual(JString("1s"))
+      content \ "requests" \ "GET" \ "overage" \ "interval" \ "count"      mustEqual(JInt(12))
 
       content \ "service" \ "name"    mustEqual(JString("email"))
       content \ "service" \ "version" mustEqual(JString("1.2.3"))
@@ -101,7 +112,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
   val emailService = service ("email", "1.2.3") {
     requestLogging{
       logging { log =>
-        healthMonitor(eternity, (HttpMethods.GET, interval(3.seconds, 3))) { monitor =>
+        healthMonitor(eternity, (HttpMethods.POST, interval(3.seconds, 3))) { monitor =>
           serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {

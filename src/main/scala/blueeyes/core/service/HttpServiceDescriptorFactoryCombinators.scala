@@ -13,8 +13,9 @@ import blueeyes.util.logging._
 import java.util.Calendar
 import blueeyes.core.data._
 import util.matching.Regex
-import blueeyes.health.metrics.{eternity, IntervalConfig}
 import blueeyes.core.http.{HttpMethod, HttpRequest, HttpResponse}
+import blueeyes.health.metrics._
+import IntervalLength._
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -32,11 +33,22 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = healthMonitor(eternity)(f)
+  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 5))(f)
   def healthMonitor[T, S](default: IntervalConfig, forMethods: (HttpMethod, IntervalConfig)*)(f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
+
+      def loadDefault = {
+        val configMap = context.config.getConfigMap("healthMonitor").flatMap(_.getConfigMap("overage")).flatMap(_.getConfigMap("interval")).getOrElse(new Config())
+        configMap.getString("length").flatMap{lengthValue =>
+          val intervalConfig = IntervalLengthParser.parse(lengthValue).map{length =>
+            interval(length, configMap.getString("count").map(_.toInt).getOrElse(5))
+          }
+          intervalConfig.orElse{ if (lengthValue == "eternity") Some(eternity) else None}
+        }.getOrElse(default)
+      }
+
       val configuration = forMethods.map(config => (JPath(JPathField(config._1.value) :: List(JPathField("overage"))), config._2))
-      val monitor = new HealthMonitor(Map(configuration: _*), default)
+      val monitor = new HealthMonitor(Map(configuration: _*), loadDefault)
 
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestHandler(underlying.request(state), monitor)})
