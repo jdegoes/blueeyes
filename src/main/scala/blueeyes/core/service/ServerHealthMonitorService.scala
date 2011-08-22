@@ -26,7 +26,7 @@ trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealt
 
 trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{
 
-  private val monitor = new blueeyes.health.HealthMonitor()
+  private val monitor = new blueeyes.health.HealthMonitor(Map())
 
   exportMemory
   exportRuntime

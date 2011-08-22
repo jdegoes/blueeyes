@@ -33,7 +33,7 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
     val startTime = realtimeClock.nanoTime
     val t = f
     this += (realtimeClock.nanoTime - startTime).nanoseconds
-    return t
+    t
   }
 
   def time[T](f: Future[T]): Future[T] = {
@@ -99,7 +99,7 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
     this
   }
 
-  def toJValue: JValue = JObject(JField("perSecond", JDouble((count / total.convert(TimeUnit.SECONDS).time))) :: JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).time)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).time)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).time)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).time)) :: Nil)
+  def toJValue: JValue = JObject(JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).time)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).time)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).time)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).time)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank
@@ -125,8 +125,6 @@ class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duratio
   } else {
     0.0
   }
-
-  private def ratio(unit: TimeUnit) = TimeUnit.NANOSECONDS.convert(1, unit).toDouble
 
   private def setMax(duration: Long) {
     while (max_.get < duration) {

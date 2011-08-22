@@ -15,10 +15,11 @@ class ErrorStat extends Statistic[Throwable, Map[Class[_], Long]]{
   def +=(t: Throwable): this.type = {
     _count.getAndAdd(1)
 
-    createIfAbsent(t.getClass, _distribution, {new AtomicLong(0)}).getAndAdd(1)
+    createIfAbsent(t.getClass, _distribution, newAtomicLong _).getAndAdd(1)
 
     this
   }
+  private def newAtomicLong() = new AtomicLong(0)
 
   def count = _count.get
 

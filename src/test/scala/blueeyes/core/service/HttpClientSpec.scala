@@ -46,7 +46,7 @@ class HttpClientSpec extends Specification with BijectionsByteArray{
 
   "sets headers request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("Content-Length" -> "1"))) {client => client.header("content-length", "1")} }
 
-  "sets remote host header request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress()),
+  "sets remote host header request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress(), "X-Cluster-Client-Ip" -> InetAddress.getLocalHost.getHostAddress()),
       remoteHost = Some(InetAddress.getLocalHost))) {client => client.remoteHost(InetAddress.getLocalHost)} }
 
   private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]){

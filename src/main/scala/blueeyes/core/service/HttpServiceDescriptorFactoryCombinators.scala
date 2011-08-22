@@ -2,7 +2,6 @@ package blueeyes.core.service
 
 import blueeyes.health.HealthMonitor
 import net.lag.logging.Logger
-import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
@@ -14,6 +13,8 @@ import blueeyes.util.logging._
 import java.util.Calendar
 import blueeyes.core.data._
 import util.matching.Regex
+import blueeyes.health.metrics.{eternity, IntervalConfig}
+import blueeyes.core.http.{HttpMethod, HttpRequest, HttpResponse}
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -31,9 +32,11 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
+  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = healthMonitor(eternity)(f)
+  def healthMonitor[T, S](default: IntervalConfig, forMethods: (HttpMethod, IntervalConfig)*)(f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
     (context: HttpServiceContext) => {
-      val monitor = new HealthMonitor()
+      val configuration = forMethods.map(config => (JPath(JPathField(config._1.value) :: List(JPathField("overage"))), config._2))
+      val monitor = new HealthMonitor(Map(configuration: _*), default)
 
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestHandler(underlying.request(state), monitor)})
@@ -46,7 +49,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
             val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
             val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
             val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
-            val health        = monitor.toJValue
+            val health        = JObject(JField("requests", monitor.toJValue) :: Nil)
             Future.async {
               HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
             }
@@ -216,22 +219,22 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
     def apply(request: HttpRequest[T]) = {
 
-      val methodName  = request.method.value
-      val requestPath = List(JPathField("requests"), JPathField(methodName))
-      val countPath   = JPath(requestPath ::: List(JPathField("count")))
-      val timePath    = JPath(requestPath ::: List(JPathField("timing")))
-      val errorPath   = JPath(requestPath ::: List(JPathField("errors")))
-      val startTime  = System.nanoTime
+      val methodName    = request.method.value
+      val requestPath   = JPathField(methodName)
+      val countPath     = JPath(requestPath :: List(JPathField("count")))
+      val timePath      = JPath(requestPath :: List(JPathField("timing")))
+      val errorPath     = JPath(requestPath :: List(JPathField("errors")))
+      val overagePath   = JPath(requestPath :: List(JPathField("overage")))
+      val startTime     = System.nanoTime
 
       def monitor(response: Future[HttpResponse[T]]) = {
-        val methodName = request.method.value
-
+        healthMonitor.overage(overagePath)
         healthMonitor.count(countPath)
         healthMonitor.trapFuture(errorPath)(response)
 
         response.deliverTo{v =>
           healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
-          healthMonitor.count(JPath(List(JPathField("requests"), JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
+          healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
         }
 
         response
