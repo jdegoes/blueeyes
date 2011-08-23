@@ -7,20 +7,20 @@ import blueeyes.health.ConcurrentMaps._
 import blueeyes.json.JsonAST._
 import java.util.concurrent.ConcurrentHashMap
 
-private[metrics] trait TimedSampleReport extends  Statistic[Long, Map[Long, Long]]{
+private[metrics] trait TimedSampleReport extends  Statistic[Long, Map[Long, Double]]{
   def toJValue = {
     val (intervalLength, intervalCount) = intervalConfig match{
       case interval(length, count)  => (length.toString, count)
       case eternity => ("eternity", 1)
     }
-    val histogramJValue = details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JField(kv._1.toString, JInt(kv._2 / intervalLengthInSeconds)))
+    val histogramJValue = details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JField(kv._1.toString, JDouble(kv._2 / intervalLengthInSeconds)))
     JObject(JField("interval", JObject(JField("length", JString(intervalLength)) :: JField("count", JInt(intervalCount)) :: Nil)) :: JField("perSecond", JObject(histogramJValue)) :: Nil)
   }
   protected def intervalLengthInSeconds: Long
   protected def intervalConfig: IntervalConfig
 }
 
-class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) extends Histogram with Statistic[Long, Map[Long, Long]] with TimedSampleReport{
+class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) extends Histogram with Statistic[Long, Map[Long, Double]] with TimedSampleReport{
   private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
   protected val intervalLengthInSeconds = intervalConfig.length.unit.toSeconds(intervalConfig.length.length)
@@ -37,7 +37,7 @@ class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) exte
 
   def count = _rawData.size
 
-  def details: Map[Long, Long] = {
+  def details: Map[Long, Double] = {
     removeExpired()
     container((clock() - intervalFullLength).toDouble).addAndGet(0)
     build
@@ -56,7 +56,7 @@ class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) exte
   }
 }
 
-class EternityTimedSample(implicit clock: () => Long) extends Statistic[Long, Map[Long, Long]] with TimedSampleReport{
+class EternityTimedSample(implicit clock: () => Long) extends Statistic[Long, Map[Long, Double]] with TimedSampleReport{
   private val startTime = clock()
   private val _count    = new AtomicLong(0)
 
@@ -67,7 +67,7 @@ class EternityTimedSample(implicit clock: () => Long) extends Statistic[Long, Ma
 
   def count = _count.get
 
-  def details = Map[Long, Long](startTime -> count)
+  def details = Map[Long, Double](startTime -> count)
 
   protected def intervalLengthInSeconds = (clock() - startTime) / 1000
 
@@ -75,7 +75,7 @@ class EternityTimedSample(implicit clock: () => Long) extends Statistic[Long, Ma
 }
 
 object TimedSample{
-  def apply(intervalConfig: IntervalConfig)(implicit clock: () => Long): Statistic[Long, Map[Long, Long]] = intervalConfig match{
+  def apply(intervalConfig: IntervalConfig)(implicit clock: () => Long): Statistic[Long, Map[Long, Double]] = intervalConfig match{
     case e: interval => new TimedSample(e)
     case eternity    => new EternityTimedSample()
   }

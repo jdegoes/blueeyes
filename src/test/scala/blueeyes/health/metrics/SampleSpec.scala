@@ -40,6 +40,6 @@ class SampleSpec extends Specification{
     val sample = new Sample(1)
     sample += 1.1
 
-    sample.toJValue mustEqual (JObject(JField("count", JInt(1)) :: JField("histogram", JObject(JField("1", JInt(1)) :: Nil)) :: Nil))
+    sample.toJValue mustEqual (JObject(JField("count", JInt(1)) :: JField("histogram", JObject(JField("1", JDouble(1.0)) :: Nil)) :: Nil))
   }
 }

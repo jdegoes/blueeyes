@@ -15,7 +15,7 @@ class HealthMonitor(timedConfig: Map[JPath, IntervalConfig] = Map(), defaultTime
   private val _timersStats:   ConcurrentMap[JPath, Timer]     = new ConcurrentHashMap[JPath, Timer]
   private val _errorsStats:   ConcurrentMap[JPath, ErrorStat] = new ConcurrentHashMap[JPath, ErrorStat]
   private val _sampleStats:   ConcurrentMap[JPath, Sample]    = new ConcurrentHashMap[JPath, Sample]
-  private val _timedSampleStats:   ConcurrentMap[JPath, Statistic[Long, Map[Long, Long]]]    = new ConcurrentHashMap[JPath, Statistic[Long, Map[Long, Long]]]
+  private val _timedSampleStats:   ConcurrentMap[JPath, Statistic[Long, Map[Long, Double]]]    = new ConcurrentHashMap[JPath, Statistic[Long, Map[Long, Double]]]
   private val _exportedStats: ConcurrentMap[JPath, ExportedStatistic[_]] = new ConcurrentHashMap[JPath, ExportedStatistic[_]]
 
   def overage(path: JPath)() { timedSampleStat(path) += 1 }
@@ -93,8 +93,8 @@ class HealthMonitor(timedConfig: Map[JPath, IntervalConfig] = Map(), defaultTime
   private def normalizePath(path: JPath) = if (path.path.startsWith(".")) path.path.substring(1) else path.path
 
   private implicit def clock() = System.currentTimeMillis()
-  private def timedSampleStat(path: JPath):  Statistic[Long, Map[Long, Long]] = createIfAbsent[JPath, Statistic[Long, Map[Long, Long]]](path, _timedSampleStats, newTimedSample(path) _)
-  private def newTimedSample(path: JPath)(): Statistic[Long, Map[Long, Long]] = TimedSample(timedConfig.get(path).getOrElse(defaultTimedConfig))
+  private def timedSampleStat(path: JPath):  Statistic[Long, Map[Long, Double]] = createIfAbsent[JPath, Statistic[Long, Map[Long, Double]]](path, _timedSampleStats, newTimedSample(path) _)
+  private def newTimedSample(path: JPath)(): Statistic[Long, Map[Long, Double]] = TimedSample(timedConfig.get(path).getOrElse(defaultTimedConfig))
 
   private def sampleStat(path: JPath):  Sample    = createIfAbsent[JPath, Sample](path, _sampleStats, newSample _)
   private def newSample(): Sample = new Sample(sampleSize)

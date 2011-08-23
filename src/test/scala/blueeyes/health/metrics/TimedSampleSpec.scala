@@ -26,8 +26,8 @@ class TimedSampleSpec extends Specification{
       val timedSample = new TimedSample(interval(3.seconds, 3))(clock.now _)
       fill(timedSample)
 
-      val histogram = timedSample.toJValue
-      val histogramValue = JObject(List(JField("112000", JInt(2)), JField("115000", JInt(0)), JField("109000", JInt(0)), JField("106000", JInt(0))))
+      val histogram      = timedSample.toJValue
+      val histogramValue = JObject(List(JField("112000", JDouble(2.0)), JField("115000", JDouble(0.3333333333333333)), JField("109000", JDouble(0.0)), JField("106000", JDouble(0.0))))
       histogram mustEqual (JObject(JField("interval", JObject(JField("length", JString(3.seconds.toString)) :: JField("count", JInt(3)) :: Nil)) :: JField("perSecond", histogramValue) :: Nil))
     }
     "creates TimedSample if the configuration is interval" in{

@@ -13,7 +13,7 @@ class EternityTimedSampleSpec extends Specification{
 
       val histogram = timedSample.toJValue
       println(Printer.pretty(Printer.render(histogram)))
-      val histogramValue = JObject(List(JField("0", JInt(4))))
+      val histogramValue = JObject(List(JField("0", JDouble(4))))
       histogram mustEqual (JObject(JField("interval", JObject(JField("length", JString("eternity")) :: JField("count", JInt(1)) :: Nil)) :: JField("perSecond", histogramValue) :: Nil))
     }
   }

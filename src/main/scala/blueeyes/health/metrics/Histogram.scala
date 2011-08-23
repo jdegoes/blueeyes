@@ -17,7 +17,7 @@ trait Histogram{
     fillMissing(bucketSize, sorted, buckets).toMap
   }
 
-  private def fillMissing(bucketSize: Int, sorted: List[(Double, Long)], buckets: HashMap[Long, Long]): HashMap[Long, Long] = {
+  private def fillMissing(bucketSize: Int, sorted: List[(Double, Long)], buckets: HashMap[Long, Double]): HashMap[Long, Double] = {
     val minV          = floor(sorted.head._1).longValue
     val maxV          = floor(sorted.last._1).longValue
     var bucketNumber  = minV
@@ -34,14 +34,14 @@ trait Histogram{
   }
 
   private def createBuckets(bucketSize: Int, sorted: List[(Double, Long)]) = {
-    val buckets     = new HashMap[Long, Long]()
+    val buckets     = new HashMap[Long, Double]()
     val minV        = floor(sorted.head._1).longValue
 
     sorted.foreach(kv => {
       val bucketNumber: Long = minV + (floor((kv._1 - sorted.head._1) / bucketSize).longValue * bucketSize)
 
       val bucket      = buckets.get(bucketNumber)
-      val bucketValue = bucket.getOrElse(0l) + kv._2
+      val bucketValue = bucket.getOrElse(0.0) + kv._2
       buckets.put(bucketNumber, bucketValue)
     })
 

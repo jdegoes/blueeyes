@@ -8,12 +8,12 @@ import collection.mutable.ConcurrentMap
 import ConcurrentMaps._
 import blueeyes.json.JsonAST._
 
-class Sample(val size: Int) extends Histogram with Statistic[Double, Option[Map[Long, Long]]]{
+class Sample(val size: Int) extends Histogram with Statistic[Double, Option[Map[Long, Double]]]{
   private val _count = new AtomicLong(0)
   private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
-  private var _histogram: Option[Map[Long, Long]] = None
+  private var _histogram: Option[Map[Long, Double]] = None
 
   def +=(elem: Double): this.type = {
     if (count < size){
@@ -27,7 +27,7 @@ class Sample(val size: Int) extends Histogram with Statistic[Double, Option[Map[
 
   def rawData = _rawData.toMap.mapValues(_.get.intValue)
 
-  def details: Option[Map[Long, Long]] = {
+  def details: Option[Map[Long, Double]] = {
     writeLock{
       if (count >= size && !_histogram.isDefined){
         _histogram = Some(build)
@@ -37,7 +37,7 @@ class Sample(val size: Int) extends Histogram with Statistic[Double, Option[Map[
   }
 
   def toJValue = {
-    val histogramJValue: List[JField] = details.map(v => v.toList.map(kv => JField(kv._1.toString, JInt(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
+    val histogramJValue: List[JField] = details.map(v => v.toList.map(kv => JField(kv._1.toString, JDouble(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
 
     JObject(JField("count", JInt(count)) :: histogramJValue)
   }
