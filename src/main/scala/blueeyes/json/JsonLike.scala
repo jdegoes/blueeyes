@@ -2,33 +2,30 @@ package blueeyes.json
 
 import blueeyes.json.JsonAST._
 
-class JsonLikeElement[T]
-case class Prim[A](value: A)                extends JsonLikeElement[A]
-case class Arr[A](value: List[A])           extends JsonLikeElement[A]
-case class Obj[A](value: List[A])           extends JsonLikeElement[A]
+trait JsonLikeTypes[A]{
+  type or[L,R] = Either[L,R]
+  type Obj = List[A]
+  type Arr = List[A]
+}
 
-sealed trait ElementWitness[T]
+trait JsonLike[A, F <: A] extends JsonLikeTypes[A] {
 
-trait JsonLike[A] {
-
-  def unfold(value: A): JsonLikeElement[A]
+  def unfold(value: A): Option[Obj or Arr]
 
   def unfoldOne(value: A): A
 
   def zero: A
 
-  def fold[T: ElementWitness](value: T): A
+  def foldArr(elemets: List[A]): A
+
+  def foldObj(elemets: List[F]): A
 
   def children(value: A): List[A]
 
   def name(value: A): Option[String]
 }
 
-class RichJsonLike[A](json: A, jsonLike: JsonLike[A]){
-  implicit case object PrimWitness extends ElementWitness[A]
-  implicit case object ArrWitness  extends ElementWitness[List[A]]
-  implicit case object ObjWitness  extends ElementWitness[List[(String, A)]]
-
+class RichJsonLike[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A]{
   /** XPath-like expression to query JSON fields by name. Matches only fields on
    * next level.
    * <p>
@@ -45,71 +42,73 @@ class RichJsonLike[A](json: A, jsonLike: JsonLike[A]){
     found match {
       case Nil => jsonLike.zero
       case x :: Nil => jsonLike.unfoldOne(x)
-      case xs => jsonLike.fold(xs.map(jsonLike.unfoldOne))
+      case xs => jsonLike.foldArr(xs.map(jsonLike.unfoldOne))
     }
   }
 
-  private def findDirect(xs: List[A], p: A => Boolean): List[A] = xs.flatMap {
-    jsonLike.unfold(_) match {
-      case Obj(l) => l.filter {
+  /**
+   * Returns the element as a JValue of the specified class.
+   * <p>
+   * Example:<pre>
+   * (json \ "foo" --> classOf[JField]).value
+   * </pre>
+   */
+  def --> [B <: A](clazz: Class[B]): B = (this -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + mf.erasure.asInstanceOf[Class[A]]))
+  /**
+  * Returns the element as an option of a JValue of the specified class.
+  * <p>
+  * Example:<pre>
+  * (json \ "foo" -->? classOf[JField]).map(_.value).getOrElse(defaultFieldValue)
+  * </pre>
+  */
+  def -->? [B <: A](clazz: Class[B]): Option[B] = {
+    val ca: Class[A] = mf.erasure.asInstanceOf[Class[A]]
+    val cf: Class[F] = mf.erasure.asInstanceOf[Class[F]]
+    def extractTyped(value: A) = if (ca == clazz) Some(value.asInstanceOf[B]) else None
+
+    val unfolded = jsonLike.unfoldOne(json)
+    if (unfolded != json && clazz != cf) extractTyped(unfolded)
+    else extractTyped(json)
+  }
+
+  /**
+   * Does a breadth-first traversal of all descendant JValues, beginning
+   * with this one.
+   */
+  def breadthFirst: List[A] = {
+    import scala.collection.immutable.Queue
+
+    def breadthFirst0(cur: List[A], queue: Queue[A]): List[A] = {
+      if (queue.isEmpty) cur
+      else {
+        val (head, nextQueue) = queue.dequeue
+
+        breadthFirst0(head :: cur,
+          jsonLike.unfold(head) match{
+            case Some(Left(fields)) => nextQueue.enqueue(fields.map(jsonLike.unfoldOne(_)))
+            case Some(Right(elements)) => nextQueue.enqueue(elements)
+            case None => nextQueue
+          }
+        )
+      }
+    }
+
+    breadthFirst0(Nil, Queue.empty.enqueue(json)).reverse
+  }
+
+  private def findDirect(xs: List[A], p: A => Boolean): List[A] = xs.flatMap { element =>
+    jsonLike.unfold(element) match {
+      case Some(Left(l)) => l.filter {
         case x if p(x) => true
         case _ => false
       }
-      case Arr(l) => findDirect(l, p)
-      case Prim(x) if p(x) => x :: Nil
+      case Some(Right(l)) => findDirect(l, p)
+      case None if p(element) => element  :: Nil
       case _ => Nil
     }
   }
 }
 
 trait ToRichJsonLike{
-  implicit def toRichJsonLike[A: JsonLike](value: A) = new RichJsonLike[A](value, implicitly[JsonLike[A]])
-}
-
-class JsonLikeJValue extends JsonLike[JValue]{
-
-  def unfold(value: JValue) = value match{
-    case JObject(fields)  => Obj(fields)
-    case JArray(elements) => Arr(elements)
-    case _                => Prim(value)
-  }
-
-  def unfoldOne(value: JValue) = value match{
-    case JField(n, v) => v
-    case _ => value
-  }
-
-  def children(value: JValue): List[JValue] = value match {
-    case JObject(l)   => l
-    case JArray(l)    => l
-    case JField(n, v) => List(v)
-    case _ => Nil
-  }
-
-  def fold[T: ElementWitness](value: T) = value match {
-    case e: List[JValue]           => JArray(e)
-    case e: List[(String, JValue)] => JObject(e.map(v => JField(v._1, v._2)))
-    case e: JValue                 => e
-  }
-
-  val zero: JValue = JNothing
-
-  def name(value: JValue) = value match{
-    case JField(n, v) => Some(n)
-    case _ => None
-  }
-}
-
-trait JsonLikeJValueImplicits{
-  implicit val jsonLikeJValue = new JsonLikeJValue()
-}
-object JsonLikeJValueImplicits extends JsonLikeJValueImplicits
-
-object JsonLikeTest extends JsonLikeJValueImplicits with ToRichJsonLike{
-  def main(args: Array[String]){
-    val value: JValue = JObject(JField("bar", JString("dd")) :: Nil)
-
-    println(value.\("bar"))
-    println(value.+\("bar"))
-  }
+  implicit def toRichJsonLike[A, F <: A](value: A)(implicit jsonLike: JsonLike[A, F], af: Manifest[A], mf: Manifest[F]) = new RichJsonLike[A, F](value, jsonLike)
 }
