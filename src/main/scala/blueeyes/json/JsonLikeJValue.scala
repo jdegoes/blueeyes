@@ -14,6 +14,8 @@ class JsonLikeJValue extends JsonLike[JValue, JField]{
     case _ => value
   }
 
+  def foldOne(name: String, value: JValue) = JField(name, value)
+
   def children(value: JValue): List[JValue] = value match {
     case JObject(l)   => l
     case JArray(l)    => l

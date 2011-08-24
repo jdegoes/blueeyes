@@ -1,16 +1,18 @@
 package blueeyes.json
 
-trait JsonLikeTypes[A]{
+trait JsonLikeTypes[A, F <: A]{
   type or[L,R] = Either[L,R]
-  type Obj = List[A]
+  type Obj = List[F]
   type Arr = List[A]
 }
 
-trait JsonLike[A, F <: A] extends JsonLikeTypes[A] {
+trait JsonLike[A, F <: A] extends JsonLikeTypes[A, F] {
 
   def unfold(value: A): Option[Obj or Arr]
 
   def unfoldOne(value: A): A
+
+  def foldOne(name: String, value: A): F
 
   def zero: A
 
@@ -23,7 +25,7 @@ trait JsonLike[A, F <: A] extends JsonLikeTypes[A] {
   def name(value: A): Option[String]
 }
 
-class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A]{
+class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A, F]{
   /** XPath-like expression to query JSON fields by name. Matches only fields on
    * next level.
    * <p>
@@ -92,6 +94,40 @@ class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manife
     }
 
     breadthFirst0(Nil, Queue.empty.enqueue(json)).reverse
+  }
+
+  private def !!(json: A) = new RichJson[A, F](json, jsonLike)
+
+  def set(path: JPath, value: A): A = if (path == JPath.Identity) value else {
+    def up(l: List[A], i: Int, v: A) = l.length match {
+        case len if len == i =>  l :+ v
+        case len if i < 0 || i > len =>
+          sys.error("Attempt to create a new element out of JArray bounds at " + i)
+
+        case _ => l.updated(i, v)
+    }
+
+    jsonLike.unfold(json) match {
+      case Some(Left(fields)) => path.nodes match {
+        case JPathField(name) :: Nil => jsonLike.foldObj(jsonLike.foldOne(name, value) :: fields.filterNot(jsonLike.name(_).map(_ == name).getOrElse(false)))
+
+        case JPathField(name)  :: nodes => jsonLike.foldObj(jsonLike.foldOne(name, !!(+\(name)).set(JPath(nodes), value)) :: fields.filterNot(jsonLike.name(_).map(_ == name).getOrElse(false)))
+
+        case _ => sys.error("Objects are not indexed")
+      }
+      case Some(Right(elements)) => path.nodes match {
+        case JPathIndex(index) :: Nil => jsonLike.foldArr(up(elements, index, value))
+        case JPathIndex(index) :: nodes => jsonLike.foldArr(up(elements, index, !!(elements.lift(index).getOrElse(jsonLike.zero)).set(JPath(nodes), value)))
+        case _ => sys.error("Arrays have no fields")
+      }
+      case _ => path.nodes match {
+        case Nil => value
+
+        case JPathIndex(_) :: _ => !!(jsonLike.foldArr(Nil)).set(path, value)
+
+        case JPathField(_) :: _ => !!(jsonLike.foldObj(Nil)).set(path, value)
+      }
+    }
   }
 
   private def findDirect(xs: List[A], p: A => Boolean): List[A] = xs.flatMap { element =>
