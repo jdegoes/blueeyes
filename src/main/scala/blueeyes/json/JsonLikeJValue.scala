@@ -35,7 +35,7 @@ class JsonLikeJValue extends JsonLike[JValue, JField]{
 
 trait JsonLikeJValueImplicits extends ToRichJsonLike{
   implicit val jsonLikeJValue = new JsonLikeJValue()
-  implicit def jValueToRichJsonLike[T <: JValue](value: T) = toRichJsonLike[JValue, JField](value)
+  implicit def jValueToRichJsonLike[T <: JValue](value: T) = toRichJson[JValue, JField](value)
 }
 object JsonLikeJValueImplicits extends JsonLikeJValueImplicits
 

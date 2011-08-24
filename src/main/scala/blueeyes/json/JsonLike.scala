@@ -1,7 +1,5 @@
 package blueeyes.json
 
-import blueeyes.json.JsonAST._
-
 trait JsonLikeTypes[A]{
   type or[L,R] = Either[L,R]
   type Obj = List[A]
@@ -25,7 +23,7 @@ trait JsonLike[A, F <: A] extends JsonLikeTypes[A] {
   def name(value: A): Option[String]
 }
 
-class RichJsonLike[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A]{
+class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A]{
   /** XPath-like expression to query JSON fields by name. Matches only fields on
    * next level.
    * <p>
@@ -110,5 +108,5 @@ class RichJsonLike[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Ma
 }
 
 trait ToRichJsonLike{
-  implicit def toRichJsonLike[A, F <: A](value: A)(implicit jsonLike: JsonLike[A, F], af: Manifest[A], mf: Manifest[F]) = new RichJsonLike[A, F](value, jsonLike)
+  implicit def toRichJson[A, F <: A](value: A)(implicit jsonLike: JsonLike[A, F], af: Manifest[A], mf: Manifest[F]) = new RichJson[A, F](value, jsonLike)
 }
