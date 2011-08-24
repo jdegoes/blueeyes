@@ -3,6 +3,21 @@ package blueeyes.json
 import blueeyes.json.JsonAST._
 
 class JsonLikeJValue extends JsonLike[JValue, JField]{
+
+  val zero: JValue = JNothing
+
+  def name(value: JValue) = value match{
+    case JField(n, v) => Some(n)
+    case _ => None
+  }
+
+  def children(value: JValue): List[JValue] = value match {
+    case JObject(l)   => l
+    case JArray(l)    => l
+    case JField(n, v) => List(v)
+    case _ => Nil
+  }
+
   def unfold(value: JValue) = value match{
     case JObject(fields)  => Some(Left(fields))
     case JArray(elements) => Some(Right(elements))
@@ -16,23 +31,9 @@ class JsonLikeJValue extends JsonLike[JValue, JField]{
 
   def foldOne(name: String, value: JValue) = JField(name, value)
 
-  def children(value: JValue): List[JValue] = value match {
-    case JObject(l)   => l
-    case JArray(l)    => l
-    case JField(n, v) => List(v)
-    case _ => Nil
-  }
-
   def foldArr(elemets: List[JValue]) = JArray(elemets)
 
   def foldObj(elemets: List[JField]) = JObject(elemets)
-
-  val zero: JValue = JNothing
-
-  def name(value: JValue) = value match{
-    case JField(n, v) => Some(n)
-    case _ => None
-  }
 }
 
 trait JsonLikeJValueImplicits extends ToRichJsonLike{

@@ -1,12 +1,18 @@
 package blueeyes.json
 
+import scalaz.Zero
+
 trait JsonLikeTypes[A, F <: A]{
   type or[L,R] = Either[L,R]
   type Obj = List[F]
   type Arr = List[A]
 }
 
-trait JsonLike[A, F <: A] extends JsonLikeTypes[A, F] {
+trait JsonLike[A, F <: A] extends JsonLikeTypes[A, F] with Zero[A]{
+
+  def children(value: A): List[A]
+
+  def name(value: A): Option[String]
 
   def unfold(value: A): Option[Obj or Arr]
 
@@ -14,15 +20,9 @@ trait JsonLike[A, F <: A] extends JsonLikeTypes[A, F] {
 
   def foldOne(name: String, value: A): F
 
-  def zero: A
-
   def foldArr(elemets: List[A]): A
 
   def foldObj(elemets: List[F]): A
-
-  def children(value: A): List[A]
-
-  def name(value: A): Option[String]
 }
 
 class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A, F]{
