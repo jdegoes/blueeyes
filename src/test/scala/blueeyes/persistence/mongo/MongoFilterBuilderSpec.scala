@@ -60,4 +60,8 @@ class MongoFilterBuilderSpec extends Specification{
   "builds $within for polygon" in {
     ("foo" within Polygon((10, 20), (30, 40))) mustEqual (MongoFieldFilter("foo", $within, MongoPrimitiveJObject(JObject(JField("$within", JObject(JField("$polygon", JArray(JArray(JDouble(10.0) :: JDouble(20.0) :: Nil) :: JArray(JDouble(30.0) :: JDouble(40.0) :: Nil) :: Nil)) :: Nil)) :: Nil))))
   }
+  "builds $where operation" in {
+    (evaluation("this.a > 3")) mustEqual (MongoFieldFilter(JPath.Identity, $where, MongoPrimitiveString("this.a > 3")))
+  }
+
 }

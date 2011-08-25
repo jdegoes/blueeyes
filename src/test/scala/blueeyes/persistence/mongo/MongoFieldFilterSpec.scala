@@ -39,6 +39,10 @@ class MongoFieldFilterSpec extends Specification{
     import MongoFilterImplicits._
     MongoFieldFilter("author.name", $eq, "joe").filter mustEqual (JObject(JField("author.name", JString("joe")) :: Nil))
   }
+  "creates valid json for $where operator" in{
+    import MongoFilterImplicits._
+    MongoFieldFilter(JPath.Identity, $where, "joe").filter mustEqual (JObject(JField("$where", JString("joe")) :: Nil))
+  }
   "creates valid json for another operator then $eq" in{
     import MongoFilterImplicits._
     MongoFieldFilter("foo", $ne, "bar").filter mustEqual (JObject(JField("foo", JObject(JField("$ne", JString("bar")) :: Nil)) :: Nil))

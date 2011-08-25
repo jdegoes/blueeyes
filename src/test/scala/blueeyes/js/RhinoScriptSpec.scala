@@ -10,10 +10,3 @@ class RhinoScriptSpec extends Specification{
     result mustEqual(Some(JsonParser.parse("""{"name": "hello", "foo": {"bar": 2.0}}""")))
   }
 }
-
-//"""
-//    var record  = %s;
-//    record.map  = %s
-//    record.emit = function(k, v){emitter.emmit(k, v)}
-//
-//    record.map()"""

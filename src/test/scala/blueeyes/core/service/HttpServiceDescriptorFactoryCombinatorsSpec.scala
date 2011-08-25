@@ -29,7 +29,6 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
             roll    = "never"
             file    = "%s"
             enabled = true
-            formatter = "json"
           }
           healthMonitor{
             overage{

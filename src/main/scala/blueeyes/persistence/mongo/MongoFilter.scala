@@ -44,6 +44,7 @@ object MongoFilterOperators {
   case object $near        extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $near operator does not have a negation"); }
   case object $nearSphere  extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $nearSphere operator does not have a negation"); }
   case object $within      extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $within operator does not have a negation"); }
+  case object $where       extends MongoFilterOperatorGeo { def unary_! : MongoFilterOperator  = sys.error("The $where operator does not have a negation"); }
 }
 
 import MongoFilterOperators._
@@ -309,6 +310,10 @@ case class MongoFilterBuilder(jpath: JPath) {
     }
     MongoFieldFilter(jpath, $within, JObject(JField("$within", JObject(withinValue :: Nil)) :: Nil))
   }
+}
+
+object evaluation{
+  def apply(javascriptExpression: String) = MongoFieldFilter(JPath.Identity, $where, javascriptExpression)
 }
 
 private[mongo] object JPathExtension{
