@@ -135,10 +135,12 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 10)
         val includePaths      = configMap.getList("includePaths").map(new Regex(_)).toList
         val excludePaths      = configMap.getList("excludePaths").map(new Regex(_)).toList
+        val formatter         = HttpRequestLoggerFormatter(configMap.getString("formatter", "w3c"))
 
-        val log = W3ExtendedLogger.get(fileName, policy, fieldsDirective, writeDelaySeconds)
+        def fileHeader() = formatter.formatHeader(fieldsDirective)
+        val log = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
 
-        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, includePaths, excludePaths, log, underlying.request(state))},
+        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, includePaths, excludePaths, log, formatter, underlying.request(state))},
                         shutdown = (state: S) => {
                           log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
                         })
@@ -207,7 +209,8 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
-  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, includePaths: List[Regex], excludePaths: List[Regex], log: W3ExtendedLogger, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
+  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, includePaths: List[Regex],
+                                                     excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
     private val includeExcludeLogic = new IncludeExcludeLogic(includePaths, excludePaths)
     private val requestLogger       = HttpRequestLogger[T, T](fieldsDirective)
     def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
@@ -217,7 +220,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
 
       if (includeExcludeLogic(request.subpath)){
         val logRecord = requestLogger(request, response)
-        logRecord foreach { log(_)}
+        logRecord.map(formatter.formatLog(_)) foreach { log(_)}
       }
 
       response

@@ -29,6 +29,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
             roll    = "never"
             file    = "%s"
             enabled = true
+            formatter = "json"
           }
           healthMonitor{
             overage{
@@ -78,7 +79,6 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       response.status  mustEqual(HttpStatus(OK))
 
       val content  = response.content.get
-      println(Printer.pretty(Printer.render(content)))
       content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
       content \ "requests" \ "GET" \ "overage" \ "perSecond"      mustNotEq(JNothing)

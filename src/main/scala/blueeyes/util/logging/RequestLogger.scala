@@ -1,7 +1,6 @@
 package blueeyes.util.logging
 
 import blueeyes.concurrent.Future
-import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 import blueeyes.util.RichThrowableImplicits
 
@@ -21,23 +20,23 @@ object RollPolicies{
 }
 
 import RollPolicies._
-object W3ExtendedLogger{
-  private val loggersCache = new scala.collection.mutable.HashMap[String, W3ExtendedLogger]
+object RequestLogger{
+  private val loggersCache = new scala.collection.mutable.HashMap[String, RequestLogger]
 
-  def get(fileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int): W3ExtendedLogger = {
+  def get(fileName: String, policy: Policy, fileHeader: () => String, writeDelaySeconds: Int): RequestLogger = {
     loggersCache.get(fileName) match {
       case Some(logger) =>
         logger
       case None =>
-        val logger = new W3ExtendedLogger(fileName, policy, fieldsDirective, writeDelaySeconds)
+        val logger = new RequestLogger(fileName, policy, fileHeader, writeDelaySeconds)
         loggersCache.put(fileName, logger)
         logger
     }
   }
 }
 
-class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective, writeDelaySeconds: Int){
-  private val fileHandler = new FileHandler(baseFileName, policy, fieldsDirective)
+class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => String, writeDelaySeconds: Int){
+  private val fileHandler = new FileHandler(baseFileName, policy, fileHeader)
   private val logStage    = Stage[String, StringBuilder](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000, write)
 
   implicit val LogLineSemigroup = new Semigroup[StringBuilder] {
@@ -56,7 +55,7 @@ class W3ExtendedLogger(baseFileName: String, policy: Policy, fieldsDirective: Fi
   private def write(key: String, record: StringBuilder) {fileHandler.publish(record)}
 }
 
-class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsDirective) extends RichThrowableImplicits with NameFormat with Roll{
+class FileHandler(baseFileName: String, policy: Policy, fileHeader: () => String) extends RichThrowableImplicits with NameFormat with Roll{
 
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private var _fileName: Option[String]  = None
@@ -121,9 +120,7 @@ class FileHandler(baseFileName: String, policy: Policy, fieldsDirective: FieldsD
       val initialize = !new File(fileNameValue).exists
       val stream     = new OutputStreamWriter(new FileOutputStream(fileNameValue, true), "UTF-8")
       if (initialize){
-        stream.write("#Version: 1.0\n")
-        stream.write("#Date: %s\n".format(new SimpleDateFormat("dd-MMM-yyyy HH:MM:SS").format(new Date())))
-        stream.write(fieldsDirective.toString+ "\n")
+        stream.write(fileHeader() + "\n")
         stream.flush()
       }
       stream

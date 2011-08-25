@@ -5,20 +5,22 @@ import blueeyes.parsers.W3ExtendedLogAST._
 import RollPolicies._
 import java.io.File
 import scala.io.Source
+import blueeyes.core.service.HttpRequestLoggerW3CFormatter
 
-class W3ExtendedLoggerSpec extends Specification {
+class RequestLoggerSpec extends Specification {
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
+  private val formatter  = new HttpRequestLoggerW3CFormatter()
 
-  private var w3Logger: W3ExtendedLogger = _
+  private var w3Logger: RequestLogger = _
   "W3ExtendedLogger" should {
     "creates log file" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, directives, 1)
+      w3Logger = RequestLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3.log", Never, header _, 1)
 
       new File(w3Logger.fileName.get).exists must be (true)
       cleanUp()
     }
     "init log file" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_1.log", Never, directives, 1)
+      w3Logger = RequestLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_1.log", Never, header _, 1)
 
       val content = getContents(new File(w3Logger.fileName.get))
       cleanUp()
@@ -29,7 +31,7 @@ class W3ExtendedLoggerSpec extends Specification {
     }
 
     "flush entries while closing" in{
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_2.log", Never, directives, 1)
+      w3Logger = RequestLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_2.log", Never, header _, 1)
 
       w3Logger("foo")
       w3Logger("bar")
@@ -45,7 +47,7 @@ class W3ExtendedLoggerSpec extends Specification {
     }
 
     "write log entries" in {
-      w3Logger = W3ExtendedLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_3.log", Never, directives, 1)
+      w3Logger = RequestLogger.get(System.getProperty("java.io.tmpdir") + File.separator + "w3_3.log", Never, header _, 1)
 
       w3Logger("foo")
       w3Logger("bar")
@@ -58,6 +60,8 @@ class W3ExtendedLoggerSpec extends Specification {
 
       cleanUp()
     }
+
+    def header() = formatter.formatHeader(directives)
 
     def cleanUp(){
       val future = w3Logger.close
