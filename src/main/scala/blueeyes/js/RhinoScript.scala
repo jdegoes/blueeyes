@@ -2,7 +2,7 @@ package blueeyes.js
 
 import scala.collection.JavaConversions._
 import blueeyes.json.JsonAST._
-import org.mozilla.javascript.{ScriptableObject, Scriptable, Context}
+import org.mozilla.javascript.{ScriptableObject, Scriptable, Context, Undefined}
 
 trait RhinoJsonImplicits{
   trait CanConvertToJValue { def toJValue: JValue }
@@ -22,41 +22,42 @@ trait RhinoJsonImplicits{
     def toJField(key: String): JField = {
       JField(key, anyRef2JValue(dbObject.get(key, dbObject)))
     }
-
     JObject(allKeys.foldLeft(List[JField]()){ (obj, key) => toJField(key.asInstanceOf[String]) :: obj })
   }
 
-  private def anyRef2JValue[T](value: T): JValue = value match {
-    case x: String                       => x.toJValue
-    case x: java.lang.Long               => x.toJValue
-    case x: java.lang.Integer            => x.toJValue
-    case x: java.lang.Double             => x.toJValue
-    case x: java.lang.Float              => x.toJValue
-    case x: java.lang.Boolean            => x.toJValue
+  implicit def anyRef2JValue[T](value: T): JValue = value match {
+    case x: String                  => x.toJValue
+    case x: java.lang.Long          => x.toJValue
+    case x: java.lang.Integer       => x.toJValue
+    case x: java.lang.Double        => x.toJValue
+    case x: java.lang.Float         => x.toJValue
+    case x: java.lang.Boolean       => x.toJValue
     case x: java.util.ArrayList[_]  => x.toJValue
-    case x: Scriptable                     => x.toJValue
-    case null                            => JNull
-    case _                               => sys.error("Unknown type for. {value=" + value + "}")
+    case x: Scriptable              => x.toJValue
+    case null                       => JNull
+    case _                          => sys.error("Unknown type for. {value=" + value + "}")
   }
 }
 
 object RhinoJsonImplicits extends RhinoJsonImplicits
 
 case class RhinoScript(script: String) extends RhinoJsonImplicits{
-  def apply(scopedObjects: Map[String, _] = Map()): Option[JObject] = {
+  def apply(scopedObjects: Map[String, _] = Map()): Option[JValue] = {
     val context = Context.enter();
     try{
-      val scope = context.initStandardObjects();
+      val scope = context.initStandardObjects()
 
       scopedObjects.foreach(scopedObject => ScriptableObject.putProperty(scope, scopedObject._1, scopedObject._2))
 
-      context.evaluateString(scope, script, "javascript.log", 1, null) match {
-        case e: Scriptable => Some(e)
-        case _             => None
-      }
+      val result = context.evaluateString(scope, script, "javascript.log", 1, null)
+      Option(result).flatMap{_ match {
+        case e: Undefined => None
+        case e => Some(anyRef2JValue(e))
+      }}
+
     }
     finally{
-      Context.exit();
+      Context.exit()
     }
   }
 }

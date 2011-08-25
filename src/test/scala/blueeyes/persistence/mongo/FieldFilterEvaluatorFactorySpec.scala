@@ -58,4 +58,7 @@ class FieldFilterEvaluatorFactorySpec extends Specification with JPathImplicits{
   "creates $within Evaluator" in {
     FieldFilterEvaluatorFactory("foo", $within) must be (WithinFilterEvaluator)
   }
+  "creates $where Evaluator" in {
+    FieldFilterEvaluatorFactory("foo", $where) must be (WhereFilterEvaluator)
+  }
 }

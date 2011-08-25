@@ -88,6 +88,7 @@ private[mongo] object Evaluators{
       case $near        => NearFilterEvaluator
       case $nearSphere  => NearSphereFilterEvaluator
       case $within      => WithinFilterEvaluator
+      case $where       => WhereFilterEvaluator
       case $or          => sys.error("'or' is not supported")
       case $each        => sys.error("'or' is not supported")
     }
@@ -247,6 +248,12 @@ private[mongo] object Evaluators{
         case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
         case _ => false
       }
+    }
+  }
+
+  case object WhereFilterEvaluator extends FieldFilterEvaluator{
+    def apply(v1: JValue, v2: JValue) = {
+      false
     }
   }
 

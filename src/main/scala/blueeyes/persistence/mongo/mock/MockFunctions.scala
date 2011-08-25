@@ -23,7 +23,12 @@ object GroupFunction extends JObjectFields{
     var result         = List[JValue]()
 
     groupedObject.foreach(group => {
-      val groupValue = group._2.foldLeft(initial){ (groupResult, current) => RhinoScript(reduceFunction.format(renderJObject(current), renderJObject(groupResult)))().get}
+      val groupValue = group._2.foldLeft(initial){ (groupResult, current) =>
+        RhinoScript(reduceFunction.format(renderJObject(current), renderJObject(groupResult)))() match{
+          case Some(e @ JObject(_)) => e
+          case e => sys.error("Group function does not return JObject. Value=" + e)
+        }
+      }
       result = group._1.merge(groupValue) :: result
     })
 
@@ -67,7 +72,10 @@ private[mongo] object MapReduceFunction extends RhinoJsonImplicits{
         case _ => entry._1
       }
       val entryValue    = renderJObject(JArray(entry._2))
-      val reducedObject = RhinoScript(reduceScriptPattern.format(reduce, entryKey, entryValue))().get
+      val reducedObject = RhinoScript(reduceScriptPattern.format(reduce, entryKey, entryValue))() match{
+        case Some(e @ JObject(_)) => e
+        case e => sys.error("Reduce function does not return JObject. Value=" + e)
+      }
       Tuple2(entry._1, reducedObject)
     })
     reduced.values.toList
