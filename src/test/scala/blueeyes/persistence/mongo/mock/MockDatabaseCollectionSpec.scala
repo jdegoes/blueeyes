@@ -422,6 +422,12 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jobjects)
     collection.select(MongoSelection(Set()), Some(MongoAndFilter(ListSet.empty[MongoFilter] + MongoFieldFilter("address.city", $eq, "A") + MongoFieldFilter("address.street", $exists, true))), None, None, None, None, false).toList mustEqual(jObject :: Nil)
   }
+  "select jobjects by filter with script" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.select(MongoSelection(Set()), Some(MongoAndFilter(ListSet.empty[MongoFilter] + MongoFieldFilter(JPath.Identity, $where, "function(){return obj.address.street == 1;}"))), None, None, None, None, false).toList mustEqual(jObject :: Nil)
+  }
   "does not select jobjects by filter with wrong exists" in{
     val collection = newCollection
 

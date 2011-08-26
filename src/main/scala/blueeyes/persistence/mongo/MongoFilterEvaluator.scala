@@ -2,10 +2,11 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import MongoFilterOperators._
-import blueeyes.json.JPath
 import util.matching.Regex
 import blueeyes.util.GeoTools
 import com.mongodb.MongoException
+import blueeyes.js.RhinoScript
+import blueeyes.json.{Printer, JPath}
 
 private[mongo] object MongoFilterEvaluator{
   implicit def valuesToEvaluator(values: List[JValue]) = MongoFilterEvaluator(values)
@@ -59,12 +60,10 @@ private[mongo] object Evaluators{
       val evaluator = FieldFilterEvaluatorFactory(filter.lhs, filter.operator)
       values.filter(value => {
         val pathValue = value.get(filter.lhs)
-        !pathValue.filter(v => {
-          v match{
-            case JArray(x) => evaluator(v, filter.rhs.toJValue) || x.foldLeft(false){(result, element) => result || evaluator(element, filter.rhs.toJValue) }
-            case _         => evaluator(v, filter.rhs.toJValue)
-          }
-        }).isEmpty
+        pathValue match{
+          case JArray(x) => evaluator(pathValue, filter.rhs.toJValue) || x.foldLeft(false){(result, element) => result || evaluator(element, filter.rhs.toJValue) }
+          case _         => evaluator(pathValue, filter.rhs.toJValue)
+        }
       })
     }
   }
@@ -215,7 +214,11 @@ private[mongo] object Evaluators{
         case _ => false
       }
     }
-    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = distanceInMiles(nearX, nearY, x, y) <= realDistance(maxDistance)
+    private def isNear(nearX: Double, nearY: Double, x: Double, y: Double, maxDistance: Double) = {
+      val inMiles = distanceInMiles(nearX, nearY, x, y)
+      val distance = realDistance(maxDistance)
+      inMiles <= distance
+    }
 
     protected def realDistance(distance: Double): Double
     protected def query: String
@@ -251,9 +254,34 @@ private[mongo] object Evaluators{
     }
   }
 
-  case object WhereFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = {
-      false
+  case object WhereFilterEvaluator extends FieldFilterEvaluator with WhereFilterScriptBuilder{
+    def apply(v1: JValue, v2: JValue) = (v1, v2) match{
+      case (e: JObject, JString(function)) =>
+        RhinoScript(build(function, e))().map{_ match{
+          case JBool(v)   => v
+          case JInt(v)    => v != 0
+          case JDouble(v) => v != 0
+          case JString(v) => v.length != 0
+          case JObject(v) => true
+          case JArray(v)  => true
+          case _          => false
+        }}.getOrElse(false)
+      case _ => false
+    }
+  }
+
+  private[mongo] trait WhereFilterScriptBuilder {
+    private val scriptPattern = """var obj = %s; obj.evaluate = %s; obj.evaluate()"""
+    def build(function: String, value: JObject) = {
+      val trimmed = function.trim
+      val fullFunction = if (trimmed.startsWith("function")) function
+      else if (trimmed.startsWith("{")) {
+        if (trimmed.indexOf("return") != -1) "function()" + function
+        else throw new MongoException(10070, "$where compile error")
+      }
+      else if (trimmed.startsWith("return")) "function(){" + function + "}"
+      else "function(){return " + function + "}"
+      scriptPattern.format(Printer.compact(Printer.render(value)), fullFunction)
     }
   }
 
