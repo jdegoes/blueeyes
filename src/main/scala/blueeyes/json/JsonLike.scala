@@ -10,19 +10,13 @@ trait JsonLikeTypes[A, F <: A]{
 
 trait JsonLike[A, F <: A] extends JsonLikeTypes[A, F] with Zero[A]{
 
-  def children(value: A): List[A]
+  def fold[Z](value: A, prim: A => Z, field: (String, A) => Z, arr: List[A] => Z, obj: List[F] => Z): Z
 
-  def name(value: A): Option[String]
+  def jsonField(name: String, value: A): F
 
-  def unfold(value: A): Option[Obj or Arr]
+  def jsonArray(elements: List[A]): A
 
-  def unfoldOne(value: A): A
-
-  def foldOne(name: String, value: A): F
-
-  def foldArr(elemets: List[A]): A
-
-  def foldObj(elemets: List[F]): A
+  def jsonObject(elements: List[F]): A
 }
 
 class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manifest[A], mf: Manifest[F]) extends JsonLikeTypes[A, F]{
@@ -34,15 +28,34 @@ class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manife
    * </pre>
    */
   def +\ (nameToFind: String): A = {
-    val p = (json: A) => jsonLike.name(json) match {
-      case Some(name) if name == nameToFind => true
-      case _ => false
+    val p = (json: A) => {
+      fieldName(json) match {
+        case Some(name) if name == nameToFind => true
+        case _ => false
+      }
     }
-    val found = findDirect(jsonLike.children(json), p)
+    val found = findDirect(children(json), p)
     found match {
       case Nil => jsonLike.zero
-      case x :: Nil => jsonLike.unfoldOne(x)
-      case xs => jsonLike.foldArr(xs.map(jsonLike.unfoldOne))
+      case x :: Nil => unfoldOne(x)
+      case xs => jsonLike.jsonArray(xs.map(unfoldOne))
+    }
+  }
+
+  private def unfold(json: A): Option[Obj or Arr] = jsonLike.fold(json, _ => None, (_, _) => None, v => Some(Right(v)), v => Some(Left(v)))
+  private def fieldName(json: A): Option[String]  = jsonLike.fold(json, _ => None, (name, v) => Some(name), _ => None, _ => None)
+  private def unfoldField(json: A): Option[A]     = jsonLike.fold(json, _ => None, (name, v) => Some(v), _ => None, _ => None)
+  private def unfoldOne(json: A): A               = unfoldField(json) match{
+    case Some(x) => x
+    case None    => json
+  }
+
+  private def children(json: A): List[A] = unfold(json) match{
+    case Some(Left(fields))    => fields
+    case Some(Right(elements)) => elements
+    case None => fieldName(json) match {
+      case Some(x) => unfoldOne(json) :: Nil
+      case None => Nil
     }
   }
 
@@ -66,7 +79,7 @@ class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manife
     val cf: Class[F] = mf.erasure.asInstanceOf[Class[F]]
     def extractTyped(value: A) = if (ca == clazz) Some(value.asInstanceOf[B]) else None
 
-    val unfolded = jsonLike.unfoldOne(json)
+    val unfolded = unfoldOne(json)
     if (unfolded != json && clazz != cf) extractTyped(unfolded)
     else extractTyped(json)
   }
@@ -84,8 +97,8 @@ class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manife
         val (head, nextQueue) = queue.dequeue
 
         breadthFirst0(head :: cur,
-          jsonLike.unfold(head) match{
-            case Some(Left(fields)) => nextQueue.enqueue(fields.map(jsonLike.unfoldOne(_)))
+          unfold(head) match{
+            case Some(Left(fields)) => nextQueue.enqueue(fields.map(unfoldOne(_)))
             case Some(Right(elements)) => nextQueue.enqueue(elements)
             case None => nextQueue
           }
@@ -107,31 +120,31 @@ class RichJson[A, F <: A](json: A, jsonLike: JsonLike[A, F])(implicit af: Manife
         case _ => l.updated(i, v)
     }
 
-    jsonLike.unfold(json) match {
+    unfold(json) match {
       case Some(Left(fields)) => path.nodes match {
-        case JPathField(name) :: Nil => jsonLike.foldObj(jsonLike.foldOne(name, value) :: fields.filterNot(jsonLike.name(_).map(_ == name).getOrElse(false)))
+        case JPathField(name) :: Nil => jsonLike.jsonObject(jsonLike.jsonField(name, value) :: fields.filterNot(fieldName(_).map(_ == name).getOrElse(false)))
 
-        case JPathField(name)  :: nodes => jsonLike.foldObj(jsonLike.foldOne(name, !!(+\(name)).set(JPath(nodes), value)) :: fields.filterNot(jsonLike.name(_).map(_ == name).getOrElse(false)))
+        case JPathField(name)  :: nodes => jsonLike.jsonObject(jsonLike.jsonField(name, !!(+\(name)).set(JPath(nodes), value)) :: fields.filterNot(fieldName(_).map(_ == name).getOrElse(false)))
 
         case _ => sys.error("Objects are not indexed")
       }
       case Some(Right(elements)) => path.nodes match {
-        case JPathIndex(index) :: Nil => jsonLike.foldArr(up(elements, index, value))
-        case JPathIndex(index) :: nodes => jsonLike.foldArr(up(elements, index, !!(elements.lift(index).getOrElse(jsonLike.zero)).set(JPath(nodes), value)))
+        case JPathIndex(index) :: Nil => jsonLike.jsonArray(up(elements, index, value))
+        case JPathIndex(index) :: nodes => jsonLike.jsonArray(up(elements, index, !!(elements.lift(index).getOrElse(jsonLike.zero)).set(JPath(nodes), value)))
         case _ => sys.error("Arrays have no fields")
       }
       case _ => path.nodes match {
         case Nil => value
 
-        case JPathIndex(_) :: _ => !!(jsonLike.foldArr(Nil)).set(path, value)
+        case JPathIndex(_) :: _ => !!(jsonLike.jsonArray(Nil)).set(path, value)
 
-        case JPathField(_) :: _ => !!(jsonLike.foldObj(Nil)).set(path, value)
+        case JPathField(_) :: _ => !!(jsonLike.jsonObject(Nil)).set(path, value)
       }
     }
   }
 
   private def findDirect(xs: List[A], p: A => Boolean): List[A] = xs.flatMap { element =>
-    jsonLike.unfold(element) match {
+    unfold(element) match {
       case Some(Left(l)) => l.filter {
         case x if p(x) => true
         case _ => false

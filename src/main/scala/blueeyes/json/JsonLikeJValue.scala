@@ -6,34 +6,16 @@ class JsonLikeJValue extends JsonLike[JValue, JField]{
 
   val zero: JValue = JNothing
 
-  def name(value: JValue) = value match{
-    case JField(n, v) => Some(n)
-    case _ => None
+  def fold[Z](value: JValue, prim: (JValue) => Z, field: (String, JValue) => Z, arr: (List[JValue]) => Z, obj: (List[JField]) => Z) = value match {
+    case JField(n, v) => field(n, v)
+    case JArray(v)    => arr(v)
+    case JObject(v)   => obj(v)
+    case _            => prim(value)
   }
 
-  def children(value: JValue): List[JValue] = value match {
-    case JObject(l)   => l
-    case JArray(l)    => l
-    case JField(n, v) => List(v)
-    case _ => Nil
-  }
-
-  def unfold(value: JValue) = value match{
-    case JObject(fields)  => Some(Left(fields))
-    case JArray(elements) => Some(Right(elements))
-    case _                => None
-  }
-
-  def unfoldOne(value: JValue) = value match{
-    case JField(n, v) => v
-    case _ => value
-  }
-
-  def foldOne(name: String, value: JValue) = JField(name, value)
-
-  def foldArr(elemets: List[JValue]) = JArray(elemets)
-
-  def foldObj(elemets: List[JField]) = JObject(elemets)
+  def jsonField(name: String, value: JValue) = JField(name, value)
+  def jsonArray(elements: List[JValue])      = JArray(elements)
+  def jsonObject(elements: List[JField])     = JObject(elements)
 }
 
 trait JsonLikeJValueImplicits extends ToRichJsonLike{
@@ -41,10 +23,6 @@ trait JsonLikeJValueImplicits extends ToRichJsonLike{
   implicit def jValueToRichJsonLike[T <: JValue](value: T) = toRichJson[JValue, JField](value)
 }
 object JsonLikeJValueImplicits extends JsonLikeJValueImplicits
-
-
-
-
 
 object JsonLikeTest extends JsonLikeJValueImplicits with ToRichJsonLike{
   def main(args: Array[String]){
