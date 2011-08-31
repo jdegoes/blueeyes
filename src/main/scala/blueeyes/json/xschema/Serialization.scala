@@ -2,10 +2,18 @@ package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 
+import scalaz.{Validation, Success, Failure}
+
 /** Extracts the value from a JSON object.
  */
 trait Extractor[A] extends Function[JValue, A] { self =>
   def extract(jvalue: JValue): A
+
+  def validated(jvalue: JValue): Validation[String, A] = try {
+    Success(extract(jvalue))
+  } catch { 
+    case ex => Failure(ex.getMessage)
+  }
 
   def map[B](f: A => B): Extractor[B] = new Extractor[B] {
     override def extract(jvalue: JValue): B = f(self.extract(jvalue))
@@ -35,10 +43,12 @@ trait Decomposer[-A] extends Function[A, JValue] { self =>
  */
 trait SerializationImplicits {
   case class DeserializableJValue(jvalue: JValue) {
-    def deserialize[T](implicit e: Extractor[T]): T = e(jvalue)
+    def deserialize[T](implicit e: Extractor[T]): T = e.extract(jvalue)
+    def validated[T](implicit e: Extractor[T]): Validation[String, T] = e.validated(jvalue)
   }
+
   case class SerializableTValue[T](tvalue: T) {
-    def serialize(implicit d: Decomposer[T]): JValue = d(tvalue)
+    def serialize(implicit d: Decomposer[T]): JValue = d.decompose(tvalue)
   }
   
   implicit def JValueToTValue[T](jvalue: JValue): DeserializableJValue = DeserializableJValue(jvalue)

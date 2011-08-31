@@ -4,7 +4,7 @@ version := "0.4.20"
 
 organization := "com.reportgrid"
 
-scalaVersion := "2.9.1.RC4"
+scalaVersion := "2.9.1"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 

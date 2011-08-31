@@ -17,6 +17,7 @@
 package blueeyes.json
 
 import scalaz.NonEmptyList
+import scalaz.Scalaz._
 
 object JsonAST {
   import scala.text.{Document, DocText}
@@ -605,6 +606,9 @@ object JsonAST {
     type Self = JObject
     
     def values = Map() ++ fields.map(_.values : (String, Any))
+    def partition(f: JField => Boolean): (JObject, JObject) = {
+      fields.partition(f).mapElements(JObject(_), JObject(_))
+    }
 
     override lazy val hashCode = Set(this.fields: _*).hashCode
 
