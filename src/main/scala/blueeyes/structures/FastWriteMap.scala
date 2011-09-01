@@ -1,12 +1,12 @@
 package blueeyes.structures
 
-import scala.collection.immutable.Map
-
 /* Nathan Gerhart
  * 
  * History:
  **********
- * 08.30.11: Initial commit
+ * 08.30.11: NKG
+ *  - Initial commit
+ *  - removed +V and extension of Map class to get compilation working
  * 
  * Docs:
  * *********
@@ -18,9 +18,10 @@ import scala.collection.immutable.Map
  *  the map.
  */
 
-class FastWriteMap[K, +V] (
+// TODO: implement extension of Map class and covariant Value types
+class FastWriteMap[K, V] (
     val mapData: MapData[K, V] = new MapData,
-    val version: Int = 0) extends Map[K, V] {
+    val version: Int = 0) {
 	
 	// when modifying the FastWriteMap
 	// check to make sure we have the right version
