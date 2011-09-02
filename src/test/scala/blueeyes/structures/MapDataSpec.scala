@@ -12,6 +12,9 @@ import scala.collection.mutable.HashMap
  * 08.31.11: NKG
  *  - Formatted
  *  - Added test to show reset of history exceeding MAX_HISTORY
+ * 09.01.11: NKG
+ *  - Added test to show addition of looser-typed values
+ *  - Updated undo test to be more certain it works
  * 
  * Docs:
  * *********
@@ -101,10 +104,22 @@ class MapDataSpec extends Specification {
         map.history.length must_== 4
       }
     }
+    "handle variable value types" in { 
+      val newMap = map + ("3" -> 'c) // not a String, so newMap has looser type
+      newMap.get("2").get must_== "b"
+      newMap.get("3").get must_== 'c
+      newMap.version must_== 1
+      // doesn't modify the existing object
+      map.get("3") must_== None
+      val anyMap = newMap + ("4" -> 4)
+      anyMap.get("4").get must_== 4
+      newMap.get("4") must_== None
+    }
     "be forkable with" in {
       "a complete reset" in {
         val newMap = map.rollBackToVersion(0)
         newMap.get("1") must_== None
+	newMap.get("2") must_== None
         newMap.version must_== 0
         newMap.history.length must_== 0
       }

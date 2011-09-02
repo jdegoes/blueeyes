@@ -14,6 +14,8 @@ import blueeyes.concurrent.ReadWriteLock
  *  - fixed rollBackToVersion based on results of tests
  * 08.31.11: NKG
  *  - added support for clearing the history when it gets too big
+ * 09.01.11: NKG
+ *  - added + method for adding looser-typed values
  * 
  * Docs:
  * *********
@@ -96,6 +98,15 @@ case class MapData[K, V](
       adder executeOn mutableMap
     })
     return this
+  }
+
+  // for adding values of looser types
+  override def + [V1 >: V] (kv: (K, V1)): MapData[K, V1] = { 
+    // create a new mutable map with the right type
+    var newMutMap:HashMap[K,V1] = null
+    readLock(newMutMap = mutableMap.clone().asInstanceOf[HashMap[K, V1]])
+    // return a new MapData with the item added
+    new MapData[K, V1](newMutMap) += kv
   }
 
   // when removing items from the hash table
