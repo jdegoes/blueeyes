@@ -1,4 +1,4 @@
-package blueeyes.json.xschema {
+package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
@@ -101,7 +101,7 @@ trait DefaultOrderings {
     }
   }
   
-  def JFieldOrdering: Ordering[JField] = new Ordering[JField] {
+  object JFieldOrdering extends Ordering[JField] {
     def compare(v1: JField, v2: JField): Int = {
       import Stream.{cons, empty}
       
@@ -113,7 +113,7 @@ trait DefaultOrderings {
     }
   }
   
-  def JValueOrdering: Ordering[JValue] = new Ordering[JValue] {
+  object JValueOrdering extends Ordering[JValue] {
     def compare(v1: JValue, v2: JValue): Int = v1 match {
       case JNothing => v2 match {
         case JNothing => 0
@@ -161,11 +161,18 @@ trait DefaultOrderings {
       }
     }
   }
+
+  object JArrayOrdering extends Ordering[JArray] {
+    def compare(v1: JArray, v2: JArray): Int = ListOrdering(JValueOrdering).compare(v1.elements, v2.elements)
+  }
+
+  object JObjectOrdering extends Ordering[JObject] {
+    def compare(v1: JObject, v2: JObject): Int = ListOrdering(JFieldOrdering).compare(v1.fields, v2.fields)
+  }
   
-  def DateOrdering: Ordering[JDate] = new Ordering[JDate] {
+  object DateOrdering extends Ordering[JDate] {
     def compare(v1: JDate, v2: JDate) = if (v1.getTime < v2.getTime) -1 else if (v1.getTime > v2.getTime) 1 else 0
   }
 }
-object DefaultOrderings extends DefaultOrderings
 
-}
+object DefaultOrderings extends DefaultOrderings

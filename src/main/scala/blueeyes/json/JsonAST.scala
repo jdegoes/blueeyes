@@ -610,6 +610,8 @@ object JsonAST {
       fields.partition(f).mapElements(JObject(_), JObject(_))
     }
 
+    def mapFields(f: JField => JField) = JObject(fields.map(f))
+
     override lazy val hashCode = Set(this.fields: _*).hashCode
 
     override def equals(that: Any): Boolean = that match {
