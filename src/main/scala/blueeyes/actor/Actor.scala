@@ -17,7 +17,7 @@ trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[
 
   final def ! (a: A): ActorState[A, B] = receive(a)
 
-  final def !! (as: Seq[A])(implicit semigroup: Semigroup[B]): (B, Actor[A, B]) = {
+  final def !! (as: Seq[A])(implicit semigroup: Semigroup[B]): ActorState[A, B] = {
     val (b, actor) = self ! as.head
 
     as.drop(1).foldLeft[(B, Actor[A, B])]((b, actor)) {
