@@ -22,7 +22,9 @@ import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Shrink
 
 class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.ScalaTest {
-  val BigStage = Stage.empty[Int, String](Int.MaxValue / 10)
+  import StageActorPimp._
+
+  val BigStage   = Stage.empty[Int, String](Int.MaxValue / 10)
   val SmallStage = Stage.empty[Int, String](2, 4)
 
   implicit val arbString = Arbitrary[String](identifier)
@@ -45,7 +47,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
     Gen.oneOf(genPutAll, genExpireAll, genExpire)
   }
 
-  implicit val arbStrage = Arbitrary[Stage[Int, String]] {
+  implicit val arbStage = Arbitrary[StageActor[Int, String]] {
     for (base <- choose(2, 10); max <- choose(10, 18)) yield Stage.empty[Int, String](base, max)
   }
 
@@ -63,7 +65,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
   "information content" should {
     "be invariant" in {
 
-      forAll { (operations: List[StageIn[Int, String]], stage: Stage[Int, String]) => 
+      forAll { (operations: List[StageIn[Int, String]], stage: StageActor[Int, String]) => 
         val (discarded, finalStage) = operations.foldLeft((Map.empty[Int, String], stage)) { 
           case ((discarded1, stage), operation) =>
             val (discarded2, stage2) = stage.apply(operation) 
@@ -179,7 +181,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
         val AllTimedInput(list, accessTimeCutoff) = input
         val sortedList = list.sortBy(_.time)
 
-        val stage = sortedList.foldLeft(BigStage) {
+        val stage = sortedList.foldLeft[StageActor[Int, String]](BigStage) {
           case (stage, TimedInput(toPut, time)) => stage.putAll(toPut, time)._2
         }
 
@@ -207,7 +209,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
         val AllTimedInput(list, creationTimeCutoff) = input
         val sortedList = list.sortBy(_.time)
 
-        val stage = sortedList.foldLeft(BigStage) {
+        val stage = sortedList.foldLeft[StageActor[Int, String]](BigStage) {
           case (stage, TimedInput(toPut, time)) => stage.putAll(toPut, time)._2
         }
 
