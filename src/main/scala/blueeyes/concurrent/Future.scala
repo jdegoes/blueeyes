@@ -5,7 +5,7 @@ import akka.actor.Scheduler
 import akka.util.Duration
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
-import scalaz.{Validation, Success, Failure, Semigroup, Monad}
+import scalaz.{Validation, Success, Failure, Semigroup, Monad, Functor}
 import scalaz.Scalaz._
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
@@ -578,12 +578,20 @@ object Future extends FutureImplicits {
   implicit def FutureSemigroup[T: Semigroup]: Semigroup[Future[T]] = new Semigroup[Future[T]] {
     override def append(f1: Future[T], f2: => Future[T]) = f1.zip(f2).map(_.fold(implicitly[Semigroup[T]].append(_, _)))
   }
+
+  implicit val FutureFunctor: Functor[Future] = new Functor[Future] {
+    def fmap[A, B](future: Future[A], f: A => B): Future[B] = future.map(f)
+  }
+
+  /*implicit val FutureTraversable: Traversable[Future] = new Traversable[Future] {
+    // Cannot implement without blocking
+  }*/
 }
 
 class FutureDispatch(val timeout: Long, val dispatcher: MessageDispatcher)
 object FutureDispatch {
   implicit val DefaultFutureDispatch: FutureDispatch = new FutureDispatch (
-    Long.MaxValue, //don't time things out
+    Long.MaxValue, //don't time things out -- TODO: Fix this, extremely dangerous!
     Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_async")
       .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
       .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
