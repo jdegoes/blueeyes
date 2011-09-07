@@ -108,7 +108,7 @@ class MapDataSpec extends Specification {
         map.history.length must_== 4
       }
     }
-/*  don't do this anymore!
+    /*  don't do this anymore!
     "handle variable value types" in { 
       val newMap = map + ("3" -> 'c) // not a String, so newMap has looser type
       newMap.get("2").get must_== "b"
@@ -125,7 +125,7 @@ class MapDataSpec extends Specification {
       "a complete reset" in {
         val newMap = map.rollBackToVersion(0)
         newMap.get("1") must_== None
-	newMap.get("2") must_== None
+        newMap.get("2") must_== None
         newMap.version must_== 0
         newMap.history.length must_== 0
       }
@@ -149,15 +149,15 @@ class MapDataSpec extends Specification {
         newMap must notEq(bigMap) // now we've forked things
         newMap.history.length must_== 0
         newMap.version must_== 0
-	// reset the MAX_HISTORY
-	MapData.MAX_HISTORY = oldMax
+        // reset the MAX_HISTORY
+        MapData.MAX_HISTORY = oldMax
       }
     }
     "not be forkable with no rollback" in {
       val newMap = map.rollBackToVersion(4)
       newMap mustEq map // they are the same object!
     }
-    "prevent rollback to the future" in { 
+    "prevent rollback to the future" in {
       map.rollBackToVersion(10) must throwAn[Error]
     }
     "be copiable" in {
