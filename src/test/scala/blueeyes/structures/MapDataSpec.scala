@@ -15,6 +15,10 @@ import scala.collection.mutable.HashMap
  * 09.01.11: NKG
  *  - Added test to show addition of looser-typed values
  *  - Updated undo test to be more certain it works
+ * 09.07.11 NKG
+ *  - Removed test for addition of looser-typed values (moved functionality up
+ *      to FastWriteMap instead)
+ *  - Updated roll back test to make sure we don't roll to future
  * 
  * Docs:
  * *********
@@ -104,6 +108,7 @@ class MapDataSpec extends Specification {
         map.history.length must_== 4
       }
     }
+/*  don't do this anymore!
     "handle variable value types" in { 
       val newMap = map + ("3" -> 'c) // not a String, so newMap has looser type
       newMap.get("2").get must_== "b"
@@ -115,6 +120,7 @@ class MapDataSpec extends Specification {
       anyMap.get("4").get must_== 4
       newMap.get("4") must_== None
     }
+*/
     "be forkable with" in {
       "a complete reset" in {
         val newMap = map.rollBackToVersion(0)
@@ -150,6 +156,9 @@ class MapDataSpec extends Specification {
     "not be forkable with no rollback" in {
       val newMap = map.rollBackToVersion(4)
       newMap mustEq map // they are the same object!
+    }
+    "prevent rollback to the future" in { 
+      map.rollBackToVersion(10) must throwAn[Error]
     }
     "be copiable" in {
       val newMap = map.copy(Vector[UndoableOperation[String, String]]())

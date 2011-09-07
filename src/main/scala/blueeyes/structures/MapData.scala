@@ -16,6 +16,8 @@ import blueeyes.concurrent.ReadWriteLock
  *  - added support for clearing the history when it gets too big
  * 09.01.11: NKG
  *  - added + method for adding looser-typed values
+ * 09.07.11: NKG
+ *  - removed + method (moved functionality to FastWriteMap instead)
  * 
  * Docs:
  * *********
@@ -100,6 +102,7 @@ case class MapData[K, V](
     return this
   }
 
+  /* don't need this, just cast to looser at FastWriteMap
   // for adding values of looser types
   override def + [V1 >: V] (kv: (K, V1)): MapData[K, V1] = { 
     // create a new mutable map with the right type
@@ -108,6 +111,7 @@ case class MapData[K, V](
     // return a new MapData with the item added
     new MapData[K, V1](newMutMap) += kv
   }
+  */
 
   // when removing items from the hash table
   // create a remove-operation
