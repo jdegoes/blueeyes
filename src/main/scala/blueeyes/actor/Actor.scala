@@ -17,7 +17,24 @@ trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[
 
   final def ! (a: A): ActorState[A, B] = receive(a)
 
-  final def !! (head: A, tail: A*)(implicit semigroup: Semigroup[B]): ActorState[A, B] = {
+  /** Send multiple values and collect all the results.
+   */
+  final def !! (head: A, tail: A*): (Seq[B], Actor[A, B]) = {
+    val (b, actor) = self ! head
+
+    tail.foldLeft((Vector(b), actor)) {
+      case ((seq, actor), a) =>
+        val (b, next) = actor ! a
+
+        (seq :+ b, next)
+    }
+  }
+
+  final def !! (as: Seq[A]): (Seq[B], Actor[A, B]) = !! (as(0), as.tail: _*)
+
+  /** Send multiple values and combine the results with a semigroup.
+   */
+  final def !+! (head: A, tail: A*)(implicit semigroup: Semigroup[B]): ActorState[A, B] = {
     val (b, actor) = self ! head
 
     tail.foldLeft[(B, Actor[A, B])]((b, actor)) {
@@ -28,7 +45,7 @@ trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[
     }
   }
 
-  final def !! (as: Seq[A])(implicit semigroup: Semigroup[B]): ActorState[A, B] = !! (as(0), as.tail: _*)
+  final def !+! (as: Seq[A])(implicit semigroup: Semigroup[B]): ActorState[A, B] = !+! (as(0), as.tail: _*)
 
   protected def receive(a: A): ActorState[A, B]
 

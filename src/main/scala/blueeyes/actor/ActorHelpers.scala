@@ -4,6 +4,8 @@ import scalaz._
 import scalaz.Scalaz._
 
 trait ActorHelpers {
+  def identityActor[A] = moore(identity[A])
+  
   def receive[A, B](fn: A => ActorState[A, B]): Actor[A, B] = new Actor[A, B] {
     final def receive(a: A): ActorState[A, B] = fn(a)
   }
