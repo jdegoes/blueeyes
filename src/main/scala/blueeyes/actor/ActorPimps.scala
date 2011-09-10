@@ -86,6 +86,40 @@ trait ActorPimps {
       }
     }
 
+    /** Accepts one or the other input type and produces the corresponding 
+     * output type.
+     */
+    def ^ [C, D] (that: Actor[C, D]): Actor[Either[A, C], Either[B, D]] = {
+      receive { 
+        case Left(a)  => (value ! a).mapElements(Left.apply  _, _ ^ that)
+        case Right(c) => (that  ! c).mapElements(Right.apply _, value ^ _)
+      }
+    }
+
+    /** Joins a higher order actor with its dependency to produce a lower 
+     * order actor.
+     */
+    def <~ [AA, BB, C, D] (that: Actor[C, D])(implicit w1: Tuple2[AA, Actor[C, D]] => A, w2: B => (BB, Actor[C, D])): Actor[AA, BB] = {
+      val self = bimap(w1, w2)
+
+      receive { aa: AA =>
+        val ((bb, that2), self2) = self ! ((aa, that))
+
+        (bb, self2 <~ that2)
+      }
+    }
+
+    /** Joins a higher order actor with its dependency to produce a lower 
+     * order actor.
+     */
+    def ~> [C, D] (that: Actor[(C, Actor[A, B]), (D, Actor[A, B])]): Actor[C, D] = {
+      receive { c: C =>
+        val ((d, this2), that2) = that ! ((c, value))
+
+        (d, this2 ~> that2)
+      }
+    }
+
     /** Returns a new actor, which accepts a tuple and produces a tuple, which 
      * are formed from the input and output values for this actor and the 
      * specified actor, respectively. This operation is called "cross".
@@ -141,24 +175,22 @@ trait ActorPimps {
      * input values, to generate a single final result, together with the
      * continuation of this actor.
      */
-    def fold[Z](as: Seq[A], z: Z)(f: (Z, B) => Z): (Z, Actor[A, B]) = as.foldLeft[(Z, Actor[A, B])]((z, value)) {
+    def fold[Z](z: Z, as: Seq[A])(f: (Z, B) => Z): (Z, Actor[A, B]) = as.foldLeft[(Z, Actor[A, B])]((z, value)) {
       case ((z, actor), a) =>
         val (b, actor2) = actor ! a
 
         (f(z, b), actor2)
     }
 
-    /** Zips together output values for actors sharing a common input type.
+    /** Switches between two actors based on a boolean predicate.
+     * {{{
+     * a.ifTrue(_ % 2 == 0)(then = multiply, orELse = divide)
+     * }}}
      */
-    def zip[C](that: Actor[A, C]): Actor[A, (B, C)] = receive { a: A =>
-      val (b, next1) = value ! a
-      val (c, next2) = that  ! a
-
-      ((b, c), next1.zip(next2))
-    }
-
     def ifTrue[C](f: B => Boolean)(then: Actor[B, C], orElse: Actor[B, C]): Actor[A, C] = switch(orElse)(f -> then)
 
+    /** Switches between multiple actors based on boolean predicates.
+     */
     def switch[C](defaultCase: Actor[B, C])(cases: (B => Boolean, Actor[B, C])*): Actor[A, C] = {
       def reduce(t: (B => Boolean, Actor[B, C]), orElse: Actor[B, C]): Actor[B, C] = {
         val (p1, a1) = t

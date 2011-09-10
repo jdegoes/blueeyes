@@ -79,6 +79,35 @@ trait ActorMPimps {
         })
       }
     }
+
+    def ^ [C, D] (that: ActorM[M, C, D])(implicit functor: Functor[M]): ActorM[M, Either[A, C], Either[B, D]] = {
+      receive { 
+        case Left(a)  => (value ! a).mapElements(_.map(Left.apply  _), _ ^ that)
+        case Right(c) => (that  ! c).mapElements(_.map(Right.apply _), value ^ _)
+      }
+    }
+
+    def <~ [AA, BB, C, D] (that: ActorM[M, C, D])(implicit monad: Monad[M], w1: Tuple2[AA, ActorM[M, C, D]] => A, w2: B => (BB, ActorM[M, C, D])): ActorM[M, AA, BB] = {
+      val self = bimap(w1, w2)
+
+      receive { aa: AA =>
+        val (mv, self2) = self ! ((aa, that))
+
+        unwrapM(mv.map {
+          case (bb, that2) => (monad.pure(bb), self2 <~ that2)
+        })
+      }
+    }
+
+    def ~> [C, D] (that: ActorM[M, (C, ActorM[M, A, B]), (D, ActorM[M, A, B])])(implicit monad: Monad[M]): ActorM[M, C, D] = {
+      receive { c: C =>
+        val (mv, that2) = that ! ((c, value))
+
+        unwrapM(mv.map {
+          case (d, this2) => (monad.pure(d), this2 ~> that2)
+        })
+      }
+    }
     
     def * [AA, BB](that: ActorM[M, AA, BB])(implicit monad: Monad[M]): ActorM[M, (A, AA), (B, BB)] = receive {
       case (a, aa) =>
@@ -122,20 +151,13 @@ trait ActorMPimps {
       scan0(monad.pure(z))(f)
     } 
 
-    def fold[Z](as: Seq[A], z: Z)(f: (Z, B) => Z)(implicit monad: Monad[M]): (M[Z], ActorM[M, A, B]) = {
+    def fold[Z](z: Z, as: Seq[A])(f: (Z, B) => Z)(implicit monad: Monad[M]): (M[Z], ActorM[M, A, B]) = {
       as.foldLeft[(M[Z], ActorM[M, A, B])]((monad.pure(z), value)) {
         case ((mz, actor), a) =>
           val (mb, actor2) = actor ! a
 
           (for (z <- mz; b <- mb) yield f(z, b), actor2)
       }
-    }
-
-    def zip[C](that: ActorM[M, A, C])(implicit monad: Monad[M]): ActorM[M, A, (B, C)] = receive { a: A =>
-      val (mb, next1) = value ! a
-      val (mc, next2) = that  ! a
-
-      (for (b <- mb; c <- mc) yield (b, c), next1.zip(next2))
     }
 
     def ifTrue[C](f: B => Boolean)(then: ActorM[M, B, C], orElse: ActorM[M, B, C])(implicit monad: Monad[M]): ActorM[M, A, C] = switch(orElse)(f -> then)
