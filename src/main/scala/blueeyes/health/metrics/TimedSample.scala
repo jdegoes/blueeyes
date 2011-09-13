@@ -26,12 +26,16 @@ class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) exte
   protected val intervalLengthInSeconds = intervalConfig.length.unit.toSeconds(intervalConfig.length.length)
   private val intervalLengthInMillis    = intervalConfig.length.unit.toMillis(intervalConfig.length.length)
   private val intervalFullLength        = intervalLengthInMillis * intervalConfig.count
+  @volatile private var removeTime      = 0l
+
+  updateRemoveTime()
 
   def rawData = _rawData.toMap.mapValues(_.get.intValue)
 
   def +=(elem: Long): this.type = {
     container(clock().toDouble).addAndGet(elem)
-    removeExpired()
+    if (removeTime < clock()) removeExpired()
+
     this
   }
 
@@ -49,10 +53,16 @@ class TimedSample(val intervalConfig: interval)(implicit clock: () => Long) exte
   private def newAtomicLong = new AtomicLong(0)
 
   private def removeExpired(){
+    updateRemoveTime()
+
     val sortedKeys =_rawData.keys.toList.sorted
     val last       = clock() - intervalFullLength
     val expired    = sortedKeys.takeWhile(_ <= last)
     expired.foreach(_rawData.remove(_))
+  }
+
+  private def updateRemoveTime(){
+    removeTime = clock() + intervalFullLength
   }
 }
 
