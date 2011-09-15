@@ -15,7 +15,11 @@ trait JodaSerializationImplicits {
   }
 
   implicit val DateTimeExtractor = new Extractor[DateTime] {
-    def extract(jvalue: JValue): DateTime = new DateTime(jvalue.deserialize[Long], DateTimeZone.UTC)
+    def extract(jvalue: JValue): DateTime = jvalue match {
+      case JInt(instant) => new DateTime(instant.longValue, DateTimeZone.UTC)
+      case JString(text)  => new DateTime(text)
+      case x => sys.error("Unexpected time format: " + x + "; was anticipating integral millisecond value or text string.")
+    }
   }
 
   implicit val DateTimeDecomposer = new Decomposer[DateTime] {
