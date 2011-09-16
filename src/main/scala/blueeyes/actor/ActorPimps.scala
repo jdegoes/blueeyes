@@ -13,6 +13,11 @@ trait ActorPimps {
 
   implicit def ToActorPimp[A, B](actor: Actor[A, B]) = ActorPimp(actor)
 
+  implicit def ToTupledOutputPimp[A, B1, B2, B](actor: Actor[A, (B1, B2)]) = TupledOutputPimp(actor)
+  implicit def ToHigherKindedPimp[T[_], A, B](actor: Actor[A, T[B]]) = HigherKindedPimp(actor)
+  implicit def ToValidatedPimp[A, E, B](actor: Actor[A, Validation[E, B]]) = ValidatedPimp(actor)
+  implicit def ToHigherOrderPimp[A, B, C, D](actor: Actor[(A, Actor[C, D]), (B, Actor[C, D])]) = HigherOrderPimp(actor)
+
   implicit def ActorStateToActorStatePimp[A, B](value: ActorState[A, B]): ActorStatePimp[A, B] = ActorStatePimp(value)
 
   sealed case class ActorPimp[A, B](value: Actor[A, B]) extends NewType[Actor[A, B]] {
@@ -40,16 +45,6 @@ trait ActorPimps {
      */
     def bimap[AA, BB](f: AA => A, g: B => BB): Actor[AA, BB] = premap(f).postmap(g)
 
-    /** Filters out all values not accepted by the specified predicate. 
-     */
-    def filter[Z[_], ZA](f: B => Boolean)(implicit empty: Empty[Z], witness: B => Z[ZA]): Actor[A, Z[ZA]] = receive { a: A =>
-      val (b, next) = value ! a
-
-      val z = witness(b)
-
-      (if (f(b)) z else implicitly[Empty[Z]].empty[ZA], next.filter(f))
-    }
-
     /** Returns a new actor, which given an input value, produces a tuple 
      * holding the outputs for this actor AND the specified 
      */
@@ -60,29 +55,24 @@ trait ActorPimps {
       ((b, c), selfNext & thatNext)
     }
 
-    /** Returns a new actor, which given an input value, produces an output
-     * value from this actor OR the specified actor -- whichever is the first
-     * to produce a non-failure output.
-     *
-     * This function also considers a match error to be a failure, so it may be
-     * safely used with actors defined by partial functions. However, the 
-     * recommended approach is to form the actor with receiveSome, passing
-     * a partial function.
+    /** Accepts one or the other input type and produces the corresponding 
+     * output type.
      */
-    def | [E, BB, AA >: A, BBB <: BB](that: Actor[AA, Validation[E, BBB]])(implicit witness: B => Validation[E, BB]): Actor[A, Validation[E, BB]] = {
-      receive { a: A =>
-        try {
-          val result = (value.map(witness) ! a)
+    def ^ [C, D] (that: Actor[C, D]): Actor[Either[A, C], Either[B, D]] = {
+      receive { 
+        case Left(a)  => (value ! a).mapElements(Left.apply  _, _ ^ that)
+        case Right(c) => (that  ! c).mapElements(Right.apply _, value ^ _)
+      }
+    }
 
-          result.mapElements(identity, _ | that.variant[A, Validation[E, BB]]) match {
-            case (Failure(_), next) => (that ! a).variant[A, Validation[E, BB]].mapElements(identity, next | _)
+    /** Joins a higher order actor with its dependency to produce a lower 
+     * order actor.
+     */
+    def ~> [C, D] (that: Actor[(C, Actor[A, B]), (D, Actor[A, B])]): Actor[C, D] = {
+      receive { c: C =>
+        val ((d, this2), that2) = that ! ((c, value))
 
-            case x => x
-          }
-        }
-        catch {
-          case e: MatchError => (that ! a).variant[A, Validation[E, BB]].mapElements(identity, this | _)
-        }
+        (d, this2 ~> that2)
       }
     }
 
@@ -97,23 +87,6 @@ trait ActorPimps {
 
         ((b, bb), next1 * next2)
     }
-
-    /** If this actor produces a tuple, you can use this function to merge the
-     * elements of the tuple into a single value.
-     */
-    def >- [C, CC, D](f: (C, CC) => D)(implicit witness: B => (C, CC)): Actor[A, D] = receive { a: A =>
-      val (b, next) = value ! a
-
-      val (c, cc) = witness(b)
-       
-      val d = f(c, cc)
-
-      (d, next >- (f))
-    }
-
-    /** @see >-
-     */
-    def merge[C, CC, D](f: (C, CC) => D)(implicit witness: B => (C, CC)): Actor[A, D] = this >- f
 
     /** Splits the output into a tuple of the output.
      */
@@ -141,24 +114,22 @@ trait ActorPimps {
      * input values, to generate a single final result, together with the
      * continuation of this actor.
      */
-    def fold[Z](as: Seq[A], z: Z)(f: (Z, B) => Z): (Z, Actor[A, B]) = as.foldLeft[(Z, Actor[A, B])]((z, value)) {
+    def fold[Z](z: Z, as: Seq[A])(f: (Z, B) => Z): (Z, Actor[A, B]) = as.foldLeft[(Z, Actor[A, B])]((z, value)) {
       case ((z, actor), a) =>
         val (b, actor2) = actor ! a
 
         (f(z, b), actor2)
     }
 
-    /** Zips together output values for actors sharing a common input type.
+    /** Switches between two actors based on a boolean predicate.
+     * {{{
+     * a.ifTrue(_ % 2 == 0)(then = multiply, orELse = divide)
+     * }}}
      */
-    def zip[C](that: Actor[A, C]): Actor[A, (B, C)] = receive { a: A =>
-      val (b, next1) = value ! a
-      val (c, next2) = that  ! a
-
-      ((b, c), next1.zip(next2))
-    }
-
     def ifTrue[C](f: B => Boolean)(then: Actor[B, C], orElse: Actor[B, C]): Actor[A, C] = switch(orElse)(f -> then)
 
+    /** Switches between multiple actors based on boolean predicates.
+     */
     def switch[C](defaultCase: Actor[B, C])(cases: (B => Boolean, Actor[B, C])*): Actor[A, C] = {
       def reduce(t: (B => Boolean, Actor[B, C]), orElse: Actor[B, C]): Actor[B, C] = {
         val (p1, a1) = t
@@ -167,9 +138,9 @@ trait ActorPimps {
           if (p1(b)) {
             val (c, a2) = a1 ! b
 
-            (c, reduce((p1, a2), defaultCase))
+            (c, reduce((p1, a2), orElse))
           }
-          else defaultCase ! b
+          else orElse ! b
         }
       }
 
@@ -206,6 +177,56 @@ trait ActorPimps {
     /** Workaround invariance of actor.
      */
     def variant[AA <: A, BB >: B]: Actor[AA, BB] = premap[AA](aa => (aa: A)).postmap[BB](b => (b: BB))
+  }
+
+  case class HigherKindedPimp[T[_], A, B](value: Actor[A, T[B]]) extends NewType[Actor[A, T[B]]] {
+    def filter(f: T[B] => Boolean)(implicit empty: Empty[T]): Actor[A, T[B]] = receive { a: A =>
+      val (tb, next) = value ! a
+
+      (if (f(tb)) tb else implicitly[Empty[T]].empty[B], next.filter(f))
+    }
+  }
+
+  case class TupledOutputPimp[A, B1, B2](value: Actor[A, (B1, B2)]) extends NewType[Actor[A, (B1, B2)]] {
+    def >- [B](f: (B1, B2) => B): Actor[A, B] = receive { a: A =>
+      val ((b1, b2), next) = value ! a
+       
+      val c = f(b1, b2)
+
+      (c, next >- (f))
+    }
+  }
+
+  case class ValidatedPimp[A, E, B](value: Actor[A, Validation[E, B]]) extends NewType[Actor[A, Validation[E, B]]] {
+    def | [AA >: A, BB <: B, EE <: E](that: Actor[AA, Validation[EE, BB]]): Actor[A, Validation[E, B]] = {
+      receive { a: A =>
+        try {
+          val result = value ! a
+
+          result.mapElements(identity, _ | that.variant[A, Validation[E, B]]) match {
+            case (Failure(_), next) => (that ! a).variant[A, Validation[E, B]].mapElements(identity, next | _)
+
+            case x => x
+          }
+        }
+        catch {
+          case e: MatchError => (that ! a).variant[A, Validation[E, B]].mapElements(identity, this | _)
+        }
+      }
+    }
+  }
+
+  case class HigherOrderPimp[A, B, C, D](value: Actor[(A, Actor[C, D]), (B, Actor[C, D])]) extends NewType[Actor[(A, Actor[C, D]), (B, Actor[C, D])]] {
+    /** Joins a higher order actor with its dependency to produce a lower 
+     * order actor.
+     */
+    def <~ (that: Actor[C, D]): Actor[A, B] = {
+      receive { a: A =>
+        val ((b, that2), self2) = value ! ((a, that))
+
+        (b, self2 <~ that2)
+      }
+    }
   }
 
   case class ActorStatePimp[A, B](value: ActorState[A, B]) extends NewType[ActorState[A, B]] {

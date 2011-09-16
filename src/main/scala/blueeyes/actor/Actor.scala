@@ -10,24 +10,52 @@ import scalaz.Scalaz._
  * This trait is invariant because some actors may have complex dependencies 
  * between input / output types and some other polymorphic type.
  */
-trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[A, B]] { self =>
+trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[A, B]] with Serializable { self =>
   final val value: A => ActorState[A, B] = (a: A) => receive(a)
 
   final def apply(a: A): ActorState[A, B] = receive(a)
 
   final def ! (a: A): ActorState[A, B] = receive(a)
 
-  final def !! (as: Seq[A]): (Seq[B], Actor[A, B]) = {
-    as.foldLeft[(Vector[B], Actor[A, B])]((Vector.empty[B], self)) {
-      case ((bs, actor), a) =>
+  /** Send multiple values and collect all the results.
+   */
+  final def !! (head: A, tail: A*): (Seq[B], Actor[A, B]) = {
+    val (b, actor) = self ! head
+
+    tail.foldLeft((Vector(b), actor)) {
+      case ((seq, actor), a) =>
         val (b, next) = actor ! a
 
-        (bs :+ b, next)
-        
+        (seq :+ b, next)
     }
   }
 
+  final def !! (as: Seq[A]): (Seq[B], Actor[A, B]) = !! (as(0), as.tail: _*)
+
+  /** Send multiple values and combine the results with a semigroup.
+   */
+  final def !+! (head: A, tail: A*)(implicit semigroup: Semigroup[B]): ActorState[A, B] = {
+    val (b, actor) = self ! head
+
+    tail.foldLeft[(B, Actor[A, B])]((b, actor)) {
+      case ((b1, actor), a) =>
+        val (b2, next) = actor ! a
+
+        (b1 |+| b2, next)
+    }
+  }
+
+  final def !+! (as: Seq[A])(implicit semigroup: Semigroup[B]): ActorState[A, B] = !+! (as(0), as.tail: _*)
+
   protected def receive(a: A): ActorState[A, B]
+
+  override def equals(that: Any): Boolean = that match {
+    case that: ActorV[_, _] => this.value == that.value
+
+    case _ => false
+  }
+
+  override def hashCode: Int = value.hashCode
 }
 
 object Actor  extends ActorModule
