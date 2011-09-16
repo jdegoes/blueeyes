@@ -58,9 +58,8 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
       case _ => {
-        val reason = th.fullStackTrace
         log.error(th, "Error handling request")
-        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, if (reason.length > 3500) reason.substring(0, 3500) else reason))
+        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
       }
     }
     

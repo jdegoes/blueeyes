@@ -31,12 +31,7 @@ trait HttpResponseHelpers{
     content map { 
       c => HttpResponse[T](HttpStatus(OK), headers, Some(c))
     } orElse { why =>
-      HttpResponse[T](
-        status = HttpStatus(
-          InternalServerError, 
-          why.map(_.fullStackTrace).getOrElse("The response was unexpectedly canceled")
-        )
-      )
+      HttpResponse[T](status = HttpStatus(InternalServerError, "The response was unexpectedly canceled"))
     }
   }
 }
