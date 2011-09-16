@@ -2,24 +2,68 @@ package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 
-import scalaz.{Validation, Success, Failure}
+import scalaz._
+import scalaz.Scalaz._
 
-/** Extracts the value from a JSON object.
+/** Extracts the value from a JSON object. You must implement either validated or extract.
  */
 trait Extractor[A] extends Function[JValue, A] { self =>
-  def extract(jvalue: JValue): A
+  import Extractor._
 
-  def validated(jvalue: JValue): Validation[String, A] = try {
+  def extract(jvalue: JValue): A = validated(jvalue).fold[A](_.die, identity[A])
+
+  def validated(jvalue: JValue): Validation[Error, A] = try {
     Success(extract(jvalue))
   } catch { 
-    case ex => Failure(ex.getMessage)
+    case ex => Failure(Thrown(ex))
   }
 
   def map[B](f: A => B): Extractor[B] = new Extractor[B] {
     override def extract(jvalue: JValue): B = f(self.extract(jvalue))
   }
+
+  def kleisli = ☆ [({type M[X] = Validation[Error, X]})#M, JValue, A](validated _)
   
   def apply(jvalue: JValue): A = extract(jvalue)
+}
+
+object Extractor {
+  sealed trait Error {
+    def die: Nothing 
+    def message: String
+  }
+
+  object Error {
+    object Semigroup extends scalaz.Semigroup[Error] {
+      import NonEmptyList._
+      def append(e1: Error, e2: => Error): Error = (e1, e2) match {
+        case (Errors(l1), Errors(l2)) => Errors(l1.list <::: l2)
+        case (Errors(l), x) => Errors(nel(x, l.list))
+        case (x, Errors(l)) => Errors(x <:: l)
+        case (x, y) => Errors(nel(x, y))
+      }
+    }
+  }
+
+  case class Thrown(exception: Throwable) extends Error {
+    def die = throw exception
+    def message: String = exception.getMessage
+  }
+
+  case class Invalid(message: String) extends Error {
+    def die = sys.error("JSON Extraction failure: " + message)
+  }
+
+  case class Errors(errors: NonEmptyList[Error]) extends Error {
+    def die = sys.error(message)
+    def message = "Multiple extraction errors occurred: " + errors.map(_.message).list.mkString(": ")
+  }
+
+  def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] {
+    override def validated(jvalue: JValue) = 
+      if (f.isDefinedAt(jvalue)) Success(f(jvalue)) 
+      else Failure(Invalid("Extraction not defined from value " + jvalue + " to type " + implicitly[Manifest[A]].erasure.getName))
+  }
 }
 
 /** Decomposes the value into a JSON object.
@@ -44,7 +88,7 @@ trait Decomposer[-A] extends Function[A, JValue] { self =>
 trait SerializationImplicits {
   case class DeserializableJValue(jvalue: JValue) {
     def deserialize[T](implicit e: Extractor[T]): T = e.extract(jvalue)
-    def validated[T](implicit e: Extractor[T]): Validation[String, T] = e.validated(jvalue)
+    def validated[T](implicit e: Extractor[T]): Validation[Extractor.Error, T] = e.validated(jvalue)
   }
 
   case class SerializableTValue[T](tvalue: T) {

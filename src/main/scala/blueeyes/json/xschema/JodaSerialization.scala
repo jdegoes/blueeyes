@@ -7,7 +7,7 @@ import org.joda.time.{Instant, DateTime, DateTimeZone}
 
 trait JodaSerializationImplicits {
   implicit val InstantExtractor = new Extractor[Instant] {
-    def extract(jvalue: JValue): Instant = new Instant(jvalue.deserialize[Long])
+    override def extract(jvalue: JValue): Instant = new Instant(jvalue.deserialize[Long])
   }
 
   implicit val InstantDecomposer = new Decomposer[Instant] {
@@ -15,7 +15,7 @@ trait JodaSerializationImplicits {
   }
 
   implicit val DateTimeExtractor = new Extractor[DateTime] {
-    def extract(jvalue: JValue): DateTime = jvalue match {
+    override def extract(jvalue: JValue): DateTime = jvalue match {
       case JInt(instant)  => new DateTime(instant.longValue, DateTimeZone.UTC)
       case JDouble(d)     => new DateTime(d.toLong, DateTimeZone.UTC)
       case JString(text)  => new DateTime(text)

@@ -36,7 +36,7 @@ package blueeyes.demo {
     }
     
     implicit val ContactExtractor: Extractor[blueeyes.demo.Contact] = new Extractor[blueeyes.demo.Contact] {
-      def extract(jvalue: JValue): blueeyes.demo.Contact = {
+      override def extract(jvalue: JValue): blueeyes.demo.Contact = {
         Contact(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[Option[String]](jvalue, "email", JString(""), blueeyes.json.xschema.DefaultExtractors.OptionExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor)),
