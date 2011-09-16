@@ -3,10 +3,12 @@ package blueeyes.core.service
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 import blueeyes.core.data._
-import blueeyes.{BlueEyesServiceBuilderBase, BlueEyesServiceBuilder}
+import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.HttpResponse
 import blueeyes.core.data.BijectionsChunkJson
 import blueeyes.core.http.MimeTypes._
+import blueeyes.health.IntervalHealthMonitor
+import blueeyes.health.metrics.eternity
 
 trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkJson{
   def createService = service("serverhealth", "1.0.0"){ context =>
@@ -26,8 +28,7 @@ trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealt
 
 trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{
 
-  private val monitor = new blueeyes.health.HealthMonitor(Map())
-
+  private val monitor = new IntervalHealthMonitor(eternity)
   exportMemory
   exportRuntime
   exportThreads
@@ -35,22 +36,22 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
 
   import java.lang.management._  
 
-  private def exportMemory = {
-    val bean = ManagementFactory.getMemoryMXBean()
+  private def exportMemory() {
+    val bean = ManagementFactory.getMemoryMXBean
 
-    exportMemoryUsage("memory.heap", bean.getHeapMemoryUsage())
-    exportMemoryUsage("memory.nonHeap", bean.getNonHeapMemoryUsage())
+    exportMemoryUsage("memory.heap", bean.getHeapMemoryUsage)
+    exportMemoryUsage("memory.nonHeap", bean.getNonHeapMemoryUsage)
   }
 
-  private def exportMemoryUsage(path: String, bean: MemoryUsage) = {
+  private def exportMemoryUsage(path: String, bean: MemoryUsage) {
     monitor.export(path + ".init",      bean.getInit)
     monitor.export(path + ".used",      bean.getUsed)
     monitor.export(path + ".committed", bean.getCommitted)
     monitor.export(path + ".max",       bean.getMax)
   }
 
-  private def exportRuntime = {
-    val bean = ManagementFactory.getRuntimeMXBean()
+  private def exportRuntime() {
+    val bean = ManagementFactory.getRuntimeMXBean
 
     monitor.export("runtime.vmName",      bean.getVmName)
     monitor.export("runtime.vmVendor",    bean.getVmVendor)
@@ -65,8 +66,8 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
     monitor.export("runtime.currentTime", System.currentTimeMillis)
   }
 
-  private def exportThreads = {
-    val bean = ManagementFactory.getThreadMXBean()
+  private def exportThreads() {
+    val bean = ManagementFactory.getThreadMXBean
 
     monitor.export("threads.count",             bean.getThreadCount)
     monitor.export("threads.peakCount",         bean.getPeakThreadCount)
@@ -74,8 +75,8 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
     monitor.export("threads.daemonCount",       bean.getDaemonThreadCount)
   }
 
-  private def exportOperatingSystem = {
-    val bean = ManagementFactory.getOperatingSystemMXBean()
+  private def exportOperatingSystem {
+    val bean = ManagementFactory.getOperatingSystemMXBean
 
     monitor.export("operatingSystem.name",                bean.getName)
     monitor.export("operatingSystem.arch",                bean.getArch)

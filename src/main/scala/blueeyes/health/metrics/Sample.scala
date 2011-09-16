@@ -8,7 +8,7 @@ import collection.mutable.ConcurrentMap
 import ConcurrentMaps._
 import blueeyes.json.JsonAST._
 
-class Sample(val size: Int) extends Histogram with Statistic[Double, Option[Map[Long, Double]]]{
+class Sample(val size: Int) extends SimpleHistogram with Statistic[Double, Option[Map[Long, Double]]]{
   private val _count = new AtomicLong(0)
   private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
