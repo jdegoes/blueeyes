@@ -10,7 +10,7 @@ import scalaz.Scalaz._
 trait Extractor[A] extends Function[JValue, A] { self =>
   import Extractor._
 
-  def extract(jvalue: JValue): A = validated(jvalue).fold[A](_.die, identity[A])
+  def extract(jvalue: JValue): A 
 
   def validated(jvalue: JValue): Validation[Error, A] = try {
     Success(extract(jvalue))
@@ -27,6 +27,10 @@ trait Extractor[A] extends Function[JValue, A] { self =>
   def apply(jvalue: JValue): A = extract(jvalue)
 }
 
+trait ValidatedExtraction[A] { this: Extractor[A] =>
+  def extract(jvalue: JValue): A = validated(jvalue).fold[A](_.die, identity[A])
+}
+
 object Extractor {
   sealed trait Error {
     def die: Nothing 
@@ -34,7 +38,7 @@ object Extractor {
   }
 
   object Error {
-    object Semigroup extends scalaz.Semigroup[Error] {
+    implicit object Semigroup extends scalaz.Semigroup[Error] {
       import NonEmptyList._
       def append(e1: Error, e2: => Error): Error = (e1, e2) match {
         case (Errors(l1), Errors(l2)) => Errors(l1.list <::: l2)
@@ -59,7 +63,7 @@ object Extractor {
     def message = "Multiple extraction errors occurred: " + errors.map(_.message).list.mkString(": ")
   }
 
-  def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] {
+  def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] with ValidatedExtraction[A] {
     override def validated(jvalue: JValue) = 
       if (f.isDefinedAt(jvalue)) Success(f(jvalue)) 
       else Failure(Invalid("Extraction not defined from value " + jvalue + " to type " + implicitly[Manifest[A]].erasure.getName))

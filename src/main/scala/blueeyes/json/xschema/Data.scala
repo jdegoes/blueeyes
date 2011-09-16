@@ -803,7 +803,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XRootExtractor: Extractor[blueeyes.json.xschema.XRoot] = new Extractor[blueeyes.json.xschema.XRoot] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XRoot = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XRoot = {
         XRoot(
           extractField[List[blueeyes.json.xschema.XDefinition]](jvalue, "definitions", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.ListExtractor(blueeyes.json.xschema.Extractors.XDefinitionExtractor)),
           extractField[List[blueeyes.json.xschema.XConstant]](jvalue, "constants", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.ListExtractor(blueeyes.json.xschema.Extractors.XConstantExtractor)),
@@ -819,7 +819,7 @@ package blueeyes.json.xschema {
       case JField("XConstant", value) => blueeyes.json.xschema.Extractors.XConstantExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XSchema]).orElse(blueeyes.json.xschema.Extractors.XDefinitionExtractorFunction).orElse(blueeyes.json.xschema.Extractors.XReferenceExtractorFunction).orElse(blueeyes.json.xschema.Extractors.XFieldExtractorFunction)
     implicit val XSchemaExtractor: Extractor[blueeyes.json.xschema.XSchema] = new Extractor[blueeyes.json.xschema.XSchema] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XSchema = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XSchema = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XSchema] = {
           (jvalue --> classOf[JObject]).fields.filter(XSchemaExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XSchemaExtractorFunction(field))
@@ -843,7 +843,7 @@ package blueeyes.json.xschema {
       case JField("XDefinitionRef", value) => blueeyes.json.xschema.Extractors.XDefinitionRefExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XReference]).orElse(blueeyes.json.xschema.Extractors.XPrimitiveRefExtractorFunction).orElse(blueeyes.json.xschema.Extractors.XContainerRefExtractorFunction)
     implicit val XReferenceExtractor: Extractor[blueeyes.json.xschema.XReference] = new Extractor[blueeyes.json.xschema.XReference] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XReference = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XReference = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XReference] = {
           (jvalue --> classOf[JObject]).fields.filter(XReferenceExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XReferenceExtractorFunction(field))
@@ -872,7 +872,7 @@ package blueeyes.json.xschema {
       case JField("XDate", value) => blueeyes.json.xschema.Extractors.XDateExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XPrimitiveRef])
     implicit val XPrimitiveRefExtractor: Extractor[blueeyes.json.xschema.XPrimitiveRef] = new Extractor[blueeyes.json.xschema.XPrimitiveRef] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XPrimitiveRef = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XPrimitiveRef = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XPrimitiveRef] = {
           (jvalue --> classOf[JObject]).fields.filter(XPrimitiveRefExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XPrimitiveRefExtractorFunction(field))
@@ -897,7 +897,7 @@ package blueeyes.json.xschema {
       case JField("XTuple", value) => blueeyes.json.xschema.Extractors.XTupleExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XContainerRef]).orElse(blueeyes.json.xschema.Extractors.XCollectionExtractorFunction)
     implicit val XContainerRefExtractor: Extractor[blueeyes.json.xschema.XContainerRef] = new Extractor[blueeyes.json.xschema.XContainerRef] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XContainerRef = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XContainerRef = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XContainerRef] = {
           (jvalue --> classOf[JObject]).fields.filter(XContainerRefExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XContainerRefExtractorFunction(field))
@@ -916,7 +916,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XDefinitionRefExtractor: Extractor[blueeyes.json.xschema.XDefinitionRef] = new Extractor[blueeyes.json.xschema.XDefinitionRef] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XDefinitionRef = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XDefinitionRef = {
         XDefinitionRef(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[String](jvalue, "namespace", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor)
@@ -925,49 +925,49 @@ package blueeyes.json.xschema {
     }
     
     implicit val XBooleanExtractor: Extractor[blueeyes.json.xschema.XBoolean.type] = new Extractor[blueeyes.json.xschema.XBoolean.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XBoolean.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XBoolean.type = {
         XBoolean
       }
     }
     
     implicit val XIntExtractor: Extractor[blueeyes.json.xschema.XInt.type] = new Extractor[blueeyes.json.xschema.XInt.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XInt.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XInt.type = {
         XInt
       }
     }
     
     implicit val XLongExtractor: Extractor[blueeyes.json.xschema.XLong.type] = new Extractor[blueeyes.json.xschema.XLong.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XLong.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XLong.type = {
         XLong
       }
     }
     
     implicit val XFloatExtractor: Extractor[blueeyes.json.xschema.XFloat.type] = new Extractor[blueeyes.json.xschema.XFloat.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XFloat.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XFloat.type = {
         XFloat
       }
     }
     
     implicit val XDoubleExtractor: Extractor[blueeyes.json.xschema.XDouble.type] = new Extractor[blueeyes.json.xschema.XDouble.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XDouble.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XDouble.type = {
         XDouble
       }
     }
     
     implicit val XStringExtractor: Extractor[blueeyes.json.xschema.XString.type] = new Extractor[blueeyes.json.xschema.XString.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XString.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XString.type = {
         XString
       }
     }
     
     implicit val XJSONExtractor: Extractor[blueeyes.json.xschema.XJSON.type] = new Extractor[blueeyes.json.xschema.XJSON.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XJSON.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XJSON.type = {
         XJSON
       }
     }
     
     implicit val XDateExtractor: Extractor[blueeyes.json.xschema.XDate.type] = new Extractor[blueeyes.json.xschema.XDate.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XDate.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XDate.type = {
         XDate
       }
     }
@@ -978,7 +978,7 @@ package blueeyes.json.xschema {
       case JField("XArray", value) => blueeyes.json.xschema.Extractors.XArrayExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XCollection])
     implicit val XCollectionExtractor: Extractor[blueeyes.json.xschema.XCollection] = new Extractor[blueeyes.json.xschema.XCollection] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XCollection = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XCollection = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XCollection] = {
           (jvalue --> classOf[JObject]).fields.filter(XCollectionExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XCollectionExtractorFunction(field))
@@ -997,7 +997,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XListExtractor: Extractor[blueeyes.json.xschema.XList] = new Extractor[blueeyes.json.xschema.XList] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XList = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XList = {
         XList(
           extractField[blueeyes.json.xschema.XReference](jvalue, "elementType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor)
         )
@@ -1005,7 +1005,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XSetExtractor: Extractor[blueeyes.json.xschema.XSet] = new Extractor[blueeyes.json.xschema.XSet] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XSet = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XSet = {
         XSet(
           extractField[blueeyes.json.xschema.XReference](jvalue, "elementType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor)
         )
@@ -1013,7 +1013,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XArrayExtractor: Extractor[blueeyes.json.xschema.XArray] = new Extractor[blueeyes.json.xschema.XArray] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XArray = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XArray = {
         XArray(
           extractField[blueeyes.json.xschema.XReference](jvalue, "elementType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor)
         )
@@ -1021,7 +1021,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XMapExtractor: Extractor[blueeyes.json.xschema.XMap] = new Extractor[blueeyes.json.xschema.XMap] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XMap = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XMap = {
         XMap(
           extractField[blueeyes.json.xschema.XReference](jvalue, "keyType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor),
           extractField[blueeyes.json.xschema.XReference](jvalue, "valueType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor)
@@ -1030,7 +1030,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XOptionalExtractor: Extractor[blueeyes.json.xschema.XOptional] = new Extractor[blueeyes.json.xschema.XOptional] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XOptional = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XOptional = {
         XOptional(
           extractField[blueeyes.json.xschema.XReference](jvalue, "optionalType", JObject(JField("XDefinitionRef",JObject(JField("name",JString(""))::JField("namespace",JString(""))::Nil))::Nil), blueeyes.json.xschema.Extractors.XReferenceExtractor)
         )
@@ -1038,7 +1038,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XTupleExtractor: Extractor[blueeyes.json.xschema.XTuple] = new Extractor[blueeyes.json.xschema.XTuple] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XTuple = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XTuple = {
         XTuple(
           extractField[List[blueeyes.json.xschema.XReference]](jvalue, "types", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.ListExtractor(blueeyes.json.xschema.Extractors.XReferenceExtractor))
         )
@@ -1050,7 +1050,7 @@ package blueeyes.json.xschema {
       case JField("XMultitype", value) => blueeyes.json.xschema.Extractors.XMultitypeExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XDefinition]).orElse(blueeyes.json.xschema.Extractors.XMultitypeExtractorFunction)
     implicit val XDefinitionExtractor: Extractor[blueeyes.json.xschema.XDefinition] = new Extractor[blueeyes.json.xschema.XDefinition] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XDefinition = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XDefinition = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XDefinition] = {
           (jvalue --> classOf[JObject]).fields.filter(XDefinitionExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XDefinitionExtractorFunction(field))
@@ -1073,7 +1073,7 @@ package blueeyes.json.xschema {
       case JField("XUnion", value) => blueeyes.json.xschema.Extractors.XUnionExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XMultitype])
     implicit val XMultitypeExtractor: Extractor[blueeyes.json.xschema.XMultitype] = new Extractor[blueeyes.json.xschema.XMultitype] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XMultitype = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XMultitype = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XMultitype] = {
           (jvalue --> classOf[JObject]).fields.filter(XMultitypeExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XMultitypeExtractorFunction(field))
@@ -1097,7 +1097,7 @@ package blueeyes.json.xschema {
       case JField("XConstantField", value) => blueeyes.json.xschema.Extractors.XConstantFieldExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XField])
     implicit val XFieldExtractor: Extractor[blueeyes.json.xschema.XField] = new Extractor[blueeyes.json.xschema.XField] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XField = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XField = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XField] = {
           (jvalue --> classOf[JObject]).fields.filter(XFieldExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XFieldExtractorFunction(field))
@@ -1116,7 +1116,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XProductExtractor: Extractor[blueeyes.json.xschema.XProduct] = new Extractor[blueeyes.json.xschema.XProduct] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XProduct = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XProduct = {
         XProduct(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[String](jvalue, "namespace", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
@@ -1127,7 +1127,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XCoproductExtractor: Extractor[blueeyes.json.xschema.XCoproduct] = new Extractor[blueeyes.json.xschema.XCoproduct] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XCoproduct = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XCoproduct = {
         XCoproduct(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[String](jvalue, "namespace", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
@@ -1139,7 +1139,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XUnionExtractor: Extractor[blueeyes.json.xschema.XUnion] = new Extractor[blueeyes.json.xschema.XUnion] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XUnion = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XUnion = {
         XUnion(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[String](jvalue, "namespace", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
@@ -1151,7 +1151,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XConstantExtractor: Extractor[blueeyes.json.xschema.XConstant] = new Extractor[blueeyes.json.xschema.XConstant] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XConstant = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XConstant = {
         XConstant(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[String](jvalue, "namespace", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
@@ -1163,7 +1163,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XRealFieldExtractor: Extractor[blueeyes.json.xschema.XRealField] = new Extractor[blueeyes.json.xschema.XRealField] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XRealField = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XRealField = {
         XRealField(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[Map[String, blueeyes.json.JsonAST.JValue]](jvalue, "properties", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.StringMapExtractor(blueeyes.json.xschema.DefaultExtractors.JValueExtractor)),
@@ -1175,7 +1175,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XViewFieldExtractor: Extractor[blueeyes.json.xschema.XViewField] = new Extractor[blueeyes.json.xschema.XViewField] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XViewField = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XViewField = {
         XViewField(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[Map[String, blueeyes.json.JsonAST.JValue]](jvalue, "properties", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.StringMapExtractor(blueeyes.json.xschema.DefaultExtractors.JValueExtractor)),
@@ -1185,7 +1185,7 @@ package blueeyes.json.xschema {
     }
     
     implicit val XConstantFieldExtractor: Extractor[blueeyes.json.xschema.XConstantField] = new Extractor[blueeyes.json.xschema.XConstantField] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XConstantField = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XConstantField = {
         XConstantField(
           extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
           extractField[Map[String, blueeyes.json.JsonAST.JValue]](jvalue, "properties", JArray(Nil), blueeyes.json.xschema.DefaultExtractors.StringMapExtractor(blueeyes.json.xschema.DefaultExtractors.JValueExtractor)),
@@ -1201,7 +1201,7 @@ package blueeyes.json.xschema {
       case JField("XOrderIgnore", value) => blueeyes.json.xschema.Extractors.XOrderIgnoreExtractor.extract(value)
     }: PartialFunction[JField, blueeyes.json.xschema.XOrder])
     implicit val XOrderExtractor: Extractor[blueeyes.json.xschema.XOrder] = new Extractor[blueeyes.json.xschema.XOrder] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XOrder = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XOrder = {
         def extract0(jvalue: JValue): Option[blueeyes.json.xschema.XOrder] = {
           (jvalue --> classOf[JObject]).fields.filter(XOrderExtractorFunction.isDefinedAt _) match {
             case field :: fields => Some(XOrderExtractorFunction(field))
@@ -1220,19 +1220,19 @@ package blueeyes.json.xschema {
     }
     
     implicit val XOrderAscendingExtractor: Extractor[blueeyes.json.xschema.XOrderAscending.type] = new Extractor[blueeyes.json.xschema.XOrderAscending.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XOrderAscending.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XOrderAscending.type = {
         XOrderAscending
       }
     }
     
     implicit val XOrderDescendingExtractor: Extractor[blueeyes.json.xschema.XOrderDescending.type] = new Extractor[blueeyes.json.xschema.XOrderDescending.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XOrderDescending.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XOrderDescending.type = {
         XOrderDescending
       }
     }
     
     implicit val XOrderIgnoreExtractor: Extractor[blueeyes.json.xschema.XOrderIgnore.type] = new Extractor[blueeyes.json.xschema.XOrderIgnore.type] {
-      override def extract(jvalue: JValue): blueeyes.json.xschema.XOrderIgnore.type = {
+      def extract(jvalue: JValue): blueeyes.json.xschema.XOrderIgnore.type = {
         XOrderIgnore
       }
     }
