@@ -14,11 +14,13 @@ trait JodaSerializationImplicits {
     def decompose(dateTime: Instant): JValue = JInt(dateTime.getMillis)
   }
 
-  implicit val DateTimeExtractor = new Extractor[DateTime] {
+  implicit val DateTimeExtractor = ZonedTimeExtractor(DateTimeZone.UTC)
+
+  def ZonedTimeExtractor(zone: DateTimeZone): Extractor[DateTime] = new Extractor[DateTime] {
     override def extract(jvalue: JValue): DateTime = jvalue match {
-      case JInt(instant)  => new DateTime(instant.longValue, DateTimeZone.UTC)
-      case JDouble(d)     => new DateTime(d.toLong, DateTimeZone.UTC)
-      case JString(text)  => new DateTime(text)
+      case JInt(instant)  => new DateTime(instant.longValue, zone)
+      case JDouble(d)     => new DateTime(d.toLong, zone)
+      case JString(text)  => new DateTime(text, zone)
       case x => sys.error("Unexpected time format: " + x + "; was anticipating integral millisecond value or text string.")
     }
   }
