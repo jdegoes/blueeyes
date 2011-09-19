@@ -23,7 +23,7 @@ class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers{
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled with error)" in {
     val error   = new NullPointerException()
     val content = Future.dead[String](error)
-    respondLater[String](content).value.get mustEqual(HttpResponse[String](HttpStatus(InternalServerError, error.fullStackTrace)))
+    respondLater[String](content).value.get mustEqual(HttpResponse[String](HttpStatus(InternalServerError, "The response was unexpectedly canceled")))
   }
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled without error)" in {
     val error   = new NullPointerException()
