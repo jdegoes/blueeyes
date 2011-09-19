@@ -19,6 +19,8 @@ import scala.collection.mutable.HashMap
  *  - Removed test for addition of looser-typed values (moved functionality up
  *      to FastWriteMap instead)
  *  - Updated roll back test to make sure we don't roll to future
+ * 09.18.11 NKG
+ *  - documented >= (rather than >) use with MAX_HISTORY
  * 
  * Docs:
  * *********
@@ -140,6 +142,9 @@ class MapDataSpec extends Specification {
         val bigMap = new MapData[String, String]
         val oldMax = MapData.MAX_HISTORY
         MapData.MAX_HISTORY = 3
+	// here the use of >= with MAX_HISTORY makes the behavior confusing
+	//  but the exposed behavior at FastWriteMap is the way it should be.
+	//  see the FastWriteMap test dealing with history for details
         bigMap += ("1" -> "a")
         bigMap += ("2" -> "b")
         var newMap = bigMap rollBackToVersion 2

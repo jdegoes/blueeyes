@@ -18,6 +18,10 @@ import blueeyes.concurrent.ReadWriteLock
  *  - added + method for adding looser-typed values
  * 09.07.11: NKG
  *  - removed + method (moved functionality to FastWriteMap instead)
+ * 09.18.11: NKG
+ *  - changed MAX_HISTORY default to 100,000 from 10,000 based on benchmark
+ *     results
+ *  - documented >= (rather than >) use with MAX_HISTORY
  * 
  * Docs:
  * *********
@@ -76,7 +80,7 @@ class RemoveOperation[K, V](key: K) extends UndoableOperation[K, V] {
 }
 
 object MapData {
-  var MAX_HISTORY: Int = 10000
+  var MAX_HISTORY: Int = 100000
 }
 
 // the internal structure of the FastWriteMap class
@@ -139,8 +143,11 @@ case class MapData[K, V](
   //  the MapData back to the correct version and go from there
   // This function rolls back appropriately
   def rollBackToVersion(newVersion: Int): MapData[K, V] = {
+    // use >= here because we want to be able to put MAX_HISTORY actions in
+    //  the history, and version gets checked before the add
     if (version >= MapData.MAX_HISTORY) {
       // if version is too large, return a copy with a new, blank history
+     // println("Resetting history; length exceeds " + MapData.MAX_HISTORY)
       readLock(this.copy(history.take(0)))
     } else if (version == newVersion) {
       // just return the original object
