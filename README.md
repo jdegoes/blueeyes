@@ -35,39 +35,43 @@ Repositories:
 
 Library dependency:
 
-    <dependency>
-      <groupId>com.reportgrid</groupId>
-      <artifactId>blueeyes</artifactId>
-      <version>0.4.21</version>
-      <type>jar</type>
-      <scope>compile</scope>
-    </dependency>
+```xml
+<dependency>
+  <groupId>com.reportgrid</groupId>
+  <artifactId>blueeyes</artifactId>
+  <version>0.4.21</version>
+  <type>jar</type>
+  <scope>compile</scope>
+</dependency>
+```
 
 ### SBT before 0.10
 
-    val sonatype_repo     = MavenRepository("Sonatype",     "http://nexus.scala-tools.org/content/repositories/")
-    val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
-    val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
-    val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
-    val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
+```scala
+val sonatype_repo     = MavenRepository("Sonatype",     "http://nexus.scala-tools.org/content/repositories/")
+val scala_tools_repo  = MavenRepository("Scala Tools",  "http://scala-tools.org/repo-snapshots/")
+val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss.org/nexus/content/groups/public/")
+val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
+val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
 
-    val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.21" % "compile"
-
+val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.21" % "compile"
+```
 
 ### SBT 0.10
 
-    resolvers ++= Seq(
-      "Sonatype"    at "http://nexus.scala-tools.org/content/repositories/public",
-      "Scala Tools" at "http://scala-tools.org/repo-snapshots/",
-      "JBoss"       at "http://repository.jboss.org/nexus/content/groups/public/",
-      "Akka"        at "http://akka.io/repository/",
-      "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
-    )
+```scala
+resolvers ++= Seq(
+  "Sonatype"    at "http://nexus.scala-tools.org/content/repositories/public",
+  "Scala Tools" at "http://scala-tools.org/repo-snapshots/",
+  "JBoss"       at "http://repository.jboss.org/nexus/content/groups/public/",
+  "Akka"        at "http://akka.io/repository/",
+  "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
+)
 
-    libraryDependencies ++= Seq(
-      "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.21" % "compile"
-    )
-
+libraryDependencies ++= Seq(
+  "com.reportgrid" % "blueeyes_2.9.0-1" % "0.4.21" % "compile"
+)
+```
 
 ## Origins
 
@@ -91,34 +95,36 @@ Services are generally built using *BlueEyesServiceBuilder*, which allows easy, 
 
 The following code builds an e-mail service, together with a server capable of running the service from the command-line:
 
-     trait EmailServices extends BlueEyesServiceBuilder {
-       val emailService = service("email", "1.32") { context =>
-         startup {
-           loadContactList(context.config("contactFile"))
-         } ->
-         request { contactList =>
-           path("/emails/") {
-             contentType(application/json) {
-                get { request =>
-                  ...
-                  Future.sync(HttpResponse(content = Some(JArray(emailIds))))
-                } ~
-                path('emailId) {
-                  get { request =>
-                    val emailId = request.parameters('emailId)
-                    ...
-                    Future.sync(HttpResponse(content = Some(emailObj)))
-                  }
-                }
-             }
-           }
-         } ->
-         shutdown { contactList =>
-           contactList.finalize
-         }
-       }
-     }
-     object EmailServer extends BlueEyesServer with EmailServices
+```scala
+trait EmailServices extends BlueEyesServiceBuilder {
+  val emailService = service("email", "1.32") { context =>
+    startup {
+      loadContactList(context.config("contactFile"))
+    } ->
+    request { contactList =>
+      path("/emails/") {
+        contentType(application/json) {
+          get { request =>
+            ...
+            Future.sync(HttpResponse(content = Some(JArray(emailIds))))
+          } ~
+          path('emailId) {
+            get { request =>
+              val emailId = request.parameters('emailId)
+              ...
+              Future.sync(HttpResponse(content = Some(emailObj)))
+            }
+          }
+        }
+      }
+    } ->
+    shutdown { contactList =>
+      contactList.finalize
+    }
+  }
+}
+object EmailServer extends BlueEyesServer with EmailServices
+```
 
 Services are automatically provided with *context*, which provides a bundle of functionality essential to every service:
 
@@ -134,21 +140,25 @@ Fundamentally, a service is a request handler -- that is, it processes incoming 
 
 In BlueEyes, a request handler is a *partial function from request to a future of response*. Formally:
 
-    type HttpRequestHandler2[T, S] = PartialFunction[HttpRequest[T], Future[HttpResponse[S]]]
+```scala
+type HttpRequestHandler2[T, S] = PartialFunction[HttpRequest[T], Future[HttpResponse[S]]]
+```
 
 Since a request handler is just an ordinary partial function, it's possible to construct one in many ways:
 
-    new PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
-      def isDefinedAt(request: HttpRequest[T]): Boolean = ...
+```scala
+new PartialFunction[HttpRequest[T], Future[HttpResponse[T]]] {
+  def isDefinedAt(request: HttpRequest[T]): Boolean = ...
 
-      def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = ...
-    }
+  def apply(request: HttpRequest[T]): Future[HttpResponse[T]] = ...
+}
 
-    {
-      case HttpRequest(...) => ...
-      case HttpRequest(...) => ...
-      case HttpRequest(...) => ...
-    }
+{
+  case HttpRequest(...) => ...
+  case HttpRequest(...) => ...
+  case HttpRequest(...) => ...
+}
+```
 
 However, these approaches to constructing partial functions are tedious, do not compose, and are difficult to read. BlueEyes ships with *request handler combinators* that enable declarative construction of request handlers. A few of the more common combinators are listed below:
 
@@ -164,50 +174,56 @@ However, these approaches to constructing partial functions are tedious, do not 
 
 These combinators can be combined in the obvious ways:
 
-    path("/users/'userId") {
-      produces(application/json) {
-        get { request =>
-          // get user
-          val userId = request.parameters('userId)
-          ...
-        }
-      }
+```scala
+path("/users/'userId") {
+  produces(application/json) {
+    get { request =>
+      // get user
+      val userId = request.parameters('userId)
+      ...
     }
+  }
+}
+```
 
 The only limitation is that the *get*/*put*/*post*/*delete* combinators must be innermost expressions. These combinators accept *full* functions (not partial functions).
 
 As partial functions, request handlers can be combined through the standard Scala *orElse* method, which will delegate to the first handler that is defined for a specified request:
 
-    path("/food") {
-      ...
-    }.orElse {
-      path("/foo/'fooId") {
-        ...
-      }
-    }
+```scala
+path("/food") {
+  ...
+}.orElse {
+  path("/foo/'fooId") {
+    ...
+  }
+}
+````
 
 BlueEyes provides the join operator '~' as an alternative to *orElse*. Using the join operator can make your request handlers easier to read:
 
-    produces(application/json) {
-      path("/users/") {
+```scala
+produces(application/json) {
+  path("/users/") {
+    get { request =>
+      // get list of all users
+      ...
+    } ~
+    path('userId) {
+      parameter('userId) { userId =>
         get { request =>
-          // get list of all users
+          // get user
           ...
         } ~
-        path('userId) {
-          parameter('userId) { userId =>
-            get { request =>
-              // get user
-              ...
-            } ~
-            put { request =>
-              // update user
-              ...
-            }
-          }
+        put { request =>
+          // update user
+          ...
         }
       }
     }
+  }
+}
+```
 
 An entire category of combinators is devoted to extracting data from requests in order to reduce duplication (in the above snippet, the *parameter* combinator is used to avoid duplicate extraction of the user ID). The next section explains these combinators in greater depth.
 
@@ -225,27 +241,33 @@ Rest path patterns are composed from the following building blocks:
 
 Although it's most common to create patterns from strings or symbols, you can also create them using the methods available on an existing pattern. For example:
 
-    pattern / 'foo
-    pattern / "foo"
-    pattern / "(?<email>\w+@\w+\.\w{2,3})"
+```scala
+pattern / 'foo
+pattern / "foo"
+pattern / "(?<email>\w+@\w+\.\w{2,3})"
+```
 
 ### Consumption
 
-The dual of providing HTTP services is consuming them. BlueEyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the BlueEyes stack.
+The goal of providing HTTP services is consuming them. BlueEyes includes a high-performance, asynchronous HTTP client that is unified with the rest of the BlueEyes stack.
 
 The core client interface is *HttpClient*, which is a partial function from request to a future of response. The *apply* method is seldom used directly. Instead, BlueEyes provides methods for all http request, such as "GET", "POST", etc.
 
 Given a reference to *client*, you could perform a simple HTTP GET on the path "/foo" with the following code:
 
-    val responseFuture = client.get("http://myservice.com/foo")
-    responseFuture map {response => response.content.get}
+```scala
+val responseFuture = client.get("http://myservice.com/foo")
+responseFuture map {response => response.content.get}
+```
 
 If you're going to perform a lot of requests that all share the same or similar structure, then you can create your own client:
 
-    def myService: HttpClient[JValue] = client.path("http://myservice.com/").contentType[JValue](application/json)
+```scala
+def myService: HttpClient[JValue] = client.path("http://myservice.com/").contentType[JValue](application/json)
 
-    val responseFuture = myService.get("api/v1")
-    responseFuture map {response => response.content.get}
+val responseFuture = myService.get("api/v1")
+responseFuture map {response => response.content.get}
+```
 
 Contrary to these toy examples, in real world usage, you would not simply get the content of the response. Rather, you'd extract out whatever information you need and transform it into the desired value.
 
@@ -257,17 +279,19 @@ The testing framework is currently compatible with *Specs*, and extends the *Spe
 
 To test your services with *Specs*, you should extend *BlueEyesServiceSpecification* with whatever services you want to test. This trait, in turn, mixes in a helper "service" method to create service client.
 
-    class EmailServicesSpec extends BlueEyesServiceSpecification with EmailServices {
-      "EmailService" should {
-        "get emails" in {
-          val f = service.contentType[JValue](application/json).get("/emails")
-          f.value must eventually(beSomething)
+```scala
+class EmailServicesSpec extends BlueEyesServiceSpecification with EmailServices {
+  "EmailService" should {
+    "get emails" in {
+      val f = service.contentType[JValue](application/json).get("/emails")
+      f.value must eventually(beSomething)
 
-          val response = f.value.get
-          response.status mustEqual(HttpStatus(OK))
-        }
-      }
+      val response = f.value.get
+      response.status mustEqual(HttpStatus(OK))
     }
+  }
+}
+```
 
 These combinators produce very descriptive *Specs* messages, because they are fully aware of the path, HTTP method, and query string parameters you are using to invoke the service. This eliminates duplication between textual description and test logic, and makes you more productive.
 
@@ -275,9 +299,11 @@ If a service uses mongo facade then it is convinient to use factory trait Config
 to "true" and MockMongo is used in tests. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
 Sample configuration is:
 
-    dropBeforeStart {
-      mydb = ["mycollection"]
-    } 
+```scala
+dropBeforeStart {
+  mydb = ["mycollection"]
+}
+```
 
 Using 
 
@@ -287,7 +313,9 @@ Services are run through a *server*. A "server" in this context refers to a *pro
 
 To create a server, BlueEyes includes the *BlueEyesServer* trait, which is typically extended by an *object*. You can specify all the services you want the server to run just by mixing in the traits that build them. For example, the following code creates a server that runs four services:
 
-    object AppServer extends BlueEyesServer with EmailServices with OrderProcessingServices with LoginServices with CatalogServices
+```scala
+object AppServer extends BlueEyesServer with EmailServices with OrderProcessingServices with LoginServices with CatalogServices
+```
 
 A server created in this way has *start* and *stop* methods, which can be used for starting and stopping the services. The server also defines a *main* method that accepts a *--configFile* command-line option to indicate which configuration file should be used to configure the server and all the services.
 
@@ -312,10 +340,12 @@ Server Configuration included the following options:
 
 The minimal configuration looks like:
 
-    server{
-      port = 8585
-      sslPort = 8586
-    }
+```scala
+server {
+  port = 8585
+  sslPort = 8586
+}
+```
 
 ### Augmentation
 
@@ -323,36 +353,40 @@ Services can be augmented in a variety of ways -- for example, with loggers, hea
 
 A service descriptor factory is at the heart of every service declaration. For example, take the following minimal service declaration:
 
-    val myService = service("myservice", "2.39.23") { context =>
-       request { state =>
-         path("/foo") {
-           contentType(application/json) {
-             get { request =>
-               ...
-             }
-           }
-         }
-       }
+```scala
+val myService = service("myservice", "2.39.23") { context =>
+  request { state =>
+    path("/foo") {
+      contentType(application/json) {
+        get { request =>
+          ...
+        }
+      }
     }
+  }
+}
+```
 
 The anonymous final argument passed to the *service* function is actually a service descriptor factory. That is, the argument is a function takes the context of the service, and returns a service descriptor, which describes the service lifecycle (startup, request handling, and shutdown).
 
 BlueEyes ships with many useful service descriptor factory combinators that are designed to augment your service with additional features. For example, the *logging* combinator adds logging to your service:
 
-    val myService = service("myservice", "2.39.23") {
-      logging { logger =>
-        context =>
-         request { state =>
-           path("/foo") {
-             contentType(application/json) {
-               get { request =>
-                 ...
-               }
-             }
-           }
-         }
+```scala
+val myService = service("myservice", "2.39.23") {
+  logging { logger =>
+    context => 
+      request { state =>
+        path("/foo") {
+          contentType(application/json) {
+            get { request =>
+              ...
+            }
+          }
+        }
       }
-    }
+  }
+}
+```
 
 The sections that follow describe the most common ways to augment your services.
 
@@ -360,45 +394,53 @@ The sections that follow describe the most common ways to augment your services.
 
 BlueEyes provides a combinator that provides services with a logger that can be configured independently for each service.
 
-     trait LogDemo extends BlueEyesServiceBuilder {
-       val logDemoService = service("logdemo", "1.32") {
-        logging { log =>
-          context =>
-            startup {
-            request { state =>
-              path("/foo") {
-                contentType(application/json) {
-                  get { request =>
-                    log.info("request at /foo")
-                    ...
-                  }
+```scala
+trait LogDemo extends BlueEyesServiceBuilder {
+  val logDemoService = service("logdemo", "1.32") {
+    logging { log =>
+      context =>
+        startup {
+          request { state =>
+            path("/foo") {
+              contentType(application/json) {
+                get { request =>
+                  log.info("request at /foo")
+                  ...
                 }
               }
             }
+          }
         }
-     }
+    }
+  }
+}
+```
 
 A service's logger is configured through a *log* block inside the root config for the service.
 
 #### Request Logging
 Request Logging allows services to log requests/responses in W3C Extended Log format (http://www.w3.org/TR/WD-logfile.html).
 
-   trait RequestLogDemo extends BlueEyesServiceBuilder {
-       val requestLogDemoService = service("requestlogdemo", "1.32") {
-        requestLogging{
-          context =>
-            startup {
-            request { state =>
-              path("/foo") {
-                contentType(application/json) {
-                  get { request =>
-                    ...
-                  }
+```scala
+trait RequestLogDemo extends BlueEyesServiceBuilder {
+  val requestLogDemoService = service("requestlogdemo", "1.32") {
+    requestLogging {
+      context =>
+        startup {
+          request { state =>
+            path("/foo") {
+              contentType(application/json) {
+                get { request =>
+                  ...
                 }
               }
             }
+          }
         }
-     }
+    }
+  }
+}
+```
 
 A service's request logger is configured through a *requestLog* block inside the root config for the service.
 
@@ -417,19 +459,21 @@ The following values can be configured for request logging:
    If neither "includePaths" nor "excludePaths" are specified then all requests/responses are logged. 
    If both "includePaths" and "excludePaths" are specified then only "includePaths" are taken into account.  
 
-    services {
-      requestlogdemo {
-        v1 {
-          requestLog {
-            fields            = "cs-method cs-uri cs-content sc-content"
-            roll              = "never"
-            file              = "./logs"
-            includePaths      = ["/foo/.*", "/bar/.*"]
-            writeDelaySeconds = 5
-          }
-        }
+```scala
+services {
+  requestlogdemo {
+    v1 {
+      requestLog {
+        fields            = "cs-method cs-uri cs-content sc-content"
+        roll              = "never"
+        file              = "./logs"
+        includePaths      = ["/foo/.*", "/bar/.*"]
+        writeDelaySeconds = 5
       }
     }
+  }
+}
+```
 
 #### Health Monitor
 
@@ -437,23 +481,26 @@ Health monitor allows services to export real-time metrics on health status, for
 
 The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests.
 
-      trait HealthMonitorDemo extends BlueEyesServiceBuilder {
-        val healthMonitorService = service("healthmon", "1.32") {
-         healthMonitor { monitor =>
-           context =>
-             request { state =>
-               path("/foo") {
-                 contentType(application/json) {
-                   get { request =>
-                     monitor.time(".requests.foo.timing") {
-                       ...
-                     }
-                   }
-                 }
-               }
-             }
-         }
-      }
+```scala
+trait HealthMonitorDemo extends BlueEyesServiceBuilder {
+  val healthMonitorService = service("healthmon", "1.32") {
+    healthMonitor { monitor =>
+      context =>
+        request { state =>
+          path("/foo") {
+            contentType(application/json) {
+              get { request =>
+                monitor.time(".requests.foo.timing") {
+                  ...
+                }
+              }
+            }
+          }
+        }
+    }
+  }
+}
+```
 
 Health metrics are exported in JSON form through an HTTP GET. For a particular service, the health can be queried at the following URL:
 
@@ -465,43 +512,47 @@ For example:  */blueeyes/services/healthmon/v1/health*
 
 If you have multiple services, and one service needs to consume another, you can use the service locator combinator. This combinator uses information in a config file to determine where to locate services, and provides a tailor-made client that can be used to communicate with them.
 
-    trait ServiceLocatorDemo extends BlueEyesServiceBuilder {
-      val serviceLocatorService = service ("email", "1.01") {
-        serviceLocator { locator =>
-          context => {
-            request {
-              path("/foo") {
-                get { request: HttpRequest[String] =>
-                  // Locate foo/v1 service and perform HTTP GET on /bar path
-                  val content = locator("foo", "1.02.32") { client =>
-                    client.get("/bar").map(response => response.content)
-                  }
-
-                  // Do something with content
-                  ...
-                }
+```scala
+trait ServiceLocatorDemo extends BlueEyesServiceBuilder {
+  val serviceLocatorService = service ("email", "1.01") {
+    serviceLocator { locator =>
+      context => {
+        request {
+          path("/foo") {
+            get { request: HttpRequest[String] =>
+              // Locate foo/v1 service and perform HTTP GET on /bar path
+              val content = locator("foo", "1.02.32") { client =>
+                client.get("/bar").map(response => response.content)
               }
-            }
-          }
-        }
-      }
-    }
 
-#### Configurable Root
-
-The configurable root combinator uses the *rootPath* setting in the service's config block to shift the request handler rightward by the specified string. This is useful when you want to combine many services on a single server, and avoid name clashes.
-
-    trait ConfigurableRootDemo extends BlueEyesServiceBuilder {
-      val configurableRootService = service("configurableroot", "1.0.2") {
-        configurableRoot {
-          request {
-            path("/foo") { // true path will be context.config("services.configurableroot.v1.rootPath") + "/foo"
+              // Do something with content
               ...
             }
           }
         }
       }
     }
+  }
+}
+```
+
+#### Configurable Root
+
+The configurable root combinator uses the *rootPath* setting in the service's config block to shift the request handler rightward by the specified string. This is useful when you want to combine many services on a single server, and avoid name clashes.
+
+```scala
+trait ConfigurableRootDemo extends BlueEyesServiceBuilder {
+  val configurableRootService = service("configurableroot", "1.0.2") {
+    configurableRoot {
+      request {
+        path("/foo") { // true path will be context.config("services.configurableroot.v1.rootPath") + "/foo"
+          ...
+        }
+      }
+    }
+  }
+}
+```
 
 ## Data Exchange
 
@@ -532,18 +583,24 @@ then MockMongo is created otherwise RealMongo is created. Factory "mongo" method
 dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
 Sample configuration is:
 
-    dropBeforeStart {
-      mydb = ["mycollection"]
-    } 
+```scala
+dropBeforeStart {
+  mydb = ["mycollection"]
+}
+```
 
 Once you have access to Mongo, you can then create references to databases:
 
-    val database = mongo.database( "mydb" )
+```scala
+val database = mongo.database( "mydb" )
+```
 
 To modify or retrieve documents from a database, you first create a query and then execute it using the database instance (created in the previous example).
 
-    val query    = selectOne().from("mycollection").sortBy("foo.bar" <<)
-    val document = database(query)
+```scala
+val query    = selectOne().from("mycollection").sortBy("foo.bar" <<)
+val document = database(query)
+```
 
 To restrict the scope of a query, you need to create a filter. Possible filters include: "===" (equal), "!==" (not equal), ">" (greater), "<" (less), ">=" (greater or equal), "<=" (less or equal), "anyOf" (possible matches), "contains" (all possible matches), "hasSize" (array with the specified number of elements), "exists" (field existence), "hasType" (values matches), "regex" (regular expressions).
 
@@ -554,43 +611,43 @@ To restrict the scope of a query, you need to create a filter. Possible filters 
       "foo" > "bar"
 
 It is possible to combine queries in more complex complex query using "|" (or) and "&" (and) operators.
-     "foo" === "bar" | "foo" > "baz"
+    "foo" === "bar" | "foo" > "baz"
 
 BlueEyes supports documents manipulations queries: querying, removing, updating (whole document and some documents fields) and inserting, index queries, group/map reduce queries:
 
- 1. Querying documents queries
+1. Querying documents queries
 
- * Select all documents:
+  * Select all documents:
     val query    = select().from("mycollection")
 
- * Select multiple documents and sort by a field:
+  * Select multiple documents and sort by a field:   
     val query    = select().from("mycollection").sortBy("foo.bar" <<)
 
- * Select multiple documents by criteria:
+  * Select multiple documents by criteria:
     val query    = select().from("mycollection").where("foo.bar" === "blahblah")
 
- * Select multiple documents and skip some documents:
+  * Select multiple documents and skip some documents:
     val query    = select().from("mycollection").skip(20)
 
- * Select limited count of documents:
+  * Select limited count of documents:
     val query    = select().from("mycollection").limit(20)
 
- * Select only some documents fields:
+  * Select only some documents fields:
     val query    = select("foo", "bar").from("mycollection")
 
- * Distinct multiple documents. It is possible to sort documents, select by criteria, skip documents, select limited count of documents and select only some documents fields (see examples above):
+  * Distinct multiple documents. It is possible to sort documents, select by criteria, skip documents, select limited count of documents and select only some documents fields (see examples above):
     val query    = distinct().from("mycollection")
 
- * Select one document. It is possible to sort documents and select by criteria (see examples above):
+  * Select one document. It is possible to sort documents and select by criteria (see examples above):
     val query    = selectOne().from("mycollection")
 
- * Select documents count in collection:
+  * Select documents count in collection:
     val query    = count.from("mycollection")
 
- * Select documents count by criteria:
+  * Select documents count by criteria:
     val query    = count.from("mycollection")
 
- 2. Removing documents queries
+2. Removing documents queries
 
  * Remove all documents:
     val query    = remove.from("mycollection")
@@ -598,52 +655,51 @@ BlueEyes supports documents manipulations queries: querying, removing, updating 
  * Remove documents by criteria:
     val query    = remove.from("mycollection").where("foo.bar" === "blahblah")
 
- 3. Inserting documents queries
+3. Inserting documents queries
 
- * Insert documents:
+  * Insert documents:
     val query    = insert(jObject1, jObject2).into("mycollection")
 
- 4. Index modification queries
+4. Index modification queries
 
- * Ensure index exists:
+  * Ensure index exists:
     val query    = ensureIndex("index1").on("mycollection", "foo", "bar")
 
- * Ensure unique index exists:
+  * Ensure unique index exists:
     ensureUniqueIndex("index1").on("mycollection", "foo", "bar")
 
- * Drop index:
+  * Drop index:
     val query    = dropIndex("index1").on("mycollection")
 
- * Drop indexes:
+  * Drop indexes:
     val query    = dropIndexes.on("mycollection")
 
- 5. Updating documents queries (It is possible to update both and some documents fields)
+5. Updating documents queries (It is possible to update both and some documents fields)
 
- * Update one document:
+  * Update one document:
     val query    = update("mycollection").set(MongoUpdateObject(jObject))
 
- * Update one document by criteria:
+  * Update one document by criteria:
     update("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
 
- * Update many documents:
+  * Update many documents:
     val query    = updateMany("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
 
- * Upsert one document:
+  * Upsert one document:
     val query    = upsert("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
 
- * Upsert many documents:
+  * Upsert many documents:
     val query    = upsertMany("mycollection").set(MongoUpdateObject(jObject)).where("foo.bar" === "blahblah")
 
- 6. Group/map reduce queries
+6. Group/map reduce queries
 
- * Group query
+  * Group query
     val intial = JsonParser.parse("""{ "csum": 10.0 }""").asInstanceOf[JObject]
     val query  = group(initial, "function(obj,prev) { prev.csum += obj.bar}", "foo").from("mycollection")
 
- * Map reduce query
+  * Map reduce query
     val map     = """function(){ this.tags.forEach( function(z){ emit( z , { count : 1 } ); } );};"""
     val reduce  = """function( key , values ){ var total = 0; for ( var i=0; i<values.length; i++ ) total += values[i].count; return { count : total }; };"""
-
     val query   = map(map, reduce).from("mycollection")
 
 To know whether or not operation succeeded, or if it did not succeed, what error it generated it is necessary to create "verified" query:
