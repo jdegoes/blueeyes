@@ -305,8 +305,6 @@ dropBeforeStart {
 }
 ```
 
-Using 
-
 ### Execution
 
 Services are run through a *server*. A "server" in this context refers to a *process*, not a *machine* -- any number of servers can run on the same physical machine.
