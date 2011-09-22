@@ -4,7 +4,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
-import blueeyes.json.JsonAST.{JValue, JInt, JNothing, JString}
+import blueeyes.json.JsonAST._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
@@ -78,11 +78,9 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
       response.status  mustEqual(HttpStatus(OK))
 
       val content  = response.content.get
-      content \ "requests" \ "GET" \ "count" mustEqual(JInt(1))
+      content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(JArray(JInt(1) :: Nil))
       content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
-      content \ "requests" \ "GET" \ "overage" \ "perSecond"      mustNotEq(JNothing)
-      content \ "requests" \ "GET" \ "overage" \ "interval" \ "length"    mustEqual(JString("1s"))
-      content \ "requests" \ "GET" \ "overage" \ "interval" \ "count"      mustEqual(JInt(12))
+      content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity"       mustNotEq(JNothing)
 
       content \ "service" \ "name"    mustEqual(JString("email"))
       content \ "service" \ "version" mustEqual(JString("1.2.3"))
@@ -111,7 +109,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
   val emailService = service ("email", "1.2.3") {
     requestLogging{
       logging { log =>
-        healthMonitor(eternity, (HttpMethods.POST, interval(3.seconds, 3))) { monitor =>
+        healthMonitor(eternity) { monitor =>
           serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {

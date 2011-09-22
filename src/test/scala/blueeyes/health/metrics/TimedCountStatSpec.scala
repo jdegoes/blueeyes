@@ -4,22 +4,21 @@ import org.specs.Specification
 import IntervalLength._
 import blueeyes.json.JsonAST._
 
-class TimedSampleSpec extends Specification{
+class TimedCountStatSpec extends Specification{
   private val clock = new Clock()
-  "TimedSample" should{
-    "create histogram" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 7))(clock.now _)
+  "TimedCountStat" should{
+    "creates JValue" in{
+      val config      = interval(3.seconds, 3)
+      val timedSample = TimedCountStat(config)(clock.now _)
       fill(timedSample)
 
-      val histogram = timedSample.details
-      histogram mustEqual(Map(94000 -> 0, 97000 -> 0, 100000 -> 4, 103000 -> 3, 106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+      timedSample.toJValue mustEqual JObject(JField(config.toString, (JArray(List(JInt(1), JInt(6), JInt(0), JInt(0))))) :: Nil)
     }
-    "removes expired data" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 3))(clock.now _)
-      fill(timedSample)
-
-      val histogram = timedSample.details
-      histogram mustEqual(Map(106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+    "creates TimedSample if the configuration is interval" in{
+      TimedCountStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)
+    }
+    "creates EternityTimedSample if the configuration is eternity" in{
+      TimedCountStat(eternity)(clock.now _).isInstanceOf[EternityTimedNumbersSample] must be (true)
     }
   }
 
@@ -54,9 +53,5 @@ class TimedSampleSpec extends Specification{
     def now() = _now
 
     def setNow(value: Long){_now = value}
-  }
-
-  class TimedSampleImpl(intervalConfig: interval)(implicit clock: () => Long) extends TimedNumbersSample(intervalConfig)(clock){
-    def toJValue = JNothing
   }
 }

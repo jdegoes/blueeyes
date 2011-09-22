@@ -1,15 +1,15 @@
 package blueeyes.health
 
-import metrics.Counter
+import metrics.eternity
 import org.specs.Specification
 import blueeyes.json.JPathImplicits._
-import blueeyes.json.JPath
 import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
+import blueeyes.json.{Printer, JPath}
 
-class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
+class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits{
 
-  private val montor = new HealthMonitor()
+  private val montor = new IntervalHealthMonitor(eternity)
 
   "records count" in{
     montor.increment("foo")(2)
@@ -22,18 +22,15 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
   "records the duration of the event" in {
     montor.time("foo")({ Thread.sleep(10) })
     montor.timerStats.size must be (1)
-    montor.timerStats.get(JPath("foo")).get.mean.ms.time must notBe(0.0)
   }
   "records errors" in {
     montor.error("foo")(new NullPointerException())
     montor.errorStats.size must be (1)
-    montor.errorStats.get(JPath("foo")).get.count mustEqual(1)
   }
   "moniors future time" in {
     montor.monitor("foo")(Future.async({ Thread.sleep(10) }))
 
-    montor.timerStats.size must be (1)
-    montor.timerStats.get(JPath("foo")).get.mean.ms.time must notBe(0.0)
+    montor.timerStats.size must eventually(be (1))
   }
   "moniors future error" in {
     val future = new Future[Unit]()
@@ -42,12 +39,9 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
     future.cancel(new NullPointerException())
 
     montor.errorStats.size must be (1)
-    montor.errorStats.get(JPath("foo")).get.count mustEqual(1)
   }
   "does not monior future time when exception is thrown" in {
     montor.monitor("foo")(Future.async({ throw new NullPointerException() }))
-
-    montor.timerStats.get(JPath("foo")).get.mean.ms.time mustEqual(0)
   }
 
   "records sample event" in {
@@ -65,19 +59,20 @@ class HealthMonitorSpec extends Specification with blueeyes.json.Implicits{
     }
 
     montor.errorStats.size must be (1)
-    montor.errorStats.get(JPath("foo")).get.count mustEqual(1)
   }
 
   "composes into JValue" in{
 
     def export: Int = 2
 
-    val monitor = new HealthMonitor()
+    val config  = eternity
+    val monitor = new IntervalHealthMonitor(config)
     monitor.increment("requestCount")(2)
     monitor.increment("requestCount")(3)
     monitor.export("request.export", export)
 
-    val monitorJson = JObject(List(JField("requestCount", JInt(5)), JField("request", JObject(List(JField("export", JInt(2)))))))
+    println(Printer.pretty(Printer.render(monitor.toJValue)))
+    val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JInt(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JInt(2)))))))
 
     monitor.toJValue mustEqual(monitorJson)
   }

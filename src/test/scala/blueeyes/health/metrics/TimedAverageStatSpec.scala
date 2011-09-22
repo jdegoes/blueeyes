@@ -4,22 +4,23 @@ import org.specs.Specification
 import IntervalLength._
 import blueeyes.json.JsonAST._
 
-class TimedSampleSpec extends Specification{
+class TimedAverageStatSpec extends Specification{
   private val clock = new Clock()
-  "TimedSample" should{
-    "create histogram" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 7))(clock.now _)
+  "TimedAverageStat" should{
+    "creates JValue" in{
+      val config = interval(3.seconds, 3)
+      val timedSample = TimedAverageStat(config)(clock.now _)
       fill(timedSample)
 
-      val histogram = timedSample.details
-      histogram mustEqual(Map(94000 -> 0, 97000 -> 0, 100000 -> 4, 103000 -> 3, 106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+      val histogram      = timedSample.toJValue
+      val histogramValue = JArray(List(JDouble(0.3333333333333333), JDouble(2.0), JDouble(0.0), JDouble(0.0)))
+      histogram mustEqual (JObject(JField("perSecond", JObject(JField(config.toString, histogramValue) :: Nil)) :: Nil))
     }
-    "removes expired data" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 3))(clock.now _)
-      fill(timedSample)
-
-      val histogram = timedSample.details
-      histogram mustEqual(Map(106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+    "creates TimedSample if the configuration is interval" in{
+      TimedAverageStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)
+    }
+    "creates EternityTimedSample if the configuration is eternity" in{
+      TimedAverageStat(eternity)(clock.now _).isInstanceOf[EternityTimedNumbersSample] must be (true)
     }
   }
 
@@ -54,9 +55,5 @@ class TimedSampleSpec extends Specification{
     def now() = _now
 
     def setNow(value: Long){_now = value}
-  }
-
-  class TimedSampleImpl(intervalConfig: interval)(implicit clock: () => Long) extends TimedNumbersSample(intervalConfig)(clock){
-    def toJValue = JNothing
   }
 }

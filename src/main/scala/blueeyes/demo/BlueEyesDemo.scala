@@ -5,7 +5,7 @@ import blueeyes.BlueEyesServer
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import blueeyes.core.http.HttpHeaders
+import blueeyes.core.http.{HttpHeaders, HttpMethods}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
@@ -17,6 +17,8 @@ import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpRespons
 import blueeyes.core.data.FileSource._
 import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson}
 import java.io.File
+import blueeyes.health.metrics._
+import java.util.concurrent.TimeUnit
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
@@ -44,14 +46,16 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-          aggregate(None){
-            post { request =>
-              val contact = request.content.map(ChunkToJValue(_))
-              contact.map{value =>
-                database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[ByteChunk]() }
-              }.getOrElse(Future.sync(HttpResponse[ByteChunk](status = HttpStatus(BadRequest))))
-            }
-          } ~
+              aggregate(None){
+                 jvalue {
+                  post { request =>
+                    val contact = request.content
+                    contact.map{value =>
+                      database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }
+                    }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
+                  }
+                }
+              } ~
           path("/'name") {
             produce(application/json) {
               get { request: HttpRequest[ByteChunk] =>

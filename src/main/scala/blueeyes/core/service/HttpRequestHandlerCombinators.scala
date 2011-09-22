@@ -8,7 +8,6 @@ import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteCh
 import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
 
-import java.io.ByteArrayOutputStream
 import java.net.URLDecoder._
 
 import scala.xml.NodeSeq
@@ -333,7 +332,13 @@ trait HttpRequestHandlerCombinators{
     def isDefinedAt(r: HttpRequest[U]): Boolean = {
 
       r.mimeTypes.find(_ == mimeType).map { mimeType =>
-        h.isDefinedAt(r.copy(content = r.content.map(b.apply)))
+        val newContent = try {
+          r.content.map(b.apply _)
+        }
+        catch {
+          case ex => None
+        }
+        newContent.map(content => h.isDefinedAt(r.copy(content = newContent))).getOrElse(true)
       }.orElse {
         r.content.map(b.isDefinedAt _)
       }.getOrElse(false)
