@@ -11,8 +11,7 @@ import com.mongodb.MongoException
 import scala.collection.immutable.ListSet
 import scala.math.BigInt._
 
-import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 
 
 object MongoUpdateOperators {

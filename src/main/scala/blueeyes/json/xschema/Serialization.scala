@@ -2,7 +2,7 @@ package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 
-import scalaz._
+import scalaz.{Validation, Success, Failure, NonEmptyList}
 import scalaz.Scalaz._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.

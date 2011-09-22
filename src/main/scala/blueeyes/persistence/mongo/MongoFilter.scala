@@ -6,8 +6,7 @@ import blueeyes.json.{JPath, JPathIndex, JPathField, MergeMonoid, ConcatMonoid}
 import blueeyes.json.JsonAST._
 import blueeyes.util.ProductPrefixUnmangler
 
-import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 
 object MongoFilterOperators {
   sealed trait MongoFilterOperator extends Product with ProductPrefixUnmangler {

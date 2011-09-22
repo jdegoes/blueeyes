@@ -4,10 +4,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import collection.mutable.ConcurrentMap
 import collection.JavaConversions._
-import blueeyes.health.PerSecondTimer
 
-
-class PerSecondTimer{
+class PerSecondTimer {
   private val period = 5
   private val nextCalculation = new AtomicLong(secs + period)
   private val lastCalculation = new AtomicLong(nextCalculation.get() - period)
