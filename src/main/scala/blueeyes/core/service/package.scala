@@ -9,6 +9,7 @@ package object service{
   
   type HttpRequestHandlerFull[T]     = HttpRequest[T] => Future[HttpResponse[T]]
   type HttpRequestHandlerFull2[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
+  type HttpRequestHandlerFull3[T, S] = HttpRequest[T] => S
 
   type HttpClientTransformer[T, S] = HttpClient[T] => Future[S]
 

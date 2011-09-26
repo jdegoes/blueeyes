@@ -108,7 +108,6 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
   private def method[B](method: HttpMethod, path: String, content: Option[A] = None)(implicit transcoder: Bijection[B, A]): Future[HttpResponse[B]] =
     self.apply(HttpRequest(method, path,  Map(),  Map(), content)).map{response => {
-      val newC = response.content.map(transcoder.unapply(_))
       response.copy(content = response.content.map(transcoder.unapply(_)))
     }}
 

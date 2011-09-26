@@ -306,16 +306,12 @@ trait HttpRequestHandlerCombinators{
     extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
   } { h }
 
-  private def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
-    val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
-
-    ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
-  }
-
-  private def fieldError[F <: JValue](s: Symbol, mc: Manifest[F])(): F  = sys.error("Expected field " + s.name + " to be " + mc.erasure.asInstanceOf[Class[F]].getName)
-
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]) = (h: F1 => HttpRequestHandler2[JValue, S]) => {
-    val c1: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
+    def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
+      val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
+
+      ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
+    }
 
     extract[JValue, S, F1] { (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
