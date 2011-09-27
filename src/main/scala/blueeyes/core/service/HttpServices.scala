@@ -216,29 +216,30 @@ object HttpServices{
 
   case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
     private implicit val b2 = b1.inverse
-    def service = {r: HttpRequest[T] => delegate.service(convertRequest(r)).map(_.map(convertResponse(_, r.parameters.get('callback)))) }
+    def service = {r: HttpRequest[T] => convertRequest(r).flatMap(delegate.service(_)).map(_.map(convertResponse(_, r.parameters.get('callback)))) }
 
-    private def convertRequest(r: HttpRequest[T]): HttpRequest[JValue] = {
+    private def convertRequest(r: HttpRequest[T]): Validation[NotServed, HttpRequest[JValue]] = {
       import blueeyes.json.JsonParser.parse
       import blueeyes.json.xschema.DefaultSerialization._
 
       r.parameters.get('callback) match {
         case Some(callback) if (r.method == HttpMethods.GET) =>
-          if (!r.content.isEmpty) throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")
+          if (r.content.isEmpty){
+            val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
-          val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
+            val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
+            val content = r.parameters.get('content).map(parse _)
+            val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
-          val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-          val content = r.parameters.get('content).map(parse _)
-          val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
-
-          r.copy(method = method, content = content, headers = r.headers ++ headers)
+            Success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+          }
+          else Failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
 
         case Some(callback) =>
-          throw HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")
+          Failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
 
         case None =>
-          r.copy(content = r.content.map(b1.apply))
+          Success(r.copy(content = r.content.map(b1.apply)))
       }
     }
 
