@@ -412,18 +412,6 @@ object HttpServices{
     def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull3[T, S]): HttpService[T, S] = getRange(h, None)
     def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull3[T, S], metadata: => Option[Metadata]): HttpService[T, S] = method(HttpMethods.GET)(GetRangeService(h, None))
 
-    def cookie[T](request: HttpRequest[T], s: Symbol, default: () => String){
-      def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-      cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse(default())
-    }
-
-    def field[S, F1 <: JValue](request: HttpRequest[JValue], s: Symbol, default: () => F1)(implicit mc1: Manifest[F1]): F1 = {
-      val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
-      val c: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
-
-      ((content \ s.name) -->? c).getOrElse(default()).asInstanceOf[F1]
-    }
-
     /** The accept combinator creates a handler that is defined only for requests
      * that have the specified content type. Requires an implicit bijection
      * used for transcoding.
@@ -480,6 +468,18 @@ object HttpServices{
 
     def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: HttpService[T, Future[HttpResponse[T]]]) => new ForwardingService[T, U](f, httpClient, h)
   }
+
+  def cookie[T](request: HttpRequest[T], s: Symbol): Option[String] = {
+    def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue)
+  }
+
+  def field[S, F1 <: JValue](request: HttpRequest[JValue], s: Symbol)(implicit mc1: Manifest[F1]): Option[F1] = {
+    val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
+    val c: Class[F1] = mc1.erasure.asInstanceOf[Class[F1]]
+
+    ((content \ s.name) -->? c).asInstanceOf[Option[F1]]
+  }
 }
 
 //object TestComb extends HttpServices.HttpRequestHandlerCombinators2 with RestPathPatternImplicits{
@@ -497,4 +497,4 @@ object HttpServices{
 //    }
 ////    }
 //  }
-//}
+//}§
