@@ -28,11 +28,12 @@ object HttpServices{
 
   sealed trait Metadata
 
-  case class DataSizeMetadata   (dataSize: Option[DataSize])  extends Metadata
-  case class HeaderMetadata     (mimeType: HttpHeader)        extends Metadata
-  case class PathPatternMetadata(pattern: RestPathPattern)    extends Metadata
-  case class HttpMethodMetadata (method: HttpMethod)          extends Metadata
-  case class DescriptionMetadata(description: String)         extends Metadata
+  case class DataSizeMetadata    (dataSize: Option[DataSize])             extends Metadata
+  case class HeaderMetadata       (mimeType: HttpHeader)                  extends Metadata
+  case class PathPatternMetadata  (pattern: RestPathPattern)              extends Metadata
+  case class HttpMethodMetadata   (method: HttpMethod)                    extends Metadata
+  case class DescriptionMetadata  (description: String)                   extends Metadata
+  case class ExtractMetadata[T, S](extract: IdentifierWithDefault[T, S])  extends Metadata
 
   sealed trait HttpService[A, B] { self =>
     def service: HttpRequest[A] => Validation[NotServed, B]
@@ -278,6 +279,33 @@ object HttpServices{
     def metadata = None
   }
 
+  case class ParameterService[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], delegate: HttpService[T, String => S]) extends DelegatingService[T, S, T, String => S]{
+    def service = {r: HttpRequest[T] =>
+      val parameter  = extract(r)
+      val newRequest = addParameter(r, (s1AndDefault.identifier, parameter))
+      delegate.service(newRequest).map(_.apply(parameter))
+    }
+
+    private def addParameter(r: HttpRequest[T], newParam: (Symbol, String)): HttpRequest[T] = r.copy(parameters = r.parameters + newParam)
+
+    private def extract(r: HttpRequest[T]): String = r.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
+
+    lazy val metadata = Some(ExtractMetadata(s1AndDefault))
+  }
+
+  case class ExtractService[T, S, P](s1AndDefault: IdentifierWithDefault[Symbol, P], extractor: HttpRequest[T] => P, delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
+    def service = {r: HttpRequest[T] =>
+      try {
+        delegate.service(r).map(_.apply(extractor(r)))
+      }
+      catch {
+        case t: Throwable => Inapplicable.fail
+      }
+    }
+
+    lazy val metadata = Some(ExtractMetadata(s1AndDefault))
+  }
+
   case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
     def service = delegate.service
   }
@@ -398,6 +426,63 @@ object HttpServices{
      */
     def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull3[T, S]): HttpService[T, S] = method(HttpMethods.GET)(GetRangeService(h))
 
+    /**
+     * Extracts data from the request. The extractor combinators can be used to
+     * factor out extraction logic that's duplicated across a range of handlers.
+     * <p>
+     * Extractors are fail-fast combinators. If they cannot extract the required
+     * information during evaluation of isDefinedAt() method, they immediately
+     * throw an HttpException.
+     * <pre>
+     * extract(_.parameters('username)) { username =>
+     *   ...
+     * }
+     * </pre>
+     */
+    def extract[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, E1])(extractor: HttpRequest[T] => E1): HttpService[T, E1 => S] => HttpService[T, S] = (h) => new ExtractService[T, S, E1](s1AndDefault, extractor, h)
+
+    /** A special-case extractor for parameters.
+     * <pre>
+     * parameter('token) { token =>
+     *   get {
+     *     ...
+     *   }
+     * }
+     * </pre>
+     */
+     def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
+
+    private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
+      def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
+      cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(sys.error("Expected cookie " + s.name))
+    }
+    /** A special-case extractor for cookie supporting a default value.
+     * <pre>
+     * cookie('token, "defaultValue") { token =>
+     *   get {
+     *     ...
+     *   }
+     * }
+     * </pre>
+     */
+    def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = extract[T, S, String] (s1AndDefault){ request =>
+      extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
+    }
+
+    def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): HttpService[JValue, F1 => S] => HttpService[JValue, S] = {
+      def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
+        val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
+
+        ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
+      }
+
+      extract[JValue, S, F1](s1AndDefault) { (request: HttpRequest[JValue]) =>
+        val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
+
+        extractField(content, s1AndDefault)
+      }
+    }
+
     /** The accept combinator creates a handler that is defined only for requests
      * that have the specified content type. Requires an implicit bijection
      * used for transcoding.
@@ -478,12 +563,13 @@ object HttpServices{
 //    println(value)
 //  }
 //  val service = path("foo"){
-////    parameter[String, String](IdentifierWithDefault('bar, () => "foo")) { bar =>
 //    compress{
-//      get{ request: HttpRequest[ByteChunk] =>
-//        Future.sync(HttpResponse[ByteChunk](content = Some(new ByteMemoryChunk(Array[Byte](), () => None))))
+//      parameter(IdentifierWithDefault('bar, () => "foo")) {
+//        get{ request: HttpRequest[ByteChunk] => { param: String =>
+//            Future.sync(HttpResponse[ByteChunk](content = Some(new ByteMemoryChunk(Array[Byte](), () => None))))
+//          }
+//        }
 //      }
 //    }
-////    }
 //  }
 //}
