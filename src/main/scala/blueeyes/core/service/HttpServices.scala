@@ -325,14 +325,16 @@ object HttpServices{
     /** Yields the remaining path to the specified function, which should return
      * a request handler.
      * {{{
-     * remainingPath {
+     * remainingPath { path =>
      *   get {
      *     ...
      *   }
      * }
      * }}}
      */
-    def remainingPath[T, S](h: HttpService[T, S]) = path(RestPathPattern.Root `...` ('remainingPath))(h)
+    def remainingPath[T, S](handler: HttpService[T, String => S]) = path(RestPathPattern.Root `...` ('remainingPath)) {
+      parameter(IdentifierWithDefault('remainingPath, () => ""))(handler)
+    }
 
     /** The method combinator creates a handler that is defined only for the
      * specified HTTP method.
@@ -450,7 +452,7 @@ object HttpServices{
      * }
      * </pre>
      */
-     def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
+    def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
 
     private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
       def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
@@ -555,21 +557,21 @@ object HttpServices{
   }
 }
 
-//object TestComb extends HttpServices.HttpRequestHandlerCombinators2 with RestPathPatternImplicits{
-//  import blueeyes.concurrent.Future._
-//  import blueeyes.core.data.ByteMemoryChunk
-//  def main(args: Array[String]){
-//    val value = service.service
-//    println(value)
-//  }
-//  val service = path("foo"){
-//    compress{
-//      parameter(IdentifierWithDefault('bar, () => "foo")) {
-//        get{ request: HttpRequest[ByteChunk] => { param: String =>
-//            Future.sync(HttpResponse[ByteChunk](content = Some(new ByteMemoryChunk(Array[Byte](), () => None))))
-//          }
-//        }
-//      }
-//    }
-//  }
-//}
+object TestComb extends HttpServices.HttpRequestHandlerCombinators2 with RestPathPatternImplicits{
+  import blueeyes.concurrent.Future._
+  import blueeyes.core.data.ByteMemoryChunk
+  def main(args: Array[String]){
+    val value = service.service
+    println(value)
+  }
+  val service = path("foo"){
+    compress{
+      parameter(IdentifierWithDefault('bar, () => "foo")) {
+        get{ request: HttpRequest[ByteChunk] => { param: String =>
+            Future.sync(HttpResponse[ByteChunk](content = Some(new ByteMemoryChunk(Array[Byte](), () => None))))
+          }
+        }
+      }
+    }
+  }
+}
