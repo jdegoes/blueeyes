@@ -1,6 +1,5 @@
 package blueeyes.core.service
 
-import scalaz.{Success, Validation, Failure}
 import scalaz.Scalaz._
 import blueeyes.json.JsonAST.JValue
 import blueeyes.core.http._
@@ -12,6 +11,7 @@ import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteCh
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
 import xml.NodeSeq
+import scalaz.{Functor, Success, Validation, Failure}
 
 object HttpServices{
   sealed trait NotServed {
@@ -29,7 +29,7 @@ object HttpServices{
   sealed trait Metadata
 
   case class DataSizeMetadata   (dataSize: Option[DataSize])  extends Metadata
-  case class ContentMetadata    (mimeType: MimeType)          extends Metadata
+  case class HeaderMetadata     (mimeType: HttpHeader)        extends Metadata
   case class PathPatternMetadata(pattern: RestPathPattern)    extends Metadata
   case class HttpMethodMetadata (method: HttpMethod)          extends Metadata
   case class DescriptionMetadata(description: String)         extends Metadata
@@ -89,20 +89,20 @@ object HttpServices{
   }
 
   case class HttpHandlerService[A, B](h: HttpRequestHandlerFull3[A, B]) extends HttpService[A, B]{
-    val service = (r: HttpRequest[A]) => Success(h(r))
+    val service = (r: HttpRequest[A]) => success(h(r))
 
     def metadata = None
   }
 
   case class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends HttpService[A, B]{
-    val service = (r: HttpRequest[A]) => Failure(DispatchError(onFailure(r).fold(HttpException(_, _))))
+    val service = (r: HttpRequest[A]) => failure(DispatchError(onFailure(r).fold(HttpException(_, _))))
 
     val metadata = None
   }
 
   case class CommitService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String), delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
     val service = (r: HttpRequest[A]) => delegate.service(r) match {
-      case Failure(Inapplicable) => Failure(DispatchError(onFailure(r).fold(HttpException(_, _))))
+      case Failure(Inapplicable) => failure(DispatchError(onFailure(r).fold(HttpException(_, _))))
       case success => success
     }
 
@@ -118,7 +118,7 @@ object HttpServices{
   case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[T, S])(implicit b: Bijection[U, T]) extends DelegatingService[U, S, T, S] {
     def service = {r: HttpRequest[U] =>
       def newContent(r: HttpRequest[U]) = try {
-        Success(r.content.map(b.apply _))
+        success(r.content.map(b.apply _))
       }
       catch {
         case ex => Inapplicable.fail
@@ -129,14 +129,11 @@ object HttpServices{
       r.mimeTypes.find(_ == mimeType).map { mimeType => handle(r) }.orElse { r.content.map(v => handle(r)) }.getOrElse(Inapplicable.fail)
     }
 
-    lazy val metadata = Some(ContentMetadata(mimeType))
+    lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
 
   case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull3[T, S]) extends HttpService[T, S]{
-    def service = {r: HttpRequest[T] => extractRange(r.headers.raw) match{
-      case Success(range)   => Success(h.tupled(range)(r))
-      case Failure(failure) => Failure(failure)
-    }}
+    def service = { r => extractRange(r.headers.raw).map(range => h.tupled(range)(r)) }
 
     private def extractRange(headers: Map[String, String]): Validation[NotServed, (List[(Long, Long)], String)]  = {
       headers.collect {
@@ -151,7 +148,7 @@ object HttpServices{
               }
               ranges.find(_ == None).map(x => Inapplicable.fail).getOrElse{
                 val pureRanges = ranges.collect{case Some(x) => x}
-                Success[NotServed, (List[(Long, Long)], String)]((pureRanges, unit.trim.toLowerCase))
+                success[NotServed, (List[(Long, Long)], String)]((pureRanges, unit.trim.toLowerCase))
               }
             case _ => Inapplicable.fail
           }
@@ -161,25 +158,25 @@ object HttpServices{
     def metadata = None
   }
 
-  case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, HttpResponse[S]])(implicit b: Bijection[S, V]) extends DelegatingService[T, HttpResponse[V], T, HttpResponse[S]]{
-    def service = {r: HttpRequest[T] =>
-      delegate.service(r).map { response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType)) }
-    }
-
-    lazy val metadata = Some(ContentMetadata(mimeType))
-  }
-
-  case class CompressService(delegate: HttpService[ByteChunk, HttpResponse[ByteChunk]]) extends DelegatingService[ByteChunk, HttpResponse[ByteChunk], ByteChunk, HttpResponse[ByteChunk]]{
-    def service = {r: HttpRequest[ByteChunk] =>
-      delegate.service(r).map{response =>
-        val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-        val supported  = CompressService.supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
-        (supported, response.content) match{
-          case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
-          case _ => response
-        }
+  case class ProduceService[T, S, V, M[_]](mimeType: MimeType, delegate: HttpService[T, M[HttpResponse[S]]])(implicit b: Bijection[S, V], functor: Functor[M]) extends DelegatingService[T, M[HttpResponse[V]], T, M[HttpResponse[S]]]{
+    def service = (r: HttpRequest[T]) => delegate.service(r).map { f: M[HttpResponse[S]] =>
+        f.map{response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType))
       }
     }
+
+    lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
+  }
+
+  case class CompressService[M[_]:Functor](delegate: HttpService[ByteChunk, M[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, M[HttpResponse[ByteChunk]], ByteChunk, M[HttpResponse[ByteChunk]]]{
+    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{ma =>
+      ma.map{response =>
+      val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
+      val supported  = CompressService.supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
+      (supported, response.content) match{
+        case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
+        case _ => response
+      }
+    }}
 
     val metadata = None
   }
@@ -189,7 +186,7 @@ object HttpServices{
   }
 
   case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
-    def service = {r: HttpRequest[ByteChunk] => r.content match {
+    def service = (r: HttpRequest[ByteChunk]) => r.content match {
       case Some(chunk) =>
         val result           = new Future[HttpResponse[ByteChunk]]()
         val aggregatedFuture = AggregatedByteChunk(chunk, chunkSize)
@@ -202,16 +199,16 @@ object HttpServices{
         }
         aggregatedFuture.ifCanceled(th => result.cancel(th))
         result.ifCanceled(th => aggregatedFuture.cancel(th))
-        Success(result)
+        success(result)
       case None        => delegate.service(r)
-    }}
+    }
 
     lazy val metadata = Some(DataSizeMetadata(chunkSize))
   }
 
-  case class JsonpService[T](delegate: HttpService[JValue, HttpResponse[JValue]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, HttpResponse[T], JValue, HttpResponse[JValue]]{
+  case class JsonpService[T, M[_]](delegate: HttpService[JValue, M[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String], functor: Functor[M]) extends DelegatingService[T, M[HttpResponse[T]], JValue, M[HttpResponse[JValue]]]{
     private implicit val b2 = b1.inverse
-    def service = {r: HttpRequest[T] => convertRequest(r).flatMap(delegate.service(_)).map(convertResponse(_, r.parameters.get('callback))) }
+    def service = {r: HttpRequest[T] => convertRequest(r).flatMap(delegate.service(_)).map(_.map(convertResponse(_, r.parameters.get('callback)))) }
 
     private def convertRequest(r: HttpRequest[T]): Validation[NotServed, HttpRequest[JValue]] = {
       import blueeyes.json.JsonParser.parse
@@ -226,15 +223,15 @@ object HttpServices{
             val content = r.parameters.get('content).map(parse _)
             val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
-            Success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+            success(r.copy(method = method, content = content, headers = r.headers ++ headers))
           }
-          else Failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
+          else failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
 
         case Some(callback) =>
-          Failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
+          failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
 
         case None =>
-          Success(r.copy(content = r.content.map(b1.apply)))
+          success(r.copy(content = r.content.map(b1.apply)))
       }
     }
 
@@ -411,12 +408,12 @@ object HttpServices{
      * that have the specified content type. Requires an implicit bijection
      * used for transcoding.
      */
-    def produce[T, S, V](mimeType: MimeType)(h: HttpService[T, HttpResponse[S]])(implicit b: Bijection[S, V]): HttpService[T, HttpResponse[V]] = new ProduceService(mimeType, h)
+    def produce[T, S, V, M[_]](mimeType: MimeType)(h: HttpService[T, M[HttpResponse[S]]])(implicit b: Bijection[S, V], functor: Functor[M]): HttpService[T, M[HttpResponse[V]]] = new ProduceService(mimeType, h)
     /** The content type combinator creates a handler that accepts and produces
      * requests and responses of the specified content type. Requires an implicit
      * bijection used for transcoding.
      */
-    def contentType[T, S](mimeType: MimeType)(h: HttpService[T, HttpResponse[T]])(implicit b1: Bijection[S, T]): HttpService[S, HttpResponse[S]] = {
+    def contentType[T, S, M[_]](mimeType: MimeType)(h: HttpService[T, M[HttpResponse[T]]])(implicit b1: Bijection[S, T], functor: Functor[M]): HttpService[S, M[HttpResponse[S]]] = {
       implicit val b2 = b1.inverse
 
       accept(mimeType) {
@@ -430,7 +427,7 @@ object HttpServices{
      *  The compress combinator creates a handler that compresses content by encoding supported by client
      *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
      */
-    def compress(h: HttpService[ByteChunk, HttpResponse[ByteChunk]]): HttpService[ByteChunk, HttpResponse[ByteChunk]] = new CompressService(h)
+    def compress[M[_]: Functor](h: HttpService[ByteChunk, M[HttpResponse[ByteChunk]]]): HttpService[ByteChunk, M[HttpResponse[ByteChunk]]] = new CompressService(h)
 
     /** The aggregate combinator creates a handler that stitches together chunks
      * to make a bigger chunk, up to the specified size.
@@ -443,17 +440,17 @@ object HttpServices{
      * HTTP method and content using the query string parameters "method" and
      * "content", respectively.
      */
-    def jsonp[T](delegate: HttpService[JValue, HttpResponse[JValue]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpService[T, HttpResponse[T]] = JsonpService[T](delegate)
+    def jsonp[T, M[_]](delegate: HttpService[JValue, M[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String], functor: Functor[M]): HttpService[T, M[HttpResponse[T]]] = JsonpService[T, M](delegate)
 
     /** The jvalue combinator creates a handler that accepts and produces JSON.
      * Requires an implicit bijection used for transcoding.
      */
-    def jvalue[T](h: HttpService[JValue, HttpResponse[JValue]])(implicit b: Bijection[T, JValue]): HttpService[T, HttpResponse[T]] = contentType(MimeTypes.application/MimeTypes.json) { h }
+    def jvalue[T, M[_]](h: HttpService[JValue, M[HttpResponse[JValue]]])(implicit b: Bijection[T, JValue], functor: Functor[M]): HttpService[T, M[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
 
     /** The xml combinator creates a handler that accepts and produces XML.
      * Requires an implicit bijection used for transcoding.
      */
-    def xml[T](h: HttpService[NodeSeq, HttpResponse[NodeSeq]])(implicit b: Bijection[T, NodeSeq]): HttpService[T, HttpResponse[T]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+    def xml[T, M[_]](h: HttpService[NodeSeq, M[HttpResponse[NodeSeq]]])(implicit b: Bijection[T, NodeSeq], functor: Functor[M]): HttpService[T, M[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
 
     def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: HttpService[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 
@@ -474,6 +471,7 @@ object HttpServices{
 }
 
 //object TestComb extends HttpServices.HttpRequestHandlerCombinators2 with RestPathPatternImplicits{
+//  import blueeyes.concurrent.Future._
 //  import blueeyes.core.data.ByteMemoryChunk
 //  def main(args: Array[String]){
 //    val value = service.service
@@ -488,4 +486,4 @@ object HttpServices{
 //    }
 ////    }
 //  }
-//}§
+//}
