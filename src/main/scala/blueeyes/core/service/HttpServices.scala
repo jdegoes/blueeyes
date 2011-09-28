@@ -27,7 +27,6 @@ object HttpServices{
   }
 
   sealed trait Metadata
-  case object FailureMetadata                                 extends Metadata
 
   case class DataSizeMetadata   (dataSize: Option[DataSize])  extends Metadata
   case class ContentMetadata    (mimeType: MimeType)          extends Metadata
