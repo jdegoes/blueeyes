@@ -29,7 +29,6 @@ object HttpServices{
   sealed trait Metadata
   case object FailureMetadata                                 extends Metadata
 
-  case class OrMetadata         (docs: List[Metadata])        extends Metadata
   case class DataSizeMetadata   (dataSize: Option[DataSize])  extends Metadata
   case class ContentMetadata    (mimeType: MimeType)          extends Metadata
   case class PathPatternMetadata(pattern: RestPathPattern)    extends Metadata
@@ -62,7 +61,7 @@ object HttpServices{
     }
     override val service = (r: HttpRequest[A]) => pick(r, services)
 
-    lazy val metadata = Some(OrMetadata(services.map(_.metadata).collect{case Some(x) => x}.toList))
+    lazy val metadata = None
   }
 
   trait DelegatingService[A, B, C, D] extends HttpService[A, B] {
@@ -124,10 +123,7 @@ object HttpServices{
         case ex => Inapplicable.fail
       }
 
-      def handle(r: HttpRequest[U]) = newContent(r) match{
-        case Failure(failure) => Failure(failure)
-        case Success(content) => delegate.service(r.copy(content = content))
-      }
+      def handle(r: HttpRequest[U]) = newContent(r).flatMap(content => delegate.service(r.copy(content = content)))
 
       r.mimeTypes.find(_ == mimeType).map { mimeType => handle(r) }.orElse { r.content.map(v => handle(r)) }.getOrElse(Inapplicable.fail)
     }
