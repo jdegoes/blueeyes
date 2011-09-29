@@ -16,9 +16,10 @@ import net.lag.logging.Logger
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
+import scalaz.Scalaz._
 
 class NettyRequestHandlerSpec extends Specification with NettyConverters with MocksCreation with BijectionsChunkString{
-  private val handler       = mock[HttpRequestHandler[ByteChunk]]
+  private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
@@ -34,8 +35,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Mo
     val nettyContent = new NettyChunkedInput(new MemoryChunk(Array[Byte]()), channel)
 
     when(event.getMessage()).thenReturn(request, request)
-    when(handler.isDefinedAt(request)).thenReturn(true)
-    when(handler.apply(request)).thenReturn(future, future)
+    when(handler.service.apply(request)).thenReturn(success(future))
     when(event.getChannel()).thenReturn(channel, channel)
     when(event.getChannel().isConnected).thenReturn(true)
     when(channel.write(Matchers.argThat(new RequestMatcher(nettyMessage)))).thenReturn(channelFuture, channelFuture)
@@ -52,8 +52,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Mo
     val future       = new Future[HttpResponse[ByteChunk]]()
 
     when(event.getMessage()).thenReturn(request, request)
-    when(handler.isDefinedAt(request)).thenReturn(true)
-    when(handler.apply(request)).thenReturn(future, future)
+    when(handler.service.apply(request)).thenReturn(success(future))
 
     nettyHandler.messageReceived(context, event)
 

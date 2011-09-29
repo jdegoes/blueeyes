@@ -4,6 +4,7 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
@@ -26,24 +27,20 @@ class HttpServerSpec extends Specification with BijectionsChunkString{
   }
   
   "HttpServer.apply" should {
-    "be always defined" in {
-      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")) must be (true)
-      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")) must be (true)
-    }
-    
+
     "delegate to service request handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).toOption.get.value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
     "produce NotFount response when service is not defined for request" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).toOption.get.value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
     }
 
     "gracefully handle error-producing service handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
     "gracefully handle dead-future-producing service handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 

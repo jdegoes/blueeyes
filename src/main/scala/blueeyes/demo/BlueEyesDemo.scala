@@ -5,7 +5,7 @@ import blueeyes.BlueEyesServer
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import blueeyes.core.http.{HttpHeaders, HttpMethods}
+import blueeyes.core.http.{HttpHeaders}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
@@ -13,12 +13,12 @@ import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.core.service.ServerHealthMonitorService
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
 import blueeyes.core.data.FileSource._
 import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson}
 import java.io.File
 import blueeyes.health.metrics._
-import java.util.concurrent.TimeUnit
 
 object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
@@ -46,16 +46,16 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-              aggregate(None){
-                 jvalue {
-                  post { request =>
-                    val contact = request.content
-                    contact.map{value =>
-                      database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }
-                    }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
-                  }
-                }
-              } ~
+          aggregate(None){
+             jvalue {
+              post { request =>
+                val contact = request.content
+                contact.map{value =>
+                  database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }
+                }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
+              }
+            }
+          } ~
           path("/'name") {
             produce(application/json) {
               get { request: HttpRequest[ByteChunk] =>
@@ -65,7 +65,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               } ~
               delete { request: HttpRequest[ByteChunk] =>
                 database(remove.from(collection).where("name" === request.parameters('name))) map {
-                  _ => HttpResponse[JNothing.type]()
+                  _ => HttpResponse[JValue]()
                 }
               }
             }
@@ -80,9 +80,9 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 }
               }
             }
-          }~
+          }
           path("/file/read"){
-            compress{
+            compress[Future]{
               produce(image / jpeg){
                 get { request: HttpRequest[ByteChunk] =>
                   val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("/Users/mlagutko/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))

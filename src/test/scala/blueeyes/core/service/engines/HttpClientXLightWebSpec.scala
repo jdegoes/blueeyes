@@ -5,6 +5,7 @@ import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.service.HttpServicePimps._
 import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._

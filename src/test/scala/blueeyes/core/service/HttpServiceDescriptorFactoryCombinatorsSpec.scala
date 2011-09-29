@@ -4,15 +4,15 @@ import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.json.JsonAST._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import java.io.File
-import blueeyes.core.http.{HttpMethods, HttpRequest, HttpResponse, HttpStatus}
-import blueeyes.health.metrics.{interval, eternity}
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
+import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
-import blueeyes.json.Printer
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
   override def configuration = """
@@ -123,9 +123,11 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescri
                     foo(request)
                   }
                 } ~
-                remainingPath{ path =>
+                remainingPath{
                   get{
-                    request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]().future
+                    request: HttpRequest[ByteChunk] => { path: String =>
+                      HttpResponse[ByteChunk]().future
+                    }
                   }
                 }
               }

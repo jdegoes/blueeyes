@@ -3,6 +3,7 @@ package blueeyes.core.service.test
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.service._
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
