@@ -56,6 +56,17 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
+          path("/search") {
+            jvalue{
+              post {
+                refineContentType[JValue, JObject] { request =>
+                  searchContacts(request.content, demoConfig) map {
+                    v => HttpResponse[JValue](content = Some(JArray(v)))
+                  }
+                }
+              }
+            }
+          } ~
           path("/'name") {
             produce(application/json) {
               get { request: HttpRequest[ByteChunk] =>
@@ -70,17 +81,6 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-          path("/search") {
-            jvalue{
-              post {
-                refineContentType[JValue, JObject] { request =>
-                  searchContacts(request.content, demoConfig) map {
-                    v => HttpResponse[JValue](content = Some(JArray(v)))
-                  }
-                }
-              }
-            }
-          }
           path("/file/read"){
             compress[Future]{
               produce(image / jpeg){

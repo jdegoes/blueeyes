@@ -19,7 +19,7 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
     executed must be (true)
   }
   "HttpServiceBuilder startup: creates StartupDescriptor with specified request function" in{
-    val function = mock[Function[Unit, HttpRequestHandler[Unit]]]
+    val function = mock[Function[Unit, AsyncHttpService[Unit]]]
     val builder  = new HttpServiceBuilder[Unit]{
       val descriptor = request(function)
     }

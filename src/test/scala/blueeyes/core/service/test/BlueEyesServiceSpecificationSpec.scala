@@ -13,8 +13,9 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import TestService._
 import org.specs.util._
 import org.specs.util.TimeConversions._
+import blueeyes.concurrent.test.FutureMatchers
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers{
   "Service Specification" should {
     "support get by valid URL" in {
       val f = service.get[String]("/bar/id/bar.html")
@@ -25,7 +26,11 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
       f.value must eventually(5, new Duration(10000)) (beSome(serviceResponse))
     }
     "support eventually asynch get by valid URL" in {
-      service.get[String]("/asynch/eventually").value must eventually (beSome(serviceResponse))
+      service.get[String]("/asynch/eventually") must whenDelivered {
+        verify {
+          _ mustEqual(serviceResponse)
+        }
+      }
     }
   }
 }

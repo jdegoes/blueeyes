@@ -11,7 +11,7 @@ import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteCh
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
 import xml.NodeSeq
-import scalaz.{Functor, Success, Validation, Failure}
+import scalaz.{Functor, Validation, Failure}
 
 object HttpServices{
   sealed trait NotServed {
@@ -58,7 +58,9 @@ object HttpServices{
   case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, B] {
     /*@tailrec*/ private def pick(r: HttpRequest[A], services: Seq[HttpService[A, B]]): Validation[NotServed, B] = services.headOption match {
       case None => Inapplicable.fail
-      case Some(service) => service.service(r) match {
+      case Some(service) =>
+        val ss = service
+        service.service(r) match {
         case success: scalaz.Success[_, _] => success
         case Failure(notServed) => notServed or pick(r, services.tail)
       }

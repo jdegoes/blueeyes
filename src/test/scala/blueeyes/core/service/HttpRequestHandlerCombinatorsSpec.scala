@@ -3,29 +3,23 @@ package blueeyes.core.service
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
-import blueeyes.json.JsonAST.JValue
 
 import org.specs.Specification
 import org.specs.matcher.Matchers._
 
 import blueeyes.core.http._
-import blueeyes.core.http.MimeType
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import blueeyes.concurrent.Future.FutureFunctor
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.util.metrics.DataSize
 import DataSize._
 
-import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsIdentity, Bijection, GZIPByteChunk}
 import HttpServicePimps._
-
-import HttpServices.NotServed
-import scalaz.Validation
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity with FutureMatchers {
   implicit val JValueToString = new Bijection[JValue, String] {
@@ -196,7 +190,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
   "parameter combinator" should {
     "extract parameter" in {
       val f = path("/foo/'bar") {
-        parameter[String, String]('bar) {
+        parameter('bar) {
           get { (request: HttpRequest[String]) => { bar: String =>
               Future.sync(HttpResponse[String](content=Some(bar)))
             }
@@ -209,7 +203,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
-        parameter[String, String]('bar ?: "bebe") {
+        parameter[String, Future[HttpResponse[String]]]('bar ?: "bebe") {
           get { (request: HttpRequest[String]) =>{bar: String =>
               request.parameters mustEqual Map('bar -> "bebe")
 
@@ -227,7 +221,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract parameter even when combined with produce" in {
       val f = path("/foo/'bar") {
         produce(application/json) {
-          parameter[String, JValue]('bar) {
+          parameter('bar) {
             get { (request: HttpRequest[String]) => { bar: String =>
                 Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
               }
@@ -241,7 +235,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract decoded parameter" in {
       val f = path("/foo/'bar") {
         produce(application/json) {
-          parameter[String, JValue]('bar) {
+          parameter('bar) {
             get { (request: HttpRequest[String]) => {bar: String =>
                 Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
               }
@@ -270,7 +264,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/") {
         path('bar  / "entries") {
           produce(application/json) {
-            parameter[String, JValue]('bar) {
+            parameter('bar) {
               get { (request: HttpRequest[String]) => {bar: String =>
                   Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
                 }
@@ -287,13 +281,15 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
   "compress combinator" should {
     "compress content if request contains accept encoding header" in{
       val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
-      (compress{
+      val handler = compress{
         path("/foo"){
           get { (request: HttpRequest[ByteChunk]) =>
             Future.sync(HttpResponse[ByteChunk](content=request.content))
           }
         }
-      }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome(new String(GZIPByteChunk(chunk).data))
+      }
+      val response = handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress)))
+      response.toOption.get.value.get.content.map(v => new String(v.data)) must beSome(new String(GZIPByteChunk(chunk).data))
     }
     "does not compress content if request does not contain accept appropriate encoding header" in{
       val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)

@@ -75,7 +75,8 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
       }
 
       try {
-        httpServer.service(request).toOption.getOrElse(NotFound.future)
+        val response = httpServer.service(request)
+        response.toOption.getOrElse(NotFound.future)
       } catch {
         case t: Throwable => Future.sync(convertErrorToResponse(t))
       }

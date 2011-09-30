@@ -10,7 +10,7 @@ import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import blueeyes.concurrent.Future.FutureFunctor
 
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._

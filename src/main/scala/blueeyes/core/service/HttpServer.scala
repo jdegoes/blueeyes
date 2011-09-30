@@ -15,8 +15,8 @@ import java.net.InetAddress
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import scalaz.Scalaz._
-import scalaz.{Failure, Success}
-import blueeyes.core.service.HttpServices.{DispatchError}
+import scalaz.{Validation, Failure, Success}
+import blueeyes.core.service.HttpServices.{NotServed, DispatchError}
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -75,7 +75,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     }
 
     // Convert the raw future into one that cannot die:
-    rawValidation match{
+    val validation = rawValidation match{
       case Success(rawFuture) => success{
         rawFuture.orElse { why => why match {
           case Some(throwable) =>
@@ -86,11 +86,11 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
             InternalServerError
         }
       }}
-      case Failure(DispatchError(throwable)) => success(convertErrorToResponse(throwable))
+      case Failure(DispatchError(throwable)) => success(convertErrorToResponse(throwable).future)
       case failure => success(NotFound.future)
     }
 
-    rawValidation.map{_.orElse { why =>
+    validation.map{_.orElse { why =>
       why match {
         case Some(throwable) =>
           convertErrorToResponse(throwable)

@@ -211,12 +211,12 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           }
         } ~
         path("/error") {
-          get[ByteChunk, Future[HttpRequest[ByteChunk]]] { request: HttpRequest[ByteChunk] =>
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
             throw new RuntimeException("Unexpected error (GET /error)")
           }
         } ~
         path("/http/error") {
-          get[ByteChunk, Future[HttpRequest[ByteChunk]]] { request: HttpRequest[ByteChunk] =>
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }
