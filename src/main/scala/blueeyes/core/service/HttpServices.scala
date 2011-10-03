@@ -10,7 +10,7 @@ import blueeyes.concurrent.Future
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
-import scalaz.{Functor, Validation, Failure}
+import scalaz.{Validation, Failure}
 
 object HttpServices{
   sealed trait NotServed {
@@ -27,12 +27,13 @@ object HttpServices{
 
   sealed trait Metadata
 
-  case class DataSizeMetadata    (dataSize: Option[DataSize])             extends Metadata
+  case class DataSizeMetadata     (dataSize: Option[DataSize])            extends Metadata
   case class HeaderMetadata       (mimeType: HttpHeader)                  extends Metadata
   case class PathPatternMetadata  (pattern: RestPathPattern)              extends Metadata
   case class HttpMethodMetadata   (method: HttpMethod)                    extends Metadata
   case class DescriptionMetadata  (description: String)                   extends Metadata
   case class ExtractMetadata[T, S](extract: IdentifierWithDefault[T, S])  extends Metadata
+  case class CompositeMetadata    (metadata: Seq[Metadata])               extends Metadata
 
   sealed trait HttpService[A, B] { self =>
     def service: HttpRequest[A] => Validation[NotServed, B]
