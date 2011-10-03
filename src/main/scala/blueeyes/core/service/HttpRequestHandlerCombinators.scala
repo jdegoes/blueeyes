@@ -179,22 +179,22 @@ trait HttpRequestHandlerCombinators{
      * that have the specified content type. Requires an implicit bijection
      * used for transcoding.
      */
-    def accept[T, S, U](mimeType: MimeType)(h: Service[T, S])(implicit b: Bijection[U, T]): Service[U, S] = new AcceptService[T, S, U](mimeType, h)
+    def accept[T, S, U](mimeType: MimeType)(h: Service[Future[T], S])(implicit b: Bijection[U, Future[T]]): Service[U, S] = new AcceptService[T, S, U](mimeType, h)
 
     /** The produce combinator creates a handler that is produces responses
      * that have the specified content type. Requires an implicit bijection
      * used for transcoding.
      */
-    def produce[T, S, V, M[_]](mimeType: MimeType)(h: Service[T, M[HttpResponse[S]]])(implicit b: Bijection[S, V], functor: Functor[M]): Service[T, M[HttpResponse[V]]] = new ProduceService(mimeType, h)
+    def produce[T, S, V](mimeType: MimeType)(h: Service[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): Service[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
     /** The content type combinator creates a handler that accepts and produces
      * requests and responses of the specified content type. Requires an implicit
      * bijection used for transcoding.
      */
-    def contentType[T, S, M[_]](mimeType: MimeType)(h: Service[T, M[HttpResponse[T]]])(implicit b1: Bijection[S, T], functor: Functor[M]): Service[S, M[HttpResponse[S]]] = {
-      implicit val b2 = b1.inverse
+    def contentType[T, S](mimeType: MimeType)(h: Service[Future[T], Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): Service[S, Future[HttpResponse[S]]] = {
+      implicit val b3 = b2.inverse
 
       accept(mimeType) {
-        produce(mimeType) {
+        produce[Future[T], T, S](mimeType) {
           h
         }
       }
@@ -204,12 +204,12 @@ trait HttpRequestHandlerCombinators{
      *  The compress combinator creates a handler that compresses content by encoding supported by client
      *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
      */
-    def compress[M[_]: Functor](h: Service[ByteChunk, M[HttpResponse[ByteChunk]]]): Service[ByteChunk, M[HttpResponse[ByteChunk]]] = new CompressService(h)
+    def compress(h: Service[ByteChunk, Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
 
     /** The aggregate combinator creates a handler that stitches together chunks
      * to make a bigger chunk, up to the specified size.
      */
-    def aggregate(chunkSize: Option[DataSize])(h: Service[ByteChunk, Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
+    def aggregate(chunkSize: Option[DataSize])(h: Service[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
 
     /** The jsonp combinator creates a handler that accepts and produces JSON.
      * The handler also transparently works with JSONP, if the client specifies
@@ -217,17 +217,17 @@ trait HttpRequestHandlerCombinators{
      * HTTP method and content using the query string parameters "method" and
      * "content", respectively.
      */
-    def jsonp[T, M[_]](delegate: Service[JValue, M[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String], functor: Functor[M]): Service[T, M[HttpResponse[T]]] = JsonpService[T, M](delegate)
+    def jsonp[T](delegate: Service[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): Service[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
 
     /** The jvalue combinator creates a handler that accepts and produces JSON.
      * Requires an implicit bijection used for transcoding.
      */
-    def jvalue[T, M[_]](h: Service[JValue, M[HttpResponse[JValue]]])(implicit b: Bijection[T, JValue], functor: Functor[M]): Service[T, M[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
+    def jvalue[T](h: Service[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
 
     /** The xml combinator creates a handler that accepts and produces XML.
      * Requires an implicit bijection used for transcoding.
      */
-    def xml[T, M[_]](h: Service[NodeSeq, M[HttpResponse[NodeSeq]]])(implicit b: Bijection[T, NodeSeq], functor: Functor[M]): Service[T, M[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+    def xml[T](h: Service[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
 
     def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: Service[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 

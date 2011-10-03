@@ -306,8 +306,9 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "aggregate full content when size is not specified" in{
       (aggregate(None){
         path("/foo"){
-          get { (request: HttpRequest[ByteChunk]) =>
-            Future.sync(HttpResponse[ByteChunk](content=request.content))
+          get { (request: HttpRequest[Future[ByteChunk]]) => request.content.map{_.flatMap{ content =>
+            Future.sync(HttpResponse[ByteChunk](content=Some(content)))
+            }}.getOrElse(Future.sync(HttpResponse[ByteChunk]()))
           }
         }
       }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome("1234")
@@ -315,8 +316,9 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "aggregate content up to the specified size" in{
       (aggregate(Some(2.bytes)){
         path("/foo"){
-          get { (request: HttpRequest[ByteChunk]) =>
-            Future.sync(HttpResponse[ByteChunk](content=request.content))
+          get { (request: HttpRequest[Future[ByteChunk]]) => request.content.map{_.flatMap{ content =>
+            Future.sync(HttpResponse[ByteChunk](content=Some(content)))
+            }}.getOrElse(Future.sync(HttpResponse[ByteChunk]()))
           }
         }
       }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome("12")

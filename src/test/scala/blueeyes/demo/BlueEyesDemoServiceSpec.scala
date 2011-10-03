@@ -42,29 +42,29 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
   lazy val filter: JValue = JObject(List(JField("name", JString("Sherlock"))))
 
   "Demo Service" should {
-//    "create contact" in {
-//      val f = service.header("X-Forwarded-For", "71.196.138.244").post("/contacts")(contact.serialize)
-//      f.value must eventually(beSomething)
-//    }
-//
-//    "return contact list" in {
-//      val f = service.get("/contacts")
-//      f.value must eventually(beSomething)
-//
-//      val response = f.value.get
-//
-//      response.status  mustEqual(HttpStatus(OK))
-//      response.content must beSome(JArray(List(contact \\ "name")))
-//    }
-//    "return contact" in {
-//      val f = service.get("/contacts/Sherlock")
-//      f.value must eventually(beSomething)
-//
-//      val response = f.value.get
-//
-//      response.status  mustEqual(HttpStatus(OK))
-//      response.content must beSome(contact.serialize)
-//    }
+    "create contact" in {
+      val f = service.header("X-Forwarded-For", "71.196.138.244").header("Content-Type", "application/json").post("/contacts")(contact.serialize)
+      f.value must eventually(beSomething)
+    }
+
+    "return contact list" in {
+      val f = service.get("/contacts")
+      f.value must eventually(beSomething)
+
+      val response = f.value.get
+
+      response.status  mustEqual(HttpStatus(OK))
+      response.content must beSome(JArray(List(contact \\ "name")))
+    }
+    "return contact" in {
+      val f = service.get("/contacts/Sherlock")
+      f.value must eventually(beSomething)
+
+      val response = f.value.get
+
+      response.status  mustEqual(HttpStatus(OK))
+      response.content must beSome(contact.serialize)
+    }
     "search contact" in {
       import BijectionsIdentity._
       val f = service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter)

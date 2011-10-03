@@ -10,7 +10,6 @@ import blueeyes.concurrent.Future
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
-import xml.NodeSeq
 import scalaz.{Functor, Validation, Failure}
 
 object HttpServices{
@@ -116,7 +115,7 @@ object HttpServices{
     val metadata = None
   }
 
-  case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[T, S])(implicit b: Bijection[U, T]) extends DelegatingService[U, S, T, S] {
+  case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, S, Future[T], S] {
     def service = {r: HttpRequest[U] =>
       def newContent(r: HttpRequest[U]) = try {
         success(r.content.map(b.apply _))
@@ -127,7 +126,7 @@ object HttpServices{
 
       def handle(r: HttpRequest[U]) = newContent(r).flatMap(content => delegate.service(r.copy(content = content)))
 
-      r.mimeTypes.find(_ == mimeType).map { mimeType => handle(r) }.orElse { r.content.map(v => handle(r)) }.getOrElse(Inapplicable.fail)
+      r.mimeTypes.find(_ == mimeType).map { mimeType => handle(r) }.getOrElse(Inapplicable.fail)
     }
 
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
@@ -159,8 +158,8 @@ object HttpServices{
     def metadata = None
   }
 
-  case class ProduceService[T, S, V, M[_]](mimeType: MimeType, delegate: HttpService[T, M[HttpResponse[S]]])(implicit b: Bijection[S, V], functor: Functor[M]) extends DelegatingService[T, M[HttpResponse[V]], T, M[HttpResponse[S]]]{
-    def service = (r: HttpRequest[T]) => delegate.service(r).map { f: M[HttpResponse[S]] =>
+  case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]]{
+    def service = (r: HttpRequest[T]) => delegate.service(r).map { f: Future[HttpResponse[S]] =>
         f.map{response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType))
       }
     }
@@ -168,7 +167,7 @@ object HttpServices{
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
 
-  case class CompressService[M[_]:Functor](delegate: HttpService[ByteChunk, M[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, M[HttpResponse[ByteChunk]], ByteChunk, M[HttpResponse[ByteChunk]]]{
+  case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
     def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{ma =>
       ma.map{response =>
       val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
@@ -186,28 +185,13 @@ object HttpServices{
     val supportedCompressions = Map[Encoding, CompressedByteChunk](Encodings.gzip -> GZIPByteChunk, Encodings.deflate -> ZLIBByteChunk)
   }
 
-  case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
-    def service = (r: HttpRequest[ByteChunk]) => r.content match {
-      case Some(chunk) =>
-        val result           = new Future[HttpResponse[ByteChunk]]()
-        val aggregatedFuture = AggregatedByteChunk(chunk, chunkSize)
-        aggregatedFuture.deliverTo{aggregated =>
-          delegate.service(r.copy(content = Some(aggregated))).foreach{ f =>
-            f.deliverTo(response => result.deliver(response))
-            f.ifCanceled(th => result.cancel(th))
-            result.ifCanceled(th => f.cancel(th))
-          }
-        }
-        aggregatedFuture.ifCanceled(th => result.cancel(th))
-        result.ifCanceled(th => aggregatedFuture.cancel(th))
-        success(result)
-      case None        => delegate.service(r)
-    }
+  case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], Future[ByteChunk], Future[HttpResponse[ByteChunk]]]{
+    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize))))
 
     lazy val metadata = Some(DataSizeMetadata(chunkSize))
   }
 
-  case class JsonpService[T, M[_]](delegate: HttpService[JValue, M[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String], functor: Functor[M]) extends DelegatingService[T, M[HttpResponse[T]], JValue, M[HttpResponse[JValue]]]{
+  case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
     private implicit val b2 = b1.inverse
     def service = {r: HttpRequest[T] => convertRequest(r).flatMap(delegate.service(_)).map(_.map(convertResponse(_, r.parameters.get('callback)))) }
 

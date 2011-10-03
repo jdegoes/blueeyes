@@ -16,7 +16,7 @@ import blueeyes.core.service.ServerHealthMonitorService
 import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
 import blueeyes.core.data.FileSource._
-import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson}
+import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkFutureJson}
 import java.io.File
 import blueeyes.health.metrics._
 
@@ -24,7 +24,9 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkJson with ConfigurableMongo{
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo{
+  import BijectionsChunkJson._
+  import BijectionsChunkFutureJson._
   val contactListService = service("contactlist", "1.0.0") {
     requestLogging{
 
@@ -46,14 +48,11 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-          aggregate(None){
-             jvalue {
-              post { request =>
-                val contact = request.content
-                contact.map{value =>
-                  database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }
-                }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
-              }
+          jvalue {
+            post { request =>
+              request.content.map{ content =>
+                content.flatMap{value => database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }}
+              }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
             }
           } ~
           path("/search") {
@@ -82,7 +81,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             }
           } ~
           path("/file/read"){
-            compress[Future]{
+            compress{
               produce(image / jpeg){
                 get { request: HttpRequest[ByteChunk] =>
                   val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("/Users/mlagutko/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
@@ -106,23 +105,24 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
     }
     }}
 
-  private def searchContacts(filterJObject: Option[JObject], config: BlueEyesDemoConfig): Future[List[JString]] = {
-    createFilter(filterJObject) map { filter =>
-      config.database(select().from(config.collection).where(filter)) map {
-       _.toList.flatMap(_ \ "name" -->? classOf[JString])
+  private def searchContacts(filterJObject: Option[Future[JObject]], config: BlueEyesDemoConfig): Future[List[JString]] = {
+    createFilter(filterJObject) map { _.flatMap{filter =>
+        config.database(select().from(config.collection).where(filter)) map {
+         _.toList.flatMap(_ \ "name" -->? classOf[JString])
+        }
       }
     } getOrElse {
       Future.sync[List[JString]](Nil)
     }
   }
 
-  private def createFilter(filterJObject: Option[JObject]) = filterJObject.map {
+  private def createFilter(filterJObject: Option[Future[JObject]]) = filterJObject.map {_.map{
     _.flatten.collect {
       case f @ JField(_, JString(_)) => f
     }.foldLeft(MongoFilterAll.asInstanceOf[MongoFilter]) { (filter, field) =>
       filter && field.name === field.value.asInstanceOf[JString].value
     }
-  }
+  }}
 }
 
 case class BlueEyesDemoConfig(config: ConfigMap, mongo: Mongo){
