@@ -4,6 +4,7 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
@@ -26,24 +27,22 @@ class HttpServerSpec extends Specification with BijectionsChunkString{
   }
   
   "HttpServer.apply" should {
-    "be always defined" in {
-      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")) must be (true)
-      server.isDefinedAt(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")) must be (true)
-    }
-    
+
     "delegate to service request handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+      val response = server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar"))
+      response.toOption.get.value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
     }
     
     "produce NotFount response when service is not defined for request" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).toOption.get.value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
     }
 
     "gracefully handle error-producing service handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
     "gracefully handle dead-future-producing service handler" in {
-      server.apply(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      val service1 = server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead"))
+      service1.toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 
@@ -80,7 +79,7 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
               request: HttpRequest[ByteChunk] => Future.sync(HttpResponse[String](content=Some(value)))
             } ~
             path("/error") { 
-              get { request: HttpRequest[ByteChunk] =>
+              get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
                 sys.error("He's dead, Jim.")
               }
             } ~
@@ -98,25 +97,3 @@ trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpReques
     }
   }
 }
-
-
-//  "write response when Future is cancelled" in {
-//
-//    val event  = mock[MessageEvent]
-//    val nettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
-//    val request      = fromNettyRequest(nettyRequest, remoteAddress)
-//    val future       = new Future[HttpResponse[String]]()
-//
-//    when(event.getMessage()).thenReturn(nettyRequest, nettyRequest)
-//    when(event.getRemoteAddress()).thenReturn(remoteAddress)
-//    when(handler.isDefinedAt(request)).thenReturn(true)
-//    when(handler.apply(request)).thenReturn(future, future)
-//    when(event.getChannel()).thenReturn(channel, channel)
-//    when(channel.write(Matchers.argThat(new RequestMatcher(toNettyResponse(HttpResponse[String](HttpStatus(HttpStatusCodes.InternalServerError, InternalServerError.defaultMessage))))))).thenReturn(channelFuture, channelFuture)
-//
-//    nettyHandler.messageReceived(context, event)
-//
-//    future.cancel(HttpException(InternalServerError, InternalServerError.defaultMessage))
-//
-//    Mockito.verify(channelFuture, times(1)).addListener(ChannelFutureListener.CLOSE)
-//  }

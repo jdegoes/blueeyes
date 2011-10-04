@@ -4,6 +4,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 import blueeyes.json.JsonParser.ParseException
+import blueeyes.concurrent.Future
 
 trait BijectionsChunkJson{
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
@@ -14,7 +15,7 @@ trait BijectionsChunkJson{
 
       compact(render(t), new OutputStreamWriter(stream))
 
-      new MemoryChunk(stream.toByteArray())
+      new MemoryChunk(stream.toByteArray)
     }
 
     def unapply(s: ByteChunk) = try {
@@ -25,5 +26,20 @@ trait BijectionsChunkJson{
   }
 
   implicit val ChunkToJValue    = JValueToChunk.inverse
+
 }
 object BijectionsChunkJson extends BijectionsChunkJson
+
+
+trait BijectionsChunkFutureJson{
+  import BijectionsChunkJson._
+  implicit val FutureJValueToChunk = new Bijection[Future[JValue], ByteChunk]{
+    def apply(t: Future[JValue]) = t.map(JValueToChunk(_)).value.getOrElse(new MemoryChunk(Array[Byte]()))
+
+    def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToJValue(_))
+  }
+
+  implicit val ChunkToFutureJValue  = FutureJValueToChunk.inverse
+}
+
+object BijectionsChunkFutureJson extends BijectionsChunkFutureJson

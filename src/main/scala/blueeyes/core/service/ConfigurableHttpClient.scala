@@ -14,12 +14,12 @@ trait ConfigurableHttpClient{
 
   protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb{}
 
-  private def mockClient(h: HttpRequestHandler[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
+  private def mockClient(h: HttpClientHandler[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
     def isDefinedAt(r: HttpRequest[ByteChunk]) = h.isDefinedAt(r)
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.apply(r)
   }
 
-  protected def mockServer: HttpRequestHandler[ByteChunk] = new HttpRequestHandler[ByteChunk]{
+  protected def mockServer: HttpClientHandler[ByteChunk] = new HttpClientHandler[ByteChunk]{
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = Future.sync(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound)))
   }

@@ -16,6 +16,9 @@ import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.health.metrics._
 import IntervalLength._
 import blueeyes.health.{HealthMonitor, CompositeHealthMonitor}
+import scalaz.Scalaz._
+import blueeyes.core.service.HttpServices.{DispatchError, NotServed}
+import scalaz.{Failure, Success, Validation}
 
 trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -44,7 +47,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       })
 
       val underlying = f(monitor)(context)
-      val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestHandler(underlying.request(state), monitor)})
+      val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestService(underlying.request(state), monitor)})
       val startTime = System.currentTimeMillis
 
       descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
@@ -133,7 +136,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
         def fileHeader() = formatter.formatHeader(fieldsDirective)
         val log = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
 
-        underlying.copy(request = (state: S) => {new HttpRequestLoggerHandler(fieldsDirective, includePaths, excludePaths, log, formatter, underlying.request(state))},
+        underlying.copy(request = (state: S) => {new HttpRequestLoggerService(fieldsDirective, includePaths, excludePaths, log, formatter, underlying.request(state))},
                         shutdown = (state: S) => {
                           log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
                         })
@@ -202,31 +205,25 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
-  private[service] class HttpRequestLoggerHandler[T](fieldsDirective: FieldsDirective, includePaths: List[Regex],
-                                                     excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter, underlying: HttpRequestHandler[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends HttpRequestHandler[T] with ClockSystem{
+  private[service] class HttpRequestLoggerService[T](fieldsDirective: FieldsDirective, includePaths: List[Regex],
+                                                     excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter, underlying: AsyncHttpService[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends AsyncCustomHttpService[T] with ClockSystem{
     private val includeExcludeLogic = new IncludeExcludeLogic(includePaths, excludePaths)
     private val requestLogger       = HttpRequestLogger[T, T](fieldsDirective)
-    def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
 
-    def apply(request: HttpRequest[T]) = {
-      val response = underlying(request)
-
-      if (includeExcludeLogic(request.subpath)){
-        val logRecord = requestLogger(request, response)
-        logRecord.map(formatter.formatLog(_)) foreach { log(_)}
+    def service = {request: HttpRequest[T] =>
+      val validation = underlying.service(request)
+      validation.foreach{ response =>
+        if (includeExcludeLogic(request.subpath)){
+          val logRecord = requestLogger(request, response)
+          logRecord.map(formatter.formatLog(_)) foreach { log(_)}
+        }
       }
-
-      response
+      validation
     }
-
-
   }
 
-  private[service] class MonitorHttpRequestHandler[T](underlying: HttpRequestHandler[T], healthMonitor: HealthMonitor) extends HttpRequestHandler[T] with JPathImplicits{
-    def isDefinedAt(request: HttpRequest[T]) = underlying.isDefinedAt(request)
-
-    def apply(request: HttpRequest[T]) = {
-
+  private[service] class MonitorHttpRequestService[T](underlying: AsyncHttpService[T], healthMonitor: HealthMonitor) extends AsyncCustomHttpService[T] with JPathImplicits{
+    def service = {request: HttpRequest[T] =>
       val methodName    = request.method.value
       val requestPath   = JPathField(methodName)
       val countPath     = JPath(requestPath :: List(JPathField("count")))
@@ -235,20 +232,27 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
       val overagePath   = JPath(requestPath :: List(JPathField("timing")))
       val startTime     = System.nanoTime
 
-      def monitor(response: Future[HttpResponse[T]]) = {
-        healthMonitor.request(overagePath)
-        healthMonitor.count(countPath)
-        healthMonitor.trapFuture(errorPath)(response)
+      def monitor(validation: Validation[NotServed, Future[HttpResponse[T]]]) = {
+        validation match{
+          case Success(response) =>
+            healthMonitor.request(overagePath)
+            healthMonitor.count(countPath)
+            healthMonitor.trapFuture(errorPath)(response)
 
-        response.deliverTo{v =>
-          healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
-          healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
+            response.deliverTo{v =>
+              healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
+              healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
+            }
+          case Failure(DispatchError(error)) =>
+            healthMonitor.request(overagePath)
+            healthMonitor.count(countPath)
+            healthMonitor.error(errorPath)(error)
+          case failure =>
         }
-
-        response
+        validation
       }
 
-      monitor(healthMonitor.trap(errorPath){underlying.apply(request)})
+      monitor(healthMonitor.trap(errorPath){underlying.service(request)})
     }
   }
 }

@@ -12,13 +12,15 @@ import blueeyes.core.http._
 import net.lag.logging.Logger
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import blueeyes.core.data.{GZIPByteChunk, ByteChunk, MemoryChunk}
+import blueeyes.core.service.HttpServices.DispatchError
+import scalaz.{Failure, Success}
 
 /** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
+private[engines] class NettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
@@ -40,14 +42,14 @@ private[engines] class NettyRequestHandler(requestHandler: HttpRequestHandler[By
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }
     }
-    val responseFuture = requestHandler(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]])
+    requestHandler.service(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]]).foreach{ responseFuture =>
+      pendingResponses += responseFuture
 
-    pendingResponses += responseFuture
+      responseFuture.deliverTo { response =>
+        pendingResponses -= responseFuture
 
-    responseFuture.deliverTo { response => 
-      pendingResponses -= responseFuture
-      
-      writeResponse(event, response)
+        writeResponse(event, response)
+      }
     }
   }
 
