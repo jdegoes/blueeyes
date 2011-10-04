@@ -95,7 +95,7 @@ object HttpServices{
     lazy val metadata = Some(HttpMethodMetadata(method))
   }
 
-  case class HttpHandlerService[A, B](h: HttpRequestHandlerFull2[A, B]) extends HttpService[A, B]{
+  case class HttpHandlerService[A, B](h: HttpServiceHandler[A, B]) extends HttpService[A, B]{
     val service = (r: HttpRequest[A]) => success(h(r))
 
     def metadata = None
@@ -133,7 +133,7 @@ object HttpServices{
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
 
-  case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull2[T, S]) extends HttpService[T, S]{
+  case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]) extends HttpService[T, S]{
     def service = { r => extractRange(r.headers.raw).map(range => h.tupled(range)(r)) }
 
     private def extractRange(headers: Map[String, String]): Validation[NotServed, (List[(Long, Long)], String)]  = {
@@ -168,11 +168,11 @@ object HttpServices{
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
 
-  case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
+  case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
     def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{ma =>
       ma.map{response =>
       val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-      val supported  = CompressService.supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
+      val supported  = supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
       (supported, response.content) match{
         case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
         case _ => response
@@ -279,14 +279,7 @@ object HttpServices{
   }
 
   case class ExtractService[T, S, P](s1AndDefault: IdentifierWithDefault[Symbol, P], extractor: HttpRequest[T] => P, delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
-    def service = {r: HttpRequest[T] =>
-      try {
-        delegate.service(r).map(_.apply(extractor(r)))
-      }
-      catch {
-        case t: Throwable => Inapplicable.fail
-      }
-    }
+    def service = (r: HttpRequest[T]) => delegate.service(r).map(_.apply(extractor(r)))
 
     lazy val metadata = Some(ExtractMetadata(s1AndDefault))
   }
@@ -301,22 +294,3 @@ object HttpServices{
     def metadata = None
   }
 }
-
-//object TestComb extends HttpServices.HttpRequestHandlerCombinators2 with RestPathPatternImplicits{
-//  import blueeyes.concurrent.Future._
-//  import blueeyes.core.data.ByteMemoryChunk
-//  def main(args: Array[String]){
-//    val value = service.service
-//    println(value)
-//  }
-//  val service = path("foo"){
-//    compress{
-//      parameter(IdentifierWithDefault('bar, () => "foo")) {
-//        get{ request: HttpRequest[ByteChunk] => { param: String =>
-//            Future.sync(HttpResponse[ByteChunk](content = Some(new ByteMemoryChunk(Array[Byte](), () => None))))
-//          }
-//        }
-//      }
-//    }
-//  }
-//}

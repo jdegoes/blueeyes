@@ -41,7 +41,8 @@ class HttpServerSpec extends Specification with BijectionsChunkString{
       server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
     "gracefully handle dead-future-producing service handler" in {
-      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
+      val service1 = server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead"))
+      service1.toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 

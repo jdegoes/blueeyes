@@ -28,10 +28,10 @@ trait HttpRequestHandlerCombinators{
   /** Yields the remaining path to the specified function, which should return
    * a request handler.
    * {{{
-   * remainingPath { path =>
-   *   get {
+   * remainingPath {
+   *   get {  (request: HttpRequest[T]) => { path =>
    *     ...
-   *   }
+   *   }}
    * }
    * }}}
    */
@@ -87,15 +87,15 @@ trait HttpRequestHandlerCombinators{
    */
   def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: Service[T, S]): Service[T, S] = CommitService(msgGen, h)
 
-  def get     [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.GET)     { HttpHandlerService { h } } }
-  def put     [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.PUT)     { HttpHandlerService { h } } }
-  def post    [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.POST)    { HttpHandlerService { h } } }
-  def delete  [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.DELETE)  { HttpHandlerService { h } } }
-  def head    [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.HEAD)    { HttpHandlerService { h } } }
-  def patch   [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.PATCH)   { HttpHandlerService { h } } }
-  def options [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.OPTIONS) { HttpHandlerService { h } } }
-  def trace   [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.TRACE)   { HttpHandlerService { h } } }
-  def connect [T, S](h: HttpRequestHandlerFull2[T, S]): Service[T, S] = $ { method(HttpMethods.CONNECT) { HttpHandlerService { h } } }
+  def get     [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.GET)     { HttpHandlerService { h } } }
+  def put     [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.PUT)     { HttpHandlerService { h } } }
+  def post    [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.POST)    { HttpHandlerService { h } } }
+  def delete  [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.DELETE)  { HttpHandlerService { h } } }
+  def head    [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.HEAD)    { HttpHandlerService { h } } }
+  def patch   [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.PATCH)   { HttpHandlerService { h } } }
+  def options [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.OPTIONS) { HttpHandlerService { h } } }
+  def trace   [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.TRACE)   { HttpHandlerService { h } } }
+  def connect [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.CONNECT) { HttpHandlerService { h } } }
 
   /** Creates a handler that accepts ranged GET requests. A ranged GET request
    * uses the Range header with the following syntax: [unit]=[lower-bound]-[upper-bound].
@@ -109,7 +109,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * }}}
    */
-  def getRange[T, S](h: (List[(Long, Long)], String) => HttpRequestHandlerFull2[T, S]): Service[T, S] = method(HttpMethods.GET)(GetRangeService(h))
+  def getRange[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]): Service[T, S] = method(HttpMethods.GET)(GetRangeService(h))
 
   /**
    * Extracts data from the request. The extractor combinators can be used to
@@ -119,8 +119,10 @@ trait HttpRequestHandlerCombinators{
    * information during evaluation of isDefinedAt() method, they immediately
    * throw an HttpException.
    * <pre>
-   * extract(_.parameters('username)) { username =>
-   *   ...
+   * extract(_.parameters('username)) {
+   *   get {  (request: HttpRequest[T]) => {username =>
+   *     ...
+   *   }}
    * }
    * </pre>
    */
@@ -128,10 +130,10 @@ trait HttpRequestHandlerCombinators{
 
   /** A special-case extractor for parameters.
    * <pre>
-   * parameter('token) { token =>
-   *   get {
+   * parameter('token) {
+   *   get {  (request: HttpRequest[T]) => {token =>
    *     ...
-   *   }
+   *   }}
    * }
    * </pre>
    */
@@ -143,10 +145,10 @@ trait HttpRequestHandlerCombinators{
   }
   /** A special-case extractor for cookie supporting a default value.
    * <pre>
-   * cookie('token, "defaultValue") { token =>
-   *   get {
+   * cookie('token, "defaultValue") {  =>
+   *   get {  (request: HttpRequest[T]) => { token =>
    *     ...
-   *   }
+   *   }}
    * }
    * </pre>
    */

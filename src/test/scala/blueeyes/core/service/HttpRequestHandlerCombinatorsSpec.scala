@@ -12,7 +12,6 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future.FutureFunctor
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.util.metrics.DataSize
 import DataSize._
@@ -204,7 +203,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
         parameter[String, Future[HttpResponse[String]]]('bar ?: "bebe") {
-          get { (request: HttpRequest[String]) =>{bar: String =>
+          get { (request: HttpRequest[String]) =>{ bar =>
               request.parameters mustEqual Map('bar -> "bebe")
 
               Future.sync(HttpResponse[String](content=Some(bar)))

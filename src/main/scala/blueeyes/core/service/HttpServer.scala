@@ -15,8 +15,8 @@ import java.net.InetAddress
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import scalaz.Scalaz._
-import scalaz.{Validation, Failure, Success}
-import blueeyes.core.service.HttpServices.{NotServed, DispatchError}
+import scalaz.{Failure, Success}
+import blueeyes.core.service.HttpServices.DispatchError
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -58,9 +58,9 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   val service = {r: HttpRequest[ByteChunk] =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
-      case _ => {
+      case e => {
         log.error(th, "Error handling request")
-        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
+        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
       }
     }
     
