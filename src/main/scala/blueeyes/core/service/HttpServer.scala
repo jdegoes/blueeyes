@@ -8,13 +8,15 @@ import blueeyes.core.data.ByteChunk
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
 import blueeyes.util.CommandLineArguments
-
 import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
 
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
+import scalaz.Scalaz._
+import scalaz.{Failure, Success}
+import blueeyes.core.service.HttpServices.DispatchError
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -38,7 +40,8 @@ trait HttpReflectiveServiceList[T] { self =>
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
  */
-trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
+trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
+  import HttpServicePimps._
 
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
@@ -51,31 +54,43 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
   /** The list of services that this server is supposed to run.
    */
   def services: List[HttpService[ByteChunk]]
-  
-  def isDefinedAt(r: HttpRequest[ByteChunk]): Boolean = true
-  
-  def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
+
+  val service = {r: HttpRequest[ByteChunk] =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
-      case _ => {
+      case e => {
         log.error(th, "Error handling request")
-        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
+        HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
       }
     }
     
     // The raw future may die due to error:
-    val rawFuture = try {
-      if (_handler.isDefinedAt(r)) _handler(r)
-      else NotFound.future
+    val rawValidation = try {
+       _handler.service(r)
     } catch {
       case why: Throwable =>
         // An error during invocation of the request handler, convert to
         // proper response:
-        Future.sync(convertErrorToResponse(why))
+        success(Future.sync(convertErrorToResponse(why)))
     }
 
     // Convert the raw future into one that cannot die:
-    rawFuture.orElse { why =>
+    val validation = rawValidation match{
+      case Success(rawFuture) => success{
+        rawFuture.orElse { why => why match {
+          case Some(throwable) =>
+            convertErrorToResponse(throwable)
+
+          case None =>
+            // Future was canceled for no cause.
+            InternalServerError
+        }
+      }}
+      case Failure(DispatchError(throwable)) => success(convertErrorToResponse(throwable).future)
+      case failure => success(NotFound.future)
+    }
+
+    validation.map{_.orElse { why =>
       why match {
         case Some(throwable) =>
           convertErrorToResponse(throwable)
@@ -84,7 +99,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
           // Future was canceled for no cause.
           InternalServerError
       }
-    }
+    }}
   }
   
   /** Starts the server.
@@ -114,7 +129,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
         handlerLock.writeLock.lock()
         
         try {
-          _handler = _handler.orElse(handler)
+          _handler = _handler ~ handler
         }
         finally {
           handlerLock.writeLock.unlock()
@@ -148,7 +163,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
     handlerLock.writeLock.lock()
     
     try {
-      _handler = Map[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]]()
+      _handler = HttpServices.OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
     }
     finally {
       handlerLock.writeLock.unlock()
@@ -248,11 +263,7 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
   
   private val handlerLock = new java.util.concurrent.locks.ReentrantReadWriteLock
   
-  private var _handler: HttpRequestHandler[ByteChunk] = new PartialFunction[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]] {
-    def isDefinedAt(r: HttpRequest[ByteChunk]): Boolean = false
-    
-    def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = sys.error("Function not defined here")
-  }
+  private var _handler: AsyncHttpService[ByteChunk] = HttpServices.OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
   
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
@@ -271,14 +282,8 @@ trait HttpServer extends HttpRequestHandler[ByteChunk]{ self =>
       state.deliver(result)
     }
 
-    lazy val request: Future[HttpRequestHandler[ByteChunk]] = state.map(state => descriptor.request(state))
+    lazy val request: Future[AsyncHttpService[ByteChunk]] = state.map(state => descriptor.request(state))
     
     def shutdown(): Future[Unit] = state.flatMap(state => descriptor.shutdown(state))
   }
-  
-  /*
-  private case class SafeRequestHandler(underlying: PartialFunction[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]]) extends PartialFunction[HttpRequest[ByteChunk], Future[HttpResponse[ByteChunk]]] {
-    def 
-  }
-  */
 }

@@ -28,7 +28,7 @@ trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
       def -> (shutdown: ShutdownDescriptor[S]) = HttpServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
     }
   }
-  protected case class RequestDescriptor[S](request: S => HttpRequestHandler[T])
+  protected case class RequestDescriptor[S](request: S => AsyncHttpService[T])
   protected case class ShutdownDescriptor[S](shutdown: S => Future[Unit])
   
   protected def startup[S](startup: => Future[S]): StartupDescriptor[S] = {
@@ -37,9 +37,9 @@ trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
     StartupDescriptor[S](thunk)
   }
   
-  protected def request[S](request: S => HttpRequestHandler[T]): RequestDescriptor[S] = RequestDescriptor[S](request)
+  protected def request[S](request: S => AsyncHttpService[T]): RequestDescriptor[S] = RequestDescriptor[S](request)
   
-  protected def request(request: => HttpRequestHandler[T]): RequestDescriptor[Unit] = RequestDescriptor[Unit]((u) => request)
+  protected def request(request: => AsyncHttpService[T]): RequestDescriptor[Unit] = RequestDescriptor[Unit]((u) => request)
   
   protected def shutdown[S](shutdown: S => Future[Unit]): ShutdownDescriptor[S] = ShutdownDescriptor[S](shutdown)
   

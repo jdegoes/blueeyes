@@ -6,6 +6,7 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.service.HttpServicePimps._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
@@ -210,12 +211,12 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           }
         } ~
         path("/error") {
-          get { request: HttpRequest[ByteChunk] =>
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
             throw new RuntimeException("Unexpected error (GET /error)")
           }
         } ~
         path("/http/error") {
-          get { request: HttpRequest[ByteChunk] =>
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
             throw HttpException(HttpStatusCodes.BadRequest)
           }
         }

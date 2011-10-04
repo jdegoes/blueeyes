@@ -9,12 +9,12 @@ import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 
 class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators{
-  type Handler[T, S] = HttpRequest[T] => Future[HttpResponse[S]]
+  type Handler[T, S] = HttpRequest[Future[T]] => Future[HttpResponse[S]]
   
-  "refineContentType should throw an exception when type cannot be refined to specified subtype" in {
+  "refineContentType should return bad request type cannot be refined to specified subtype" in {
     jObjectCaller { 
       refineContentType { jIntHandler }
-    }.value.get must throwAnException[HttpException]
+    }.value.get.status.code mustEqual(BadRequest)
   }
   
   "refineContentType should refine content type when possible" in {
@@ -25,9 +25,9 @@ class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinato
   
   
   
-  def jObjectCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(JObject(Nil))))
+  def jObjectCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future.sync(JObject(Nil)))))
   
-  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(JInt(123))))
+  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future.sync(JInt(123)))))
   
-  def jIntHandler(r: HttpRequest[JInt]): Future[HttpResponse[JValue]] = Future.sync(HttpResponse(content = Some(JInt(123): JValue)))
+  def jIntHandler(r: HttpRequest[Future[JInt]]): Future[HttpResponse[JValue]] = Future.sync(HttpResponse(content = Some(JInt(123): JValue)))
 }

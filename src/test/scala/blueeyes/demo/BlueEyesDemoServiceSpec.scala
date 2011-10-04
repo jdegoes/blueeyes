@@ -43,7 +43,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
 
   "Demo Service" should {
     "create contact" in {
-      val f = service.header("X-Forwarded-For", "71.196.138.244").post("/contacts")(contact.serialize)
+      val f = service.header("X-Forwarded-For", "71.196.138.244").header("Content-Type", "application/json").post("/contacts")(contact.serialize)
       f.value must eventually(beSomething)
     }
 

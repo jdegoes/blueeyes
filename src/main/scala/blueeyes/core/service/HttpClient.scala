@@ -6,7 +6,7 @@ import blueeyes.core.data._
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-trait HttpClient[A] extends HttpRequestHandler[A] { self =>
+trait HttpClient[A] extends HttpClientHandler[A] { self =>
 
   def get[B](path: String)(implicit transcoder: Bijection[B, A]) = method[B](HttpMethods.GET, path)
 
@@ -108,7 +108,6 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 
   private def method[B](method: HttpMethod, path: String, content: Option[A] = None)(implicit transcoder: Bijection[B, A]): Future[HttpResponse[B]] =
     self.apply(HttpRequest(method, path,  Map(),  Map(), content)).map{response => {
-      val newC = response.content.map(transcoder.unapply(_))
       response.copy(content = response.content.map(transcoder.unapply(_)))
     }}
 
@@ -122,7 +121,7 @@ trait HttpClient[A] extends HttpRequestHandler[A] { self =>
 }
 
 object HttpClient {
-  implicit def requestHandlerToHttpClient[A](h: HttpRequestHandler[A]): HttpClient[A] = new HttpClient[A] {
+  implicit def requestHandlerToHttpClient[A](h: HttpClientHandler[A]): HttpClient[A] = new HttpClient[A] {
     def isDefinedAt(r: HttpRequest[A]): Boolean = h.isDefinedAt(r)
 
     def apply(r: HttpRequest[A]): Future[HttpResponse[A]] = h.apply(r)
