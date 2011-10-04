@@ -203,6 +203,8 @@ trait MongoFilterImplicits {
 
   implicit def jpathToMongoFilterBuilder(jpath: JPath): MongoFilterBuilder = MongoFilterBuilder(jpath)
 
+  implicit def optionToMongoFilter(opt: Option[MongoFilter]): MongoFilter = opt.getOrElse(MongoFilterAll)
+
   implicit def jvalueToMongoPrimitive(value: JValue): MongoPrimitive = value match {
     case x: JString => MongoPrimitiveString(x.value)
     case x: JInt    => MongoPrimitiveLong(x.value.longValue())
