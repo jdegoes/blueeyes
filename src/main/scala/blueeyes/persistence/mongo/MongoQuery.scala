@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import scala.collection.immutable.ListSet
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import QueryBehaviours._
@@ -40,7 +39,7 @@ case class MongoSelection(selection: Set[JPath])
 
 sealed trait Hint
 case class NamedHint(indexName: String) extends Hint
-case class KeyedHint(keys: ListSet[JPath]) extends Hint
+case class KeyedHint(keys: Seq[JPath]) extends Hint
 
 sealed trait IndexType
 case object OrdinaryIndex extends IndexType
@@ -72,7 +71,7 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def snapshot                      : MongoSelectQuery = copy(isSnapshot = true)
   def explain                       : MongoExplainQuery = MongoExplainQuery(selection, collection, filter, sort, skip, limit, hint, isSnapshot)
 }
-case class MongoMultiSelectQuery(filters: ListSet[MongoFilter], collection: MongoCollection,
+case class MongoMultiSelectQuery(filters: Seq[MongoFilter], collection: MongoCollection,
                                 sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery with MultiSelectQuery{
   require(!filters.isEmpty)
   def hint(newHint: Hint)           : MongoMultiSelectQuery = copy(hint = Some(newHint))
@@ -93,7 +92,7 @@ case class MongoCountQuery(collection: MongoCollection, filter: Option[MongoFilt
   def where (newFilter: MongoFilter): MongoCountQuery = copy(filter = Some(newFilter))
 }
 case class MongoInsertQuery(collection: MongoCollection, objects: List[JObject]) extends MongoQuery with InsertQueryBehaviour
-case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject = JObject(Nil)) extends MongoQuery with EnsureIndexQueryBehaviour{
+case class MongoEnsureIndexQuery(collection: MongoCollection, name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject = JObject(Nil)) extends MongoQuery with EnsureIndexQueryBehaviour{
   def geospatial(path: JPath) = copy(keys = keys.map(key => if (key._1 == path) (path, GeospatialIndex) else key))
   def options(newOptions: JObject) = copy(options = newOptions)
 }
@@ -131,8 +130,8 @@ trait MongoQueryBuilder{
   class IntoQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def into (collection: MongoCollection): T = f(collection)
   }
-  class OnKeysQueryEntryPoint[T](f: ListSet[JPath] => T){
-    def on(keys: JPath*): T = f(ListSet.empty ++ keys.reverse)
+  class OnKeysQueryEntryPoint[T](f: Seq[JPath] => T){
+    def on(keys: JPath*): T = f(keys)
   }
   class InQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def in(collection: MongoCollection): T = f(collection)
@@ -141,7 +140,7 @@ trait MongoQueryBuilder{
     def set(value: MongoUpdate): T = f(value)
   }
 
-  def multiSelect(filters: MongoFilter*)        = new FromQueryEntryPoint(MongoMultiSelectQuery(ListSet.empty ++ filters.reverse, _))
+  def multiSelect(filters: MongoFilter*)        = new FromQueryEntryPoint(MongoMultiSelectQuery(filters, _))
   def select(selection: JPath*)                 = new FromQueryEntryPoint(MongoSelectQuery(MongoSelection(Set(selection: _*)), _))
   def selectAll                                 = select()
   def distinct(selection: JPath)                = new FromQueryEntryPoint(MongoDistinctQuery(selection, _))

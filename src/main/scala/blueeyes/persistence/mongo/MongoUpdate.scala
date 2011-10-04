@@ -8,7 +8,6 @@ import MongoFilterOperators._
 
 import com.mongodb.MongoException
 
-import scala.collection.immutable.ListSet
 import scala.math.BigInt._
 
 import scalaz.Scalaz._
@@ -92,10 +91,10 @@ sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
 }
 
 private[mongo] object MongoUpdateObject {
-  def decompose(jObject: JObject): ListSet[MongoUpdateField] = decompose(jObject, None)
+  def decompose(jObject: JObject): Seq[MongoUpdateField] = decompose(jObject, None)
 
-  private def decompose(jObject: JObject, parentPath: Option[JPath]): ListSet[MongoUpdateField] = {
-    ListSet.empty ++ jObject.fields.map(field => {
+  private def decompose(jObject: JObject, parentPath: Option[JPath]): Seq[MongoUpdateField] = {
+    jObject.fields.map(field => {
       val fieldPath = parentPath.map(_ \ field.name).getOrElse(JPath(field.name))
 
       jvalueToMongoPrimitive(field.value) match {
@@ -110,8 +109,16 @@ case object MongoUpdateNothing extends MongoUpdate{
   def toJValue: JObject = JObject(Nil)
 }
 
-sealed case class MongoUpdateFields(list: ListSet[MongoUpdateField]) extends MongoUpdate{
-  def toJValue: JObject = list.map(_.toJValue).asMA.sum
+sealed case class MongoUpdateFields(list: Seq[MongoUpdateField]) extends MongoUpdate{
+  private lazy val normalized = Set(list: _*)
+  def toJValue: JObject = list.distinct.map(_.toJValue).asMA.sum
+
+  override def equals(that: Any): Boolean = that match {
+    case that: MongoUpdateFields if (this.normalized.size == that.normalized.size) => normalized == that.normalized
+    case _ => false
+  }
+
+  override lazy val hashCode = normalized.hashCode
 }
 
 sealed trait MongoUpdateField extends MongoUpdate with Change1{  self =>

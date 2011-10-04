@@ -4,7 +4,6 @@ import org.specs.Specification
 import MongoQueryBuilder._
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
-import scala.collection.immutable.ListSet
 
 class MongoQueryBuilderSpec  extends Specification{
   private val jObject = JObject(JField("Foo", JString("bar")) :: Nil)
@@ -34,7 +33,7 @@ class MongoQueryBuilderSpec  extends Specification{
     insert(jObject).into("collection") mustEqual ( MongoInsertQuery("collection", jObject :: Nil) )
   }
   "creates ensureIndex query" in{
-    ensureIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), false) )
+    ensureIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", List[Tuple2[JPath, IndexType]](Tuple2(JPath("address.city"), OrdinaryIndex)), false) )
   }
   "creates dropIndex query" in{
     dropIndex("index").in("collection") mustEqual ( MongoDropIndexQuery("collection", "index") )
@@ -43,7 +42,7 @@ class MongoQueryBuilderSpec  extends Specification{
     dropIndexes.in("collection") mustEqual ( MongoDropIndexesQuery("collection") )
   }
   "creates ensureUniqueIndex query" in{
-    ensureUniqueIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", ListSet.empty[Tuple2[JPath, IndexType]] + Tuple2(JPath("address.city"), OrdinaryIndex), true) )
+    ensureUniqueIndex("index").on("address.city").in("collection") mustEqual ( MongoEnsureIndexQuery("collection", "index", List[Tuple2[JPath, IndexType]](Tuple2(JPath("address.city"), OrdinaryIndex)), true) )
   }
   "creates update query" in{
     update("collection").set(jObject) mustEqual ( MongoUpdateQuery("collection", jObject) )

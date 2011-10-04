@@ -9,7 +9,6 @@ import blueeyes.persistence.mongo.MongoFilterEvaluator._
 import collection.mutable.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
-import scala.collection.immutable.ListSet
 import blueeyes.concurrent.Future
 import scalaz._
 import Scalaz._
@@ -132,9 +131,9 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
 
-  override def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject) {
+  override def ensureIndex(name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     writeLock {
-      super.ensureIndex(name, keys, unique, options)
+      super.ensureIndex(name, keys.distinct, unique, options)
     }
   }
 
@@ -179,7 +178,7 @@ private[mock] object FilterToUpdateConvert{
       case $eq  => x.lhs set x.rhs
       case _    => MongoUpdateNothing
     }
-    case x : MongoAndFilter           => x.queries.map(FilterToUpdateConvert(_)).asMA.sum
+    case x : MongoAndFilter           => x.queries.distinct.map(FilterToUpdateConvert(_)).asMA.sum
   }
 }
 

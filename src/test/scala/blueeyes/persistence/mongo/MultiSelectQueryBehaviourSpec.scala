@@ -6,7 +6,6 @@ import org.mockito.Mockito.{times, when}
 import org.mockito.Mockito
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
-import scala.collection.immutable.ListSet
 import IterableViewImpl._
 
 class MultiSelectQueryBehaviourSpec extends Specification with MocksCreation{
@@ -21,7 +20,7 @@ class MultiSelectQueryBehaviourSpec extends Specification with MocksCreation{
   "Collect all object if they are found" in{
     val filter1   = ("address.city" === "A")
     val filter2   = ("address.street" === "2")
-    val orFilter  = MongoOrFilter(ListSet(filter1, filter2))
+    val orFilter  = MongoOrFilter(List(filter1, filter2))
     
     when(collection.getLastError).thenReturn(None)
     when(collection.select(keys, Some(orFilter), None, None, None, None, false)).thenReturn(new IterableViewImpl[JObject, Iterator[JObject]](List(jObject, jObject1, jObject2).iterator))
@@ -37,7 +36,7 @@ class MultiSelectQueryBehaviourSpec extends Specification with MocksCreation{
     val filter1   = ("address.city" === "A")
     val filter2   = ("address.street" === "1")
     val filter3   = ("address.street" === "2")
-    val orFilter  = MongoOrFilter(ListSet(filter1, filter2, filter3))
+    val orFilter  = MongoOrFilter(List(filter1, filter2, filter3))
 
     when(collection.getLastError).thenReturn(None)
     when(collection.select(keys, Some(orFilter), None, None, None, None, false)).thenReturn(new IterableViewImpl[JObject, Iterator[JObject]](List(jObject, jObject1, jObject2).iterator))
@@ -52,7 +51,7 @@ class MultiSelectQueryBehaviourSpec extends Specification with MocksCreation{
   "Miss some objects if they are not found" in{
     val filter1   = ("address.city" === "A")
     val filter2   = ("address.street" === "7")
-    val orFilter = MongoOrFilter(ListSet(filter1, filter2))
+    val orFilter = MongoOrFilter(List(filter1, filter2))
     
     when(collection.getLastError).thenReturn(None)
     when(collection.select(keys, Some(orFilter), None, None, None, None, false)).thenReturn(new IterableViewImpl[JObject, Iterator[JObject]](List(jObject, jObject1, jObject2).iterator))

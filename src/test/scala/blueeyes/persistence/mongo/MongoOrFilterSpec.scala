@@ -10,7 +10,6 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
-import scala.collection.immutable.ListSet
 
 class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
@@ -20,7 +19,7 @@ class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicit
   private val orFilter = filter1 || filter2
 
   def getDifferentOrdersOrs: Gen[(MongoOrFilter, MongoOrFilter)] = getListMongoFieldFilter.map{filters =>
-    def orFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoOrFilter(ListSet.empty + values.head)){(andFilter, filter) => (andFilter || filter).asInstanceOf[MongoOrFilter]}
+    def orFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoOrFilter(List(values.head))){(andFilter, filter) => (andFilter || filter).asInstanceOf[MongoOrFilter]}
     (orFilter(filters), orFilter(filters.reverse))
   }
 
@@ -51,8 +50,8 @@ class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicit
       (orFilter).unary_! mustEqual (filter1.unary_! && filter2.unary_!)
     }
     "several or does not create recursion" in{
-      ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(ListSet.empty[MongoFilter] + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
-      ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(ListSet.empty[MongoFilter] + ("address.city" === "B") + ("address.street" === "2") + ("address.code" === 1)))
+      ("address.city" === "B") || ( ("address.street" === "2") || ("address.code" === 1) ) mustEqual (MongoOrFilter(List(("address.city" === "B"), ("address.street" === "2"), ("address.code" === 1))))
+      ("address.city" === "B") || ("address.street" === "2") || ("address.code" === 1) mustEqual (MongoOrFilter(List(("address.city" === "B"), ("address.street" === "2"), ("address.code" === 1))))
     }
 
     "2 unary_! results to the same filter" in{

@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.immutable.ListSet
 import MongoFilterOperators._
 
 import blueeyes.json._
@@ -158,7 +157,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
           var passedNow = true
           for (i <- 1 to filters.size if (passedNow)){
-            val filter = MongoAndFilter(ListSet.empty ++ filters.take(i))
+            val filter = MongoAndFilter(filters.take(i))
             passedNow = checkSelectPass(filter, value)
           }
           passedNow
@@ -250,7 +249,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
     filters match{
       case x :: Nil => x
-      case _ => MongoAndFilter(ListSet.empty ++ filters)
+      case _ => MongoAndFilter(filters)
     }
   }
 

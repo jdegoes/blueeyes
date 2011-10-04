@@ -5,7 +5,6 @@ import blueeyes.json.JPath
 import blueeyes.concurrent._
 import com.mongodb.MongoException
 import scala.collection.IterableView
-import scala.collection.immutable.ListSet
 import scalaz.{Validation, Success, Failure}
 
 private[mongo] object QueryBehaviours{
@@ -47,7 +46,7 @@ private[mongo] object QueryBehaviours{
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.ensureIndex(name, keys, unique, options) }
 
-    def keys: ListSet[(JPath, IndexType)]
+    def keys: Seq[(JPath, IndexType)]
     def name: String
     def unique: Boolean
     def options: JObject
@@ -176,7 +175,7 @@ private[mongo] object QueryBehaviours{
 
     def query(collection: DatabaseCollection) = {
       val allObjects = selectQuery.query(collection)
-      var result     = filters.toList.map(filter => (filter, None: Option[JObject]))
+      var result     = filters.map(filter => (filter, None: Option[JObject]))
 
       allObjects.exists{jObject =>
         result = result.map{filterAndObject => filterAndObject match {
@@ -187,7 +186,7 @@ private[mongo] object QueryBehaviours{
       }
       new IterableViewImpl[Option[JObject], Seq[Option[JObject]]](result.unzip._2.toSeq)
     }
-    def filters   : ListSet[MongoFilter]
+    def filters   : Seq[MongoFilter]
     def sort      : Option[MongoSort]
     def hint      : Option[Hint]
   }

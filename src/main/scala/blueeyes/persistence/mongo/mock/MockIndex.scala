@@ -2,14 +2,13 @@ package blueeyes.persistence.mongo.mock
 
 import blueeyes.json.JPath
 import com.mongodb.MongoException
-import scala.collection.immutable.ListSet
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo._
 
 private[mock] trait MockIndex extends JObjectFields{
-  private var indexes   = Map[String, Tuple2[Set[(JPath, IndexType)], JObject]]()
+  private var indexes   = Map[String, Tuple2[Seq[(JPath, IndexType)], JObject]]()
 
-  def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject){
+  def ensureIndex(name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject){
     indexes = if (unique) indexes.get(name) match{
       case None    => indexes + Tuple2(name, (keys, options))
       case Some(x) => indexes
@@ -21,13 +20,13 @@ private[mock] trait MockIndex extends JObjectFields{
   }
 
   def indexExists(name: String): Boolean = indexes.contains(name)
-  def indexExists(keys: Set[JPath]): Boolean = indexes.find(keyAndValue => keys.toSet == keyAndValue._2._1.toSet.map{v: (JPath, IndexType) => v._1}) != None
+  def indexExists(keys: Seq[JPath]): Boolean = indexes.find(keyAndValue => keys.toSet == keyAndValue._2._1.toSet.map{v: (JPath, IndexType) => v._1}) != None
 
-  def dropIndexes() {indexes = Map[String, Tuple2[Set[(JPath, IndexType)], JObject]]()}
+  def dropIndexes() {indexes = Map[String, Tuple2[Seq[(JPath, IndexType)], JObject]]()}
 
   def index(newObjects: List[JObject]) {
     indexes.foreach(index => {
-      val selection = MongoSelection(index._2._1.map{v: (JPath, IndexType) => v._1})
+      val selection = MongoSelection(index._2._1.map{v: (JPath, IndexType) => v._1}.toSet)
       val newFields = selectExistingFields(newObjects, selection.selection)
 
       if (newFields.distinct.size != newFields.size) throw new MongoException("Index contraint.")
@@ -40,7 +39,7 @@ private[mock] trait MockIndex extends JObjectFields{
     })
   }
 
-  private def checkGeospatialRange(newObjects: List[JObject], index: (Set[(JPath, IndexType)], JObject)){
+  private def checkGeospatialRange(newObjects: List[JObject], index: (Seq[(JPath, IndexType)], JObject)){
     def rangeValue(options: JObject, rangeName: String, defaultValue: Int): Int = options.fields.find{field =>
       field.name == rangeName && {field.value match{
         case JInt(_) => true

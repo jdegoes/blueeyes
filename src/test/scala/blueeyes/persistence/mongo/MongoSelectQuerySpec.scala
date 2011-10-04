@@ -7,7 +7,6 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
-import collection.immutable.ListSet
 
 class MongoSelectQuerySpec extends Specification with MongoImplicits{
   private val query = select("foo", "bar").from(MongoCollectionReference("collection"))
@@ -31,9 +30,9 @@ class MongoSelectQuerySpec extends Specification with MongoImplicits{
     query.hint("foo") mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(NamedHint("foo"))))
   }
   "'hint' with keys sets new hint" in {
-    query.hint(JPath("foo") :: JPath("bar") :: Nil) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(ListSet(JPath("foo"), JPath("bar"))))))
+    query.hint(JPath("foo") :: JPath("bar") :: Nil) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(List(JPath("foo"), JPath("bar"))))))
   }
   "'explain' creates Explain query" in {
-    query.hint(JPath("foo") :: JPath("bar") :: Nil).explain mustEqual (MongoExplainQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(ListSet(JPath("foo"), JPath("bar"))))))
+    query.hint(JPath("foo") :: JPath("bar") :: Nil).explain mustEqual (MongoExplainQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, None, None, Some(KeyedHint(List(JPath("foo"), JPath("bar"))))))
   }
 }

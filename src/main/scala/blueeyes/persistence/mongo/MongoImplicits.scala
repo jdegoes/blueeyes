@@ -2,7 +2,6 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST.JObject
 import blueeyes.json.{JPathImplicits, JPath}
-import collection.immutable.ListSet
 
 trait MongoImplicits extends JPathImplicits with MongoFilterImplicits with MongoQueryBuilder{
   implicit def stringToMongoCollection(string: String): MongoCollection = MongoCollectionReference(string)
@@ -19,7 +18,7 @@ trait MongoImplicits extends JPathImplicits with MongoFilterImplicits with Mongo
 
   implicit def stringToHint(indexName: String) = NamedHint(indexName)
 
-  implicit def keysToHint(keys: List[JPath]) = KeyedHint(ListSet(keys: _*))
+  implicit def keysToHint(keys: List[JPath]) = KeyedHint(keys)
 }
 
 object MongoImplicits extends MongoImplicits

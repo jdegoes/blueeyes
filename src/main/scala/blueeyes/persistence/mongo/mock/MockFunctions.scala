@@ -118,7 +118,7 @@ private[mock] object UpdateFunction extends JObjectFields{
       val jfield = selectByPath(x.path, jobject, updateValue _, pathRestorer)
       jfield.map(update(jobject, x.path, _, mergeOperation)).getOrElse(jobject)
     }
-    case x: MongoUpdateFields => x.list.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
+    case x: MongoUpdateFields => x.list.distinct.foldLeft(jobject){(jobject, updater) => update(jobject, updater)}
   }
 
   private def update(jobject: JObject, fieldPath: JPath, newValue: JValue, merge: Boolean): JObject = {

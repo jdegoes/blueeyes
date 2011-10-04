@@ -9,7 +9,6 @@ import org.scalacheck.Prop._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
-import scala.collection.immutable.ListSet
 
 class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
@@ -19,7 +18,7 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
   private val andFilter  = filter1 && filter2
 
   def getDifferentOrdersAnds: Gen[(MongoAndFilter, MongoAndFilter)] = getListMongoFieldFilter.map{filters =>
-    def andFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoAndFilter(ListSet.empty + values.head)){(andFilter, filter) => andFilter && filter}
+    def andFilter(values: List[MongoFieldFilter]) = values.tail.foldLeft(MongoAndFilter(List(values.head))){(andFilter, filter) => andFilter && filter}
     (andFilter(filters), andFilter(filters.reverse))
   }
 

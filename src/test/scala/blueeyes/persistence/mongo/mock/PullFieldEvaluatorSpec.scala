@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo.mock
 
-import scala.collection.immutable.ListSet
 import org.specs.Specification
 import blueeyes.json.JsonAST._
 import MockMongoUpdateEvaluators._
@@ -21,7 +20,7 @@ class PullFieldEvaluatorSpec  extends Specification{
      PullFieldEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]"""), operation.filter) mustEqual(JsonParser.parse("""[{"foo": 2}]"""))
   }
   "pull element by element match " in {
-    val operation = ("foo" pull (MongoAndFilter(ListSet.empty + MongoFieldFilter("foo", $eq, 1)).elemMatch(""))).asInstanceOf[MongoUpdateField]
+    val operation = ("foo" pull (MongoAndFilter(List(MongoFieldFilter("foo", $eq, 1))).elemMatch(""))).asInstanceOf[MongoUpdateField]
      PullFieldEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]"""), operation.filter) mustEqual(JsonParser.parse("""[{"foo": 2}]"""))
   }
   "cannot pull from not Array field" in {

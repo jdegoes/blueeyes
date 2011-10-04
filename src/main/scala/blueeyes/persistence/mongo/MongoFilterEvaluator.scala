@@ -43,11 +43,11 @@ private[mongo] object Evaluators{
   }
 
   object MongoOrFilterEvaluator{
-    def apply(values: List[JValue], filter: MongoOrFilter) = filter.queries.foldLeft(List[JValue]()){ (result, currentFilter) => result.union(values.filter(currentFilter)) }
+    def apply(values: List[JValue], filter: MongoOrFilter) = filter.queries.distinct.foldLeft(List[JValue]()){ (result, currentFilter) => result.union(values.filter(currentFilter)) }
   }
 
   object MongoAndFilterEvaluator{
-    def apply(values: List[JValue], filter: MongoAndFilter) = filter.queries.toList match{
+    def apply(values: List[JValue], filter: MongoAndFilter) = filter.queries.distinct.toList match{
       case x :: xs => xs.foldLeft(values.filter(x)){ (result, currentFilter) => result.filter(currentFilter) }
       case Nil     => values
     }

@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
@@ -91,7 +90,7 @@ private[mongo] trait DatabaseCollection{
   def distinct(selection : JPath, filter: Option[MongoFilter]): List[JValue]
   def remove(filter: Option[MongoFilter])
   def count(filter: Option[MongoFilter]): Long
-  def ensureIndex(name: String, keys: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject)
+  def ensureIndex(name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject)
   def dropIndexes()
   def dropIndex(name: String)
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean)

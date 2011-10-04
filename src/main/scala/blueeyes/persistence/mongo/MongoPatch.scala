@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.immutable.ListSet
 import blueeyes.json.JPath
 
 private[mongo] object Changes {
@@ -8,7 +7,7 @@ private[mongo] object Changes {
     /**
      * The list of changes that make up this change.
      */
-    def flatten: ListSet[Change1]
+    def flatten: Seq[Change1]
 
     /**
      * Coalesces this change with that change, to produce a new change that
@@ -20,7 +19,7 @@ private[mongo] object Changes {
      * Coalesces this change with the list of changes, to produce a new
      * change that achieves the effect of both changes applied sequentially.
      */
-    def *>(list: ListSet[Change]) = Changes.compose(flatten, Changelist(list).flatten)
+    def *>(list: Seq[Change]) = Changes.compose(flatten, Changelist(list).flatten)
   }
 
   trait Change1 extends Change {
@@ -29,24 +28,24 @@ private[mongo] object Changes {
      */
     def path: JPath
 
-    def flatten = ListSet.empty + this
+    def flatten = List(this)
 
     final def fuseWith(change: Change1): Option[Change1] = if (change.path != this.path) None else fuseWithImpl(change)
 
     protected def fuseWithImpl(older: Change1): Option[Change1]
   }
 
-  sealed case class Changelist[T <: Change](list: ListSet[T]) extends Change {
+  sealed case class Changelist[T <: Change](list: Seq[T]) extends Change {
     lazy val flatten = list.flatMap(_.flatten)
   }
 
   object Changelist {
-    implicit def patchToChangelist[T <: Change1](patch: T): Changelist[T] = Changelist[T](ListSet.empty + patch)
+    implicit def patchToChangelist[T <: Change1](patch: T): Changelist[T] = Changelist[T](List(patch))
 
-    implicit def setToChangelist[T <: Change1](list: ListSet[T]): Changelist[T] = Changelist[T](list)
+    implicit def setToChangelist[T <: Change1](list: Seq[T]): Changelist[T] = Changelist[T](list)
   }
 
-  def compose(older: ListSet[Change1], newer: ListSet[Change1]): ListSet[Change1] = {
+  def compose(older: Seq[Change1], newer: Seq[Change1]): Seq[Change1] = {
     val sortedOlder = older.foldLeft(Map[JPath, List[Change1]]()){(result, change) =>
       val changes = result.get(change.path).getOrElse(List[Change1]())
       result + Tuple2(change.path, changes ::: List(change))
@@ -56,7 +55,7 @@ private[mongo] object Changes {
       val changes = result.get(change.path).getOrElse(List[Change1]())
       result + Tuple2(change.path, _compose(change, changes) )
     }
-    ListSet.empty ++ newChanges.values.flatten
+    newChanges.values.flatten.toList
   }
 
   private def _compose(c: Change1, cs: List[Change1]): List[Change1] = {

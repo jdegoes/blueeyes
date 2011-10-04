@@ -5,7 +5,6 @@ import MongoUpdateOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JsonParser
 import UpdateFieldFunctions._
-import scala.collection.immutable.ListSet
 
 class MongoUpdateFieldSpec  extends Specification{
   "build valid json" in {
@@ -15,6 +14,6 @@ class MongoUpdateFieldSpec  extends Specification{
     PullF("foo", "bar" === 1).toJValue mustEqual  (JObject(JField("$pull", JObject(JField("foo", JObject(JField("bar", JInt(1)) :: Nil)) :: Nil)) :: Nil))
   }
   "build valid json for pull and for elemMatch" in {
-    PullF("foo", MongoAndFilter(ListSet.empty + ("bar" === 1)).elemMatch("")).toJValue mustEqual  (JsonParser.parse(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
+    PullF("foo", MongoAndFilter(List("bar" === 1)).elemMatch("")).toJValue mustEqual  (JsonParser.parse(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
   }
 }

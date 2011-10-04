@@ -11,7 +11,6 @@ import IterableViewImpl._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
-import scala.collection.immutable.ListSet
 
 import akka.actor.Actor._
 import akka.actor.Actor
@@ -99,7 +98,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) {
     collection.update(toMongoFilter(filter), value.toJValue, upsert, multi) }
 
-  def ensureIndex(name: String, keysPaths: ListSet[(JPath, IndexType)], unique: Boolean, options: JObject) {
+  def ensureIndex(name: String, keysPaths: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     val indexOptions = JObject(
       JField("name", JString(name)) :: 
       JField("background", JBool(true)) :: 
@@ -112,7 +111,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
         case GeospatialIndex => JString("2d")
       }
     }
-    val indexKeys = JObject(keysPaths.toList.map(key => JField(JPathExtension.toMongoField(key._1), toMongoIndexType(key._2))))
+    val indexKeys = JObject(keysPaths.distinct.map(key => JField(JPathExtension.toMongoField(key._1), toMongoIndexType(key._2))).toList)
 
     collection.ensureIndex(indexKeys, indexOptions)
   }
@@ -167,13 +166,13 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
     val hintedCursor  = hint.map{value => value match{
       case NamedHint(name) => limitedCursor.hint(name)
-      case KeyedHint(keys) => limitedCursor.hint(toMongoKeys(keys))
+      case KeyedHint(keys) => limitedCursor.hint(toMongoKeys(keys.distinct))
     }}.getOrElse(limitedCursor)
     if (isSnapshot) hintedCursor.snapshot() else hintedCursor
   }
 
   private def toMongoKeys(selection : MongoSelection): JObject = toMongoKeys(selection.selection)
-  private def toMongoKeys(keysPaths: Set[JPath]): JObject      = JObject(keysPaths.toList.map(key => JField(JPathExtension.toMongoField(key), JInt(1))))
+  private def toMongoKeys(keysPaths: Iterable[JPath]): JObject      = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 }
 

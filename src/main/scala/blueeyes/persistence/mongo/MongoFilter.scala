@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.immutable.ListSet
 import scala.math.BigInt
 import blueeyes.json.{JPath, JPathIndex, JPathField, MergeMonoid, ConcatMonoid}
 import blueeyes.json.JsonAST._
@@ -99,35 +98,51 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def unary_! : MongoFilter = MongoFieldFilter(lhs, !operator, rhs)
 }
 
-sealed case class MongoOrFilter(queries: ListSet[MongoFilter]) extends MongoFilter {
-  def filter: JValue = JObject(JField($or.symbol, JArray(queries.toList.map(_.filter))) :: Nil)
+sealed case class MongoOrFilter(queries: Seq[MongoFilter]) extends MongoFilter {
+  private lazy val normalized = Set(queries: _*)
+  def filter: JValue = JObject(JField($or.symbol, JArray(queries.distinct.map(_.filter).toList)) :: Nil)
 
   def unary_! : MongoFilter = MongoAndFilter(queries.map(!_))
+
+  override def equals(that: Any): Boolean = that match {
+    case that: MongoOrFilter if (this.normalized.size == that.normalized.size) => normalized == that.normalized
+    case _ => false
+  }
+
+  override lazy val hashCode = normalized.hashCode
 }
 
-sealed case class MongoAndFilter(queries: ListSet[MongoFilter]) extends MongoFilter { self =>
+sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter { self =>
+  private lazy val normalized = Set(queries: _*)
   def filter: JValue = {
-    val (notEqs, eqs) = queries partition { filter => filter match {
+    val (notEqs, eqs) = queries.distinct.partition { filter => filter match {
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false
       case _ => true
     }}
     JObject(notEqsQuery(notEqs).fields ::: eqsQuery(eqs).fields)
   }
 
-  private def notEqsQuery(queries: ListSet[MongoFilter]) = {
+  private def notEqsQuery(queries: Seq[MongoFilter]) = {
     implicit val mergeMonoid = MergeMonoid
-    val objects = queries.map(_.filter).toList
-    (JObject(Nil) :: objects).asMA.sum.asInstanceOf[JObject]
+    val objects = queries.map(_.filter)
+    (JObject(Nil) +: objects).asMA.sum.asInstanceOf[JObject]
   }
-  private def eqsQuery(queries: ListSet[MongoFilter]) = {
+  private def eqsQuery(queries: Seq[MongoFilter]) = {
     implicit val concatMonoid = ConcatMonoid
-    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue]).toList
-    (JObject(Nil) :: fields).asMA.sum.asInstanceOf[JObject]
+    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue])
+    (JObject(Nil) +: fields).asMA.sum.asInstanceOf[JObject]
   }
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))
 
   def elemMatch(path: JPath) = MongoElementsMatchFilter(path, self)
+
+  override def equals(that: Any): Boolean = that match {
+    case that: MongoAndFilter if (this.normalized.size == that.normalized.size) => normalized == that.normalized
+    case _ => false
+  }
+
+  override lazy val hashCode = normalized.hashCode
 }
 
 sealed case class MongoElementsMatchFilter(lhs: JPath, elementsQuery: MongoAndFilter) extends MongoFilter{
