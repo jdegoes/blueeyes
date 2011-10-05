@@ -22,6 +22,7 @@ import DataSize._
 import java.net.URLDecoder.{decode => decodeUrl}
 import java.net.URLEncoder.{encode => encodeUrl}
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsIdentity, Bijection, GZIPByteChunk}
+import blueeyes.core.http.HttpStatusCodes.BadRequest
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity with FutureMatchers {
   implicit val JValueToString = new Bijection[JValue, String] {
@@ -304,6 +305,16 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           }
         }
       }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).value.get.content.map(v => new String(v.data)) must beSome("1234")
+    }
+    "does not hang when a handler throws an error" in{
+      (aggregate(None){
+        path("/foo"){
+          get { (request: HttpRequest[ByteChunk]) =>
+            throw new HttpException(BadRequest, "foo")
+            Future.sync(HttpResponse[ByteChunk](content=request.content))
+          }
+        }
+      }).apply(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)))).error must beSome(HttpException(BadRequest, "foo"))
     }
     "aggregate content up to the specified size" in{
       (aggregate(Some(2.bytes)){

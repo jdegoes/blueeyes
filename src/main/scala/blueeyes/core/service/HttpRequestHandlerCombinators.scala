@@ -404,11 +404,16 @@ trait HttpRequestHandlerCombinators{
         val result = new Future[HttpResponse[ByteChunk]]()
         val aggregatedFuture = AggregatedByteChunk(chunk, chunkSize)
         aggregatedFuture.deliverTo{aggregated =>
-          val f = h(r.copy(content = Some(aggregated)))
+          try {
+            val f = h(r.copy(content = Some(aggregated)))
 
-          f.deliverTo(response => result.deliver(response))
-          f.ifCanceled(th => result.cancel(th))
-          result.ifCanceled(th => f.cancel(th))
+            f.deliverTo(response => result.deliver(response))
+            f.ifCanceled(th => result.cancel(th))
+            result.ifCanceled(th => f.cancel(th))
+          }
+          catch {
+            case e => result.cancel(e)
+          }
         }
         aggregatedFuture.ifCanceled(th => result.cancel(th))
         result.ifCanceled(th => aggregatedFuture.cancel(th))
