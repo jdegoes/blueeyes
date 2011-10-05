@@ -126,7 +126,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * </pre>
    */
-  def extract[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, E1])(extractor: HttpRequest[T] => E1): Service[T, E1 => S] => Service[T, S] = (h) => new ExtractService[T, S, E1](s1AndDefault, extractor, h)
+  def extract[T, S, E1](extractor: HttpRequest[T] => E1): Service[T, E1 => S] => Service[T, S] = (h) => new ExtractService[T, S, E1](extractor, h)
 
   /** A special-case extractor for parameters.
    * <pre>
@@ -139,21 +139,25 @@ trait HttpRequestHandlerCombinators{
    */
   def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): Service[T, String => S] => Service[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
 
-  private def extractCookie[T](request: HttpRequest[T], s: Symbol, defaultValue: Option[String] = None) = {
+  def extractCookie[T](request: HttpRequest[T], s: Symbol, default: () => String) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).orElse(defaultValue).getOrElse(sys.error("Expected cookie " + s.name))
+    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse(default())
   }
   /** A special-case extractor for cookie supporting a default value.
    * <pre>
-   * cookie('token, "defaultValue") {  =>
+   * cookie('token, "defaultValue") {
    *   get {  (request: HttpRequest[T]) => { token =>
    *     ...
    *   }}
    * }
    * </pre>
    */
-  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): Service[T, String => S] => Service[T, S] = extract[T, S, String] (s1AndDefault){ request =>
-    extractCookie(request, s1AndDefault.identifier, Some(s1AndDefault.default))
+  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): Service[T, String => S] => Service[T, S] = extract[T, S, String]{ request =>
+    extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_)
+  }
+
+  def cookie[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, String], convert: (String) => E1): Service[T, E1 => S] => Service[T, S] = extract[T, S, E1]{ request =>
+    convert(extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_))
   }
 
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): Service[JValue, F1 => S] => Service[JValue, S] = {
@@ -163,7 +167,7 @@ trait HttpRequestHandlerCombinators{
       ((content \ s1AndDefault.identifier.name) -->? c).getOrElse(s1AndDefault.default).asInstanceOf[F]
     }
 
-    extract[JValue, S, F1](s1AndDefault) { (request: HttpRequest[JValue]) =>
+    extract[JValue, S, F1]{ (request: HttpRequest[JValue]) =>
       val content = request.content.getOrElse(sys.error("Expected request body to be JSON object"))
 
       extractField(content, s1AndDefault)

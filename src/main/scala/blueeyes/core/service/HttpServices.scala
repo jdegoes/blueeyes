@@ -1,6 +1,5 @@
 package blueeyes.core.service
 
-import scalaz.Scalaz._
 import blueeyes.json.JsonAST.JValue
 import blueeyes.core.http._
 import annotation.tailrec
@@ -10,6 +9,8 @@ import blueeyes.concurrent.Future
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
+
+import scalaz.Scalaz._
 import scalaz.{Validation, Failure}
 
 object HttpServices{
@@ -32,7 +33,7 @@ object HttpServices{
   case class PathPatternMetadata  (pattern: RestPathPattern)              extends Metadata
   case class HttpMethodMetadata   (method: HttpMethod)                    extends Metadata
   case class DescriptionMetadata  (description: String)                   extends Metadata
-  case class ExtractMetadata[T, S](extract: IdentifierWithDefault[T, S])  extends Metadata
+  case class ParameterMetadata[T, S](extract: IdentifierWithDefault[T, S])  extends Metadata
   case class CompositeMetadata    (metadata: Seq[Metadata])               extends Metadata
 
   sealed trait HttpService[A, B] { self =>
@@ -275,13 +276,13 @@ object HttpServices{
 
     private def extract(r: HttpRequest[T]): String = r.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
 
-    lazy val metadata = Some(ExtractMetadata(s1AndDefault))
+    lazy val metadata = Some(ParameterMetadata(s1AndDefault))
   }
 
-  case class ExtractService[T, S, P](s1AndDefault: IdentifierWithDefault[Symbol, P], extractor: HttpRequest[T] => P, delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
+  case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
     def service = (r: HttpRequest[T]) => delegate.service(r).map(_.apply(extractor(r)))
 
-    lazy val metadata = Some(ExtractMetadata(s1AndDefault))
+    val metadata = None
   }
 
   case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
