@@ -190,7 +190,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract parameter" in {
       val f = path("/foo/'bar") {
         parameter('bar) {
-          get { (request: HttpRequest[String]) => { bar: String =>
+          get { (request: HttpRequest[String]) => { bar =>
               Future.sync(HttpResponse[String](content=Some(bar)))
             }
           }
