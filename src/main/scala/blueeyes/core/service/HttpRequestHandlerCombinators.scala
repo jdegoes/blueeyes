@@ -338,7 +338,7 @@ trait HttpRequestHandlerCombinators{
         catch {
           case ex => None
         }
-        newContent.map(content => h.isDefinedAt(r.copy(content = newContent))).getOrElse(true)
+        h.isDefinedAt(r.copy(content = newContent))
       }.orElse {
         r.content.map(b.isDefinedAt _)
       }.getOrElse(false)

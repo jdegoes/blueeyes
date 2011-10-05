@@ -318,11 +318,24 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
   "accept combinator" should{
     "handle request of content is not full in is 'isDefinedAt' method" in{
-      (accept(application/json){
-        get { (request: HttpRequest[JValue]) =>
-          Future.sync(HttpResponse[JValue](content=request.content))
+      (path("/foo"){
+        accept(application/json){
+          get { (request: HttpRequest[JValue]) =>
+            Future.sync(HttpResponse[JValue](content=request.content))
+          }
         }
       }).isDefinedAt(HttpRequest[String](method = HttpMethods.GET, uri = "/foo", content = Some("{"), headers = HttpHeaders.Empty + `Content-Type`(application/json))) must be (true)
+    }
+  }
+  "accept combinator" should{
+    "not handle request if underluying handle cannot handle request" in{
+      (path("/foo"){
+        accept(application/json){
+          post { (request: HttpRequest[JValue]) =>
+            Future.sync(HttpResponse[JValue](content=request.content))
+          }
+        }
+      }).isDefinedAt(HttpRequest[String](method = HttpMethods.GET, uri = "/foo", content = Some("{"), headers = HttpHeaders.Empty + `Content-Type`(application/json))) must be (false)
     }
   }
 
