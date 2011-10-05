@@ -190,9 +190,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract parameter" in {
       val f = path("/foo/'bar") {
         parameter('bar) {
-          get { (request: HttpRequest[String]) => { bar =>
-              Future.sync(HttpResponse[String](content=Some(bar)))
-            }
+          get { (request: HttpRequest[String]) => bar: String =>
+            Future.sync(HttpResponse[String](content=Some(bar)))
           }
         }
       }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
@@ -203,11 +202,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
         parameter[String, Future[HttpResponse[String]]]('bar ?: "bebe") {
-          get { (request: HttpRequest[String]) =>{ bar =>
-              request.parameters mustEqual Map('bar -> "bebe")
+          get { (request: HttpRequest[String]) => bar =>
+            request.parameters mustEqual Map('bar -> "bebe")
 
-              Future.sync(HttpResponse[String](content=Some(bar)))
-            }
+            Future.sync(HttpResponse[String](content=Some(bar)))
           }
         }
       }
@@ -221,9 +219,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/'bar") {
         produce(application/json) {
           parameter('bar) {
-            get { (request: HttpRequest[String]) => { bar: String =>
-                Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
-              }
+            get { (request: HttpRequest[String]) => bar: String =>
+              Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
             }
           }
         }
@@ -235,9 +232,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/'bar") {
         produce(application/json) {
           parameter('bar) {
-            get { (request: HttpRequest[String]) => {bar: String =>
-                Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
-              }
+            get { (request: HttpRequest[String]) => bar: String =>
+              Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
             }
           }
         }
@@ -251,9 +247,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract symbol" in {
       (path('token) {
         parameter('token) {
-          get { (request: HttpRequest[String]) =>{ token: String =>
-              Future.sync(HttpResponse[String](content=Some(token)))
-            }
+          get { (request: HttpRequest[String]) => token: String =>
+            Future.sync(HttpResponse[String](content=Some(token)))
           }
         }
       }).service(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B", content = None)).toOption.get.value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
@@ -264,9 +259,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         path('bar  / "entries") {
           produce(application/json) {
             parameter('bar) {
-              get { (request: HttpRequest[String]) => {bar: String =>
-                  Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
-                }
+              get { (request: HttpRequest[String]) => bar: String =>
+                Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
               }
             }
           }
