@@ -6,12 +6,13 @@ import annotation.tailrec
 import java.net.URLDecoder._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
 import blueeyes.concurrent.Future
+import blueeyes.concurrent.Future._
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.util.metrics.DataSize
 import blueeyes.json.JsonAST.{JField, JObject}
 
 import scalaz.Scalaz._
-import scalaz.{Validation, Failure}
+import scalaz.{Success, Validation, Failure}
 
 object HttpServices{
   sealed trait NotServed {
@@ -118,20 +119,26 @@ object HttpServices{
   }
 
   case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, S, Future[T], S] {
-    def service = {r: HttpRequest[U] =>
-      def newContent(r: HttpRequest[U]) = try {
-        success(r.content.map(b.apply _))
-      }
-      catch {
-        case ex => Inapplicable.fail
-      }
+    def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap{newRequest: HttpRequest[Future[T]] => delegate.service(newRequest)}
 
-      def handle(r: HttpRequest[U]) = newContent(r).flatMap(content => delegate.service(r.copy(content = content)))
-
-      r.mimeTypes.find(_ == mimeType).map { mimeType => handle(r) }.getOrElse(Inapplicable.fail)
+    lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
+  }
+  case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => S, Future[T], E1 => S] {
+    def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap {newRequest: HttpRequest[Future[T]] =>
+      delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
     }
 
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
+  }
+
+  private def convert[U, T](mimeType: MimeType, r: HttpRequest[U])(implicit b: Bijection[U, Future[T]]) = {
+    def newContent = try {
+      success(r.copy(content = r.content.map(b.apply _)))
+    }
+    catch {
+      case ex => Inapplicable.fail
+    }
+    r.mimeTypes.find(_ == mimeType).map { mimeType => newContent }.getOrElse(Inapplicable.fail)
   }
 
   case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]) extends HttpService[T, S]{
@@ -161,10 +168,13 @@ object HttpServices{
   }
 
   case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]]{
-    def service = (r: HttpRequest[T]) => delegate.service(r).map { f: Future[HttpResponse[S]] =>
-        f.map{response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType))
-      }
-    }
+    def service = (r: HttpRequest[T]) => delegate.service(r).map { _.map{response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType)) }}
+
+    lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
+  }
+
+  case class Produce2Service[T, S, V, E1](mimeType: MimeType, delegate: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]]{
+    def service = (r: HttpRequest[T]) => delegate.service(r).map{function => (e: E1) => function.apply(e).map { response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType)) }}
 
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
@@ -294,4 +304,19 @@ object HttpServices{
 
     def metadata = None
   }
+
+//  implicit def validationToFuture[S](validation: Validation[NotServed, Future[HttpResponse[S]]]): Future[HttpResponse[S]] = {
+//    def convertErrorToResponse(th: Throwable): HttpResponse[S] = th match {
+//      case e: HttpException => HttpResponse[S](HttpStatus(e.failure, e.reason))
+//      case e => {
+//        HttpResponse[S](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
+//      }
+//    }
+//
+//    validation match {
+//      case Success(future) => future
+//      case Failure(DispatchError(throwable)) => convertErrorToResponse(throwable).future
+//      case failure => HttpResponse[S](HttpStatus(HttpStatusCodes.NotFound)).future
+//    }
+//  }
 }

@@ -180,11 +180,18 @@ trait HttpRequestHandlerCombinators{
    */
   def accept[T, S, U](mimeType: MimeType)(h: Service[Future[T], S])(implicit b: Bijection[U, Future[T]]): Service[U, S] = new AcceptService[T, S, U](mimeType, h)
 
+  def accept2[T, S, U, E1](mimeType: MimeType)(h: Service[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]): Service[U, E1 => S] = new Accept2Service[T, S, U, E1](mimeType, h)
+
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
   def produce[T, S, V](mimeType: MimeType)(h: Service[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): Service[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
+  /** The produce combinator creates a handler that is produces responses
+   * that have the specified content type. Requires an implicit bijection
+   * used for transcoding.
+   */
+  def produce2[T, S, V, E1](mimeType: MimeType)(h: Service[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): Service[T, E1 => Future[HttpResponse[V]]] = new Produce2Service(mimeType, h)
   /** The content type combinator creates a handler that accepts and produces
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
@@ -194,6 +201,15 @@ trait HttpRequestHandlerCombinators{
 
     accept(mimeType) {
       produce[Future[T], T, S](mimeType) {
+        h
+      }
+    }
+  }
+  def contentType2[T, S, E1](mimeType: MimeType)(h: Service[Future[T], E1 => Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): Service[S, E1 => Future[HttpResponse[S]]] = {
+    implicit val b3 = b2.inverse
+
+    accept2(mimeType) {
+      produce2[Future[T], T, S, E1](mimeType) {
         h
       }
     }
@@ -222,6 +238,8 @@ trait HttpRequestHandlerCombinators{
    * Requires an implicit bijection used for transcoding.
    */
   def jvalue[T](h: Service[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
+
+  def jvalue2[T, E1](h: Service[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): Service[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.application/MimeTypes.json) { h }
 
   /** The xml combinator creates a handler that accepts and produces XML.
    * Requires an implicit bijection used for transcoding.

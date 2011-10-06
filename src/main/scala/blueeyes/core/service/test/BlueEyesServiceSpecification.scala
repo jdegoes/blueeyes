@@ -57,7 +57,6 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   // Revert main function of HttpServer to Specification's main function:
   override def main(args: Array[String]) { httpServer.main(args) }
 
-
   lazy val rootConfig = {
     Configgy.configureFromString(configuration)
     Configgy.config
