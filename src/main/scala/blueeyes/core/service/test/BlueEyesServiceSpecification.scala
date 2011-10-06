@@ -36,7 +36,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     def services = self.services
 
     // Manual configuration based on "configuration" string:
-    override def rootConfig: Config = self._rootConfig
+    override def rootConfig: Config = self.rootConfig
   }
 
   def setMockCongiguration = {
@@ -58,7 +58,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   override def main(args: Array[String]) { httpServer.main(args) }
 
 
-  private lazy val _rootConfig = {
+  lazy val rootConfig = {
     Configgy.configureFromString(configuration)
     Configgy.config
   }
