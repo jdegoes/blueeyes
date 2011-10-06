@@ -39,7 +39,7 @@ Library dependency:
 <dependency>
   <groupId>com.reportgrid</groupId>
   <artifactId>blueeyes</artifactId>
-  <version>0.4.25</version>
+  <version>0.4.26</version>
   <type>jar</type>
   <scope>compile</scope>
 </dependency>
@@ -54,7 +54,7 @@ val jboss_repo        = MavenRepository("JBoss",        "http://repository.jboss
 val akka_repo         = MavenRepository("Akka",         "http://akka.io/repository/")
 val guicey_fruit_repo = MavenRepository("GuiceyFruit",  "http://guiceyfruit.googlecode.com/svn/repo/release/")
 
-val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.25" % "compile"
+val blueeyesRelease = "com.reportgrid" % "blueeyes" % "0.4.26" % "compile"
 ```
 
 ### SBT 0.10
@@ -69,7 +69,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.reportgrid" % "blueeyes_2.9.1" % "0.4.25" % "compile"
+  "com.reportgrid" % "blueeyes_2.9.1" % "0.4.26" % "compile"
 )
 ```
 
