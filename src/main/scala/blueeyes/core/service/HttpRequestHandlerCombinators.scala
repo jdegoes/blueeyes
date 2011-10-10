@@ -4,7 +4,6 @@ package core.service
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.data.{ByteChunk, Bijection}
 import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
 
@@ -12,6 +11,7 @@ import scala.xml.NodeSeq
 import scalaz.Functor
 import core.service.HttpServices._
 import core.service.HttpServices.{HttpService => Service}
+import core.data.{CompressedByteChunk, ByteChunk, Bijection}
 
 trait HttpRequestHandlerCombinators{
   /** The path combinator creates a handler that is defined only for suffixes
@@ -219,12 +219,16 @@ trait HttpRequestHandlerCombinators{
    *  The compress combinator creates a handler that compresses content by encoding supported by client
    *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
    */
-  def compress(h: Service[ByteChunk, Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
+  def compress(h: Service[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
+
+  def compress2[E1](h: Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new CompressService2[E1](h)
 
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
   def aggregate(chunkSize: Option[DataSize])(h: Service[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
+
+  def aggregate2[E1](chunkSize: Option[DataSize])(h: Service[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new Aggregate2Service[E1](chunkSize, h)
 
   /** The jsonp combinator creates a handler that accepts and produces JSON.
    * The handler also transparently works with JSONP, if the client specifies
@@ -233,6 +237,8 @@ trait HttpRequestHandlerCombinators{
    * "content", respectively.
    */
   def jsonp[T](delegate: Service[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): Service[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
+
+  def jsonp2[T, E1](delegate: Service[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): Service[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
@@ -245,6 +251,8 @@ trait HttpRequestHandlerCombinators{
    * Requires an implicit bijection used for transcoding.
    */
   def xml[T](h: Service[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+
+  def xml2[T, E1](h: Service[Future[NodeSeq], E1 => Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): Service[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.text/MimeTypes.xml) { h }
 
   def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: Service[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 

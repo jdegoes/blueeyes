@@ -179,18 +179,25 @@ object HttpServices{
     lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
   }
 
-  case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
-    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{ma =>
-      ma.map{response =>
-      val encodings  = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-      val supported  = supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
-      (supported, response.content) match{
-        case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
-        case _ => response
-      }
-    }}
+  case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
+    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{compress(r, _)}
 
     val metadata = None
+  }
+
+  case class CompressService2[E1](delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
+    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{function => (e: E1) => compress(r, function.apply(e))}
+
+    val metadata = None
+  }
+
+  private def compress(r: HttpRequest[ByteChunk], f: Future[HttpResponse[ByteChunk]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) = f.map{response =>
+    val encodings = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
+    val supported = supportedCompressions.filterKeys(encodings.contains(_)).headOption.map(_._2)
+    (supported, response.content) match {
+      case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
+      case _ => response
+    }
   }
 
   object CompressService{
@@ -203,68 +210,82 @@ object HttpServices{
     lazy val metadata = Some(DataSizeMetadata(chunkSize))
   }
 
+  case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]{
+    def service = (r: HttpRequest[ByteChunk]) => delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize)))).map{function => (e: E1) => function.apply(e)}
+
+    lazy val metadata = Some(DataSizeMetadata(chunkSize))
+  }
+
   case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
-    private implicit val b2 = b1.inverse
-    def service = {r: HttpRequest[T] => convertRequest(r).flatMap(delegate.service(_)).map(_.map(convertResponse(_, r.parameters.get('callback)))) }
-
-    private def convertRequest(r: HttpRequest[T]): Validation[NotServed, HttpRequest[JValue]] = {
-      import blueeyes.json.JsonParser.parse
-      import blueeyes.json.xschema.DefaultSerialization._
-
-      r.parameters.get('callback) match {
-        case Some(callback) if (r.method == HttpMethods.GET) =>
-          if (r.content.isEmpty){
-            val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
-
-            val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(parse _)
-            val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
-
-            success(r.copy(method = method, content = content, headers = r.headers ++ headers))
-          }
-          else failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
-
-        case Some(callback) =>
-          failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
-
-        case None =>
-          success(r.copy(content = r.content.map(b1.apply)))
-      }
-    }
-
-    private def convertResponse(r: HttpResponse[JValue], callback: Option[String]): HttpResponse[T] = {
-      import blueeyes.json.xschema.DefaultSerialization._
-      import blueeyes.json.Printer._
-
-      (callback match {
-        case Some(callback) =>
-          val meta = compact(render(JObject(
-            JField("headers", r.headers.raw.serialize) ::
-            JField("status",
-              JObject(
-                JField("code",    r.status.code.value.serialize) ::
-                JField("reason",  r.status.reason) ::
-                Nil
-              )
-            ) ::
-            Nil
-          )))
-
-          r.copy(content = r.content.map { content =>
-            bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
-          }.orElse {
-            Some(
-              bstr.inverse.apply(callback + "(undefined," + meta + ");")
-            )
-          }, headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript))
-
-        case None =>
-          r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
-      })
-    }
+    def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
     def metadata = None
   }
+
+  case class Jsonp2Service[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, E1 => Future[HttpResponse[T]], JValue, E1 => Future[HttpResponse[JValue]]]{
+    def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map{function => (e: E1) => function.apply(e).map(jsonpConvertResponse(_, r.parameters.get('callback)))}
+
+    def metadata = None
+  }
+
+  private def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpResponse[T] = {
+    import blueeyes.json.xschema.DefaultSerialization._
+    import blueeyes.json.Printer._
+
+    implicit val b2 = b1.inverse
+
+    (callback match {
+      case Some(callback) =>
+        val meta = compact(render(JObject(
+          JField("headers", r.headers.raw.serialize) ::
+          JField("status",
+            JObject(
+              JField("code",    r.status.code.value.serialize) ::
+              JField("reason",  r.status.reason) ::
+              Nil
+            )
+          ) ::
+          Nil
+        )))
+
+        r.copy(content = r.content.map { content =>
+          bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
+        }.orElse {
+          Some(
+            bstr.inverse.apply(callback + "(undefined," + meta + ");")
+          )
+        }, headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript))
+
+      case None =>
+        r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+    })
+  }
+
+  private def jsonpConvertRequest[T](r: HttpRequest[T])(implicit b1: Bijection[T, JValue]): Validation[NotServed, HttpRequest[JValue]] = {
+    import blueeyes.json.JsonParser.parse
+    import blueeyes.json.xschema.DefaultSerialization._
+
+    r.parameters.get('callback) match {
+      case Some(callback) if (r.method == HttpMethods.GET) =>
+        if (r.content.isEmpty){
+          val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
+
+          val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
+          val content = r.parameters.get('content).map(parse _)
+          val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
+
+          success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+        }
+        else failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
+
+      case Some(callback) =>
+        failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
+
+      case None =>
+        success(r.copy(content = r.content.map(b1.apply)))
+    }
+  }
+
 
   case class ForwardingService[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U], delegate: HttpService[T, HttpResponse[T]]) extends DelegatingService[T, HttpResponse[T], T, HttpResponse[T]]{
     def service = { r: HttpRequest[T] =>
@@ -304,19 +325,4 @@ object HttpServices{
 
     def metadata = None
   }
-
-//  implicit def validationToFuture[S](validation: Validation[NotServed, Future[HttpResponse[S]]]): Future[HttpResponse[S]] = {
-//    def convertErrorToResponse(th: Throwable): HttpResponse[S] = th match {
-//      case e: HttpException => HttpResponse[S](HttpStatus(e.failure, e.reason))
-//      case e => {
-//        HttpResponse[S](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
-//      }
-//    }
-//
-//    validation match {
-//      case Success(future) => future
-//      case Failure(DispatchError(throwable)) => convertErrorToResponse(throwable).future
-//      case failure => HttpResponse[S](HttpStatus(HttpStatusCodes.NotFound)).future
-//    }
-//  }
 }

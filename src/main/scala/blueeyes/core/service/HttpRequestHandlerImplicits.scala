@@ -1,9 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.core.http.{HttpRequest, HttpResponse}
-import blueeyes.concurrent.Future
 import blueeyes.util.PartialFunctionCombinators
-import blueeyes.core.data._
 
 trait HttpRequestHandlerImplicits extends PartialFunctionCombinators {
   implicit def identifierToIdentifierWithDefault[S](default: => S) = new ToIdentifierWithDefault(default)
