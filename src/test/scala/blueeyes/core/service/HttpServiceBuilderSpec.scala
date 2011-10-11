@@ -8,9 +8,9 @@ import org.mockito.Mockito
 import org.specs.mock.MocksCreation
 
 class HttpServiceBuilderSpec extends Specification with MocksCreation{
-  "HttpServiceBuilder startup: creates StartupDescriptor with specified startup function" in{
+  "ServiceBuilder startup: creates StartupDescriptor with specified startup function" in{
     var executed = false
-    val builder  = new HttpServiceBuilder[Unit]{
+    val builder  = new ServiceBuilder[Unit]{
       val descriptor = startup(Future.sync(executed = true))
     }
 
@@ -18,9 +18,9 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
 
     executed must be (true)
   }
-  "HttpServiceBuilder startup: creates StartupDescriptor with specified request function" in{
+  "ServiceBuilder startup: creates StartupDescriptor with specified request function" in{
     val function = mock[Function[Unit, AsyncHttpService[Unit]]]
-    val builder  = new HttpServiceBuilder[Unit]{
+    val builder  = new ServiceBuilder[Unit]{
       val descriptor = request(function)
     }
 
@@ -28,9 +28,9 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
 
     Mockito.verify(builder.descriptor.request, times(1)).apply(())
   }
-  "HttpServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in{
+  "ServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in{
     val function = mock[Function[Unit, Future[Unit]]]
-    val builder  = new HttpServiceBuilder[Unit]{
+    val builder  = new ServiceBuilder[Unit]{
       val descriptor = shutdown(function)
     }
 

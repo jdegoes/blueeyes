@@ -4,23 +4,25 @@ import net.lag.logging.Logger
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
-import net.lag.configgy.{Config, Configgy}
 import blueeyes.parsers.W3ExtendedLog
 import blueeyes.concurrent._
-import blueeyes.util._
-import blueeyes.util.logging._
-import java.util.Calendar
 import blueeyes.core.data._
-import util.matching.Regex
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.health.metrics._
-import IntervalLength._
 import blueeyes.health.{HealthMonitor, CompositeHealthMonitor}
+import blueeyes.util._
+import blueeyes.util.logging._
+import blueeyes.core.service._
+
+import net.lag.configgy.{Config, Configgy}
+import java.util.Calendar
+import util.matching.Regex
+import IntervalLength._
+
 import scalaz.Scalaz._
-import blueeyes.core.service.HttpServices.{DispatchError, NotServed}
 import scalaz.{Failure, Success, Validation}
 
-trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
+trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
 //  import TransformerCombinators.{path$}
 
@@ -36,9 +38,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def healthMonitor[T, S](f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))(f)
-  def healthMonitor[T, S](default: IntervalConfig*)(f: HealthMonitor => HttpServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): HttpServiceDescriptorFactory[T, S] = {
-    (context: HttpServiceContext) => {
+  def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))(f)
+  def healthMonitor[T, S](default: IntervalConfig*)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = {
+    (context: ServiceContext) => {
 
       val intervals = context.config.getConfigMap("healthMonitor").map(_.getList("intervals").map(IntervalParser.parse(_))).getOrElse(default).toList
       val monitor   = new CompositeHealthMonitor(intervals match {
@@ -77,8 +79,8 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def logging[T, S](f: Logger => HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
-    (context: HttpServiceContext) => {
+  def logging[T, S](f: Logger => ServiceDescriptorFactory[T, S]): ServiceDescriptorFactory[T, S] = {
+    (context: ServiceContext) => {
       val logger = LoggingHelper.initializeLogging(context.config, context.toString)
 
       f(logger)(context)
@@ -95,9 +97,9 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def requestLogging[T, S](f: => HttpServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): HttpServiceDescriptorFactory[T, S] = {
+  def requestLogging[T, S](f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = {
     import RollPolicies._
-    (context: HttpServiceContext) => {
+    (context: ServiceContext) => {
       val underlying = f(context)
 
       val configMap = context.config.getConfigMap("requestLog").getOrElse(new Config())
@@ -157,8 +159,8 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def configurableRoot[T, S](f: HttpServiceDescriptorFactory[T, S]): HttpServiceDescriptorFactory[T, S] = {
-    (context: HttpServiceContext) => {
+  def configurableRoot[T, S](f: ServiceDescriptorFactory[T, S]): ServiceDescriptorFactory[T, S] = {
+    (context: ServiceContext) => {
       val underlying = f(context)
 
       underlying.copy(
@@ -175,7 +177,7 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
     }
   }
 
-  type ServiceLocator[T] = (String, HttpServiceVersion) => HttpClient[T]
+  type ServiceLocator[T] = (String, ServiceVersion) => HttpClient[T]
 
   /**
    * Augments the service with a locator, which is capable of creating HTTP
@@ -191,12 +193,12 @@ trait HttpServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinat
    * }
    * }}}
    */
-  def serviceLocator[T, S](f: ServiceLocator[T] => HttpServiceDescriptorFactory[T, S])(implicit httpClient: HttpClient[T]): HttpServiceDescriptorFactory[T, S] = {
+  def serviceLocator[T, S](f: ServiceLocator[T] => ServiceDescriptorFactory[T, S])(implicit httpClient: HttpClient[T]): ServiceDescriptorFactory[T, S] = {
     implicit def hack[X1, X2](f: Future[X1]): Future[X2] = f.asInstanceOf[Future[X2]]
 
-    (context: HttpServiceContext) => {
+    (context: ServiceContext) => {
       f {
-        (serviceName: String, serviceVersion: HttpServiceVersion) => {
+        (serviceName: String, serviceVersion: ServiceVersion) => {
           val serviceRootUrl = Configgy.config("services." + serviceName + ".v" + serviceVersion.majorVersion.toString + ".serviceRootUrl")
 
           httpClient.path(serviceRootUrl)

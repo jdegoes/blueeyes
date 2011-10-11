@@ -3,9 +3,9 @@ package blueeyes.core.service
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.data.ByteChunk
+import blueeyes.core.service._
 import engines.HttpClientXLightWeb
 import scalaz.{Failure, Success}
-import blueeyes.core.service.HttpServices.DispatchError
 import blueeyes.core.http._
 
 import scalaz.Scalaz._

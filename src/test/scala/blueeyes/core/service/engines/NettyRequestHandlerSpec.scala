@@ -17,7 +17,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 import scalaz.Scalaz._
 import scalaz.Validation
-import blueeyes.core.service.HttpServices.NotServed
+import blueeyes.core.service.NotServed
 
 class NettyRequestHandlerSpec extends Specification with NettyConverters with MocksCreation with BijectionsChunkString{
   private val handler       = mock[AsyncCustomHttpService[ByteChunk]]

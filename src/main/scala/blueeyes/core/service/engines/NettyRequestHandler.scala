@@ -1,18 +1,20 @@
 package blueeyes.core.service.engines
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable.{HashSet, SynchronizedSet}
 
-import org.jboss.netty.channel._
-import org.jboss.netty.handler.codec.http.HttpHeaders._
-import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
-import net.lag.logging.Logger
-import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import blueeyes.core.data.{GZIPByteChunk, ByteChunk, MemoryChunk}
-import blueeyes.core.service.HttpServices.DispatchError
+import blueeyes.core.service._
+
+import net.lag.logging.Logger
+
+import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
+import org.jboss.netty.channel._
+import org.jboss.netty.handler.codec.http.HttpHeaders._
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable.{HashSet, SynchronizedSet}
 import scalaz.{Failure, Success}
 
 /** This handler is not thread safe, it's assumed a new one will be created

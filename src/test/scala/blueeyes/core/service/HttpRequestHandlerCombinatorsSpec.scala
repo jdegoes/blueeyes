@@ -18,7 +18,6 @@ import DataSize._
 
 import java.net.URLEncoder.{encode => encodeUrl}
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsIdentity, Bijection, GZIPByteChunk}
-import HttpServicePimps._
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity with FutureMatchers {
   implicit val JValueToString = new Bijection[JValue, String] {

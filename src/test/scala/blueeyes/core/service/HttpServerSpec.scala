@@ -4,7 +4,6 @@ import org.specs.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future

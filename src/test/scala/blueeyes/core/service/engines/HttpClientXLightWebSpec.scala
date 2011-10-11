@@ -5,7 +5,6 @@ import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.service.HttpServicePimps._
 import net.lag.configgy.Configgy
 import org.specs.Specification
 import org.specs.util._
@@ -238,7 +237,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
 }
 
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.core.service.{HttpService, HttpReflectiveServiceList}
+import blueeyes.core.service._
 
 object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
 
@@ -301,7 +300,7 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with
     }
   }
 
-  val echoService: HttpService[ByteChunk] = service("echo", "1.0.0") { context =>
+  val echoService: Service[ByteChunk] = service("echo", "1.0.0") { context =>
     request {
       path("/echo") {
         produce(text/html) {

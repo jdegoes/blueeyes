@@ -21,11 +21,11 @@ val emailService = {
   }
 }
 */
-trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
+trait ServiceBuilder[T] {
   protected case class StartupDescriptor[S](startup: () => Future[S]) {
     def -> (request: RequestDescriptor[S]) = new StartupAndShutdownDescriptor(request)
     class StartupAndShutdownDescriptor(request: RequestDescriptor[S]){
-      def -> (shutdown: ShutdownDescriptor[S]) = HttpServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
+      def -> (shutdown: ShutdownDescriptor[S]) = ServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
     }
   }
   protected case class RequestDescriptor[S](request: S => AsyncHttpService[T])
@@ -45,12 +45,12 @@ trait HttpServiceBuilder[T] extends HttpServiceVersionImplicits{
   
   protected def shutdown(shutdown: => Future[Unit]): ShutdownDescriptor[Unit] = ShutdownDescriptor[Unit]((u) => shutdown)
   
-  protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[Unit]): HttpServiceDescriptor[T, Unit] = 
-    HttpServiceDescriptor[T, Unit](() => ().future, rd.request, _ => ().future)
+  protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[Unit]): ServiceDescriptor[T, Unit] = 
+    ServiceDescriptor[T, Unit](() => ().future, rd.request, _ => ().future)
 
-  def service(name: String, version: String)(descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]): HttpService[T] = new HttpServiceImpl[T](name, version, descriptorFactory)
+  def service(name: String, version: String)(descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]): Service[T] = new ServiceImpl[T](name, version, descriptorFactory)
 
-  private class HttpServiceImpl[T](val name: String, val version: HttpServiceVersion, val descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _])(implicit m: Manifest[T]) extends HttpService[T]{
+  private class ServiceImpl[T](val name: String, val version: ServiceVersion, val descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]) extends Service[T]{
     def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
   }
 }

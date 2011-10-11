@@ -56,7 +56,7 @@ import concurrent.{FutureImplicits}
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with 
+trait BlueEyesServiceBuilderBase[T] extends ServiceBuilder[T] with 
   FutureImplicits with 
   HttpHeaderImplicits with 
   HttpStatusImplicits with
@@ -66,7 +66,6 @@ trait BlueEyesServiceBuilderBase[T] extends HttpServiceBuilder[T] with
   HttpRequestHandlerCombinators with 
   HttpRequestHandlerImplicits with
   RestPathPatternImplicits with
-  HttpServiceDescriptorFactoryCombinators{
+  ServiceDescriptorFactoryCombinators
 
-}
 trait BlueEyesServiceBuilder extends BlueEyesServiceBuilderBase[ByteChunk]

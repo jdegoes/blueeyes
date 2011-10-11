@@ -3,11 +3,13 @@ package blueeyes.core.service
 
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import blueeyes.core.http._
 import blueeyes.core.data.ByteChunk
+import blueeyes.core.http._
+import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.logging.LoggingHelper
 import blueeyes.util.CommandLineArguments
+
 import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
@@ -16,23 +18,22 @@ import net.lag.configgy.{Config, ConfigMap, Configgy}
 import net.lag.logging.Logger
 import scalaz.Scalaz._
 import scalaz.{Failure, Success}
-import blueeyes.core.service.HttpServices.DispatchError
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
  */
 trait HttpReflectiveServiceList[T] { self =>
-  lazy val services: List[HttpService[T]] = {
+  lazy val services: List[Service[T]] = {
     val c = self.getClass
     
     val allMethods: List[Method] = c.getDeclaredMethods.toList
     
     val serviceMethods: List[Method] = allMethods.reverse.filter { method =>
-      classOf[HttpService[T]].isAssignableFrom(method.getReturnType) && method.getParameterTypes.length == 0
+      classOf[Service[T]].isAssignableFrom(method.getReturnType) && method.getParameterTypes.length == 0
     }
     
     serviceMethods.map { method =>
-      method.invoke(self).asInstanceOf[HttpService[T]]
+      method.invoke(self).asInstanceOf[Service[T]]
     }
   }
 }
@@ -41,8 +42,6 @@ trait HttpReflectiveServiceList[T] { self =>
  * and started, and has a main function so it can be mixed into objects.
  */
 trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
-  import HttpServicePimps._
-
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
 
@@ -53,7 +52,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   
   /** The list of services that this server is supposed to run.
    */
-  def services: List[HttpService[ByteChunk]]
+  def services: List[Service[ByteChunk]]
 
   val service = {r: HttpRequest[ByteChunk] =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
@@ -163,7 +162,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     handlerLock.writeLock.lock()
     
     try {
-      _handler = HttpServices.OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
+      _handler = OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
     }
     finally {
       handlerLock.writeLock.unlock()
@@ -263,18 +262,18 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   
   private val handlerLock = new java.util.concurrent.locks.ReentrantReadWriteLock
   
-  private var _handler: AsyncHttpService[ByteChunk] = HttpServices.OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
+  private var _handler: AsyncHttpService[ByteChunk] = OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
   
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
 
-    val context = HttpServiceContext(config, service.name, service.version, host, port, sslPort)
+    val context = ServiceContext(config, service.name, service.version, host, port, sslPort)
 
     BoundStateDescriptor(context, service)
   }
 
-  private case class BoundStateDescriptor[ByteChunk, S](context: HttpServiceContext, service: HttpService[ByteChunk]) {
-    val descriptor: HttpServiceDescriptor[ByteChunk, S] = service.descriptorFactory(context).asInstanceOf[HttpServiceDescriptor[ByteChunk, S]]
+  private case class BoundStateDescriptor[ByteChunk, S](context: ServiceContext, service: Service[ByteChunk]) {
+    val descriptor: ServiceDescriptor[ByteChunk, S] = service.descriptorFactory(context).asInstanceOf[ServiceDescriptor[ByteChunk, S]]
     
     val state: Future[S] = new Future[S]
     

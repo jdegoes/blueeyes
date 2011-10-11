@@ -5,12 +5,12 @@ package blueeyes.core.service
  * Services are typed in whatever type is required by the server engine.
  * For example, some server engines might only deal with strings.
  */
-trait HttpService[T] {
+trait Service[T] {
   def name: String
   
-  def version: HttpServiceVersion
+  def version: ServiceVersion
 
-  def descriptorFactory: HttpServiceContext => HttpServiceDescriptor[T, _]
+  def descriptorFactory: ServiceContext => ServiceDescriptor[T, _]
   
   def ioClass: Class[T]
   

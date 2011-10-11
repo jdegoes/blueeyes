@@ -6,7 +6,6 @@ import org.specs.Specification
 import org.specs.util._
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.service.HttpServicePimps._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
@@ -197,7 +196,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
 
-  val sampleService: HttpService[ByteChunk] = service("sample", "1.32") { context =>
+  val sampleService: Service[ByteChunk] = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
         path("/bar/'adId/adCode.html") {

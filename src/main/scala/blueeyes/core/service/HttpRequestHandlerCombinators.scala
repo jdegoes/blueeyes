@@ -9,11 +9,10 @@ import blueeyes.util.metrics.DataSize
 
 import scala.xml.NodeSeq
 import scalaz.Functor
-import core.service.HttpServices._
-import core.service.HttpServices.{HttpService => Service}
+import core.service._
 import core.data.{CompressedByteChunk, ByteChunk, Bijection}
 
-trait HttpRequestHandlerCombinators{
+trait HttpRequestHandlerCombinators {
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
    *
@@ -23,7 +22,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * }}}
    */
-  def path[T, S](path: RestPathPattern): Service[T, S] => Service[T, S] = (h: Service[T, S]) => new PathService[T, S] (path, h)
+  def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = (h: HttpService[T, S]) => new PathService[T, S] (path, h)
 
   /** Yields the remaining path to the specified function, which should return
    * a request handler.
@@ -35,14 +34,14 @@ trait HttpRequestHandlerCombinators{
    * }
    * }}}
    */
-  def remainingPath[T, S](handler: Service[T, String => S]) = path(RestPathPattern.Root `...` ('remainingPath)) {
+  def remainingPath[T, S](handler: HttpService[T, String => S]) = path(RestPathPattern.Root `...` ('remainingPath)) {
     parameter(IdentifierWithDefault('remainingPath, () => ""))(handler)
   }
 
   /** The method combinator creates a handler that is defined only for the
    * specified HTTP method.
    */
-  def method[T, S](method: HttpMethod): Service[T, S] => Service[T, S] = (h: Service[T, S]) => new HttpMethodService[T, S] (method, h)
+  def method[T, S](method: HttpMethod): HttpService[T, S] => HttpService[T, S] = (h: HttpService[T, S]) => new HttpMethodService[T, S] (method, h)
 
   /**
    * <pre>
@@ -51,7 +50,7 @@ trait HttpRequestHandlerCombinators{
    * } ~ orFail { request => BadRequest -> "The path " + request.path + " is malformed" }
    * </pre>
    */
-  def orFail[T, S](h: HttpRequest[T] => (HttpFailure, String)): Service[T, S] = new FailureService[T, S](h)
+  def orFail[T, S](h: HttpRequest[T] => (HttpFailure, String)): HttpService[T, S] = new FailureService[T, S](h)
 
   /**
    * <pre>
@@ -60,7 +59,7 @@ trait HttpRequestHandlerCombinators{
    * } ~ orFail(HttpStatusCodes.NotFound, "No handler found that could handle this request.")
    * </pre>
    */
-  def orFail[T, S](code: HttpFailure, msg: String): Service[T, S] = orFail { request => code -> msg }
+  def orFail[T, S](code: HttpFailure, msg: String): HttpService[T, S] = orFail { request => code -> msg }
 
   /**
    * <pre>
@@ -69,12 +68,12 @@ trait HttpRequestHandlerCombinators{
    * } ~ orFail("The path is malformed")
    * </pre>
    */
-  def orFail[T, S](msg: String): Service[T, S] = orFail { request => HttpStatusCodes.BadRequest -> msg }
+  def orFail[T, S](msg: String): HttpService[T, S] = orFail { request => HttpStatusCodes.BadRequest -> msg }
 
   /** The path end combinator creates a handler that is defined only for paths
    * that are fully matched.
    */
-  def $ [T, S](h: Service[T, S]): Service[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
+  def $ [T, S](h: HttpService[T, S]): HttpService[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
 
   /** Forces a particular combinator to match.
    * <pre>
@@ -85,17 +84,17 @@ trait HttpRequestHandlerCombinators{
    * }
    * </pre>
    */
-  def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: Service[T, S]): Service[T, S] = CommitService(msgGen, h)
+  def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: HttpService[T, S]): HttpService[T, S] = CommitService(msgGen, h)
 
-  def get     [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.GET)     { HttpHandlerService { h } } }
-  def put     [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.PUT)     { HttpHandlerService { h } } }
-  def post    [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.POST)    { HttpHandlerService { h } } }
-  def delete  [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.DELETE)  { HttpHandlerService { h } } }
-  def head    [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.HEAD)    { HttpHandlerService { h } } }
-  def patch   [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.PATCH)   { HttpHandlerService { h } } }
-  def options [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.OPTIONS) { HttpHandlerService { h } } }
-  def trace   [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.TRACE)   { HttpHandlerService { h } } }
-  def connect [T, S](h: HttpServiceHandler[T, S]): Service[T, S] = $ { method(HttpMethods.CONNECT) { HttpHandlerService { h } } }
+  def get     [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.GET)     { HttpHandlerService { h } } }
+  def put     [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.PUT)     { HttpHandlerService { h } } }
+  def post    [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.POST)    { HttpHandlerService { h } } }
+  def delete  [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.DELETE)  { HttpHandlerService { h } } }
+  def head    [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.HEAD)    { HttpHandlerService { h } } }
+  def patch   [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.PATCH)   { HttpHandlerService { h } } }
+  def options [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.OPTIONS) { HttpHandlerService { h } } }
+  def trace   [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.TRACE)   { HttpHandlerService { h } } }
+  def connect [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.CONNECT) { HttpHandlerService { h } } }
 
   /** Creates a handler that accepts ranged GET requests. A ranged GET request
    * uses the Range header with the following syntax: [unit]=[lower-bound]-[upper-bound].
@@ -109,7 +108,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * }}}
    */
-  def getRange[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]): Service[T, S] = method(HttpMethods.GET)(GetRangeService(h))
+  def getRange[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]): HttpService[T, S] = method(HttpMethods.GET)(GetRangeService(h))
 
   /**
    * Extracts data from the request. The extractor combinators can be used to
@@ -126,7 +125,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * </pre>
    */
-  def extract[T, S, E1](extractor: HttpRequest[T] => E1): Service[T, E1 => S] => Service[T, S] = (h) => new ExtractService[T, S, E1](extractor, h)
+  def extract[T, S, E1](extractor: HttpRequest[T] => E1): HttpService[T, E1 => S] => HttpService[T, S] = (h) => new ExtractService[T, S, E1](extractor, h)
 
   /** A special-case extractor for parameters.
    * <pre>
@@ -137,7 +136,7 @@ trait HttpRequestHandlerCombinators{
    * }
    * </pre>
    */
-  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): Service[T, String => S] => Service[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
+  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
 
   def extractCookie[T](request: HttpRequest[T], s: Symbol, default: () => String) = {
     def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
@@ -152,15 +151,15 @@ trait HttpRequestHandlerCombinators{
    * }
    * </pre>
    */
-  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): Service[T, String => S] => Service[T, S] = extract[T, S, String]{ request =>
+  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = extract[T, S, String]{ request =>
     extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_)
   }
 
-  def cookie[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, String], convert: (String) => E1): Service[T, E1 => S] => Service[T, S] = extract[T, S, E1]{ request =>
+  def cookie[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, String], convert: (String) => E1): HttpService[T, E1 => S] => HttpService[T, S] = extract[T, S, E1]{ request =>
     convert(extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_))
   }
 
-  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): Service[JValue, F1 => S] => Service[JValue, S] = {
+  def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): HttpService[JValue, F1 => S] => HttpService[JValue, S] = {
     def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
       val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
 
@@ -178,25 +177,25 @@ trait HttpRequestHandlerCombinators{
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
-  def accept[T, S, U](mimeType: MimeType)(h: Service[Future[T], S])(implicit b: Bijection[U, Future[T]]): Service[U, S] = new AcceptService[T, S, U](mimeType, h)
+  def accept[T, S, U](mimeType: MimeType)(h: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]): HttpService[U, S] = new AcceptService[T, S, U](mimeType, h)
 
-  def accept2[T, S, U, E1](mimeType: MimeType)(h: Service[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]): Service[U, E1 => S] = new Accept2Service[T, S, U, E1](mimeType, h)
+  def accept2[T, S, U, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]): HttpService[U, E1 => S] = new Accept2Service[T, S, U, E1](mimeType, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
-  def produce[T, S, V](mimeType: MimeType)(h: Service[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): Service[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
+  def produce[T, S, V](mimeType: MimeType)(h: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): HttpService[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
-  def produce2[T, S, V, E1](mimeType: MimeType)(h: Service[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): Service[T, E1 => Future[HttpResponse[V]]] = new Produce2Service(mimeType, h)
+  def produce2[T, S, V, E1](mimeType: MimeType)(h: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): HttpService[T, E1 => Future[HttpResponse[V]]] = new Produce2Service(mimeType, h)
   /** The content type combinator creates a handler that accepts and produces
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
    */
-  def contentType[T, S](mimeType: MimeType)(h: Service[Future[T], Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): Service[S, Future[HttpResponse[S]]] = {
+  def contentType[T, S](mimeType: MimeType)(h: HttpService[Future[T], Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): HttpService[S, Future[HttpResponse[S]]] = {
     implicit val b3 = b2.inverse
 
     accept(mimeType) {
@@ -205,7 +204,7 @@ trait HttpRequestHandlerCombinators{
       }
     }
   }
-  def contentType2[T, S, E1](mimeType: MimeType)(h: Service[Future[T], E1 => Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): Service[S, E1 => Future[HttpResponse[S]]] = {
+  def contentType2[T, S, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): HttpService[S, E1 => Future[HttpResponse[S]]] = {
     implicit val b3 = b2.inverse
 
     accept2(mimeType) {
@@ -219,16 +218,16 @@ trait HttpRequestHandlerCombinators{
    *  The compress combinator creates a handler that compresses content by encoding supported by client
    *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
    */
-  def compress(h: Service[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
+  def compress(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
 
-  def compress2[E1](h: Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new CompressService2[E1](h)
+  def compress2[E1](h: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new CompressService2[E1](h)
 
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
-  def aggregate(chunkSize: Option[DataSize])(h: Service[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
+  def aggregate(chunkSize: Option[DataSize])(h: HttpService[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
 
-  def aggregate2[E1](chunkSize: Option[DataSize])(h: Service[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]): Service[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new Aggregate2Service[E1](chunkSize, h)
+  def aggregate2[E1](chunkSize: Option[DataSize])(h: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new Aggregate2Service[E1](chunkSize, h)
 
   /** The jsonp combinator creates a handler that accepts and produces JSON.
    * The handler also transparently works with JSONP, if the client specifies
@@ -236,33 +235,33 @@ trait HttpRequestHandlerCombinators{
    * HTTP method and content using the query string parameters "method" and
    * "content", respectively.
    */
-  def jsonp[T](delegate: Service[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): Service[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
+  def jsonp[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpService[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
 
-  def jsonp2[T, E1](delegate: Service[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): Service[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
+  def jsonp2[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpService[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
    */
-  def jvalue[T](h: Service[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
+  def jvalue[T](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): HttpService[T, Future[HttpResponse[T]]] = contentType(MimeTypes.application/MimeTypes.json) { h }
 
-  def jvalue2[T, E1](h: Service[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): Service[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.application/MimeTypes.json) { h }
+  def jvalue2[T, E1](h: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], b2: Bijection[JValue, T]): HttpService[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.application/MimeTypes.json) { h }
 
   /** The xml combinator creates a handler that accepts and produces XML.
    * Requires an implicit bijection used for transcoding.
    */
-  def xml[T](h: Service[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): Service[T, Future[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
+  def xml[T](h: HttpService[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): HttpService[T, Future[HttpResponse[T]]] = contentType(MimeTypes.text/MimeTypes.xml) { h }
 
-  def xml2[T, E1](h: Service[Future[NodeSeq], E1 => Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): Service[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.text/MimeTypes.xml) { h }
+  def xml2[T, E1](h: HttpService[Future[NodeSeq], E1 => Future[HttpResponse[NodeSeq]]])(implicit b1: Bijection[T, Future[NodeSeq]], b2: Bijection[NodeSeq, T]): HttpService[T, E1 => Future[HttpResponse[T]]] = contentType2(MimeTypes.text/MimeTypes.xml) { h }
 
-  def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: Service[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
+  def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: HttpService[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 
-  def metadata[T, S](metadata: Metadata*)(h: Service[T, HttpResponse[S]]) = MetadataService(Some(CompositeMetadata(metadata)), h)
+  def metadata[T, S](metadata: Metadata*)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(CompositeMetadata(metadata)), h)
 
-  def describe[T, S](description: String)(h: Service[T, HttpResponse[S]]) = MetadataService(Some(DescriptionMetadata(description)), h)
+  def describe[T, S](description: String)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(DescriptionMetadata(description)), h)
 
   /** The decodeUrl combinator creates a handler that decode HttpRequest URI.
    */
-  def decodeUrl[T, S](h: Service[T, S]) = new DecodeUrlService[T, S](h)
+  def decodeUrl[T, S](h: HttpService[T, S]) = new DecodeUrlService[T, S](h)
 }
 
 

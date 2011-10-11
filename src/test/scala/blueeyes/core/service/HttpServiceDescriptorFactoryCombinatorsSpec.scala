@@ -4,7 +4,6 @@ import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
-import blueeyes.core.service.HttpServicePimps._
 import blueeyes.json.JsonAST._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.concurrent.Future
@@ -103,7 +102,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HeatlhMonitorService extends BlueEyesServiceBuilder with HttpServiceDescriptorFactoryCombinators with BijectionsChunkJson{
+trait HeatlhMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with BijectionsChunkJson{
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {

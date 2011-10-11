@@ -19,12 +19,12 @@ class HttpReflectiveServiceListSpec extends Specification{
     serviceList.services mustEqual(serviceList.service :: Nil)
   }
 
-  object ServiceImpl extends HttpService[Unit]{
+  object ServiceImpl extends Service[Unit]{
     def ioClass = null
 
     def descriptorFactory = null
 
-    def version = HttpServiceVersion(1, 2, "3")
+    def version = ServiceVersion(1, 2, "3")
 
     def name = null
   }

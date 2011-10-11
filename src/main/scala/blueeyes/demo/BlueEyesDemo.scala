@@ -13,7 +13,6 @@ import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.core.service.ServerHealthMonitorService
-import blueeyes.core.service.HttpServicePimps._
 import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
 import blueeyes.core.data.FileSource._
 import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkFutureJson}
