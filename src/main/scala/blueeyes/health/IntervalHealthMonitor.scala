@@ -58,16 +58,25 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   def errorStats = _errorsStats.toMap
 
 
-  def shutdown() = {
+  def shutdown() {
     val statistics  = List[Map[JPath, AsyncStatistic[_, _]]](timerStats, countStats, timedSampleStats, errorStats).map(_.values.toList).flatten
 
     statistics.foreach(_.shutdown())
   }
 
   private def errorsCountJValue = {
-    val errorsCount       = Future[Long](_errorsStats.toMap.values.map(count(_)).toList: _*).map(_.sum)
     val errorsCountPath   = _errorsStats.headOption.map(v => JPath(v._1.nodes.take(v._1.nodes.length - 2) ::: List(JPathField("count"), JPathField(intervalConfig.toString))))
-    errorsCount.map(count => errorsCountPath.map(jvalueToJObject(_, JInt(count))).getOrElse(JObject(Nil)))
+    val errors: Future[List[List[Long]]] = Future(errorStats.values.toList.map{ statistic => statistic.details.map{ histogram => histogram.values.toList.map(_.toLong) } }: _*)
+    val errorsCount = errors.map{errors =>
+      val initial = intervalConfig match{
+        case e: interval => List.fill(e.samples)(0l)
+        case eternity    => List(0l)
+      }
+
+      JArray(errors.foldLeft(initial){(result, e) => result zip e map (v => v._1 + v._2)}.map(JInt(_)))
+    }
+
+    errorsCount.map(count => errorsCountPath.map(jvalueToJObject(_, count)).getOrElse(JObject(Nil)))
   }
 
   private def composeStatistics[T](stat: Map[JPath, Statistic[_, _]]) =
