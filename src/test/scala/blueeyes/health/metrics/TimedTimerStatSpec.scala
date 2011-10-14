@@ -7,14 +7,15 @@ import blueeyes.json.Printer
 
 class TimedTimerStatSpec extends Specification{
   private val clock = new Clock()
-  "TimedCountStat" should{
+  "TimedTimerStat" should{
     "creates JValue" in{
       val config = interval(3.seconds, 3)
       val timedSample = TimedTimerStat(config)(clock.now _)
       fill(timedSample)
 
-      val values        = ("minimumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0), JDouble(0.0))) :: ("maximumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0), JDouble(0.0))) :: ("averageTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0), JDouble(0.0))) :: ("standardDeviation", List(JDouble(0.0), JDouble(0.0), JDouble(0.0), JDouble(0.0))) :: Nil
-      timedSample.toJValue mustEqual (JObject(values.map(kv => JField(kv._1, JObject(JField(config.toString, JArray(kv._2)) :: Nil)))))
+      val values = ("minimumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("maximumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("averageTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("standardDeviation", List(JDouble(0.0), JDouble(0.0), JDouble(0.0))) :: Nil
+      val jValue = timedSample.toJValue
+      jValue.value must eventually (beSome(JObject(values.map(kv => JField(kv._1, JObject(JField(config.toString, JArray(kv._2)) :: Nil))))))
     }
     "creates TimedSample if the configuration is interval" in{
       TimedTimerStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)
@@ -47,6 +48,8 @@ class TimedTimerStatSpec extends Specification{
   private def set(timedSample: Statistic[Long, Map[Long, Timer]], now: Long) = {
     clock.setNow(now)
     timedSample += 1
+
+    Thread.sleep(50)
   }
 
   class Clock{

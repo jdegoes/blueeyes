@@ -1,5 +1,6 @@
 package blueeyes.health.metrics
 
+import histogram.{DynamicLengthBucketsStrategy, StaticHistogram}
 import java.util.concurrent.atomic.AtomicLong
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap
@@ -8,8 +9,11 @@ import collection.mutable.ConcurrentMap
 import ConcurrentMaps._
 import blueeyes.json.JsonAST._
 
-class Sample(val size: Int) extends SimpleHistogram with Statistic[Double, Option[Map[Long, Double]]]{
-  private val _count = new AtomicLong(0)
+import histogram.ValueStrategy._
+
+class Sample(val size: Int) extends SyncStatistic[Double, Option[Map[Long, Double]]]{
+  private val histogram = new StaticHistogram[Double](new DynamicLengthBucketsStrategy())
+  private val _count    = new AtomicLong(0)
   private val _rawData : ConcurrentMap[Double, AtomicLong] = new ConcurrentHashMap[Double, AtomicLong]
 
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
@@ -25,12 +29,12 @@ class Sample(val size: Int) extends SimpleHistogram with Statistic[Double, Optio
 
   def count = _count.get
 
-  def rawData = _rawData.toMap.mapValues(_.get.intValue)
+  def rawData = _rawData.toMap.mapValues(_.get.longValue)
 
   def details: Option[Map[Long, Double]] = {
     writeLock{
       if (count >= size && !_histogram.isDefined){
-        _histogram = Some(build)
+        _histogram = Some(histogram.histogram(_rawData.toList.map(v => (v._1, v._2.get.longValue)).toList.sortWith((e1, e2) => (e1._1 < e2._1))))
       }
       _histogram
     }

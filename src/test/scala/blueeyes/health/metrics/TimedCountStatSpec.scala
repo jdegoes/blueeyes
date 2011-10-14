@@ -12,7 +12,8 @@ class TimedCountStatSpec extends Specification{
       val timedSample = TimedCountStat(config)(clock.now _)
       fill(timedSample)
 
-      timedSample.toJValue mustEqual JObject(JField(config.toString, (JArray(List(JInt(1), JInt(6), JInt(0), JInt(0))))) :: Nil)
+      val jValue = timedSample.toJValue
+      jValue.value must eventually (beSome(JObject(JField(config.toString, (JArray(List(JInt(4), JInt(3), JInt(0))))) :: Nil)))
     }
     "creates TimedSample if the configuration is interval" in{
       TimedCountStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)

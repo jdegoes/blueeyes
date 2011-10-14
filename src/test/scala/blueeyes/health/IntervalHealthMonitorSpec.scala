@@ -16,7 +16,7 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     montor.increment("foo")(3)
 
     montor.countStats.size must be (1)
-    montor.countStats.get(JPath("foo")).get.count mustEqual(5)
+    montor.countStats.get(JPath("foo")).get.count.value must eventually (beSome(5))
   }
 
   "records the duration of the event" in {
@@ -71,9 +71,8 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     monitor.increment("requestCount")(3)
     monitor.export("request.export", export)
 
-    println(Printer.pretty(Printer.render(monitor.toJValue)))
     val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JInt(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JInt(2)))))))
 
-    monitor.toJValue mustEqual(monitorJson)
+    monitor.toJValue.value must eventually(beSome(monitorJson))
   }
 }

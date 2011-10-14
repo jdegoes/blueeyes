@@ -16,7 +16,7 @@ import blueeyes.util.ClockSystem
  *
  * @author coda
  */
-class Timer extends Statistic[Duration, Tuple5[Long, Duration, Duration, Duration, Duration]] with ClockSystem{
+class Timer extends SyncStatistic[Duration, Tuple5[Long, Duration, Duration, Duration, Duration]] with ClockSystem{
   private val count_ = new AtomicLong(0)
   private val min_ = new AtomicLong(Long.MaxValue)
   private val max_ = new AtomicLong(Long.MinValue)

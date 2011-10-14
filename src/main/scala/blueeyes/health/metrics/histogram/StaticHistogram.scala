@@ -1,24 +1,18 @@
-package blueeyes.health.metrics
+package blueeyes.health.metrics.histogram
+
 
 import collection.mutable.HashMap
 import scala.math.floor
 import scala.math.round
 import scala.math.max
 
-trait Histogram[V]{
-  def rawData: Map[Double, Long]
+class StaticHistogram[V](bucketStrategy: BucketsLengthStrategy)(implicit val valueStrategy: ValueStrategy[V]){
+  def histogram(sortedData: List[(Double, Long)]) = {
+    val bucketSize  = bucketStrategy.length(sortedData)
 
-  def bucketInitialValue: V
+    val buckets = createBuckets(bucketSize, sortedData)
 
-  def setBucketValue(value: V, newValue: Long): V
-
-  def build = {
-    val sorted      = rawData.toList.sortWith((e1, e2) => (e1._1 < e2._1))
-    val bucketSize  = bucket(sorted)
-
-    val buckets = createBuckets(bucketSize, sorted)
-
-    fillMissing(bucketSize, sorted, buckets).toMap
+    fillMissing(bucketSize, sortedData, buckets).toMap
   }
 
   private def fillMissing(bucketSize: Int, sorted: List[(Double, Long)], buckets: HashMap[Long, V]): HashMap[Long, V] = {
@@ -29,7 +23,7 @@ trait Histogram[V]{
     while (bucketNumber < maxV){
       val bucket = buckets.get(bucketNumber)
 
-      if (!bucket.isDefined) buckets.put(bucketNumber, bucketInitialValue)
+      if (!bucket.isDefined) buckets.put(bucketNumber, valueStrategy.zero)
 
       bucketNumber = bucketNumber + bucketSize
     }
@@ -45,23 +39,29 @@ trait Histogram[V]{
       val bucketNumber: Long = minV + (floor((kv._1 - sorted.head._1) / bucketSize).longValue * bucketSize)
 
       val bucket      = buckets.get(bucketNumber)
-      val bucketValue = setBucketValue(bucket.getOrElse(bucketInitialValue), kv._2)
-      buckets.put(bucketNumber, bucketValue)
+      if (kv._2 != 0){
+        val bucketValue = valueStrategy.plus(bucket.getOrElse(valueStrategy.zero), kv._2)
+        buckets.put(bucketNumber, bucketValue)
+      }
     })
 
     buckets
   }
+}
 
-  protected def bucket(sorted: List[(Double, Long)]) = {
+trait BucketsLengthStrategy{
+  def length(sorted: List[(Double, Long)]): Int
+}
+
+class FixedLengthBucketsStrategy(size: Int) extends BucketsLengthStrategy{
+  def length(sorted: List[(Double, Long)]) = size
+}
+
+class DynamicLengthBucketsStrategy extends BucketsLengthStrategy{
+  def length(sorted: List[(Double, Long)]) = {
     val minV = sorted.head._1
     val maxV = sorted.last._1
 
     max(floor(minV), round((maxV - minV) / sorted.size)).intValue
   }
-}
-
-trait SimpleHistogram extends Histogram[Double]{
-  def bucketInitialValue = 0.0
-
-  def setBucketValue(value: Double, newValue: Long) = value + newValue
 }

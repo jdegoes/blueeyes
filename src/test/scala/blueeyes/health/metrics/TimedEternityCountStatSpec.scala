@@ -11,7 +11,7 @@ class TimedEternityCountStatSpec extends Specification{
       fill(timedSample)
 
 
-      timedSample.toJValue mustEqual JObject(JField(eternity.toString, JArray(List(JInt(4)))) :: Nil)
+      timedSample.toJValue.value must eventually (beSome(JObject(JField(eternity.toString, JArray(List(JInt(4)))) :: Nil)))
     }
   }
 

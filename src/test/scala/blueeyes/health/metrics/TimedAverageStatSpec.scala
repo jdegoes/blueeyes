@@ -13,8 +13,8 @@ class TimedAverageStatSpec extends Specification{
       fill(timedSample)
 
       val histogram      = timedSample.toJValue
-      val histogramValue = JArray(List(JDouble(0.3333333333333333), JDouble(2.0), JDouble(0.0), JDouble(0.0)))
-      histogram mustEqual (JObject(JField("perSecond", JObject(JField(config.toString, histogramValue) :: Nil)) :: Nil))
+      val histogramValue = JArray(List(JDouble(1.3333333333333333), JDouble(1.0), JDouble(0.0)))
+      histogram.value must eventually (beSome(JObject(JField("perSecond", JObject(JField(config.toString, histogramValue) :: Nil)) :: Nil)))
     }
     "creates TimedSample if the configuration is interval" in{
       TimedAverageStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)
@@ -25,11 +25,6 @@ class TimedAverageStatSpec extends Specification{
   }
 
   private def fill(timedSample: Statistic[Long, Map[Long, Double]]){
-    set(timedSample, 100000)
-    set(timedSample, 101000)
-    set(timedSample, 102000)
-    set(timedSample, 102100)
-
     set(timedSample, 103000)
     set(timedSample, 104000)
     set(timedSample, 104020)
@@ -47,6 +42,8 @@ class TimedAverageStatSpec extends Specification{
   private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
     clock.setNow(now)
     timedSample += 1
+
+    Thread.sleep(50)
   }
 
   class Clock{

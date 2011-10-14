@@ -15,16 +15,12 @@ trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealt
     request{
       path("/blueeyes/server/health") {
         produce(application/json){
-          get { request =>
-            Future.async {
-              HttpResponse[JValue](content=Some(toJValue(context)))
-            }
+          get { request => toJValue(context) map {content => HttpResponse[JValue](content=Some(content))} }
           }
         }
       }
     }
   }
-}
 
 trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{
 
@@ -87,6 +83,6 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
 
   def toJValue(context: ServiceContext) = {
     val server     = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
-    server.merge(monitor.toJValue)
+    monitor.toJValue map {server.merge(_)}
   }
 }
