@@ -48,10 +48,12 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
             }
           } ~
           jvalue {
-            post { request =>
-              request.content.map{ content =>
-                content.flatMap{value => database(insert(value.asInstanceOf[JObject]).into(collection)) map {_ => HttpResponse[JValue]() }}
-              }.getOrElse(Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest))))
+            post { request: HttpRequest[Future[JValue]] =>
+              request.content map { 
+                _.flatMap(v => database(insert(v --> classOf[JObject]).into(collection)) map (_ => HttpResponse[JValue]()))
+              } getOrElse {
+                Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest)))
+              }
             }
           } ~
           path("/search") {

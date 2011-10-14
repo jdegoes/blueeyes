@@ -4,6 +4,7 @@ import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
 import blueeyes.core.data._
 import blueeyes.BlueEyesServiceBuilder
+import blueeyes.core.http.HttpRequest
 import blueeyes.core.http.HttpResponse
 import blueeyes.core.data.BijectionsChunkJson
 import blueeyes.core.http.MimeTypes._
@@ -12,13 +13,11 @@ import blueeyes.health.metrics.eternity
 
 trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkJson{
   def createService = service("serverhealth", "1.0.0"){ context =>
-    request{
+    request {
       path("/blueeyes/server/health") {
         produce(application/json){
-          get { request =>
-            Future.async {
-              HttpResponse[JValue](content=Some(toJValue(context)))
-            }
+          get { 
+            (request: HttpRequest[ByteChunk]) => Future.sync(HttpResponse[JValue](content=Some(toJValue(context))))
           }
         }
       }

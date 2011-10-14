@@ -13,6 +13,8 @@ import core.service._
 import core.data.{CompressedByteChunk, ByteChunk, Bijection}
 
 trait HttpRequestHandlerCombinators {
+  implicit def handlerToService[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = HttpHandlerService[A, B](handler)
+
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
    *
@@ -86,15 +88,15 @@ trait HttpRequestHandlerCombinators {
    */
   def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: HttpService[T, S]): HttpService[T, S] = CommitService(msgGen, h)
 
-  def get     [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.GET)     { HttpHandlerService { h } } }
-  def put     [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.PUT)     { HttpHandlerService { h } } }
-  def post    [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.POST)    { HttpHandlerService { h } } }
-  def delete  [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.DELETE)  { HttpHandlerService { h } } }
-  def head    [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.HEAD)    { HttpHandlerService { h } } }
-  def patch   [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.PATCH)   { HttpHandlerService { h } } }
-  def options [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.OPTIONS) { HttpHandlerService { h } } }
-  def trace   [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.TRACE)   { HttpHandlerService { h } } }
-  def connect [T, S](h: HttpServiceHandler[T, S]): HttpService[T, S] = $ { method(HttpMethods.CONNECT) { HttpHandlerService { h } } }
+  def get     [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.GET)     { h } }
+  def put     [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.PUT)     { h } }
+  def post    [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.POST)    { h } }
+  def delete  [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.DELETE)  { h } }
+  def head    [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.HEAD)    { h } }
+  def patch   [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.PATCH)   { h } }
+  def options [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.OPTIONS) { h } }
+  def trace   [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.TRACE)   { h } }
+  def connect [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.CONNECT) { h } }
 
   /** Creates a handler that accepts ranged GET requests. A ranged GET request
    * uses the Range header with the following syntax: [unit]=[lower-bound]-[upper-bound].

@@ -56,7 +56,7 @@ sealed trait HttpService[A, B] { self =>
   def metadata: Option[Metadata]
 }
 
-trait CustomHttpService[A, B] extends HttpService[A, B]{
+trait CustomHttpService[A, B] extends HttpService[A, B] {
   def metadata = None
 }
 
