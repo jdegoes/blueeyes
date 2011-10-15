@@ -11,7 +11,7 @@ class TimedEternityAverageStatSpec extends Specification{
       fill(timedSample)
 
       val histogramValue = JArray(List(JDouble(4)))
-      timedSample.toJValue mustEqual JObject(JField("perSecond", JObject(JField(eternity.toString, histogramValue) :: Nil)) :: Nil)
+      timedSample.toJValue.value must eventually (beSome(JObject(JField("perSecond", JObject(JField(eternity.toString, histogramValue) :: Nil)) :: Nil)))
     }
   }
 

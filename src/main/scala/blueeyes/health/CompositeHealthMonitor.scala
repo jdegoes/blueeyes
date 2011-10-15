@@ -7,6 +7,7 @@ import blueeyes.json.MergeMonoid
 
 import scalaz._
 import Scalaz._
+import blueeyes.concurrent.Future
 
 class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonitor with FunctionsMonitor{
   private implicit val mergeMonoid = MergeMonoid
@@ -26,5 +27,7 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
 
   def error[T <: Throwable](path: JPath)(t: T) {healthMonitors.foreach(_.error(path)(t))}
 
-  def toJValue = (healthMonitors.map(_.toJValue)).asMA.sum
+  def toJValue = Future[JValue](healthMonitors.map(_.toJValue): _*).map(_.asMA.sum)
+
+  def shutdown() = healthMonitors.foreach(_.shutdown())
 }

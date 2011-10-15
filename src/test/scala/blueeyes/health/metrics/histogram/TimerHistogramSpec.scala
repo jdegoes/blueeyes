@@ -1,12 +1,15 @@
-package blueeyes.health.metrics
+package blueeyes.health.metrics.histogram
 
 import blueeyes.util.metrics.Duration._
 import org.specs.Specification
 
+import ValueStrategy._
+import blueeyes.health.metrics.Timer
+
 class TimerHistogramSpec extends Specification{
   "TimerHistogram" should{
     "create Timer Histogram" in{
-      val histogram = new HistogramImpl(Map(1.2 -> 2, 1.5 -> 2, 5.9 -> 1, 12.1 -> 3)).build
+      val histogram = new StaticHistogram[Timer](new DynamicLengthBucketsStrategy()).histogram(Map(1.2 -> 2l, 1.5 -> 2l, 5.9 -> 1l, 12.1 -> 3l).toList.sortWith((e1, e2) => (e1._1 < e2._1)))
       histogram.get(1).get.count mustEqual(2)
       histogram.get(1).get.min mustEqual(2.nanoseconds)
 
@@ -20,5 +23,4 @@ class TimerHistogramSpec extends Specification{
       histogram.get(10).get.min mustEqual(3.nanoseconds)
     }
   }
-  class HistogramImpl(val rawData: Map[Double, Long]) extends TimerHistogram
 }

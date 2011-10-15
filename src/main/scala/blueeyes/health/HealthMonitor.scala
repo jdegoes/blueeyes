@@ -29,5 +29,7 @@ trait HealthMonitor{
 
   def trap[T](path: JPath)(f: => T): T
 
-  def toJValue: JValue
+  def toJValue: Future[JValue]
+
+  def shutdown()
 }

@@ -55,6 +55,8 @@ case class TemporalCache[K, V] private (private val cache: Map[K, CacheValue[V]]
   def putAll(vs: Iterable[(K, V)], accessTime: NanoTime) = vs.foldLeft(this)(_.put(_, accessTime))
 
   def get(k: K): Option[V] = cache.get(k).map(_.value)
+
+  def keys = cache.keys
 }
 
 object TemporalCache {

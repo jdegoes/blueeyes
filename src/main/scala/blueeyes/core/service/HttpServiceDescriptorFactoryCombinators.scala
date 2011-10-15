@@ -49,7 +49,10 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       })
 
       val underlying = f(monitor)(context)
-      val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestService(underlying.request(state), monitor)})
+      val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestService(underlying.request(state), monitor)}, shutdown = (state: S) => {
+        monitor.shutdown()
+        underlying.shutdown(state)
+      })
       val startTime = System.currentTimeMillis
 
       descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
@@ -59,10 +62,9 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
             val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
             val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
-            val health        = JObject(JField("requests", monitor.toJValue) :: Nil)
-            Future.async {
-              HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))
-            }
+            val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
+
+            health map {health => HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))}
           }
         }
       }

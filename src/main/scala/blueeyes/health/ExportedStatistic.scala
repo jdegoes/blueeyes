@@ -1,9 +1,9 @@
 package blueeyes.health
 
-import metrics.Statistic
 import blueeyes.json.JsonAST.JValue
+import metrics.{SyncStatistic}
 
-class ExportedStatistic[T](value: => T)(implicit converter: T => JValue) extends Statistic[T, T]{
+class ExportedStatistic[T](value: => T)(implicit converter: T => JValue) extends SyncStatistic[T, T]{
   def toJValue = converter(details)
 
   def details = value

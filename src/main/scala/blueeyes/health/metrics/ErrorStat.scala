@@ -8,7 +8,7 @@ import blueeyes.health.ConcurrentMaps
 import ConcurrentMaps._
 import blueeyes.json.JsonAST._
 
-class ErrorStat extends Statistic[Throwable, Map[Class[_], Long]]{
+class ErrorStat extends SyncStatistic[Throwable, Map[Class[_], Long]]{
   private val _count = new AtomicLong(0)
   private val _distribution : ConcurrentMap[Class[_], AtomicLong] = new ConcurrentHashMap[Class[_], AtomicLong]
 
@@ -29,5 +29,4 @@ class ErrorStat extends Statistic[Throwable, Map[Class[_], Long]]{
     val distributionJValue = details.toList.map(kv => JField(kv._1.getName, JInt(kv._2)))
     JObject(JField("errorCount", JInt(count)) :: JField("errorDistribution", JObject(distributionJValue)) :: Nil)
   }
-
 }

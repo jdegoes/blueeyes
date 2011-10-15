@@ -3,6 +3,7 @@ package blueeyes.health.metrics
 import org.specs.Specification
 import IntervalLength._
 import blueeyes.json.JsonAST._
+import blueeyes.concurrent.Future
 
 class TimedSampleSpec extends Specification{
   private val clock = new Clock()
@@ -12,14 +13,14 @@ class TimedSampleSpec extends Specification{
       fill(timedSample)
 
       val histogram = timedSample.details
-      histogram mustEqual(Map(94000 -> 0, 97000 -> 0, 100000 -> 4, 103000 -> 3, 106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+      histogram.value must eventually (beSome(Map(96 -> 0.0, 99 -> 2.0, 102 -> 5.0, 105 -> 0.0, 108 -> 0.0, 111 -> 3.0, 114 -> 4.0)))
     }
     "removes expired data" in{
       val timedSample = new TimedSampleImpl(interval(3.seconds, 3))(clock.now _)
       fill(timedSample)
 
       val histogram = timedSample.details
-      histogram mustEqual(Map(106000 -> 0, 109000 -> 0, 112000 -> 6, 115000 -> 1))
+      histogram.value must eventually (beSome(Map(108 -> 0.0, 111 -> 3.0, 114 -> 4.0)))
     }
   }
 
@@ -46,6 +47,8 @@ class TimedSampleSpec extends Specification{
   private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
     clock.setNow(now)
     timedSample += 1
+
+    Thread.sleep(50)
   }
 
   class Clock{
@@ -57,6 +60,6 @@ class TimedSampleSpec extends Specification{
   }
 
   class TimedSampleImpl(intervalConfig: interval)(implicit clock: () => Long) extends TimedNumbersSample(intervalConfig)(clock){
-    def toJValue = JNothing
+    def toJValue = Future.sync(JNothing)
   }
 }
