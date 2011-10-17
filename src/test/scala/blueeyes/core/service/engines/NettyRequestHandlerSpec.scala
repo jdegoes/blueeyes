@@ -7,7 +7,6 @@ import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.channel._
 import org.mockito.{Matchers, Mockito, ArgumentMatcher}
 import blueeyes.concurrent.Future
-import blueeyes.core.service.RestPathPatternImplicits._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkString}

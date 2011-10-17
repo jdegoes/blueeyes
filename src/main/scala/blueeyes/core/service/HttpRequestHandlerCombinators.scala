@@ -3,6 +3,7 @@ package service
 
 import http._
 import http.HttpHeaders._
+import http.HttpStatusCodes._
 import data.{CompressedByteChunk, ByteChunk, Bijection}
 
 import blueeyes.concurrent.Future
@@ -26,6 +27,29 @@ trait HttpRequestHandlerCombinators {
    * }}}
    */
   def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = (h: HttpService[T, S]) => new PathService[T, S] (path, h)
+
+  def / [T, S](delegate: HttpService[T, S]) = {
+    def subpaths(service: HttpService[_, _]): Seq[PathPatternMetadata] = {
+      def pathMetadata(metadata: Metadata): Seq[PathPatternMetadata] = metadata match {
+        case OrMetadata(metadata @ _*)  => metadata.flatMap(pathMetadata)
+        case AndMetadata(metadata @ _*) => metadata.flatMap(pathMetadata)
+        case pathPattern: PathPatternMetadata => pathPattern :: Nil
+        case _ => Nil
+      }
+
+      service match {
+        case OrService(services @ _*) => services.flatMap(subpaths)
+        case service: DelegatingService[_, _, _, _] => 
+          val metadata = service.metadata.toList.flatMap(pathMetadata)
+          if (metadata.isEmpty) subpaths(service.delegate) else metadata
+        case service => subpaths(service)
+      }
+    }
+
+    path("/")(delegate) ~ orFail { (_: HttpRequest[T]) => 
+      (NotFound, "You may want to try one of the following patterns: " + subpaths(delegate).map(p => p.pattern.toString + p.desc.map(": " + _).getOrElse("")).mkString("\n"))
+    }
+  }
 
   /** Yields the remaining path to the specified function, which should return
    * a request handler.
@@ -257,7 +281,7 @@ trait HttpRequestHandlerCombinators {
 
   def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: HttpService[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 
-  def metadata[T, S](metadata: Metadata*)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(CompositeMetadata(metadata)), h)
+  def metadata[T, S](metadata: Metadata*)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(AndMetadata(metadata: _*)), h)
 
   def describe[T, S](description: String)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(DescriptionMetadata(description)), h)
 

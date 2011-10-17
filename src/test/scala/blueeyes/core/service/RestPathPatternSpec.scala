@@ -2,12 +2,11 @@ package blueeyes.core.service
 
 import org.specs.Specification
 import scala.util.matching.Regex
-import RestPathPatternImplicits._
 
 import blueeyes.core.http.{HttpRequest, HttpMethods}
 
 class RestPathPatternSpec extends Specification{
-  import RestPathPatternImplicits._
+  import RestPathPattern._
 
   "path matching and regex extraction" should {
     "match regexp element with first named group" in{

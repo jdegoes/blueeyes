@@ -9,7 +9,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkString, BijectionsIdentity}
+import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -125,7 +125,6 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       response.value.get.content must beSome(Context.context)
     }
     "return huge content"in{
-      import BijectionsIdentity._
       val response = client.get[ByteChunk]("/huge")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
@@ -133,7 +132,6 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
     "return huge delayed content"in{
-      import BijectionsIdentity._
       val response = client.get[ByteChunk]("/huge/delayed")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)
@@ -146,7 +144,6 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       response.value.get.content.get mustEqual(Context.context)
     }
     "return huge content by htpps"in{
-      import BijectionsIdentity._
       val response = sslClient.get[ByteChunk]("/huge")
 
       response.value must eventually(retries, new Duration(duration))(beSomething)

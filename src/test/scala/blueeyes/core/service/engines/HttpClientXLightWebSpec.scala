@@ -158,7 +158,6 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
       f.value.get.status.code must be(HttpStatusCodes.OK)
     }
     "Support POST requests with large payload with several chunks" in {
-      import BijectionsIdentity._
       val content = Array.fill[Byte](2048*100)('0')
       val chunk   = new ByteMemoryChunk(content, () => Some(Future.sync(new ByteMemoryChunk(content))))
       val f = httpClient.post[ByteChunk](uri)(chunk)

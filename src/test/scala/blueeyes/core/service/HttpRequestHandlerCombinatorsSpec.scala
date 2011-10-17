@@ -17,9 +17,9 @@ import blueeyes.util.metrics.DataSize
 import DataSize._
 
 import java.net.URLEncoder.{encode => encodeUrl}
-import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, BijectionsIdentity, Bijection, GZIPByteChunk}
+import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, Bijection, GZIPByteChunk}
 
-class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with BijectionsIdentity with FutureMatchers {
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with FutureMatchers {
   implicit val JValueToString = new Bijection[JValue, String] {
     def apply(s: JValue)   = compact(render(s))
     def unapply(t: String) = JsonParser.parse(t)

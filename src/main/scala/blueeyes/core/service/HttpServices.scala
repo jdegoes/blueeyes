@@ -32,7 +32,7 @@ case object Inapplicable extends NotServed {
   override def or[A](result: => Validation[NotServed, A]) = result
 }
 
-sealed trait Metadata
+sealed trait Metadata 
 
 case class DataSizeMetadata     (dataSize: DataSize) extends Metadata
 case class HeaderMetadata       (mimeType: HttpHeader, desc: Option[String] = None) extends Metadata
@@ -41,7 +41,8 @@ case class ParameterMetadata    (parameter: Symbol, default: Option[String], des
 case class CookieMetadata       (ident: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata
 case class HttpMethodMetadata   (method: HttpMethod) extends Metadata
 case class DescriptionMetadata  (description: String) extends Metadata
-case class CompositeMetadata    (metadata: Seq[Metadata]) extends Metadata
+case class OrMetadata           (metadata: Metadata*) extends Metadata
+case class AndMetadata          (metadata: Metadata*) extends Metadata
 
 sealed trait HttpService[A, B] { self =>
   def service: HttpRequest[A] => Validation[NotServed, B]
@@ -76,6 +77,7 @@ case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, 
       case Failure(notServed) => notServed or pick(r, services.tail)
     }
   }
+ 
   val service = (r: HttpRequest[A]) => pick(r, services)
 
   lazy val metadata = None
@@ -97,6 +99,7 @@ case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B])
       Inapplicable.fail[B]
     }
   }
+
   lazy val metadata = Some(PathPatternMetadata(path))
 }
 
@@ -229,7 +232,15 @@ extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpRespons
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
-  def metadata = None
+  def metadata = Some(OrMetadata(
+    AndMetadata(
+      HttpMethodMetadata(HttpMethods.GET),
+      ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+    ),
+    HttpMethodMetadata(HttpMethods.POST),
+    HttpMethodMetadata(HttpMethods.PUT),
+    HttpMethodMetadata(HttpMethods.DELETE)
+  ))
 }
 
 case class Jsonp2Service[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) 

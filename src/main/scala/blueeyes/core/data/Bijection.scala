@@ -1,7 +1,16 @@
 package blueeyes.core.data
 
+import blueeyes.json.JsonAST.JValue
+import scala.xml.NodeSeq
+
 sealed trait Unapply[A, B] {
   def unapply(b: B): A
+}
+
+object Unapply {
+  implicit def identity[A]: Unapply[A, A] = new Unapply[A, A] {
+    def unapply(a: A) = a
+  }
 }
 
 trait Bijection[A, B] extends Function1[A, B] with Unapply[A, B] { self =>
@@ -34,9 +43,22 @@ sealed class Biject[A](a: A) {
 }
 
 trait Bijections {
+  implicit def identity[T]: Bijection[T, T] = new Bijection[T, T] {
+    def apply(t: T): T = t
+    def unapply(t: T): T = t
+  }
+
   implicit def biject[A](a: A): Biject[A] = new Biject(a)
   implicit def forwardEither[A, B](implicit a: Function1[A,B]): Either[Function1[A,B], Unapply[B,A]] = Left(a)
   implicit def reverseEither[A, B](implicit b: Unapply[B,A]): Either[Function1[A,B], Unapply[B,A]] = Right(b)
 }
 
-object Bijection extends Bijections with BijectionsIdentity
+trait IdentityBijections extends Bijections {
+  implicit val JValueToJValue         = identity[JValue]
+  implicit val StringToString         = identity[String]
+  implicit val ArrayByteToArrayByte   = identity[Array[Byte]]
+  implicit val XMLToXML               = identity[NodeSeq]
+  implicit val ByteChunkToByteChunk   = identity[ByteChunk]
+}
+
+object Bijection extends Bijections with IdentityBijections 

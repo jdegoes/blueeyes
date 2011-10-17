@@ -8,7 +8,7 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.data.{BijectionsChunkJson, BijectionsIdentity}
+import blueeyes.core.data.BijectionsChunkJson
 
 class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
@@ -66,7 +66,6 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
       response.content must beSome(contact.serialize)
     }
     "search contact" in {
-      import BijectionsIdentity._
       val f = service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter)
       f.value must eventually(beSomething)
 
