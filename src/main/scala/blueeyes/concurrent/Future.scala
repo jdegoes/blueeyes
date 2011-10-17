@@ -535,17 +535,13 @@ object Future extends FutureImplicits {
       val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
 
       futures.zipWithIndex.foreach {
-        case (future, index) => future.deliverTo { 
-          result => resultsMap.put(index, result)
-        }
-      }
-
-      futures.foreach { future =>
-        future.ifCanceled { e =>
+        case (future, index) => future.ifCanceled { e =>
           result.cancel(e)
         }
 
-        future.deliverTo { _ =>
+        future.deliverTo { futureResult =>
+          resultsMap.put(index, futureResult)
+
           val newCount = remaining.decrementAndGet
 
           if (newCount == 0) {
