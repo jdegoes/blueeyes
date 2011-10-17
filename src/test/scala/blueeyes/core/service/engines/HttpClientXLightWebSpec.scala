@@ -2,6 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.http._
 import blueeyes.core.data._
+import blueeyes.core.service.HttpRequestHandlerCombinators
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
@@ -15,7 +16,7 @@ import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 
-class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader{
+class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators {
   val duration = 250
   val retries = 30
 
@@ -304,10 +305,10 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with
     request {
       path("/echo") {
         produce(text/html) {
-          get(handler) ~
-	        post(handler) ~
-	        put(handler) ~
-	        head(handler)
+          get(handler _) ~
+	        post(handler _) ~
+	        put(handler _) ~
+	        head(handler _)
         }
       }
     }

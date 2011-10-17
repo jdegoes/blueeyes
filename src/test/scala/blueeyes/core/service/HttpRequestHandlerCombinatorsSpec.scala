@@ -173,7 +173,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "propagate default cookie value" in {
       val defaultValue = "defaultValue"
       val f = path("/foo/bar") {
-        cookie('someCookie ?: defaultValue) {
+        cookie('someCookie, Some(defaultValue)) {
           get { (request: HttpRequest[String]) => {
               cookieVal: String => Future.sync(HttpResponse[String](content=Some(cookieVal)))
             }
@@ -189,7 +189,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     "extract parameter" in {
       val f = path("/foo/'bar") {
         parameter('bar) {
-          get { (request: HttpRequest[String]) => bar: String =>
+          get { (request: HttpRequest[String]) => (bar: String) =>
             Future.sync(HttpResponse[String](content=Some(bar)))
           }
         }
@@ -200,8 +200,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
-        parameter[String, Future[HttpResponse[String]]]('bar ?: "bebe") {
-          get { (request: HttpRequest[String]) => bar =>
+        parameter[String, Future[HttpResponse[String]]]('bar, Some("bebe")) {
+          get { (request: HttpRequest[String]) => (bar: String) =>
             request.parameters mustEqual Map('bar -> "bebe")
 
             Future.sync(HttpResponse[String](content=Some(bar)))
@@ -218,7 +218,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val f = path("/foo/'bar") {
         produce(application/json) {
           parameter('bar) {
-            get { (request: HttpRequest[String]) => bar: String =>
+            get { (request: HttpRequest[String]) => (bar: String) =>
               Future.sync(HttpResponse[JValue](content=Some(JString(bar))))
             }
           }
@@ -227,6 +227,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       f.toOption.get.value must eventually(beSomething)
       f.toOption.get.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
     }
+
     "extract decoded parameter" in {
       val f = path("/foo/'bar") {
         produce(application/json) {

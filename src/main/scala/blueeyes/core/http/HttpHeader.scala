@@ -242,6 +242,10 @@ object HttpHeaders {
     def unapply(t: (String, String)) = parse(t).map(_.cookies)
   }
 
+  object Cookies {
+    def unapply(t: (String, String)) = Cookie.parse(t)
+  }
+
   case class `Content-Length`(length: Long) extends HttpHeaderRequest with HttpHeaderResponse {
     def value = length.toString
   }

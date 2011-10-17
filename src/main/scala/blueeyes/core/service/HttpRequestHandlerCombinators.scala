@@ -1,16 +1,17 @@
-package blueeyes
-package core.service
+package blueeyes.core
+package service
+
+import http._
+import http.HttpHeaders._
+import data.{CompressedByteChunk, ByteChunk, Bijection}
 
 import blueeyes.concurrent.Future
-import blueeyes.core.http._
-import blueeyes.core.http.HttpHeaders._
 import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
 
 import scala.xml.NodeSeq
-import scalaz.Functor
-import core.service._
-import core.data.{CompressedByteChunk, ByteChunk, Bijection}
+import scalaz.Scalaz._
+
 
 trait HttpRequestHandlerCombinators {
   implicit def handlerToService[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = HttpHandlerService[A, B](handler)
@@ -36,9 +37,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def remainingPath[T, S](handler: HttpService[T, String => S]) = path(RestPathPattern.Root `...` ('remainingPath)) {
-    parameter(IdentifierWithDefault('remainingPath, () => ""))(handler)
-  }
+  def remainingPath[T, S] = path(RestPathPattern.Root `...` ('remainingPath)) andThen parameter[T, S]('remainingPath, Some(""))
 
   /** The method combinator creates a handler that is defined only for the
    * specified HTTP method.
@@ -127,7 +126,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def extract[T, S, E1](extractor: HttpRequest[T] => E1): HttpService[T, E1 => S] => HttpService[T, S] = (h) => new ExtractService[T, S, E1](extractor, h)
+  def extract[T, S, E1](extractor: HttpRequest[T] => E1): HttpService[T, E1 => S] => HttpService[T, S] = ExtractService[T, S, E1](extractor, _)
 
   /** A special-case extractor for parameters.
    * <pre>
@@ -138,12 +137,14 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def parameter[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = (h) => new ParameterService[T, S](s1AndDefault, h)
-
-  def extractCookie[T](request: HttpRequest[T], s: Symbol, default: () => String) = {
-    def cookies = (for (HttpHeaders.Cookie(value) <- request.headers.raw) yield HttpHeaders.Cookie(value)).headOption.getOrElse(HttpHeaders.Cookie(Nil))
-    cookies.cookies.find(_.name == s.name).map(_.cookieValue).getOrElse(default())
+  def parameter[T, S](parameter: Symbol, default: => Option[String] = None, desc: Option[String] = None) = {
+    ParameterService[T, S](parameter, default, desc, _: HttpService[T, String => S])
   }
+
+  def convertedParameter[T, S, E1](parameter: Symbol, convert: String => E1, default: => Option[String] = None, desc: Option[String] = None) = {
+    (s: HttpService[T, E1 => S]) => ParameterService[T, S](parameter, default, desc, s.map((_: E1 => S) compose convert))
+  }
+
   /** A special-case extractor for cookie supporting a default value.
    * <pre>
    * cookie('token, "defaultValue") {
@@ -153,13 +154,14 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookie[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String]): HttpService[T, String => S] => HttpService[T, S] = extract[T, S, String]{ request =>
-    extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_)
+  def cookie[T, S](ident: Symbol, default: => Option[String] = None, desc: Option[String] = None) = {
+    CookieService[T, S](ident, default, desc, _: HttpService[T, String => S])
   }
 
-  def cookie[T, S, E1](s1AndDefault: IdentifierWithDefault[Symbol, String], convert: (String) => E1): HttpService[T, E1 => S] => HttpService[T, S] = extract[T, S, E1]{ request =>
-    convert(extractCookie(request, s1AndDefault.identifier, s1AndDefault.default_))
+  def convertedCookie[T, S, E1](ident: Symbol, convert: String => E1, default: => Option[String] = None, desc: Option[String] = None) = {
+    (s: HttpService[T, E1 => S]) => CookieService[T, S](ident, default, desc, s.map((_: E1 => S) compose convert))
   }
+
 
   def field[S, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): HttpService[JValue, F1 => S] => HttpService[JValue, S] = {
     def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
@@ -180,8 +182,6 @@ trait HttpRequestHandlerCombinators {
    * used for transcoding.
    */
   def accept[T, S, U](mimeType: MimeType)(h: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]): HttpService[U, S] = new AcceptService[T, S, U](mimeType, h)
-
-  def accept2[T, S, U, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]): HttpService[U, E1 => S] = new Accept2Service[T, S, U, E1](mimeType, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
@@ -209,7 +209,7 @@ trait HttpRequestHandlerCombinators {
   def contentType2[T, S, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): HttpService[S, E1 => Future[HttpResponse[S]]] = {
     implicit val b3 = b2.inverse
 
-    accept2(mimeType) {
+    accept(mimeType) {
       produce2[Future[T], T, S, E1](mimeType) {
         h
       }
@@ -267,6 +267,11 @@ trait HttpRequestHandlerCombinators {
 }
 
 
-case class IdentifierWithDefault[T, S](identifier: T, default_ : () => S) {
-  def default = default_ ()
+class IdentifierWithDefault[A, B](val identifier: A, dflt: => Option[B]) {
+  lazy val default = dflt
+}
+
+object IdentifierWithDefault {
+  def apply[A, B](a: A, dflt: => Option[B]) = new IdentifierWithDefault(a, dflt)
+  def unapply[A, B](idwd: IdentifierWithDefault[A, B]) = Some((idwd.identifier, idwd.default))
 }

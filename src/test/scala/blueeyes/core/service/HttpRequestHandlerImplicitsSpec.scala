@@ -9,8 +9,8 @@ import blueeyes.core.http._
 class HttpRequestHandlerImplicitsSpec extends Specification with HttpRequestHandlerImplicits {
   "HttpRequestHandlerImplicits.identifierToIdentifierWithDefault: creates IdentifierWithDefault" in {
     import HttpRequestHandlerImplicits._
-    val identifierWithDefault = "foo" ?: "bar"
-    identifierWithDefault.default mustEqual("bar")
+    val identifierWithDefault = 'foo ?: "bar"
+    identifierWithDefault.default mustEqual(Some("bar"))
   }
 }
 

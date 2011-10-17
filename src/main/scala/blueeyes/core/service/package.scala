@@ -16,4 +16,6 @@ package object service {
   type ServiceDescriptorFactory[T, S] = ServiceContext => ServiceDescriptor[T, S]
 
   type HttpResponseTransformer[T, S] = HttpResponse[T] => Future[S]
+
+  type HttpServiceCombinator[A, B, C, D] = HttpService[A, B] => HttpService[C, D]
 }

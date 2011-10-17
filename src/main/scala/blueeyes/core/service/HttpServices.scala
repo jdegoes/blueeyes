@@ -3,6 +3,7 @@ package blueeyes.core.service
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
+import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
@@ -23,19 +24,24 @@ case class DispatchError(exception: HttpException) extends NotServed {
   override def or[A](result: => Validation[NotServed, A]) = this.fail[A]
 }
 
+object DispatchError {
+  def apply(failure: HttpFailure, reason: String): DispatchError = DispatchError(HttpException(failure, reason))
+}
+
 case object Inapplicable extends NotServed {
   override def or[A](result: => Validation[NotServed, A]) = result
 }
 
 sealed trait Metadata
 
-case class DataSizeMetadata     (dataSize: Option[DataSize])            extends Metadata
-case class HeaderMetadata       (mimeType: HttpHeader)                  extends Metadata
-case class PathPatternMetadata  (pattern: RestPathPattern)              extends Metadata
-case class HttpMethodMetadata   (method: HttpMethod)                    extends Metadata
-case class DescriptionMetadata  (description: String)                   extends Metadata
-case class ParameterMetadata[T, S](extract: IdentifierWithDefault[T, S])  extends Metadata
-case class CompositeMetadata    (metadata: Seq[Metadata])               extends Metadata
+case class DataSizeMetadata     (dataSize: DataSize) extends Metadata
+case class HeaderMetadata       (mimeType: HttpHeader, desc: Option[String] = None) extends Metadata
+case class PathPatternMetadata  (pattern: RestPathPattern, desc: Option[String] = None) extends Metadata
+case class ParameterMetadata    (parameter: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata
+case class CookieMetadata       (ident: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata
+case class HttpMethodMetadata   (method: HttpMethod) extends Metadata
+case class DescriptionMetadata  (description: String) extends Metadata
+case class CompositeMetadata    (metadata: Seq[Metadata]) extends Metadata
 
 sealed trait HttpService[A, B] { self =>
   def service: HttpRequest[A] => Validation[NotServed, B]
@@ -128,25 +134,26 @@ case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Futu
   lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
 }
 
-case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => S])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => S, Future[T], E1 => S] {
-  import AcceptService._
-  def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap {newRequest: HttpRequest[Future[T]] =>
-    delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
+object AcceptService {
+  def convert[U, T](mimeType: MimeType, r: HttpRequest[U])(implicit b: Bijection[U, Future[T]]) = {
+    r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(b)).success).getOrElse(Inapplicable.fail)
+  }
+}
+
+case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]]{
+  def service = (r: HttpRequest[T]) => delegate.service(r).map { 
+    _.map(response => response.copy(content = response.content.map(b), headers = response.headers + `Content-Type`(mimeType)))
   }
 
   lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
 }
 
-object AcceptService {
-  def convert[U, T](mimeType: MimeType, r: HttpRequest[U])(implicit b: Bijection[U, Future[T]]) = {
-    def newContent = try {
-      success(r.copy(content = r.content.map(b.apply _)))
-    }
-    catch {
-      case ex => Inapplicable.fail
-    }
-    r.mimeTypes.find(_ == mimeType).map { mimeType => newContent }.getOrElse(Inapplicable.fail)
+case class Produce2Service[T, S, V, E1](mimeType: MimeType, delegate: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]]{
+  def service = (r: HttpRequest[T]) => delegate.service(r).map {
+    f => f andThen ((r: Future[HttpResponse[S]]) => r.map(response => response.copy(content = response.content.map(b), headers = response.headers + `Content-Type`(mimeType))))
   }
+
+  lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
 }
 
 case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]) extends HttpService[T, S]{
@@ -173,18 +180,6 @@ case class GetRangeService[T, S](h: (List[(Long, Long)], String) => HttpServiceH
   }
 
   def metadata = None
-}
-
-case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]]{
-  def service = (r: HttpRequest[T]) => delegate.service(r).map { _.map{response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType)) }}
-
-  lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
-}
-
-case class Produce2Service[T, S, V, E1](mimeType: MimeType, delegate: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]]{
-  def service = (r: HttpRequest[T]) => delegate.service(r).map{function => (e: E1) => function.apply(e).map { response => response.copy(content = response.content.map(b.apply), headers = response.headers + `Content-Type`(mimeType)) }}
-
-  lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
 }
 
 case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
@@ -217,70 +212,44 @@ object CompressService {
 case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], Future[ByteChunk], Future[HttpResponse[ByteChunk]]]{
   def service = (r: HttpRequest[ByteChunk]) => delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize))))
 
-  lazy val metadata = Some(DataSizeMetadata(chunkSize))
+  lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]) extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]{
-  def service = (r: HttpRequest[ByteChunk]) => delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize)))).map{function => (e: E1) => function.apply(e)}
+case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]) 
+extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]{
+  def service = (r: HttpRequest[ByteChunk]) => {
+    delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize)))).map(f => (e: E1) => f(e))
+  }
 
-  lazy val metadata = Some(DataSizeMetadata(chunkSize))
+  lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
+case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) 
+extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
   def metadata = None
 }
 
-case class Jsonp2Service[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) extends DelegatingService[T, E1 => Future[HttpResponse[T]], JValue, E1 => Future[HttpResponse[JValue]]]{
+case class Jsonp2Service[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) 
+extends DelegatingService[T, E1 => Future[HttpResponse[T]], JValue, E1 => Future[HttpResponse[JValue]]]{
   import JsonpService._
-  def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map{function => (e: E1) => function.apply(e).map(jsonpConvertResponse(_, r.parameters.get('callback)))}
+  def service = (r: HttpRequest[T]) => {
+    jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
+  }
 
   def metadata = None
 }
 
 object JsonpService {
-  def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpResponse[T] = {
-    import blueeyes.json.xschema.DefaultSerialization._
-    import blueeyes.json.Printer._
-
-    implicit val b2 = b1.inverse
-
-    (callback match {
-      case Some(callback) =>
-        val meta = compact(render(JObject(
-          JField("headers", r.headers.raw.serialize) ::
-          JField("status",
-            JObject(
-              JField("code",    r.status.code.value.serialize) ::
-              JField("reason",  r.status.reason) ::
-              Nil
-            )
-          ) ::
-          Nil
-        )))
-
-        r.copy(content = r.content.map { content =>
-          bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
-        }.orElse {
-          Some(
-            bstr.inverse.apply(callback + "(undefined," + meta + ");")
-          )
-        }, headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript))
-
-      case None =>
-        r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
-    })
-  }
-
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit b1: Bijection[T, JValue]): Validation[NotServed, HttpRequest[JValue]] = {
     import blueeyes.json.JsonParser.parse
     import blueeyes.json.xschema.DefaultSerialization._
 
     r.parameters.get('callback) match {
       case Some(callback) if (r.method == HttpMethods.GET) =>
-        if (r.content.isEmpty){
+        if (r.content.isEmpty) {
           val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
           val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
@@ -288,14 +257,47 @@ object JsonpService {
           val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
           success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+        } else {
+          failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
         }
-        else failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
 
       case Some(callback) =>
         failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
 
       case None =>
         success(r.copy(content = r.content.map(b1.apply)))
+    }
+  }
+
+  def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpResponse[T] = {
+    import blueeyes.json.xschema.DefaultSerialization._
+    import blueeyes.json.Printer._
+
+    implicit val b2 = b1.inverse
+
+    callback map { callback =>
+      val meta = compact(render(JObject(
+        JField("headers", r.headers.raw.serialize) ::
+        JField("status",
+          JObject(
+            JField("code",    r.status.code.value.serialize) ::
+            JField("reason",  r.status.reason) ::
+            Nil
+          )
+        ) ::
+        Nil
+      )))
+
+      r.copy(
+        content = r.content.map { content =>
+          bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
+        } orElse {
+          Some(bstr.inverse.apply(callback + "(undefined," + meta + ");"))
+        }, 
+        headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
+      )
+    } getOrElse {
+      r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
     }
   }
 }
@@ -310,24 +312,46 @@ case class ForwardingService[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], 
   def metadata = None
 }
 
-case class ParameterService[T, S](s1AndDefault: IdentifierWithDefault[Symbol, String], delegate: HttpService[T, String => S]) extends DelegatingService[T, S, T, String => S]{
-  def service = {r: HttpRequest[T] =>
-    val parameter  = extract(r)
-    val newRequest = addParameter(r, (s1AndDefault.identifier, parameter))
-    delegate.service(newRequest).map(_.apply(parameter))
+class ParameterService[T, S](parameter: Symbol, default: => Option[String], desc: Option[String], val delegate: HttpService[T, String => S]) 
+extends DelegatingService[T, S, T, String => S]{
+  def service = (r: HttpRequest[T]) => {
+    r.parameters.get(parameter).orElse(default)
+    .toSuccess(DispatchError(BadRequest, "Parameter " + parameter + desc.map(" ("+_+")").getOrElse("") + " is required."))
+    .flatMap(value => delegate.service(r.copy(parameters = r.parameters + (parameter -> value))).map(_.apply(value)))
   }
 
-  private def addParameter(r: HttpRequest[T], newParam: (Symbol, String)): HttpRequest[T] = r.copy(parameters = r.parameters + newParam)
-
-  private def extract(r: HttpRequest[T]): String = r.parameters.get(s1AndDefault.identifier).getOrElse(s1AndDefault.default)
-
-  lazy val metadata = Some(ParameterMetadata(s1AndDefault))
+  lazy val metadata = Some(ParameterMetadata(parameter, default, desc))
 }
 
-case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
+object ParameterService {
+  def apply[T, S](parameter: Symbol, default: => Option[String], desc: Option[String], delegate: HttpService[T, String => S]) = 
+    new ParameterService(parameter, default, desc, delegate)
+}
+
+case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
   def service = (r: HttpRequest[T]) => delegate.service(r).map(_.apply(extractor(r)))
 
   val metadata = None
+}
+
+class CookieService[A, B](ident: Symbol, default: => Option[String], desc: Option[String], val delegate: HttpService[A, String => B]) 
+extends DelegatingService[A, B, A, String => B] {
+  val service = (req: HttpRequest[A]) => {
+    extractCookie(req, ident, default).toSuccess(DispatchError(BadRequest, "No cookie was found for the identifier " + ident))
+    .flatMap(cookieValue => delegate.service(req).map(_.apply(cookieValue)))
+  }
+
+  def extractCookie[T](request: HttpRequest[T], ident: Symbol, default: => Option[String]): Option[String] = {
+    val cookieValues = for (HttpHeaders.Cookie(cookies) <- request.headers.raw; cookie <- cookies if cookie.name == ident.name) yield cookie.cookieValue
+    cookieValues.headOption.orElse(default)
+  }
+
+  lazy val metadata = Some(CookieMetadata(ident, default, desc))
+}
+
+object CookieService {
+  def apply[A, B](ident: Symbol, default: => Option[String], desc: Option[String], delegate: HttpService[A, String => B]) =
+    new CookieService(ident, default, desc, delegate)
 }
 
 case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
@@ -337,5 +361,5 @@ case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpServi
 case class DecodeUrlService[T, S](delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
   def service = (r: HttpRequest[T]) => delegate.service(r.copy(uri = r.uri.decode))
 
-  def metadata = None
+  val metadata = None
 }

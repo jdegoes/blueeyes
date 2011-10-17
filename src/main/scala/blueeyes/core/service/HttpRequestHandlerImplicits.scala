@@ -5,11 +5,7 @@ import blueeyes.util.PartialFunctionCombinators
 trait HttpRequestHandlerImplicits extends PartialFunctionCombinators {
   implicit def identifierToIdentifierWithDefault[S](default: => S) = new ToIdentifierWithDefault(default)
   class ToIdentifierWithDefault[S](default: => S){
-    def ?: [T](identifier: T) = {
-      IdentifierWithDefault[T, S](identifier, () => default)
-    }
+    def ?: [T](identifier: T) = IdentifierWithDefault[T, S](identifier, Some(default))
   }
-  
-  implicit def identifierToIdentifierWithErrorDefault[T <: AnyRef, S](identifier: T) = IdentifierWithDefault[T, S](identifier, () => sys.error("Expected to find value for " + identifier.toString))
 }
 object HttpRequestHandlerImplicits extends HttpRequestHandlerImplicits
