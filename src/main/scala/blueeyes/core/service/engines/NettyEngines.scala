@@ -4,9 +4,9 @@ import blueeyes.core.service._
 import blueeyes.concurrent.Future
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
-import java.util.concurrent.{Executors, Executor}
+import java.util.concurrent.Executors
 import org.jboss.netty.channel._
-import org.jboss.netty.util.internal.ExecutorUtil
+import group.DefaultChannelGroup
 import java.net.{InetAddress, InetSocketAddress}
 import net.lag.configgy.ConfigMap
 import org.jboss.netty.handler.codec.http.{HttpResponseEncoder, HttpRequestDecoder}
@@ -20,7 +20,8 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
-  private var servers: List[Tuple2[Executor, ServerBootstrap]]  = Nil
+  private var servers: List[ServerBootstrap]  = Nil
+  private val allChannels = new DefaultChannelGroup()
 
   override def start: Future[Unit] = {
     super.start.flatMapEither(_ => {
@@ -59,9 +60,10 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
         bootstrap.setParentHandler(new SetBacklogHandler(config.getInt("backlog", 10000)))
         bootstrap.setPipelineFactory(serverArg._2)
 
-        bootstrap.bind(InetInterfaceLookup.socketAddres(config, serverArg._1))
+        val channel = bootstrap.bind(InetInterfaceLookup.socketAddres(config, serverArg._1))
+        allChannels.add(channel)
 
-        servers = Tuple2(executor, bootstrap) :: servers
+        servers = bootstrap :: servers
       }
     })
   }
@@ -70,12 +72,12 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
     super.stop.map(_ => {
 
       startStopLock.writeLock.lock()
-      
+
+      allChannels.close().awaitUninterruptibly()
       try {
-        servers.foreach(server => {
-          ExecutorUtil.terminate(server._1)
-          server._2.releaseExternalResources()
-        })
+        servers.foreach{server =>
+          server.releaseExternalResources()
+        }
         servers = Nil
       }
       finally{
@@ -91,11 +93,12 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
     def getPipeline: ChannelPipeline = {
       val pipeline = Channels.pipeline()
 
-      pipeline.addLast("decoder",       new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
-      pipeline.addLast("encoder",       new HttpResponseEncoder())
-      pipeline.addLast("chunkedWriter", new ChunkedWriteHandler())
-      pipeline.addLast("aggregator",    new NettyChunkedRequestHandler(chunkSize))
-      pipeline.addLast("handler",       new NettyRequestHandler(self, Logger.get))
+      pipeline.addLast("decoder",         new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
+      pipeline.addLast("encoder",         new HttpResponseEncoder())
+      pipeline.addLast("chunkedWriter",   new ChunkedWriteHandler())
+      pipeline.addLast("aggregator",      new NettyChunkedRequestHandler(chunkSize))
+      pipeline.addLast("channelsTracker", new ChannelsTracker())
+      pipeline.addLast("handler",         new NettyRequestHandler(self, Logger.get))
 
       pipeline
     }
@@ -114,6 +117,12 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
       pipeline.addFirst("ssl", new SslHandler(engine))
 
       pipeline
+    }
+  }
+
+  class ChannelsTracker extends SimpleChannelUpstreamHandler {
+    override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
+      allChannels.add(e.getChannel)
     }
   }
 }
