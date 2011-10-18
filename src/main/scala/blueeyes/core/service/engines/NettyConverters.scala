@@ -77,7 +77,7 @@ trait NettyConverters{
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
-    nettyHeaders.foldLeft(Map.empty[String, String]) {
+    nettyHeaders.foldLeft(HttpHeaders.Empty) {
       case (headers, header) => 
         val key   = header.getKey
         val value = header.getValue
