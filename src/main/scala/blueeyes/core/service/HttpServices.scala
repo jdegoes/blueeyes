@@ -1,6 +1,5 @@
 package blueeyes.core.service
 
-import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
 import blueeyes.core.http.HttpStatusCodes._
@@ -15,6 +14,7 @@ import java.net.URLDecoder._
 import scala.annotation.tailrec
 import scalaz.Scalaz._
 import scalaz.{Success, Validation, Failure}
+import blueeyes.core.http._
 
 sealed trait NotServed {
   def or[A](result: => Validation[NotServed, A]): Validation[NotServed, A]
@@ -130,9 +130,18 @@ case class CommitService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String
   val metadata = None
 }
 
-case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, S, Future[T], S] {
+case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
   import AcceptService._
-  def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap{newRequest: HttpRequest[Future[T]] => delegate.service(newRequest)}
+  def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap{newRequest: HttpRequest[Future[T]] => delegate.service(newRequest).map{checkConvert(newRequest, _)} }
+
+  lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
+}
+
+case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
+  import AcceptService._
+  def service = (r: HttpRequest[U]) => convert(mimeType, r).flatMap {newRequest: HttpRequest[Future[T]] =>
+    delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
+  }
 
   lazy val metadata = Some(HeaderMetadata(`Content-Type`(mimeType)))
 }
@@ -140,6 +149,16 @@ case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Futu
 object AcceptService {
   def convert[U, T](mimeType: MimeType, r: HttpRequest[U])(implicit b: Bijection[U, Future[T]]) = {
     r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(b)).success).getOrElse(Inapplicable.fail)
+  }
+
+  def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
+    request.content.map{content =>
+      val result = new Future[HttpResponse[S]]
+      content  ifCanceled{error => result.deliver(HttpResponse[S](status = HttpStatus(BadRequest, error.map(_.getMessage).getOrElse(""))))}
+      response ifCanceled(result.cancel(_))
+      response deliverTo(result.deliver(_))
+      result
+    }.getOrElse(response)
   }
 }
 

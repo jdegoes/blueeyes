@@ -3,7 +3,6 @@ package blueeyes.core.data
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
-import blueeyes.json.JsonParser.ParseException
 import blueeyes.concurrent.Future
 
 trait BijectionsChunkJson{
@@ -18,11 +17,7 @@ trait BijectionsChunkJson{
       new MemoryChunk(stream.toByteArray)
     }
 
-    def unapply(s: ByteChunk) = try {
-      JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
-    } catch {
-      case e: ParseException => throw new ParseException("""Data is too big, use big data handler. If "aggregate" combinator is used then probably Json is broken.""", e)
-    }
+    def unapply(s: ByteChunk) = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
   }
 
   implicit val ChunkToJValue    = JValueToChunk.inverse

@@ -277,7 +277,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatMapOption[S](f: T => Option[S]): Future[S] = {
@@ -295,7 +295,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatMapEither[F <: Throwable, S](f: T => Either[F, S]): Future[S] = {
@@ -313,7 +313,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatten[S](implicit witness: T => Future[S]): Future[S] = flatMap(witness)
