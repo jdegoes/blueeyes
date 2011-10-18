@@ -154,7 +154,7 @@ object AcceptService {
   def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
     request.content.map{content =>
       val result = new Future[HttpResponse[S]]
-      content  ifCanceled{error => result.deliver(HttpResponse[S](status = HttpStatus(BadRequest, error.map(_.getMessage).getOrElse(""))))}
+      content  ifCanceled{error => result.deliver(HttpResponse[S](status = HttpStatus(BadRequest, error.flatMap(value => Option(value.getMessage)).getOrElse(""))))}
       response ifCanceled(result.cancel(_))
       response deliverTo(result.deliver(_))
       result
@@ -280,13 +280,18 @@ object JsonpService {
     r.parameters.get('callback) match {
       case Some(callback) if (r.method == HttpMethods.GET) =>
         if (r.content.isEmpty) {
-          val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
+          try {
+            val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
-          val method  = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-          val content = r.parameters.get('content).map(parse _)
-          val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
+            val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
+            val content = r.parameters.get('content).map(parse _)
+            val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
-          success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+            success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+          }
+          catch {
+            case e => failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, Option(e.getMessage).getOrElse(""))))
+          }
         } else {
           failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
         }
