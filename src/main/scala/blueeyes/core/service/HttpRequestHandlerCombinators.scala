@@ -28,28 +28,10 @@ trait HttpRequestHandlerCombinators {
    */
   def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = (h: HttpService[T, S]) => new PathService[T, S] (path, h)
 
-  def / [T, S](delegate: HttpService[T, S]) = {
-    def subpaths(service: HttpService[_, _]): Seq[PathPatternMetadata] = {
-      def pathMetadata(metadata: Metadata): Seq[PathPatternMetadata] = metadata match {
-        case OrMetadata(metadata @ _*)  => metadata.flatMap(pathMetadata)
-        case AndMetadata(metadata @ _*) => metadata.flatMap(pathMetadata)
-        case pathPattern: PathPatternMetadata => pathPattern :: Nil
-        case _ => Nil
-      }
-
-      service match {
-        case OrService(services @ _*) => services.flatMap(subpaths)
-        case service: DelegatingService[_, _, _, _] => 
-          val metadata = service.metadata.toList.flatMap(pathMetadata)
-          if (metadata.isEmpty) subpaths(service.delegate) else metadata
-        case service => subpaths(service)
-      }
-    }
-
-    path("/")(delegate) ~ orFail { (_: HttpRequest[T]) => 
-      (NotFound, "You may want to try one of the following patterns: " + subpaths(delegate).map(p => p.pattern.toString + p.desc.map(": " + _).getOrElse("")).mkString("\n"))
-    }
-  }
+  /** The path end combinator creates a handler that is defined only for paths
+   * that are fully matched.
+   */
+  def $ [T, S](h: HttpService[T, S]): HttpService[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
 
   /** Yields the remaining path to the specified function, which should return
    * a request handler.
@@ -93,12 +75,7 @@ trait HttpRequestHandlerCombinators {
    * } ~ orFail("The path is malformed")
    * </pre>
    */
-  def orFail[T, S](msg: String): HttpService[T, S] = orFail { request => HttpStatusCodes.BadRequest -> msg }
-
-  /** The path end combinator creates a handler that is defined only for paths
-   * that are fully matched.
-   */
-  def $ [T, S](h: HttpService[T, S]): HttpService[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
+  def orFail[T, S](msg: String): HttpService[T, S] = orFail(BadRequest, msg)
 
   /** Forces a particular combinator to match.
    * <pre>
@@ -109,7 +86,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def commit[T, S](msgGen: HttpRequest[T] => (HttpFailure, String))(h: HttpService[T, S]): HttpService[T, S] = CommitService(msgGen, h)
+  def commit[T, S](delegate: HttpService[T, S]): HttpService[T, S] = CommitService(delegate)
 
   def get     [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.GET)     { h } }
   def put     [T, S](h: HttpService[T, S]): HttpService[T, S] = $ { method(HttpMethods.PUT)     { h } }
@@ -133,7 +110,7 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def getRange[T, S](h: (List[(Long, Long)], String) => HttpServiceHandler[T, S]): HttpService[T, S] = method(HttpMethods.GET)(GetRangeService(h))
+  def getRange[T, S](delegate: HttpService[T, RangeHeaderValues => S]): HttpService[T, S] = method(HttpMethods.GET)(GetRangeService(delegate))
 
   /**
    * Extracts data from the request. The extractor combinators can be used to

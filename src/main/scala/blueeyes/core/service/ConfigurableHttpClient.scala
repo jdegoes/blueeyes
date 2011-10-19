@@ -46,6 +46,7 @@ trait ConfigurableHttpClient{
 
   protected def mockServer: AsyncHttpService[ByteChunk] = new AsyncCustomHttpService[ByteChunk]{
     def service = (request: HttpRequest[ByteChunk]) => success(Future.sync(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
+    val metadata = None
   }
 }
 

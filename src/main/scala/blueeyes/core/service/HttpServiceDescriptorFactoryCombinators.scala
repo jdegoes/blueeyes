@@ -224,6 +224,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       }
       validation
     }
+
+    val metadata = None
   }
 
   private[service] class MonitorHttpRequestService[T](underlying: AsyncHttpService[T], healthMonitor: HealthMonitor) extends AsyncCustomHttpService[T] with JPathImplicits{
@@ -258,6 +260,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 
       monitor(healthMonitor.trap(errorPath){underlying.service(request)})
     }
+
+    val metadata = None
   }
 }
 

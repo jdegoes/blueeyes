@@ -8,11 +8,11 @@ import blueeyes.persistence.mongo.RealMongo
 import blueeyes.core.service.engines.HttpClientXLightWeb
 import blueeyes.demo.{BlueEyesDemoFacade, BlueEyesDemoService, BlueEyesDemo}
 
-object BenchmarkServerStart extends ServerStart{
+object BenchmarkServerStart extends ServerStart {
   def main(args: Array[String]) = startServer(if (args.size > 0) args(0).toBoolean else false)
 }
 
-object LiveBlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService{
+object LiveBlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerHealthMonitorService {
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 

@@ -132,7 +132,7 @@ trait HttpHeaderImplicits {
   implicit def tuple2HttpHeader(t: (String, String)): HttpHeader = HttpHeader(t)
 }
 
-object HttpHeader {
+object HttpHeader extends HttpHeaderImplicits {
   def apply(t: (String, String)): HttpHeader = {
     def extract(l: List[HttpHeaderField[_ <: HttpHeader]]): HttpHeader = l match {
       case x :: xs => x.parse(t).getOrElse(extract(xs))

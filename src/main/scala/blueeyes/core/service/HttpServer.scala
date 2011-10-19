@@ -100,6 +100,8 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       }
     }}
   }
+
+  val metadata = None
   
   /** Starts the server.
    */
