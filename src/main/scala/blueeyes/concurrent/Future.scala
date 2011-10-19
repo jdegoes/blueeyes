@@ -277,7 +277,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatMapOption[S](f: T => Option[S]): Future[S] = {
@@ -295,7 +295,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatMapEither[F <: Throwable, S](f: T => Either[F, S]): Future[S] = {
@@ -313,7 +313,7 @@ class Future[T]{
 
     ifCanceled(fut.forceCancel)
 
-    return fut
+    fut
   }
 
   def flatten[S](implicit witness: T => Future[S]): Future[S] = flatMap(witness)
@@ -535,17 +535,13 @@ object Future extends FutureImplicits {
       val remaining = new java.util.concurrent.atomic.AtomicInteger(futures.length)
 
       futures.zipWithIndex.foreach {
-        case (future, index) => future.deliverTo { 
-          result => resultsMap.put(index, result)
-        }
-      }
-
-      futures.foreach { future =>
-        future.ifCanceled { e =>
+        case (future, index) => future.ifCanceled { e =>
           result.cancel(e)
         }
 
-        future.deliverTo { _ =>
+        future.deliverTo { futureResult =>
+          resultsMap.put(index, futureResult)
+
           val newCount = remaining.decrementAndGet
 
           if (newCount == 0) {

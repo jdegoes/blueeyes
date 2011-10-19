@@ -19,7 +19,7 @@ abstract class TimedSample[V](val config: interval)(implicit valueStrategy: Valu
 
   def details: Future[Map[Long, V]] = actor.!!![Map[Long, V]](DetailsRequest, 1000 * 60 * 60).toBlueEyes
 
-  def shutdown() = actor.stop()
+  def shutdown() { actor.stop() }
 }
 
 private[metrics] class TimedSampleActor[V](var histogram: DynamicHistogram[V]) extends Actor {

@@ -87,11 +87,6 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
     case e: SyncStatistic[_, _]  => Future.sync(e.toJValue)
   }
 
-  private def count(statistic: Statistic[_, _]): Future[Long] = statistic match {
-    case e: AsyncStatistic[_, _] => e.count
-    case e: SyncStatistic[_, _]  => Future.sync(e.count)
-  }
-
   private def jvalueToJObject(path: JPath, value: JValue): JValue = {
     def nodeName(node: JPathNode) = node match{
       case JPathField(name) => name

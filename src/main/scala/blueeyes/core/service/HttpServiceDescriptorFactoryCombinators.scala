@@ -21,6 +21,9 @@ import IntervalLength._
 
 import scalaz.Scalaz._
 import scalaz.{Failure, Success, Validation}
+import akka.actor.Actor
+import akka.actor.ActorRef
+import akka.actor.Actor._
 
 trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -138,10 +141,12 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
         val formatter         = HttpRequestLoggerFormatter(configMap.getString("formatter", "w3c"))
 
         def fileHeader() = formatter.formatHeader(fieldsDirective)
-        val log = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
+        val log          = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
+        val actor        = actorOf(new HttpRequestLoggerActor[T](fieldsDirective, includePaths, excludePaths, log, formatter)).start()
 
-        underlying.copy(request = (state: S) => {new HttpRequestLoggerService(fieldsDirective, includePaths, excludePaths, log, formatter, underlying.request(state))},
+        underlying.copy(request = (state: S) => {new HttpRequestLoggerService(actor, underlying.request(state))},
                         shutdown = (state: S) => {
+                          actor.stop()
                           log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
                         })
       }
@@ -209,20 +214,30 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     }
   }
 
-  private[service] class HttpRequestLoggerService[T](fieldsDirective: FieldsDirective, includePaths: List[Regex],
-                                                     excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter, underlying: AsyncHttpService[T])(implicit contentBijection: Bijection[T, ByteChunk]) extends AsyncCustomHttpService[T] with ClockSystem{
+  private[service] class HttpRequestLoggerService[T](actor: ActorRef, underlying: AsyncHttpService[T]) extends AsyncCustomHttpService[T]{
+    def service = {request: HttpRequest[T] =>
+      val validation = underlying.service(request)
+      validation.foreach{ response => actor ! Tuple2(request, response)}
+      validation
+    }
+
+    val metadata = None
+  }
+
+  private[service] class HttpRequestLoggerActor[T](fieldsDirective: FieldsDirective, includePaths: List[Regex], excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter)(implicit contentBijection: Bijection[T, ByteChunk]) extends Actor with ClockSystem{
     private val includeExcludeLogic = new IncludeExcludeLogic(includePaths, excludePaths)
     private val requestLogger       = HttpRequestLogger[T, T](fieldsDirective)
 
-    def service = {request: HttpRequest[T] =>
-      val validation = underlying.service(request)
-      validation.foreach{ response =>
+    def receive = {
+      case data: Tuple2[_, _] => {
+        val request  = data._1.asInstanceOf[HttpRequest[T]]
+        val response = data._2.asInstanceOf[Future[HttpResponse[T]]]
         if (includeExcludeLogic(request.subpath)){
           val logRecord = requestLogger(request, response)
           logRecord.map(formatter.formatLog(_)) foreach { log(_)}
         }
       }
-      validation
+      case _ => sys.error("wrong message.")
     }
 
     val metadata = None

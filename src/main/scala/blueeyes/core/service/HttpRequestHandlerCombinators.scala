@@ -182,7 +182,12 @@ trait HttpRequestHandlerCombinators {
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
-  def accept[T, S, U](mimeType: MimeType)(h: HttpService[Future[T], S])(implicit b: Bijection[U, Future[T]]): HttpService[U, S] = new AcceptService[T, S, U](mimeType, h)
+  def accept[T, S, U](mimeType: MimeType)(h: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]): HttpService[U, Future[HttpResponse[S]]] = new AcceptService[T, S, U](mimeType, h)
+  /** The accept combinator creates a handler that is defined only for requests
+   * that have the specified content type. Requires an implicit bijection
+   * used for transcoding.
+   */
+  def accept2[T, S, U, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]): HttpService[U, E1 => Future[HttpResponse[S]]] = new Accept2Service[T, S, U, E1](mimeType, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
@@ -210,7 +215,7 @@ trait HttpRequestHandlerCombinators {
   def contentType2[T, S, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): HttpService[S, E1 => Future[HttpResponse[S]]] = {
     implicit val b3 = b2.inverse
 
-    accept(mimeType) {
+    accept2(mimeType) {
       produce2[Future[T], T, S, E1](mimeType) {
         h
       }
