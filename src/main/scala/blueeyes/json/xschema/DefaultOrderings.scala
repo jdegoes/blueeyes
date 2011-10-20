@@ -3,9 +3,10 @@ package blueeyes.json.xschema
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
 
+import scala.math.Ordering
+import scala.math.Ordering._
+
 trait DefaultOrderings {
-  private implicit def AnyWithOrderingToOrderedAny[T](t1: T)(implicit ord: Ordering[T]): Ordered[T] = new Ordered[T] { def compare(t2: T) = ord.compare(t1, t2); }
-  
   val StringOrdering: Ordering[String] = new Ordering[String] {
     def compare(v1: String, v2: String): Int = v1.compare(v2)
   }
@@ -29,21 +30,26 @@ trait DefaultOrderings {
   val DoubleOrdering: Ordering[Double] = new Ordering[Double] {
     def compare(v1: Double, v2: Double): Int = v1.compare(v2)
   }
-  
-  def Tuple2Ordering[T1, T2](implicit ordering1: Ordering[T1], ordering2: Ordering[T2]): Ordering[(T1, T2)] = new Ordering[(T1, T2)] {
-    def compare(v1: (T1, T2), v2: (T1, T2)): Int = v1.compare(v2)
+
+  private implicit def LazyOrderingOr(i: Int) = new LazyOrderingOr(i)
+  private class LazyOrderingOr(i: Int) {
+    def |- (i2: => Int) = if (i == 0) i2 else i
   }
   
-  def Tuple3Ordering[T1, T2, T3](implicit ordering1: Ordering[T1], ordering2: Ordering[T2], ordering3: Ordering[T3]): Ordering[(T1, T2, T3)] = new Ordering[(T1, T2, T3)] {
-    def compare(v1: (T1, T2, T3), v2: (T1, T2, T3)): Int = v1.compare(v2)
+  def Tuple2Ordering[T1, T2](implicit o1: Ordering[T1], o2: Ordering[T2]): Ordering[(T1, T2)] = new Ordering[(T1, T2)] {
+    def compare(v1: (T1, T2), v2: (T1, T2)): Int = o1.compare(v1._1, v2._1) |- o2.compare(v1._2, v2._2)
   }
   
-  def Tuple4Ordering[T1, T2, T3, T4](implicit ordering1: Ordering[T1], ordering2: Ordering[T2], ordering3: Ordering[T3], ordering4: Ordering[T4]): Ordering[(T1, T2, T3, T4)] = new Ordering[(T1, T2, T3, T4)] {
-    def compare(v1: (T1, T2, T3, T4), v2: (T1, T2, T3, T4)): Int = v1.compare(v2)
+  def Tuple3Ordering[T1, T2, T3](implicit o1: Ordering[T1], o2: Ordering[T2], o3: Ordering[T3]): Ordering[(T1, T2, T3)] = new Ordering[(T1, T2, T3)] {
+    def compare(v1: (T1, T2, T3), v2: (T1, T2, T3)): Int = o1.compare(v1._1, v2._1) |- o2.compare(v1._2, v2._2) |- o3.compare(v1._3, v2._3)
   }
   
-  def Tuple5Ordering[T1, T2, T3, T4, T5](implicit ordering1: Ordering[T1], ordering2: Ordering[T2], ordering3: Ordering[T3], ordering4: Ordering[T4], ordering5: Ordering[T5]): Ordering[(T1, T2, T3, T4, T5)] = new Ordering[(T1, T2, T3, T4, T5)] {
-    def compare(v1: (T1, T2, T3, T4, T5), v2: (T1, T2, T3, T4, T5)): Int = v1.compare(v2)
+  def Tuple4Ordering[T1, T2, T3, T4](implicit o1: Ordering[T1], o2: Ordering[T2], o3: Ordering[T3], o4: Ordering[T4]): Ordering[(T1, T2, T3, T4)] = new Ordering[(T1, T2, T3, T4)] {
+    def compare(v1: (T1, T2, T3, T4), v2: (T1, T2, T3, T4)): Int = o1.compare(v1._1, v2._1) |- o2.compare(v1._2, v2._2) |- o3.compare(v1._3, v2._3) |- o4.compare(v1._4, v2._4)
+  }
+  
+  def Tuple5Ordering[T1, T2, T3, T4, T5](implicit o1: Ordering[T1], o2: Ordering[T2], o3: Ordering[T3], o4: Ordering[T4], o5: Ordering[T5]): Ordering[(T1, T2, T3, T4, T5)] = new Ordering[(T1, T2, T3, T4, T5)] {
+    def compare(v1: (T1, T2, T3, T4, T5), v2: (T1, T2, T3, T4, T5)): Int = o1.compare(v1._1, v2._1) |- o2.compare(v1._2, v2._2) |- o3.compare(v1._3, v2._3) |- o4.compare(v1._4, v2._4) |- o5.compare(v1._5, v2._5)
   }
   
   def OptionOrdering[T](ordering: Ordering[T]): Ordering[Option[T]] = new Ordering[Option[T]] {
