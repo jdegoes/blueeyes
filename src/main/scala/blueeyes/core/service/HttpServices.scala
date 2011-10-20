@@ -88,19 +88,21 @@ case class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, Strin
 }
 
 case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
-  val service = {r: HttpRequest[A] =>
-    if (path.isDefinedAt(r.subpath)) {
-      val pathParameters = path(r.subpath).map(parameter => (parameter._1, decode(parameter._2, "UTF-8")))
-
-      val shiftedRequest = path.shift(r)
-
-      delegate.service(shiftedRequest.copy(parameters = shiftedRequest.parameters ++ pathParameters))
-    } else {
-      inapplicable.fail[B]
-    }
-  }
+  val service = PathService.shift(path, _: HttpRequest[A]).toSuccess(inapplicable).flatMap(delegate.service)
 
   lazy val metadata = Some(PathPatternMetadata(path))
+}
+
+object PathService {
+  def shift[A](path: RestPathPattern, req: HttpRequest[A]): Option[HttpRequest[A]] = {
+    if (path.isDefinedAt(req.subpath)) {
+      val pathParameters = path(req.subpath).map(parameter => (parameter._1, decode(parameter._2, "UTF-8")))
+
+      Some(path.shift(req).copy(parameters = req.parameters ++ pathParameters))
+    } else {
+      None
+    }
+  }
 }
 
 case class HttpMethodService[A, B](method: HttpMethod, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
@@ -388,6 +390,37 @@ extends DelegatingService[T, S, T, String => S]{
 object ParameterService {
   def apply[T, S](parameter: Symbol, default: => Option[String], desc: Option[String], delegate: HttpService[T, String => S]) = 
     new ParameterService(parameter, default, desc, delegate)
+}
+
+case class PathParameterService[A, B](path: RestPathPattern, sym: Symbol, desc: Option[String], delegate: HttpService[A, String => B]) 
+extends DelegatingService[A, B, A, String => B]{
+  val service = (req: HttpRequest[A]) => {
+    for { 
+      request <- PathService.shift(path, req).toSuccess(inapplicable)
+      value   <- request.parameters.get(sym).toSuccess(DispatchError(BadRequest, "The path element " + sym + " in " + path.toString + " was not found."))
+      result  <- delegate.service(request)
+    } yield {
+      result(value)
+    }
+  }
+
+  lazy val metadata = Some(PathPatternMetadata(path))
+}
+
+case class PathDataService[A, B, X](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, X], desc: Option[String], delegate: HttpService[A, X => B]) 
+extends DelegatingService[A, B, A, X => B]{
+  val service = (req: HttpRequest[A]) => {
+    for { 
+      request  <- PathService.shift(path, req).toSuccess(inapplicable)
+      valueStr <- request.parameters.get(sym).toSuccess(DispatchError(BadRequest, "The path element " + sym + " in " + path.toString + " was not found."))
+      value    <- f(valueStr)
+      result   <- delegate.service(request)
+    } yield {
+      result(value)
+    }
+  }
+
+  lazy val metadata = Some(PathPatternMetadata(path))
 }
 
 case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{

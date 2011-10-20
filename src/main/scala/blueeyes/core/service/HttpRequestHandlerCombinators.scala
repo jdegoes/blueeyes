@@ -12,6 +12,7 @@ import blueeyes.util.metrics.DataSize
 
 import scala.xml.NodeSeq
 import scalaz.Scalaz._
+import scalaz.{Success, Validation, Failure}
 
 
 trait HttpRequestHandlerCombinators {
@@ -26,12 +27,19 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = (h: HttpService[T, S]) => new PathService[T, S] (path, h)
+  def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = 
+    (h: HttpService[T, S]) => new PathService[T, S] (path, h)
+
+  def pathParameter[A, B](path: RestPathPattern, sym: Symbol, desc: Option[String] = None) = 
+    (h: HttpService[A, String => B]) => new PathParameterService(path, sym, desc, h)
+
+  def pathData[A, B, C](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, B], desc: Option[String] = None) = 
+    (h: HttpService[A, B => C]) => new PathDataService(path, sym, f, desc, h)
 
   /** The path end combinator creates a handler that is defined only for paths
    * that are fully matched.
    */
-  def $ [T, S](h: HttpService[T, S]): HttpService[T, S] = path(RestPathPatternParsers.EmptyPathPattern) { h }
+  def $ [T, S] = path[T, S](RestPathPatternParsers.EmptyPathPattern)
 
   /** Yields the remaining path to the specified function, which should return
    * a request handler.
@@ -183,6 +191,7 @@ trait HttpRequestHandlerCombinators {
    * used for transcoding.
    */
   def accept[T, S, U](mimeType: MimeType)(h: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]): HttpService[U, Future[HttpResponse[S]]] = new AcceptService[T, S, U](mimeType, h)
+
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
@@ -194,6 +203,7 @@ trait HttpRequestHandlerCombinators {
    * used for transcoding.
    */
   def produce[T, S, V](mimeType: MimeType)(h: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): HttpService[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
+
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
