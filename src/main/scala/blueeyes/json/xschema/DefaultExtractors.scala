@@ -1,4 +1,4 @@
-package blueeyes.json.xschema {
+package blueeyes.json.xschema 
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
@@ -181,6 +181,5 @@ trait DefaultExtractors {
     def extract(jvalue: JValue): DateTime = new DateTime(LongExtractor.extract(jvalue), DateTimeZone.UTC)
   }
 }
-object DefaultExtractors extends DefaultExtractors
 
-}
+object DefaultExtractors extends DefaultExtractors

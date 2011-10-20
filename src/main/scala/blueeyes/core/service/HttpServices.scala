@@ -39,6 +39,8 @@ sealed trait HttpService[A, B] extends AnyService { self =>
   def ~ [C, D](other: HttpService[C, D])(implicit unapply: Unapply[C, A], apply: D => B): OrService[A, B] = {
     self ~ other.contramap(unapply.unapply).map(apply)
   }
+
+  def withMetadata(m: Metadata) = new MetadataService(Some(m), this)
 }
 
 /**

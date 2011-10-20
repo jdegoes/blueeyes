@@ -17,6 +17,8 @@
 package blueeyes {
 package json {
 
+import scalaz.Scalaz._
+
 /** Fast imperative parser.
  */
 object JsonParser {
@@ -57,6 +59,10 @@ object JsonParser {
   /** Return parsed JSON.
    */
   def parseOpt(s: Reader): Option[JValue] = try { Some(parse(s)) } catch { case e: Exception => None }
+
+  def parseValidated(s: String): scalaz.Validation[Exception, JValue] = try { parse(s).success } catch { case e: Exception => e.fail }
+
+  def parseValidated(s: Reader): scalaz.Validation[Exception, JValue] = try { parse(s).success } catch { case e: Exception => e.fail }
 
   /** Parse in pull parsing style.
    * Use <code>p.nextToken</code> to parse tokens one by one from a string.

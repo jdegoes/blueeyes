@@ -16,7 +16,7 @@ import scalaz.{Success, Validation, Failure}
 
 
 trait HttpRequestHandlerCombinators {
-  implicit def handlerToService[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = HttpHandlerService[A, B](handler)
+  implicit def service[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = HttpHandlerService[A, B](handler)
 
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
