@@ -132,7 +132,7 @@ case class CommitService[A, B](delegate: HttpService[A, B]) extends DelegatingSe
       }
       
       DispatchError(NotFound, "No service was found to be able to handle your request. Were you trying to access (one of) the following? \n" + 
-                    metadata.map(SimpleStringPrinter.printFormatted[Metadata])).fail
+                    metadata.map(SimpleStringPrinter.printFormatted[Metadata]).mkString("\n")).fail
       
     case other => other
   }
