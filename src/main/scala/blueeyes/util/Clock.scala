@@ -37,6 +37,10 @@ trait Clock {
   }
 }
 
+object Clock {
+  val System = ClockSystem.realtimeClock
+}
+
 trait ClockSystem {
   implicit val realtimeClock = new Clock {
     def now(): DateTime = new DateTime(DateTimeZone.UTC)
