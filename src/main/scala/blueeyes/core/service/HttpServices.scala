@@ -89,10 +89,10 @@ case class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, Strin
   val metadata = None
 }
 
-case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B], desc: Option[String]) extends DelegatingService[A, B, A, B] {
   val service = PathService.shift(path, _: HttpRequest[A]).toSuccess(inapplicable).flatMap(delegate.service)
 
-  lazy val metadata = Some(PathPatternMetadata(path))
+  lazy val metadata = Some(PathPatternMetadata(path, desc))
 }
 
 object PathService {
@@ -422,7 +422,7 @@ extends DelegatingService[A, B, A, X => B]{
     }
   }
 
-  lazy val metadata = Some(PathPatternMetadata(path))
+  lazy val metadata = Some(PathPatternMetadata(path, desc))
 }
 
 case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{

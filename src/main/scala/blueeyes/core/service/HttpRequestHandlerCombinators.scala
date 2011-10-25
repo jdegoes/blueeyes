@@ -27,8 +27,8 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] = 
-    (h: HttpService[T, S]) => new PathService[T, S] (path, h)
+  def path[T, S](path: RestPathPattern, desc: Option[String] = None): HttpService[T, S] => HttpService[T, S] =
+    (h: HttpService[T, S]) => new PathService[T, S] (path, h, desc)
 
   def pathParameter[A, B](path: RestPathPattern, sym: Symbol, desc: Option[String] = None) = 
     (h: HttpService[A, String => B]) => new PathParameterService(path, sym, desc, h)

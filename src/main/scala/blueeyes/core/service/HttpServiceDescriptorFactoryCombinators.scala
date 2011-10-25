@@ -53,8 +53,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestService(underlying.request(state), monitor)}, shutdown = (state: S) => {
-        monitor.shutdown()
-        underlying.shutdown(state)
+        underlying.shutdown(state).map(_ => monitor.shutdown())
       })
       val startTime = System.currentTimeMillis
 
@@ -146,8 +145,10 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 
         underlying.copy(request = (state: S) => {new HttpRequestLoggerService(actor, underlying.request(state))},
                         shutdown = (state: S) => {
+                          underlying.shutdown(state).flatMap{_ =>
                           actor.stop()
-                          log.close.flatMap{(v: Unit) => underlying.shutdown(state)}
+                            log.close
+                          }
                         })
       }
       else underlying
