@@ -102,32 +102,29 @@ object Metadata {
   }  
 
   implicit object StringFormatter extends Formatter[Metadata, String] {
-    def format(m: Metadata) = m match {
-      case PathPatternMetadata(pattern, desc) => Value("Service path: " + pattern.toString + desc.str(": " + _))
-      case HttpMethodMetadata(method) => Value("HTTP method: " + method.toString)
-      case HeaderMetadata(header, _, desc)    => Value("Header expected: " + header.fold(_.name, _.header) + desc.str(" (" + _ + ")"))
+    def format(m: Metadata) = Append(Title("REST API Resources"), Break, formatMetadata(m))
 
-      case ParameterMetadata(parameter, default, desc) => 
-        Value("Request Parameter: " + parameter + desc.str(": " + _ ) 
-              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)"))
+    def formatMetadata(m: Metadata): Printable[String] = m match {
+      case PathPatternMetadata(pattern, desc) => Value("Service path", pattern.toString, desc)
+      case HttpMethodMetadata(method)         => Value("HTTP method", method.toString, None)
+      case HeaderMetadata(header, _, desc)    => Value("Header", header.fold(_.name, _.header), desc)
 
-      case CookieMetadata(parameter, default, desc) => 
-        Value("HTTP cookie: " + parameter + desc.str(": " + _ ) 
-              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)"))
+      case ParameterMetadata(parameter, default, desc) =>
+        Value("Request Parameter", parameter.toString, Some(desc.getOrElse("")
+              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
 
-      case EncodingMetadata(encodings @ _*) => 
-        Append(
-          Value("The following encodings are supported:"), Break, 
-          Nest(Append(encodings.map(e => Value(e.toString): Printable[String]).toList.intersperse(Break): _*)))
+      case CookieMetadata(parameter, default, desc) =>
+        Value("HTTP cookie", parameter.toString, Some(desc.getOrElse("")
+              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
 
-      case DescriptionMetadata(desc) => Value(desc)
+      case EncodingMetadata(encodings @ _*) => Value("Supported encodings", encodings.mkString(", "), None)
+      case DescriptionMetadata(desc) => Append(Description(desc), Break)
 
-      case OrMetadata(metadata @ _*) => 
-        Append(
-          Seq(Value("You may use any one of the following configurations: "), Break) ++ 
-          metadata.map(m => Nest(format(m)): Printable[String]).toList.intersperse(Append(Break, Value("or"), Break)): _*)
+      case OrMetadata(metadata @ _*) =>
+        Append(Seq(Nest(ValueCaption("Parameter Type", "Parameter", "Description")), Break) ++
+        metadata.map(m => Nest(formatMetadata(m)): Printable[String]).toList.intersperse(Append(Break, Break)): _*)
 
-      case AndMetadata(metadata @ _*) => Append(metadata.sorted.map(format).toList.intersperse(Break): _*)
+      case AndMetadata(metadata @ _*) => Append(metadata.sorted.map(formatMetadata).toList.intersperse(Break): _*)
 
       case _ => Empty
     }
