@@ -1,26 +1,57 @@
 package blueeyes.persistence.mongo
 
+import java.util.Date
 import org.joda.time.DateTime
 
-trait BijectionsMongoValue {
-  implicit val MongoToMongoValue = new MongoBijection[MongoValue, MongoField, MongoObject](MongoValueBijectionFactory)
-  implicit val MongoValueToMongo = MongoToMongoValue.inverse
+import com.mongodb.{BasicDBObject, DBObject}
+import org.bson.types.ObjectId
+
+import scala.collection.JavaConverters._
+import scalaz.{Success, NonEmptyList}
+import scalaz.Scalaz._
+
+class MongoObjectBijection extends MongoBijection[MongoValue, MongoField, MongoObject]{
+  def extractString (value: String)                  = MongoString(value).success
+  def extractInteger(value: java.lang.Integer)       = MongoInt(value).success
+  def extractLong   (value: java.lang.Long)          = MongoLong(value).success
+  def extractFloat  (value: java.lang.Float)         = MongoFloat(value).success
+  def extractDouble (value: java.lang.Double)        = MongoDouble(value).success
+  def extractBoolean(value: java.lang.Boolean)       = MongoBoolean(value).success
+  def extractDate   (value: Date)                    = MongoDate(new DateTime(value)).success
+  def extractRegex  (value: java.util.regex.Pattern) = MongoRegex(value.pattern, if (value.flags != 0) Some(value.flags) else None).success
+  def extractBinary (value: Array[Byte])             = MongoBinary(value).success
+  def extractId     (value: ObjectId)                = MongoId(value.toByteArray).success
+  def buildNull                                      = MongoNull.success
+
+  def buildArray(value: Seq[MongoValue])             = MongoArray(value.toList)
+  def buildField(name: String, value: MongoValue)    = MongoField(name, value)
+  def buildObject(fields: Seq[MongoField])           = MongoObject(fields.toList)
+
+  def unapply(mobject: MongoObject): ValidationNEL[String, DBObject] = {
+    mobject.fields.foldLeft(success[NonEmptyList[String], BasicDBObject](new BasicDBObject)) {
+      case (Success(obj), MongoField(name, value)) => toStorageValue(value).map(obj.append(name, _))
+      case (failure, _) => failure
+    }
+  }
+
+  private def toStorageValue(mvalue: MongoValue): ValidationNEL[String, Any] = mvalue match {
+    case MongoArray(values)   => values.map(toStorageValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, Any].map(_.asJava)
+    case MongoInt(value)      => success(new java.lang.Integer(value))
+    case MongoLong(value)     => success(new java.lang.Long(value))
+    case MongoFloat(value)    => success(new java.lang.Float(value))
+    case MongoDouble(value)   => success(new java.lang.Double(value))
+    case MongoBoolean(value)  => success(new java.lang.Boolean(value))
+    case MongoDate(value)     => success(value.toDate)
+    case MongoRegex(pattern, flags) => success(flags.map(java.util.regex.Pattern.compile(pattern, _)).getOrElse(java.util.regex.Pattern.compile(pattern)))
+    case MongoId(bytes)       => success(new ObjectId(bytes))
+    case obj: MongoObject     => unapply(obj)
+    case other                => success(other.values)
+  }
 }
 
-object MongoValueBijectionFactory extends MongoBijectionFactory[MongoValue, MongoField, MongoObject]{
-  def mongoBinary(value: Array[Byte])                 = MongoBinary(value)
-  def mongoDate(value: DateTime)                      = MongoDate(value)
-  def mongoRegex(pattern: String, flags: Option[Int]) = MongoRegex(pattern, flags)
-  def mongoString(value: String)                      = MongoString(value)
-  def mongoLong(value: Long)                          = MongoLong(value)
-  def mongoInteger(value: Int)                        = MongoInt(value)
-  def mongoDouble(value: Double)                      = MongoDouble(value)
-  def mongoFloat(value: Float)                        = MongoFloat(value)
-  def mongoBoolean(value: Boolean)                    = MongoBoolean(value)
-  def mongoArray(value: List[MongoValue])             = MongoArray(value)
-  def mongoNull                                       = MongoNull
-  def mongoField(name: String, value: MongoValue)     = MongoField(name, value)
-  def mongoObject(fields: List[MongoField])           = MongoObject(fields)
+trait BijectionsMongoValue {
+  implicit val MongoToMongoValue = new MongoObjectBijection
+  implicit val MongoValueToMongo = MongoToMongoValue.inverse
 }
 
 object BijectionsMongoValue extends BijectionsMongoValue

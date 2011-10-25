@@ -1,87 +1,55 @@
 package blueeyes.persistence.mongo
 
-import scala.collection.JavaConversions._
-import org.joda.time.DateTime
+import blueeyes.core.data.PartialBijection
 import com.mongodb.{BasicDBObject, DBObject}
 import java.util.regex.Pattern
-import blueeyes.core.data.Bijection
+import org.bson.types.ObjectId
 
-class MongoBijection[V <: MongoValueRepr, F, O <: V {type Values = Map[String, Any]}](factory: MongoBijectionFactory[V, F, O]) extends Bijection[DBObject, O]{
+import scala.collection.JavaConverters._
+import scalaz.Validation
+import scalaz.Scalaz._
 
-  implicit def apply(dbObject: DBObject): O = {
-    val allKeys  = asScalaSet(dbObject.keySet)
-    val pureKeys = allKeys.filter(_ != "_id")
 
-    def toJField(key: String) = factory.mongoField(key, fromDBValue(dbObject.get(key)))
+trait MongoBijection[V, F, O <: V] extends PartialBijection[DBObject, O] {
+  def extractString (value: String): ValidationNEL[String, V]
+  def extractInteger(value: java.lang.Integer): ValidationNEL[String, V]
+  def extractLong   (value: java.lang.Long): ValidationNEL[String, V]
+  def extractFloat  (value: java.lang.Float): ValidationNEL[String, V]
+  def extractDouble (value: java.lang.Double): ValidationNEL[String, V]
+  def extractBoolean(value: java.lang.Boolean): ValidationNEL[String, V]
+  def extractDate   (value: java.util.Date): ValidationNEL[String, V]
+  def extractRegex  (value: java.util.regex.Pattern): ValidationNEL[String, V]
+  def extractBinary (value: Array[Byte]): ValidationNEL[String, V]
+  def extractId     (value: ObjectId): ValidationNEL[String, V]
+  def extractOther  (value: Any) = failure("No extractor configured for value of type " + value.getClass.getName).liftFailNel
+  def buildNull: ValidationNEL[String, V]
 
-    factory.mongoObject(pureKeys.map(toJField(_)).toList)
-  }
+  def buildArray  (values: Seq[V]): V
+  def buildField  (name: String, value: V): F
+  def buildObject (fields: Seq[F]): O
 
-  implicit def unapply(mongoObject: O): DBObject = toDBObject(mongoObject.values)
-
-  private def fromDBValue[M](value: M): V = value match {
-    case x: String                  => factory.mongoString(x)
-    case x: java.lang.Long          => factory.mongoLong(x)
-    case x: java.lang.Integer       => factory.mongoInteger(x)
-    case x: java.lang.Double        => factory.mongoDouble(x)
-    case x: java.lang.Float         => factory.mongoFloat(x)
-    case x: java.lang.Boolean       => factory.mongoBoolean(x)
-    case x: java.util.ArrayList[_]  => factory.mongoArray(x.map(fromDBValue).toList)
-    case x: java.util.regex.Pattern => factory.mongoRegex(x.pattern, if (x.flags != 0) Some(x.flags) else None)
-    case x: java.util.Date          => factory.mongoDate(new DateTime(x))
-    case x: Array[Byte]             => factory.mongoBinary(x)
-    case x: DBObject                => apply(x)
-    case null                       => factory.mongoNull
-    // Missing cases: com.mongodb.ObjectId, com.mongodb.DBRef
-    case _                               => sys.error("Unknown type for. {value=" + value + "}")
-  }
-
-  private def toDBObject(values: Map[String, Any]): DBObject = new BasicDBObject(values.mapValues(toDBValue(_)).filter(_._2 != None).mapValues(_.get))
-
-  private def toDBValue(value: Any): Option[Any] = {
-    import Predef._
-
-    value match {
-      case x: String      => Some(x.value)
-      case x: BigInt      => Some(long2Long(x.longValue))
-      case x: Int         => Some(int2Integer(x))
-      case x: Long        => Some(long2Long(x))
-      case x: Double      => Some(double2Double(x))
-      case x: Float       => Some(float2Float(x))
-      case x: Boolean     => Some(boolean2Boolean(x))
-      case x: Array[Byte] => Some(x)
-      case x: DateTime    => Some(x.toDate)
-      case (pattern: String, option: Int)   => Some(Pattern.compile(pattern, option))
-      case x: Map[_, _]   => Some(toDBObject(Map(x.toSeq.map(el => (el._1.toString, el._2)): _*)))
-      case x: List[_]     => {
-        val values = new java.util.ArrayList[Any]
-        x.foreach(y => {
-          toDBValue(y) match {
-            case Some(z) => values.add(z)
-            case _ =>
-          }
-        })
-        Some(values)
-      }
-      case None   => None
-      case null      => Some(null)
-      case _          => sys.error("Unknown type for value: " + value)
+  def apply(dbObject: DBObject): ValidationNEL[String, O] = {
+    val fields: Seq[ValidationNEL[String, F]] = {
+      dbObject.keySet.asScala.map(key => fromDBValue(dbObject.get(key)).map(buildField(key, _)))(collection.breakOut)
     }
-  }
-}
 
-trait MongoBijectionFactory[V <: MongoValueRepr, F, O <: V {type Values = Map[String, Any]}]{
-  def mongoBinary (value: Array[Byte]): V
-  def mongoDate   (value: DateTime): V
-  def mongoRegex  (pattern: String, flags: Option[Int]): V
-  def mongoString (value: String): V
-  def mongoLong   (value: Long): V
-  def mongoInteger(value: Int): V
-  def mongoDouble (value: Double): V
-  def mongoFloat  (value: Float): V
-  def mongoBoolean(value: Boolean): V
-  def mongoArray  (value: List[V]): V
-  def mongoNull: V
-  def mongoField  (name: String, value: V): F
-  def mongoObject (fields: List[F]): O
+    fields.sequence[({type N[B] = ValidationNEL[String, B]})#N, F].map(buildObject)
+  }
+
+  private def fromDBValue(value: Any): ValidationNEL[String, V] = value match {
+    case x: String                  => extractString(x)
+    case x: java.lang.Long          => extractLong(x)
+    case x: java.lang.Integer       => extractInteger(x)
+    case x: java.lang.Double        => extractDouble(x)
+    case x: java.lang.Float         => extractFloat(x)
+    case x: java.lang.Boolean       => extractBoolean(x)
+    case x: java.util.regex.Pattern => extractRegex(x)
+    case x: java.util.Date          => extractDate(x)
+    case x: Array[Byte]             => extractBinary(x)
+    case x: ObjectId    => extractId(x)
+    case x: java.util.ArrayList[_]  => x.asScala.map(fromDBValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, V].map(buildArray)
+    case x: DBObject                => apply(x)
+    case null                       => buildNull
+    case other                      => extractOther(other)
+  }
 }

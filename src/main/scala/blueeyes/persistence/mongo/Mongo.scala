@@ -81,7 +81,7 @@ abstract class Database {
 }
 
 private[mongo] trait DatabaseCollection{
-  def insert(objects: List[JObject])
+  def insert(objects: List[JObject])//: ValidationNEL[String, Unit]
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int],
              limit: Option[Int], hint: Option[Hint], isSnapshot : Boolean): IterableView[JObject, Iterator[JObject]]
   def explain(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int],

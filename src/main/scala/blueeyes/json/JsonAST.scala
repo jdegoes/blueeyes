@@ -602,6 +602,8 @@ object JsonAST {
     override def apply(i: Int): JValue = value(i)
   }
   case class JObject(fields: List[JField]) extends JValue {
+    type Field = JField
+    type Value = JValue
     type Values = Map[String, Any]
     type Self = JObject
     

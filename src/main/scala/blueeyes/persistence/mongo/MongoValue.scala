@@ -78,3 +78,8 @@ case class MongoObject(fields: List[MongoField]) extends MongoValue{
     case _ => false
   }
 }
+
+case class MongoId(bytes: Array[Byte]) extends MongoValue {
+  type Values = Array[Byte]
+  def values = bytes
+}

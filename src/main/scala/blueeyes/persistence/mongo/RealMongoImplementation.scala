@@ -20,6 +20,7 @@ import akka.dispatch.Dispatchers
 import akka.util.Duration
 
 import java.util.concurrent.TimeUnit
+import scalaz.Scalaz._
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
@@ -85,11 +86,15 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
+  type V[B] = ValidationNEL[String, B]
+
   def requestDone() { collection.getDB.requestDone() }
 
   def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject])      { collection.insert(objects.map(MongoToJson.unapply(_))) }
+  def insert(objects: List[JObject]) = { 
+    objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map(collection.insert(_)) 
+  }
 
   def remove(filter: Option[MongoFilter]) { collection.remove(toMongoFilter(filter)) }
 
@@ -121,7 +126,9 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def dropIndexes() { collection.dropIndexes() }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): JObject =
-    find(selection, filter, sort, skip, limit, hint, isSnapshot).explain()
+    MongoToJson(find(selection, filter, sort, skip, limit, hint, isSnapshot).explain()) ||| {
+      errors => sys.error("Errors occurred deserializing the explain object: " + errors.list.mkString("; "))
+    }
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) =
     iterator(find(selection, filter, sort, skip, limit, hint, isSnapshot).iterator)
@@ -158,7 +165,11 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   }
 
   private def find(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): DBCursor = {
-    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)).map(MongoToJson(_))
+    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)) map {
+      v => MongoToJson(v) ||| {
+        errors => sys.error("Errors occurred deserializing the database object: " + errors.list.mkString("; "))
+      }
+    }
 
     val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))
     val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
@@ -174,6 +185,14 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   private def toMongoKeys(selection : MongoSelection): JObject = toMongoKeys(selection.selection)
   private def toMongoKeys(keysPaths: Iterable[JPath]): JObject      = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
+
+  private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v ||| {
+    errors => sys.error("An error occurred deserializing the database object: " + errors.list.mkString("; "))
+  }
+
+  private implicit def jvo2dbo(obj: JObject): DBObject = MongoToJson.unapply(obj) ||| {
+    errors => sys.error("An error occurred serializing the JSON object to mongo: " + errors.list.mkString("; "))
+  }
 }
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
