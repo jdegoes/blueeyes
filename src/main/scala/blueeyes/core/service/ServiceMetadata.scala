@@ -6,7 +6,7 @@ import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 
 import scalaz.Scalaz._
-import scalaz.{Success, Validation, Failure, Semigroup}
+import scalaz.{Validation, Failure, Semigroup}
 
 sealed trait NotServed {
   def or[A](result: => Validation[NotServed, A]): Validation[NotServed, A]
@@ -129,7 +129,23 @@ object Metadata {
       case _ => Empty
     }
   }
+
+  implicit def serviceToMetadata(service: AnyService){
+    def metadata(service: AnyService): Option[Metadata] = {
+      def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
+        case OrService(services @ _*)  => Some(OrMetadata(services.map (metadata(m, _)).collect{case Some(v) => v}: _*))
+        case s: DelegatingService[_, _, _, _] => metadata(append(m, s.metadata), s.delegate)
+        case s => append(m, s.metadata)
+      }
+
+      def append(m1: Option[Metadata], m2: Option[Metadata]): Option[Metadata] = (m1, m2) match{
+        case (Some(v1), Some(v2)) => Some(MetadataSemigroup.append(v1, v2))
+        case (Some(v1), None)     => m1
+        case (None, Some(v2))     => m2
+        case (None, None)         => None
+      }
+
+      metadata(None, service)
+    }
+  }
 }
-
-
-// vim: set ts=4 sw=4 et:

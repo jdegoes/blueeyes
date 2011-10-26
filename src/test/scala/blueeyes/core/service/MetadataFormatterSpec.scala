@@ -7,35 +7,7 @@ import org.specs.Specification
 import blueeyes.core.service.RestPathPatternParsers.LiteralPathPattern
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 
-class MetadataSpec extends Specification {
-  "pretty-printing service metadata" should {
-    "pretty-print a simple set of metadata" in {
-
-      val expected = """REST API Resources
-  Parameter Type           Parameter                Description
-  ------------------------------------------------------------
-  HTTP method              GET
-  Request Parameter        'callback                A callback method identifier is required when using JsonP with a "GET" request. (required)
-  Supported encodings      gzip, deflate
-
-  HTTP method              POST
-
-  HTTP method              PUT
-
-  HTTP method              DELETE"""
-
-      SimpleStringPrinter.printFormatted(OrMetadata(
-        AndMetadata(
-          HttpMethodMetadata(HttpMethods.GET),
-          EncodingMetadata(Encodings.gzip, Encodings.deflate),
-          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
-        ),
-        HttpMethodMetadata(HttpMethods.POST),
-        HttpMethodMetadata(HttpMethods.PUT),
-        HttpMethodMetadata(HttpMethods.DELETE)
-      )) must_== expected
-    }
-  }
+class MetadataFormatterSpec extends Specification {
 
   "html service metadata" should {
     "print a simple set of metadata in html format" in {
