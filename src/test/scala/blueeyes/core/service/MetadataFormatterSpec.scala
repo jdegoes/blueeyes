@@ -5,7 +5,6 @@ import blueeyes.util.printer._
 
 import org.specs.Specification
 import blueeyes.core.service.RestPathPatternParsers.LiteralPathPattern
-import java.io.{File, FileOutputStream, OutputStreamWriter}
 
 class MetadataFormatterSpec extends Specification {
 

@@ -97,7 +97,11 @@ object Metadata {
         case other => paths(other)
       }
 
-      AndMetadata((for (p1 <- ap; p2 <- bp) yield PathPatternMetadata(p1.pattern / p2.pattern, None)) ++ am ++ bm: _*)
+      val pm = ap ::: bp match{
+        case Nil => List[Metadata]()
+        case abp => List(abp.tail.foldLeft(abp.head){(m, p) => PathPatternMetadata(m.pattern ~ p.pattern, m.desc ⊹ p.desc)})
+      }
+      AndMetadata(pm ++ am ++ bm: _*)
     }
   }  
 
@@ -130,22 +134,27 @@ object Metadata {
     }
   }
 
-  implicit def serviceToMetadata(service: AnyService){
-    def metadata(service: AnyService): Option[Metadata] = {
-      def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
-        case OrService(services @ _*)  => Some(OrMetadata(services.map (metadata(m, _)).collect{case Some(v) => v}: _*))
-        case s: DelegatingService[_, _, _, _] => metadata(append(m, s.metadata), s.delegate)
-        case s => append(m, s.metadata)
-      }
+  implicit def serviceToMetadata(service: AnyService): Metadata = {
+    def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
+      case OrService(services @ _*)  =>
+        val ms = services.map(metadata(m, _)).collect{case Some(v) => v}
+        Some(OrMetadata(ms.foldLeft(Seq[Metadata]()){
+          case (l, OrMetadata(ms @ _*)) => l ++ ms
+          case (l, m) => l :+ m
+        }: _*))
+      case s: DelegatingService[_, _, _, _] => metadata(m ⊹ nePath(s.metadata), s.delegate)
+      case s => m ⊹ nePath(s.metadata)
+    }
 
-      def append(m1: Option[Metadata], m2: Option[Metadata]): Option[Metadata] = (m1, m2) match{
-        case (Some(v1), Some(v2)) => Some(MetadataSemigroup.append(v1, v2))
-        case (Some(v1), None)     => m1
-        case (None, Some(v2))     => m2
-        case (None, None)         => None
-      }
+    def nePath(m: Option[Metadata]) = m.flatMap{
+      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern, _) => None
+      case _ => m
+    }
 
-      metadata(None, service)
+    metadata(None, service) match {
+      case Some(m: OrMetadata) => m
+      case Some(m) => OrMetadata(m)
+      case None => OrMetadata()
     }
   }
 }
