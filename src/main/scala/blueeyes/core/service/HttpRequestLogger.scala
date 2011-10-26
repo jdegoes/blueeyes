@@ -69,7 +69,11 @@ object HttpRequestLogger{
   }
 
   private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
-    def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = chunk.map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](agreggated => Right(agreggated.data))).getOrElse(Future.sync[Either[String, Array[Byte]]](Right(Array[Byte]())))
+    def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
+      chunk
+      .map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](agreggated => Left(new String(agreggated.data))))
+      .getOrElse(Future.sync[Either[String, Array[Byte]]](Left("")))
+    }
 
     val value: Future[Either[String, Array[Byte]]] = fieldIdentifier match {
       case DateIdentifier =>
