@@ -41,38 +41,33 @@ object HttpRequestLogger{
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")
 
   private val IpIdentifierValue = try {
-    InetAddress.getLocalHost.getHostAddress
-  }
-  catch {
-   case error: Throwable => "127.0.0.1"
+      InetAddress.getLocalHost.getHostAddress
+    } catch {
+      case error: Throwable => "127.0.0.1"
   }
 
   private val DnsNameIdentifierValue = try {
-    InetAddress.getLocalHost.getHostName
-  }
-  catch {
-   case error: Throwable => "localhost"
+      InetAddress.getLocalHost.getHostName
+    } catch {
+      case error: Throwable => "localhost"
   }
 
-  private def lift[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[List[(FieldIdentifier, Either[String, Array[Byte]])]]): HttpRequestLogger[T, S] = new HttpRequestLoggerImpl[T, S] (f)
-
-  private[HttpRequestLogger] class HttpRequestLoggerImpl[T, S](f: (HttpRequest[T], Future[HttpResponse[S]]) => Future[List[(FieldIdentifier, Either[String, Array[Byte]])]]) extends HttpRequestLogger[T, S]{
-    def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[List[(FieldIdentifier, Either[String, Array[Byte]])]] = f(request, response)
-  }
   
   /** Creates a logger from a W3 Extended Log fields directive. e.g.:
    *
    * #Fields: time cs-method cs-uri
    */
-  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = {
-    lift{(rq, rs) => Future(fieldsDirective.identifiers.map(log(_, rq, rs)): _*)}
+  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
+    def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[List[(FieldIdentifier, Either[String, Array[Byte]])]] = {
+      Future(fieldsDirective.identifiers.map(log(_, request, response)): _*)
+    }
   }
 
   private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
     def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
       chunk
-      .map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](agreggated => Left(new String(agreggated.data))))
-      .getOrElse(Future.sync[Either[String, Array[Byte]]](Left("")))
+      .map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](aggregated => Right(aggregated.data)))
+      .getOrElse(Future.sync[Either[String, Array[Byte]]](Right(Array.empty[Byte])))
     }
 
     val value: Future[Either[String, Array[Byte]]] = fieldIdentifier match {
@@ -85,30 +80,32 @@ object HttpRequestLogger{
       case TimeTakenIdentifier =>
         val start = clock.now().getMillis
 
-        response.map { _ =>
-          val end = clock.now().getMillis
-
-          val deltaSeconds = (end - start) / 1000.0
-
+        response.map[Either[String, Array[Byte]]] { _ =>
+          val deltaSeconds = (clock.now().getMillis - start) / 1000.0
+          Left(deltaSeconds.toString)
+        } orElse {
+          val deltaSeconds = (clock.now().getMillis - start) / 1000.0
           Left(deltaSeconds.toString)
         }
 
       case BytesIdentifier =>
         import HttpHeaders._
 
-        response.map { response =>
+        response.map[Either[String, Array[Byte]]] { response =>
           val contentLength = (for (`Content-Length`(length) <- response.headers.raw) yield length).headOption.getOrElse(0L)
-
           Left(contentLength.toString)
+        } orElse {
+          Left("(response unavailable)")
         }
 
       case CachedIdentifier =>
         import HttpHeaders._
 
-        response.map { response =>
+        response.map[Either[String, Array[Byte]]] { response =>
           val cached = (for (Age(age) <- response.headers.raw) yield age).headOption.getOrElse(0.0) > 0
-
           Left(if (cached) "1" else "0")
+        } orElse {
+          Left("(response unavailable)")
         }
 
       case IpIdentifier(prefix) => prefix match {
@@ -123,15 +120,15 @@ object HttpRequestLogger{
       }
       case ContentIdentifier(prefix) => prefix match {
         case ClientToServerPrefix => aggregate(request.content.map(requestBijection(_)))
-        case ServerToClientPrefix => response flatMap { response => aggregate(response.content.map(responseBijection(_))) }
+        case ServerToClientPrefix => response.flatMap[Either[String, Array[Byte]]] { response => aggregate(response.content.map(responseBijection(_))) } orElse { Left("(response unavailable)") }
         case _   => Future.sync(Left(""))
       }
       case StatusIdentifier(prefix) => prefix match {
-        case ServerToClientPrefix => response map { response => Left(response.status.code.name) }
+        case ServerToClientPrefix => response.map[Either[String, Array[Byte]]] { response => Left(response.status.code.name) } orElse { Left("(response unavailable)") }
         case _   => Future.sync(Left(""))
       }
       case CommentIdentifier(prefix) => prefix match {
-        case ServerToClientPrefix => response map { response => Left(response.status.reason) }
+        case ServerToClientPrefix => response.map[Either[String, Array[Byte]]] { response => Left(response.status.reason) } orElse { Left("(response unavailable)") }
         case _   => Future.sync(Left(""))
       }
       case MethodIdentifier(prefix) => prefix match {
@@ -154,12 +151,13 @@ object HttpRequestLogger{
         def find(key: String, headers: Map[String, String]) = headers find {keyValue => keyValue._1.toLowerCase == key.toLowerCase} map {keyValue => keyValue._2} getOrElse ("")
         prefix match {
           case ClientToServerPrefix => Future.sync(Left(find(header, request.headers.raw)))
-          case ServerToClientPrefix => response map { response => Left(find(header, response.headers.raw)) }
+          case ServerToClientPrefix => response.map[Either[String, Array[Byte]]] { response => Left(find(header, response.headers.raw)) } orElse { Left("(response unavailable)") }
           case _   => Future.sync(Left(""))
         }
       case CustomIdentifier(value) =>
         Future.sync(Left(""))
     }
+
     value.map((fieldIdentifier, _))
   }
 

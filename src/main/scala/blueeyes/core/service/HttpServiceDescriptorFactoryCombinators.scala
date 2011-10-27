@@ -216,10 +216,16 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
   }
 
   private[service] class HttpRequestLoggerService[T](actor: ActorRef, underlying: AsyncHttpService[T]) extends AsyncCustomHttpService[T]{
-    def service = {request: HttpRequest[T] =>
-      val validation = underlying.service(request)
-      validation.foreach{ response => actor ! Tuple2(request, response)}
-      validation
+    def service = (request: HttpRequest[T]) => {
+      try {
+        val validation = underlying.service(request)
+        for (response <- validation) actor ! ((request, response))
+        validation
+      } catch {
+        case ex: Throwable => 
+          actor ! ((request, Future.dead[HttpResponse[T]]))
+          throw ex
+      }
     }
 
     val metadata = None
@@ -230,15 +236,12 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     private val requestLogger       = HttpRequestLogger[T, T](fieldsDirective)
 
     def receive = {
-      case data: Tuple2[_, _] => {
-        val request  = data._1.asInstanceOf[HttpRequest[T]]
-        val response = data._2.asInstanceOf[Future[HttpResponse[T]]]
+      case (request: HttpRequest[T], response: Future[HttpResponse[T]]) => {
         if (includeExcludeLogic(request.subpath)){
           val logRecord = requestLogger(request, response)
-          logRecord.map(formatter.formatLog(_)) foreach { log(_)}
+          logRecord.map(formatter.formatLog(_)) foreach { log(_) }
         }
       }
-      case _ => sys.error("wrong message.")
     }
 
     val metadata = None
