@@ -15,7 +15,7 @@ import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, Mon
 import blueeyes.core.service.ServerHealthMonitorService
 import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
 import blueeyes.core.data.FileSource._
-import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkFutureJson}
+import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkString, BijectionsChunkFutureJson}
 import java.io.File
 import blueeyes.health.metrics._
 
@@ -25,10 +25,11 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
 
 trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo{
   import BijectionsChunkJson._
+  import BijectionsChunkString._
   import BijectionsChunkFutureJson._
   val contactListService = service("contactlist", "1.0.0") {
     requestLogging{
-
+    help{
     healthMonitor { monitor => context =>
       startup {
         val mongoConfig = context.config.configMap("mongo")
@@ -103,8 +104,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
       shutdown { demoConfig: BlueEyesDemoConfig =>
         ().future
       }
-    }
-    }}
+    }}}}
 
   private def searchContacts(filterJObject: Option[Future[JObject]], config: BlueEyesDemoConfig): Future[List[JString]] = {
     createFilter(filterJObject) map { _.flatMap{filter =>

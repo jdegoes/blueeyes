@@ -4,6 +4,7 @@ package core.service
 import blueeyes.core.http._
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
+import blueeyes.core.http.HttpHeaders.{`Content-Type`}
 
 import scalaz.Scalaz._
 import scalaz.{Validation, Failure, Semigroup}
@@ -46,9 +47,9 @@ case class HttpMethodMetadata(method: HttpMethod) extends Metadata(2) {
   }
 }
 
-case class HeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None, desc: Option[String] = None) extends Metadata(3) {
+sealed abstract class HeaderMetadata[T <: HttpHeader](sortOrder: Int) extends Metadata(sortOrder) {
   override def compare(other: Metadata) = other match {
-    case HeaderMetadata(h, _, _) => (header, h) match {
+    case h: HeaderMetadata[_] => (header, h.header) match {
       case (Left(h1),  Left(h2))  => h1.name.compare(h2.name)
       case (Right(h1), Right(h2)) => h1.name.compare(h2.name)
       case (Left(_), _) => -1
@@ -57,28 +58,37 @@ case class HeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T]
 
     case _ => super.compare(other)
   }
+  def header: Either[HttpHeaderField[T], T]
+
+  def default: Option[T]
+
+  def desc: Option[String]
 }
 
-case class ParameterMetadata(parameter: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata(4) {
+case class RequestHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None, desc: Option[String] = None) extends HeaderMetadata[T](3)
+
+case class ResponseHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None, desc: Option[String] = None) extends HeaderMetadata[T](4)
+
+case class ParameterMetadata(parameter: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata(5) {
   override def compare(other: Metadata) = other match {
     case ParameterMetadata(p, _, _) => parameter.toString.compare(p.toString)
     case _ => super.compare(other)
   }
 }
 
-case class CookieMetadata(ident: Symbol,     default: Option[String], desc: Option[String] = None) extends Metadata(5) {
+case class CookieMetadata(ident: Symbol,     default: Option[String], desc: Option[String] = None) extends Metadata(6) {
   override def compare(other: Metadata) = other match {
     case CookieMetadata(i, _, _) => ident.toString.compare(i.toString)
     case _ => super.compare(other)
   }
 }
 
-case class TitleMetadata        (title: String) extends Metadata(6)
-case class DescriptionMetadata  (description: String) extends Metadata(7)
-case class DataSizeMetadata     (dataSize: DataSize)  extends Metadata(8)
-case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(9)
-case class AndMetadata          (metadata: Metadata*) extends Metadata(10)
-case class OrMetadata           (metadata: Metadata*) extends Metadata(11)
+case class TitleMetadata        (title: String) extends Metadata(7)
+case class DescriptionMetadata  (description: String) extends Metadata(8)
+case class DataSizeMetadata     (dataSize: DataSize)  extends Metadata(9)
+case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(10)
+case class AndMetadata          (metadata: Metadata*) extends Metadata(11)
+case class OrMetadata           (metadata: Metadata*) extends Metadata(12)
 
 object Metadata {
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
@@ -112,7 +122,15 @@ object Metadata {
     def formatMetadata(m: Metadata): Printable[String] = m match {
       case PathPatternMetadata(pattern, desc) => Value("Service path", pattern.toString, desc)
       case HttpMethodMetadata(method)         => Value("HTTP method", method.toString, None)
-      case HeaderMetadata(header, _, desc)    => Value("Header", header.fold(_.name, _.header), desc)
+
+      case RequestHeaderMetadata(header, _, desc)  => header match{
+        case Right(value : `Content-Type`) => Value("Accept", value.value, desc)
+        case _ => Value("Request Header", header.fold(_.name, _.header), desc)
+      }
+      case ResponseHeaderMetadata(header, _, desc) => header match{
+        case Right(value : `Content-Type`) => Value("Produce", value.value, desc)
+        case _ => Value("Response Header", header.fold(_.name, _.header), desc)
+      }
 
       case ParameterMetadata(parameter, default, desc) =>
         Value("Request Parameter", parameter.toString, Some(desc.getOrElse("")
