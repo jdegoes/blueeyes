@@ -7,6 +7,7 @@ import blueeyes.json.JsonParser
 import org.specs.Specification
 import org.specs.matcher.Matchers._
 
+import blueeyes.core.data._
 import blueeyes.core.http._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpHeaders._
@@ -18,13 +19,11 @@ import DataSize._
 
 import java.net.URLEncoder.{encode => encodeUrl}
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, Bijection, GZIPByteChunk}
+import scalaz.Success
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with FutureMatchers {
-  implicit val JValueToString = new Bijection[JValue, String] {
-    def apply(s: JValue)   = compact(render(s))
-    def unapply(t: String) = JsonParser.parse(t)
-  }
-  implicit val StringToJValue    = JValueToString.inverse
+  import BijectionsChunkFutureJson._
+  import BijectionsChunkString._
 
   "composition of paths" should {
     "have the right type" in {
@@ -44,10 +43,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
   "jsonp combinator" should {
     "detect jsonp by callback & method parameters" in {
-      val handler: AsyncHttpService[String] = {
-        jsonp {
+      val handler: AsyncHttpService[ByteChunk] = {
+        jsonp[ByteChunk] {
           path("/") {
-            get { request: HttpRequest[JValue] =>
+            get { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue](content = Some(JString("foo"))))
             }
           }
@@ -55,13 +54,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       }
 
       handler.service {
-        HttpRequest[String](
+        HttpRequest[ByteChunk](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET"
         )
       }.toOption.get must whenDelivered {
         verify {
-          _.content must beSome(
+          _.content.map(ChunkToString) must beSome(
             """jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});"""
           )
         }
@@ -69,24 +68,24 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     }
 
     "retrieve POST content from query string parameter" in {
-      val handler: AsyncHttpService[String] = {
+      val handler: AsyncHttpService[ByteChunk] = {
         jsonp {
           path("/") {
-            post { request: HttpRequest[JValue] =>
-              Future.sync(HttpResponse[JValue](content = request.content))
+            post { request: HttpRequest[Future[JValue]] =>
+              Future.sync(HttpResponse[JValue](content = request.content.flatMap(_.value)))
             }
           }
         }
       }
 
       handler.service {
-        HttpRequest[String](
+        HttpRequest[ByteChunk](
           method  = HttpMethods.GET,
           uri     = "/?callback=jsFunc&method=POST&content=" + encodeUrl("{\"bar\":123}", "UTF-8")
         )
       }.toOption.get must whenDelivered {
         verify {
-          _.content must beSome {
+          _.content.map(ChunkToString) must beSome {
             """jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});"""
           }
         }
@@ -94,10 +93,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     }
 
     "retrieve headers from query string parameter" in {
-      val handler: AsyncHttpService[String] = {
+      val handler: AsyncHttpService[ByteChunk] = {
         jsonp {
           path("/") {
-            get { request: HttpRequest[JValue] =>
+            get { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
             }
           }
@@ -105,13 +104,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       }
 
       handler.service {
-        HttpRequest[String](
+        HttpRequest[ByteChunk](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8")
         )
       }.toOption.get must whenDelivered {
         verify {
-          _.content must beSome {
+          _.content.map(ChunkToString) must beSome {
             """jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});"""
           }
         }
@@ -119,10 +118,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     }
 
     "pass undefined to callback when there is no content" in {
-      val handler: AsyncHttpService[String] = {
+      val handler: AsyncHttpService[ByteChunk] = {
         jsonp {
           path("/") {
-            get { request: HttpRequest[JValue] =>
+            get { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue]())
             }
           }
@@ -130,13 +129,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       }
 
       handler.service {
-        HttpRequest[String](
+        HttpRequest[ByteChunk](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8")
         )
       }.toOption.get must whenDelivered {
         verify {
-          _.content must beSome {
+          _.content.map(ChunkToString) must beSome {
             """jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});"""
           }
         }
@@ -144,10 +143,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
     }
 
     "return headers in 2nd argument to callback function" in {
-      val handler: AsyncHttpService[String] = {
+      val handler: AsyncHttpService[ByteChunk] = {
         jsonp {
           path("/") {
-            get { request: HttpRequest[JValue] =>
+            get { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
             }
           }
@@ -155,13 +154,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       }
 
       handler.service {
-        HttpRequest[String](
+        HttpRequest[ByteChunk](
           method = HttpMethods.GET,
           uri    = "/?callback=jsFunc&method=GET"
         )
       }.toOption.get must whenDelivered {
         verify {
-          _.content must beSome {
+          _.content.map(ChunkToString) must beSome {
             """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});"""
           }
         }
@@ -225,7 +224,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
       f.toOption.get.value must eventually(beSomething)
-      f.toOption.get.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
+      f.toOption.get.value.get.content must beSome(JString("blahblah"))
     }
 
     "extract decoded parameter" in {
@@ -239,19 +238,22 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah"))
       f.toOption.get.value must eventually(beSomething)
-      f.toOption.get.value.get.content.map(JString(_)) must beSome(JString(""""blah blah""""))
+      f.toOption.get.value.get.content must beSome(JString("blah blah"))
     }
   }
 
   "path combinator" should {
     "extract symbol" in {
-      (path('token) {
+      val s = path('token) {
         parameter('token) {
-          get { (request: HttpRequest[String]) => token: String =>
-            Future.sync(HttpResponse[String](content=Some(token)))
+          get { 
+            service((request: HttpRequest[String]) => { (token: String) => Future.sync(HttpResponse[String](content=Some(token))) })
           }
         }
-      }).service(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B", content = None)).toOption.get.value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
+      }
+      
+      s.service(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B"))
+       .toOption.get.value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
     }
 
     "support nested paths" in {
@@ -267,7 +269,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries"))
       f.toOption.get.value must eventually(beSomething)
-      f.toOption.get.value.get.content.map(JString(_)) must beSome(JString(""""blahblah""""))
+      f.toOption.get.value.get.content must beSome(JString("blahblah"))
     }
   }
 
@@ -320,7 +322,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
   "decodeUrl combinator" should{
     "decode request URI" in{
-      val f = path("/foo/'bar") {
+      val svc = path("/foo/'bar") {
         produce(application/json) {
           decodeUrl {
             get { (request: HttpRequest[String]) =>
@@ -328,9 +330,15 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
             }
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah"))
-      f.toOption.get.value must eventually(beSomething)
-      f.toOption.get.value.get.content.map(JString(_)) must beSome(JString(""""/foo/blah blah""""))
+      }
+      
+      svc.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah")) must beLike {
+        case Success(future) => future must whenDelivered {
+          verify {
+            _.content must beSome(JString("/foo/blah blah"))
+          }
+        }
+      }
     }
   }
 }

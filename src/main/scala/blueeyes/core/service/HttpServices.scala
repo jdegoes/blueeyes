@@ -275,8 +275,8 @@ extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Futu
   lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class JsonpService[T](delegate: HttpService[JValue, Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) 
-extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpResponse[JValue]]]{
+case class JsonpService[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], bstr: Bijection[T, String]) 
+extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[HttpResponse[JValue]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
@@ -291,8 +291,8 @@ extends DelegatingService[T, Future[HttpResponse[T]], JValue, Future[HttpRespons
   ))
 }
 
-case class Jsonp2Service[T, E1](delegate: HttpService[JValue, E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]) 
-extends DelegatingService[T, E1 => Future[HttpResponse[T]], JValue, E1 => Future[HttpResponse[JValue]]]{
+case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], bstr: Bijection[T, String]) 
+extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => {
     jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
@@ -302,9 +302,10 @@ extends DelegatingService[T, E1 => Future[HttpResponse[T]], JValue, E1 => Future
 }
 
 object JsonpService {
-  def jsonpConvertRequest[T](r: HttpRequest[T])(implicit b1: Bijection[T, JValue]): Validation[NotServed, HttpRequest[JValue]] = {
+  def jsonpConvertRequest[T](r: HttpRequest[T])(implicit b1: Bijection[T, Future[JValue]]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
     import blueeyes.json.JsonParser.parse
     import blueeyes.json.xschema.DefaultSerialization._
+    import Bijection._
 
     r.parameters.get('callback) match {
       case Some(callback) if (r.method == HttpMethods.GET) =>
@@ -313,7 +314,7 @@ object JsonpService {
             val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
             val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(parse _)
+            val content = r.parameters.get('content).map(parse _).map(Future.sync(_))
             val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
             success(r.copy(method = method, content = content, headers = r.headers ++ headers))
@@ -329,15 +330,14 @@ object JsonpService {
         failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
 
       case None =>
-        success(r.copy(content = r.content.map(b1.apply)))
+        success(r.copy(content = r.content.map(_.as[Future[JValue]])))
     }
   }
 
-  def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit b1: Bijection[T, JValue], bstr: Bijection[T, String]): HttpResponse[T] = {
+  def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit b1: Bijection[T, Future[JValue]], bstr: Bijection[T, String]): HttpResponse[T] = {
     import blueeyes.json.xschema.DefaultSerialization._
     import blueeyes.json.Printer._
-
-    implicit val b2 = b1.inverse
+    import Bijection._
 
     callback map { callback =>
       val meta = compact(render(JObject(
@@ -354,14 +354,14 @@ object JsonpService {
 
       r.copy(
         content = r.content.map { content =>
-          bstr.inverse.apply(callback + "(" + bstr.apply(b2.apply(content)) + "," + meta + ");")
+          bstr.inverse.apply(callback + "(" + bstr.apply(Future.sync(content).as[T]) + "," + meta + ");")
         } orElse {
           Some(bstr.inverse.apply(callback + "(undefined," + meta + ");"))
         }, 
         headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )
     } getOrElse {
-      r.copy(content = r.content.map(b2.apply), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+      r.copy(content = r.content.map(Future.sync(_).as[T]), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
     }
   }
 }
