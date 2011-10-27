@@ -1,44 +1,17 @@
 package blueeyes.core.service
 
+import org.specs.Specification
+
 import blueeyes.core.http._
 import blueeyes.util.printer._
+import blueeyes.core.http.HttpMethods._
+import RestPathPatternParsers._
 
-import org.specs.Specification
-import blueeyes.core.service.RestPathPatternParsers.LiteralPathPattern
-import java.io.{File, FileOutputStream, OutputStreamWriter}
+class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
+  import Metadata._
 
-class MetadataSpec extends Specification {
-  "pretty-printing service metadata" should {
-    "pretty-print a simple set of metadata" in {
-
-      val expected = """REST API Resources
-  Parameter Type           Parameter                Description
-  ------------------------------------------------------------
-  HTTP method              GET
-  Request Parameter        'callback                A callback method identifier is required when using JsonP with a "GET" request. (required)
-  Supported encodings      gzip, deflate
-
-  HTTP method              POST
-
-  HTTP method              PUT
-
-  HTTP method              DELETE"""
-
-      SimpleStringPrinter.printFormatted(OrMetadata(
-        AndMetadata(
-          HttpMethodMetadata(HttpMethods.GET),
-          EncodingMetadata(Encodings.gzip, Encodings.deflate),
-          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
-        ),
-        HttpMethodMetadata(HttpMethods.POST),
-        HttpMethodMetadata(HttpMethods.PUT),
-        HttpMethodMetadata(HttpMethods.DELETE)
-      )) must_== expected
-    }
-  }
-
-  "html service metadata" should {
-    "print a simple set of metadata in html format" in {
+  "serviceToMetadata" should{
+    "extract metadata from services" in{
       val expected = """<html>
 
   <head>
@@ -63,13 +36,6 @@ class MetadataSpec extends Specification {
   <body>
     <div class = "root">
     <h1>REST API Resources</h1>
-    <table>
-      <tbody>
-        <tr><td>Timelines are collections of Tweets, ordered with the most recent first.</td></tr>
-      </tbody>
-    </table>
-
-
 <div class="nested">
         <table>
           <tbody>
@@ -85,8 +51,8 @@ class MetadataSpec extends Specification {
           <tbody>
             <tr>
                 <td class="types font-types">Service path</td>
-                <td class="values font-values">/statuses/home_timeline.format</td>
-                <td class="desc">Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...</td>
+                <td class="values font-values">/details/bar/john</td>
+                <td class="desc">Personal john details</td>
             </tr>
           </tbody>
         </table>
@@ -96,26 +62,6 @@ class MetadataSpec extends Specification {
             <tr>
                 <td class="types font-types">HTTP method</td>
                 <td class="values font-values">GET</td>
-                <td class="desc"></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Request Parameter</td>
-                <td class="values font-values">'callback</td>
-                <td class="desc">A callback method identifier is required when using JsonP with a "GET" request. (required)</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Supported encodings</td>
-                <td class="values font-values">gzip, deflate</td>
                 <td class="desc"></td>
             </tr>
           </tbody>
@@ -126,8 +72,8 @@ class MetadataSpec extends Specification {
           <tbody>
             <tr>
                 <td class="types font-types">Service path</td>
-                <td class="values font-values">/statuses/home_timeline.format</td>
-                <td class="desc">Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...</td>
+                <td class="values font-values">/details/kate</td>
+                <td class="desc">Personal kate details</td>
             </tr>
           </tbody>
         </table>
@@ -137,78 +83,6 @@ class MetadataSpec extends Specification {
             <tr>
                 <td class="types font-types">HTTP method</td>
                 <td class="values font-values">GET</td>
-                <td class="desc"></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Request Parameter</td>
-                <td class="values font-values">'callback</td>
-                <td class="desc">A callback method identifier is required when using JsonP with a "GET" request. (required)</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Supported encodings</td>
-                <td class="values font-values">gzip, deflate</td>
-                <td class="desc"></td>
-            </tr>
-          </tbody>
-        </table></div>
-
-<div class="nested">
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Service path</td>
-                <td class="values font-values">/statuses/home_timeline.format</td>
-                <td class="desc">Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">HTTP method</td>
-                <td class="values font-values">GET</td>
-                <td class="desc"></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Request Parameter</td>
-                <td class="values font-values">'callback</td>
-                <td class="desc">A callback method identifier is required when using JsonP with a "GET" request. (required)</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">Supported encodings</td>
-                <td class="values font-values">gzip, deflate</td>
-                <td class="desc"></td>
-            </tr>
-          </tbody>
-        </table></div>
-
-<div class="nested">
-        <table>
-          <tbody>
-            <tr>
-                <td class="types font-types">HTTP method</td>
-                <td class="values font-values">DELETE</td>
                 <td class="desc"></td>
             </tr>
           </tbody>
@@ -216,31 +90,20 @@ class MetadataSpec extends Specification {
      </div>
   </body>
 </html>"""
-      HtmlPrinter.printFormatted(AndMetadata(
-        DescriptionMetadata("Timelines are collections of Tweets, ordered with the most recent first."),
-        OrMetadata(
-        AndMetadata(
-          HttpMethodMetadata(HttpMethods.GET),
-          PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
-          EncodingMetadata(Encodings.gzip, Encodings.deflate),
-          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
-        ),
-          AndMetadata(
-            HttpMethodMetadata(HttpMethods.GET),
-            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
-            EncodingMetadata(Encodings.gzip, Encodings.deflate),
-            ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
-          ),
-          AndMetadata(
-            HttpMethodMetadata(HttpMethods.GET),
-            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
-            EncodingMetadata(Encodings.gzip, Encodings.deflate),
-            ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
-          ),
-        HttpMethodMetadata(HttpMethods.DELETE)
-      ))) must_== expected
+
+      val handler : HttpService[Int, Int] = {
+        path("/details", Some("Personal ")) {
+          path("/bar") {
+            path("/john", Some("john details")) {
+              get { (request: HttpRequest[Int]) => 0 }
+            }
+          }~
+          path("/kate", Some("kate details")) {
+            get { (request: HttpRequest[Int]) => 0 }
+          }
+        }
+      }
+      HtmlPrinter.printFormatted(serviceToMetadata(handler)) mustEqual (expected)
     }
   }
 }
-
-// vim: set ts=4 sw=4 et:

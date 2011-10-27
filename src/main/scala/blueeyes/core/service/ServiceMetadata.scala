@@ -6,7 +6,7 @@ import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 
 import scalaz.Scalaz._
-import scalaz.{Success, Validation, Failure, Semigroup}
+import scalaz.{Validation, Failure, Semigroup}
 
 sealed trait NotServed {
   def or[A](result: => Validation[NotServed, A]): Validation[NotServed, A]
@@ -97,7 +97,11 @@ object Metadata {
         case other => paths(other)
       }
 
-      AndMetadata((for (p1 <- ap; p2 <- bp) yield PathPatternMetadata(p1.pattern / p2.pattern, None)) ++ am ++ bm: _*)
+      val pm = ap ::: bp match{
+        case Nil => List[Metadata]()
+        case abp => List(abp.tail.foldLeft(abp.head){(m, p) => PathPatternMetadata(m.pattern ~ p.pattern, m.desc ⊹ p.desc)})
+      }
+      AndMetadata(pm ++ am ++ bm: _*)
     }
   }  
 
@@ -129,7 +133,28 @@ object Metadata {
       case _ => Empty
     }
   }
+
+  implicit def serviceToMetadata(service: AnyService): Metadata = {
+    def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
+      case OrService(services @ _*)  =>
+        val ms = services.map(metadata(m, _)).collect{case Some(v) => v}
+        Some(OrMetadata(ms.foldLeft(Seq[Metadata]()){
+          case (l, OrMetadata(ms @ _*)) => l ++ ms
+          case (l, m) => l :+ m
+        }: _*))
+      case s: DelegatingService[_, _, _, _] => metadata(m ⊹ nePath(s.metadata), s.delegate)
+      case s => m ⊹ nePath(s.metadata)
+    }
+
+    def nePath(m: Option[Metadata]) = m.flatMap{
+      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern, _) => None
+      case _ => m
+    }
+
+    metadata(None, service) match {
+      case Some(m: OrMetadata) => m
+      case Some(m) => OrMetadata(m)
+      case None => OrMetadata()
+    }
+  }
 }
-
-
-// vim: set ts=4 sw=4 et:

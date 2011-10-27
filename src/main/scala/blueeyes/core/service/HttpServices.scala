@@ -12,9 +12,8 @@ import blueeyes.json.JsonAST._
 
 import java.net.URLDecoder._
 
-import scala.annotation.tailrec
 import scalaz.Scalaz._
-import scalaz.{Success, Validation, Failure}
+import scalaz.{Validation, Failure}
 import blueeyes.core.http._
 
 sealed trait AnyService {
