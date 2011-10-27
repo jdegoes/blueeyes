@@ -269,7 +269,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>
     val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
 
-    val context = ServiceContext(config, service.name, service.version, host, port, sslPort)
+    val context = ServiceContext(config, service.name, service.version, service.desc, host, port, sslPort)
 
     BoundStateDescriptor(context, service)
   }

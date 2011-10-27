@@ -73,11 +73,12 @@ case class CookieMetadata(ident: Symbol,     default: Option[String], desc: Opti
   }
 }
 
-case class DescriptionMetadata  (description: String) extends Metadata(6) 
-case class DataSizeMetadata     (dataSize: DataSize)  extends Metadata(7)
-case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(8)
-case class AndMetadata          (metadata: Metadata*) extends Metadata(9)
-case class OrMetadata           (metadata: Metadata*) extends Metadata(10)
+case class TitleMetadata        (title: String) extends Metadata(6)
+case class DescriptionMetadata  (description: String) extends Metadata(7)
+case class DataSizeMetadata     (dataSize: DataSize)  extends Metadata(8)
+case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(9)
+case class AndMetadata          (metadata: Metadata*) extends Metadata(10)
+case class OrMetadata           (metadata: Metadata*) extends Metadata(11)
 
 object Metadata {
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
@@ -106,7 +107,7 @@ object Metadata {
   }  
 
   implicit object StringFormatter extends Formatter[Metadata, String] {
-    def format(m: Metadata) = Append(Title("REST API Resources"), Break, formatMetadata(m))
+    def format(m: Metadata) = formatMetadata(m)
 
     def formatMetadata(m: Metadata): Printable[String] = m match {
       case PathPatternMetadata(pattern, desc) => Value("Service path", pattern.toString, desc)
@@ -123,6 +124,7 @@ object Metadata {
 
       case EncodingMetadata(encodings @ _*) => Value("Supported encodings", encodings.mkString(", "), None)
       case DescriptionMetadata(desc) => Append(Description(desc), Break)
+      case TitleMetadata(title) => Append(Title(title), Break)
 
       case OrMetadata(metadata @ _*) =>
         Append(Seq(Nest(ValueCaption("Parameter Type", "Parameter", "Description")), Break) ++
@@ -134,7 +136,7 @@ object Metadata {
     }
   }
 
-  implicit def serviceToMetadata(service: AnyService): Metadata = {
+  def serviceToMetadata(service: AnyService): Metadata = {
     def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
       case OrService(services @ _*)  =>
         val ms = services.map(metadata(m, _)).collect{case Some(v) => v}
