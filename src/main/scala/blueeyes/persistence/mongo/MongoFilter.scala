@@ -33,7 +33,8 @@ object MongoFilterOperators {
   case object $mod         extends MongoFilterOperator { def unary_! : MongoFilterOperator = sys.error("The $mod operator does not have a negation"); }
   case object $all         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $all operator does not have a negation"); }
   case object $size        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $size operator does not have a negation"); }
-  case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $exists operator does not have a negation"); }
+  case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = $notExists }
+  case object $notExists   extends MongoFilterOperator { def unary_! : MongoFilterOperator  = $exists }
   case object $type        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
   case object $or          extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
   case object $each        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
@@ -86,9 +87,11 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def filter: JValue = {
     val value = operator match {
       case $eq | $regex | $near | $nearSphere | $within => rhs.toJValue
+      case $notExists => JObject(JField($exists.symbol, JBool(false)) :: Nil)
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }
+
     lhs.nodes match {
       case Nil => value
       case _   => JObject(JField(JPathExtension.toMongoField(lhs), value) :: Nil)
@@ -127,6 +130,7 @@ sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter 
     val objects = queries.map(_.filter)
     (JObject(Nil) +: objects).asMA.sum.asInstanceOf[JObject]
   }
+
   private def eqsQuery(queries: Seq[MongoFilter]) = {
     implicit val concatMonoid = ConcatMonoid
     val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue])
@@ -294,6 +298,8 @@ case class MongoFilterBuilder(jpath: JPath) {
   def <  [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $lt, value)
 
   def <= [T](value: MongoPrimitive) = MongoFieldFilter(jpath, $lte, value)
+
+  def doesNotExist = MongoFieldFilter(jpath, $exists, false)
 
   def anyOf[T <: MongoPrimitive](items: T*) = MongoFieldFilter(jpath, $in, List(items: _*))
 
