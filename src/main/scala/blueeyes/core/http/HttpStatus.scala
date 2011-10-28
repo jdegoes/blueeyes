@@ -13,13 +13,17 @@ class HttpStatus private (val code: HttpStatusCode, unsafeReason: String) {
     case _ => false
   }
 }
+
 object HttpStatus {
   def apply(code: HttpStatusCode): HttpStatus = apply(code, code.defaultMessage)
   
   def apply(code: HttpStatusCode, reason: String): HttpStatus = new HttpStatus(code, reason)
+
+  def unapply(status: HttpStatus) = Some((status.code, status.reason))
 }
 
 trait HttpStatusImplicits {
   implicit def statusCode2HttpStatus(code: HttpStatusCode) = HttpStatus(code, code.defaultMessage)
 }
+
 object HttpStatusImplicits extends HttpStatusImplicits

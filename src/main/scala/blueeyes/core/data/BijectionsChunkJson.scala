@@ -17,7 +17,7 @@ trait BijectionsChunkJson{
       new MemoryChunk(stream.toByteArray)
     }
 
-    def unapply(s: ByteChunk) = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data)))
+    def unapply(s: ByteChunk) = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data), "UTF-8"))
   }
 
   implicit val ChunkToJValue    = JValueToChunk.inverse
