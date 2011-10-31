@@ -74,13 +74,13 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def count(filter: Option[MongoFilter]) = safeProcess(filter, {found: List[JObject] => found.size})
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) =
-      safeProcess(filter, {found: List[JObject] => found.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).collect{case Some(v) => v}.distinct})
+    safeProcess(filter, (_: List[JObject]).flatMap(selectByPath(selection, _, Some(_), (p, v) => v)).distinct)
 
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) =
-    safeProcess(filter, {found: List[JObject] => GroupFunction(selection, initial, reduce, found)})
+    safeProcess(filter, GroupFunction(selection, initial, reduce, _))
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) =
-    safeProcess(filter, {found: List[JObject] => MapReduceFunction(map, reduce, outputCollection, found, database)})
+    safeProcess(filter, MapReduceFunction(map, reduce, outputCollection, _, database))
 
   def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) { selectAndUpdate(filter, None, value, MongoSelection(Set()), true, upsert, multi) }
 

@@ -44,7 +44,7 @@ object CookiesPattern extends PartialFunction[String, List[HttpCookie]]{
   }
 
   def apply(s: String): List[HttpCookie] = applyParser.apply(new CharSequenceReader(s)) match {
-    case Success(result, _) => result.collect{case Some(v) => v}
+    case Success(result, _) => result.flatten
 
     case Failure(msg, _)    => parseFailure(msg, s)
 

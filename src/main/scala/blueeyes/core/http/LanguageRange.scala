@@ -23,7 +23,7 @@ object LanguageRanges extends RegexParsers {
   private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
 
   def parseLanguageRanges(inString: String): List[Range] = parser(new CharSequenceReader(inString.toLowerCase)) match {
-    case Success(result, _) => result collect{case Some(v) => v}
+    case Success(result, _) => result.flatten
 
     case Failure(msg, _) => sys.error("The LanguageRanges " + inString + " has a syntax error: " + msg)
 

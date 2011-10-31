@@ -23,7 +23,7 @@ object TCodings extends RegexParsers {
   private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r))
 
   def parseTCodings(inString: String): List[TCoding] = parser(new CharSequenceReader(inString.toLowerCase.trim)) match {
-    case Success(result, _) => result collect{case Some(v) => v}
+    case Success(result, _) => result.flatten
 
     case Failure(msg, _) => sys.error("The TCodings " + inString + " has a syntax error: " + msg)
 
