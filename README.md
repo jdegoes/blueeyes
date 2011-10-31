@@ -745,7 +745,7 @@ BlueEyes provides support for both pillars:
       <td>Michael Lagutko</td>    <td>Core platform, persistence</td>                                               <td><a href="http://twitter.com/mlagutko">@mlagutko</a></td>
     </tr>
     <tr>
-      <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td></td>
+      <td>Jeff Simpson</td>       <td>Asynchronous HTTP client</td>                                                 <td><a href="http://twitter.com/fooblahblah">@fooblahblah</a></td>
     </tr>
     <tr>
       <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for BlueEyes Services (unreleased)</td>         <td><a href="http://twitter.com/mconigliaro">@mconigliaro</a></td>
