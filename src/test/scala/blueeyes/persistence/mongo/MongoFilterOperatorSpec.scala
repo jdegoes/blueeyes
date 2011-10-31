@@ -31,9 +31,6 @@ class MongoFilterOperatorSpec extends Specification{
   "$size does not have a negation" in {
     $size.unary_! must throwAn[java.lang.RuntimeException]
   }
-  "$exists does not have a negation" in {
-    $exists.unary_! must throwAn[java.lang.RuntimeException]
-  }
   "$type does not have a negation" in {
     $type.unary_! must throwAn[java.lang.RuntimeException]
   }
