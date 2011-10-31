@@ -82,9 +82,16 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) =
     safeProcess(filter, {found: List[JObject] => MapReduceFunction(map, reduce, outputCollection, found, database)})
 
-  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean){
+  def update(filter: Option[MongoFilter], value : MongoUpdate, upsert: Boolean, multi: Boolean) { selectAndUpdate(filter, None, value, MongoSelection(Set()), true, upsert, multi) }
+
+  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, returnNew: Boolean, upsert: Boolean) =
+    selectAndUpdate(filter, sort, value, selection, returnNew, upsert, false).headOption
+
+  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection,
+                      returnNew: Boolean, upsert: Boolean, multi: Boolean) = {
     writeLock{
-      var (objects, update) = (if (multi) search(filter) else search(filter).headOption.map(_ :: Nil).getOrElse(Nil)) match {
+      val selected          = select(MongoSelection(Set()), filter, sort, None, None, None, false).toList
+      var (objects, update) = (if (multi) selected else selected.headOption.map(_ :: Nil).getOrElse(Nil)) match {
                                 case Nil if upsert => value match {
                                   case e: MongoUpdateObject => (List(JObject(Nil)), value)
                                   case _ => (List(JObject(Nil)), value |+| filter.map(FilterToUpdateConvert(_)).getOrElse(MongoUpdateNothing))
@@ -98,7 +105,13 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       index(updated)
       remove(objects)
       insert0(updated)
+
+      updated
     }
+  }
+
+  def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection) = {
+    None
   }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) = explanation
@@ -130,14 +143,6 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def requestDone() {}
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
-
-  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection,
-                      remove: Boolean, returnNew: Boolean, upsert: Boolean) = {
-    filter match{
-      case None if (upsert) => throw new MongoException(13330, "exception: upsert mode requires query field")
-    }
-    None
-  }
 
   override def ensureIndex(name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     writeLock {

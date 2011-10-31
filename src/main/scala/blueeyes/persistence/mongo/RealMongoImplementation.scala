@@ -164,7 +164,13 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     if (error != null && error.get("err") != null) Some(error) else None
   }
 
-  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, remove: Boolean, returnNew: Boolean, upsert: Boolean) =
+  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, returnNew: Boolean, upsert: Boolean) =
+    selectAndUpdate(filter, sort, value, selection, false, returnNew, upsert)
+
+  def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection) =
+    selectAndUpdate(filter, sort, MongoUpdateNothing, selection, true, false, false)
+
+  private def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, remove: Boolean, returnNew: Boolean, upsert: Boolean) =
     Option(collection.findAndModify(toMongoFilter(filter), toMongoKeys(selection), toMongoSort2(sort), remove, value.toJValue, returnNew, upsert)).map(dbo2jvo(_))
 
 

@@ -99,5 +99,6 @@ private[mongo] trait DatabaseCollection{
   def requestDone(): Unit
   def getLastError: Option[com.mongodb.BasicDBObject]
   def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate,
-                      selection: MongoSelection, remove: Boolean, returnNew: Boolean, upsert: Boolean): Option[JObject]
+                      selection: MongoSelection, returnNew: Boolean, upsert: Boolean): Option[JObject]
+  def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection): Option[JObject]
 }
