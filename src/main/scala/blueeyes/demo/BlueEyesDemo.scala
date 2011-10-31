@@ -15,7 +15,7 @@ import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, Mon
 import blueeyes.core.service.ServerHealthMonitorService
 import blueeyes.core.http.{HttpStatusCodes, HttpStatus, HttpRequest, HttpResponse}
 import blueeyes.core.data.FileSource._
-import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkFutureJson}
+import blueeyes.core.data.{FileSource, ByteChunk, BijectionsChunkJson, BijectionsChunkString, BijectionsChunkFutureJson}
 import java.io.File
 import blueeyes.health.metrics._
 
@@ -25,10 +25,11 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
 
 trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo{
   import BijectionsChunkJson._
+  import BijectionsChunkString._
   import BijectionsChunkFutureJson._
   val contactListService = service("contactlist", "1.0.0") {
     requestLogging{
-
+    help{
     healthMonitor { monitor => context =>
       startup {
         val mongoConfig = context.config.configMap("mongo")
@@ -37,7 +38,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
       request { demoConfig: BlueEyesDemoConfig =>
         import demoConfig._
 
-        path("/contacts"){
+        path("/contacts", Some("Gets all contacts.")){
           produce(application/json) {
             get { request: HttpRequest[ByteChunk] =>
               database(select(".name").from(collection)) map { records =>
@@ -46,7 +47,9 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 )
               }
             }
-          } ~
+          }
+        }~
+        path("/contacts", Some("Adds new contact.")){
           jvalue {
             post { request: HttpRequest[Future[JValue]] =>
               request.content map { 
@@ -55,8 +58,10 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest)))
               }
             }
-          } ~
-          path("/search") {
+          }
+        }~
+        path("/contacts"){
+          path("/search", Some("Searchs contacts by criteria.")) {
             jvalue{
               post {
                 refineContentType[JValue, JObject] { request =>
@@ -67,32 +72,34 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
               }
             }
           } ~
-          path("/'name") {
+          path("/'name", Some("Searches a conatact by name.")) {
             produce(application/json) {
               get { request: HttpRequest[ByteChunk] =>
                 database(selectOne().from(collection).where("name" === request.parameters('name))) map {
                   v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound)
                 }
-              } ~
-              delete { request: HttpRequest[ByteChunk] =>
-                database(remove.from(collection).where("name" === request.parameters('name))) map {
-                  _ => HttpResponse[JValue]()
-                }
+              }
+            }
+          }~
+          path("/'name", Some("Deletes a conatact by name.")) {
+            delete { request: HttpRequest[ByteChunk] =>
+              database(remove.from(collection).where("name" === request.parameters('name))) map {
+                _ => HttpResponse[ByteChunk]()
               }
             }
           } ~
-          path("/file/read"){
+          path("/file/read", Some("Reads a file.")){
             compress{
               produce(image / jpeg){
                 get { request: HttpRequest[ByteChunk] =>
-                  val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("/Users/mlagutko/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
+                  val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("~/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
                   Future.sync[HttpResponse[ByteChunk]](response)
                 }
               }
             }
           }
         }~
-        path("/ping") {
+        path("/ping", Some("Ping service.")) {
           produce(text/plain) {
             get { request: HttpRequest[ByteChunk] =>
               Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
@@ -103,8 +110,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
       shutdown { demoConfig: BlueEyesDemoConfig =>
         ().future
       }
-    }
-    }}
+    }}}}
 
   private def searchContacts(filterJObject: Option[Future[JObject]], config: BlueEyesDemoConfig): Future[List[JString]] = {
     createFilter(filterJObject) map { _.flatMap{filter =>

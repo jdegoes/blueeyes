@@ -8,14 +8,14 @@ import blueeyes.parsers.W3ExtendedLog
 import blueeyes.concurrent._
 import blueeyes.core.data._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
+import blueeyes.core.http.MimeTypes._
 import blueeyes.health.metrics._
 import blueeyes.health.{HealthMonitor, CompositeHealthMonitor}
 import blueeyes.util._
 import blueeyes.util.logging._
-import blueeyes.core.service._
-
 import net.lag.configgy.{Config, Configgy}
 import java.util.Calendar
+import printer.HtmlPrinter
 import util.matching.Regex
 import IntervalLength._
 
@@ -24,6 +24,7 @@ import scalaz.{Failure, Success, Validation}
 import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.Actor._
+import blueeyes.core.service._
 
 trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
 //  private[this] object TransformerCombinators
@@ -57,7 +58,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       })
       val startTime = System.currentTimeMillis
 
-      descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
+      descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health", (Some("""Exports real-time metrics on health status, for use in continuous deployment.
+The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests"""))) {
         get {
           request: HttpRequest[T] => {
             val version       = context.serviceVersion
@@ -70,6 +72,35 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
           }
         }
       }
+    }
+  }
+
+  /** Augments the service with help service.
+   *
+   * {{{
+   * help {
+   *   request { state =>
+   *     ...
+   *   }
+   * }
+   * }}}
+   */
+  def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit stringBijection: Bijection[String, T]): ServiceDescriptorFactory[T, S] = {
+    (context: ServiceContext) => {
+      val underlying = f(context)
+      underlying.copy(request = (state: S) => {
+        val service = underlying.request(state)
+        service ~ path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/docs/api") {
+        get {
+          produce(text/html){
+            HttpHandlerService{
+              request: HttpRequest[T] => {
+                Future.sync(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
+              }
+            }
+          }
+        }
+      }})
     }
   }
 
@@ -247,7 +278,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     val metadata = None
   }
 
-  private[service] class MonitorHttpRequestService[T](underlying: AsyncHttpService[T], healthMonitor: HealthMonitor) extends AsyncCustomHttpService[T] with JPathImplicits{
+  private[service] class MonitorHttpRequestService[T](val delegate: AsyncHttpService[T], healthMonitor: HealthMonitor) extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]] with JPathImplicits{
     def service = {request: HttpRequest[T] =>
       val methodName    = request.method.value
       val requestPath   = JPathField(methodName)
@@ -277,7 +308,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
         validation
       }
 
-      monitor(healthMonitor.trap(errorPath){underlying.service(request)})
+      monitor(healthMonitor.trap(errorPath){delegate.service(request)})
     }
 
     val metadata = None

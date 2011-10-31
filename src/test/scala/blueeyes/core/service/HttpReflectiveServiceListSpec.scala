@@ -26,6 +26,8 @@ class HttpReflectiveServiceListSpec extends Specification{
 
     def version = ServiceVersion(1, 2, "3")
 
+    def desc = None
+
     def name = null
   }
 }

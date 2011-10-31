@@ -143,7 +143,7 @@ case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Futu
   import AcceptService._
   def service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable).flatMap{newRequest: HttpRequest[Future[T]] => delegate.service(newRequest).map{checkConvert(newRequest, _)} }
 
-  lazy val metadata = Some(HeaderMetadata(Right(`Content-Type`(mimeType))))
+  lazy val metadata = Some(RequestHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
 case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
@@ -152,7 +152,7 @@ case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService
     delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
   }
 
-  lazy val metadata = Some(HeaderMetadata(Right(`Content-Type`(mimeType))))
+  lazy val metadata = Some(RequestHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
 object AcceptService {
@@ -177,7 +177,7 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
     _.map(r => r.copy(content = r.content.map(b), headers = r.headers + `Content-Type`(mimeType)))
   }
 
-  lazy val metadata = Some(HeaderMetadata(Right(`Content-Type`(mimeType))))
+  lazy val metadata = Some(ResponseHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
 case class Produce2Service[T, S, V, E1](mimeType: MimeType, delegate: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]) 
@@ -186,7 +186,7 @@ extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[Http
     f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(b), headers = r.headers + `Content-Type`(mimeType))))
   }
 
-  lazy val metadata = Some(HeaderMetadata(Right(`Content-Type`(mimeType))))
+  lazy val metadata = Some(ResponseHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
 case class RangeHeaderValues(units: String, bounds: List[(Long, Long)])
@@ -229,7 +229,7 @@ extends DelegatingService[T, S, T, RangeHeaderValues => S] {
     }
   }
 
-  lazy val metadata = Some(HeaderMetadata(Left(HttpHeaders.Range), None, Some("A numeric range must be specified for the request.")))
+  lazy val metadata = Some(RequestHeaderMetadata(Left(HttpHeaders.Range), None, Some("A numeric range must be specified for the request.")))
 }
 
 case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{

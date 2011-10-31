@@ -10,6 +10,8 @@ trait Service[T] {
   
   def version: ServiceVersion
 
+  def desc: Option[String]
+
   def descriptorFactory: ServiceContext => ServiceDescriptor[T, _]
   
   def ioClass: Class[T]

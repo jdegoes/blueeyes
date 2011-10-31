@@ -1,17 +1,15 @@
 package blueeyes.core.service
 
 import org.specs.Specification
+import blueeyes.core.http.HttpRequest
+import blueeyes.util.printer.HtmlPrinter
+import net.lag.configgy.Config
 
-import blueeyes.core.http._
-import blueeyes.util.printer._
-import blueeyes.core.http.HttpMethods._
-import RestPathPatternParsers._
-
-class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
+class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators{
   import Metadata._
 
-  "serviceToMetadata" should{
-    "extract metadata from services" in{
+  "ServiceDocumente" should{
+    "create service docuementation" in{
       val expected = """<html>
 
   <head>
@@ -31,11 +29,20 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
         h1           {font-size: 3em;font-weight: 300;margin: 0;padding: 0;}
         div.desc     {color: #777;margin-top: 0.5em}
       </style>
-  </head>
+<title>REST API Resources | Foo (1.0.0)</title>  </head>
 
   <body>
     <div class = "root">
-    <div class="nested">
+    <h1>REST API Resources | Foo (1.0.0)</h1>
+
+    <table>
+      <tbody>
+        <tr><td>Sample service</td></tr>
+      </tbody>
+    </table>
+
+
+<div class="nested">
         <table>
           <tbody>
             <tr>
@@ -90,6 +97,7 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
   </body>
 </html>"""
 
+      implicit val printer = HtmlPrinter
       val handler : HttpService[Int, Int] = {
         path("/details", Some("Personal ")) {
           path("/bar") {
@@ -102,7 +110,7 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
           }
         }
       }
-      HtmlPrinter.printFormatted(serviceToMetadata(handler)) mustEqual (expected)
+      ServiceDocumenter.printFormatted(ServiceContext(new Config(), "Foo", ServiceVersion(1, 0, "0"), Some("Sample service"), "localhost", 8080, 8081), handler) mustEqual (expected)
     }
   }
 }

@@ -8,6 +8,33 @@ import blueeyes.core.service.RestPathPatternParsers.LiteralPathPattern
 
 class MetadataFormatterSpec extends Specification {
 
+  "pretty-printing service metadata" should {
+    "pretty-print a simple set of metadata" in {
+
+      val expected = """  Parameter Type           Parameter                Description
+  ------------------------------------------------------------
+  HTTP method              GET
+  Request Parameter        'callback                A callback method identifier is required when using JsonP with a "GET" request. (required)
+  Supported encodings      gzip, deflate
+
+  HTTP method              POST
+
+  HTTP method              PUT
+
+  HTTP method              DELETE"""
+
+      SimpleStringPrinter.printFormatted(OrMetadata(
+        AndMetadata(
+          HttpMethodMetadata(HttpMethods.GET),
+          EncodingMetadata(Encodings.gzip, Encodings.deflate),
+          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+        ),
+        HttpMethodMetadata(HttpMethods.POST),
+        HttpMethodMetadata(HttpMethods.PUT),
+        HttpMethodMetadata(HttpMethods.DELETE)
+      )) must_== expected
+    }
+  }
   "html service metadata" should {
     "print a simple set of metadata in html format" in {
       val expected = """<html>
@@ -29,12 +56,11 @@ class MetadataFormatterSpec extends Specification {
         h1           {font-size: 3em;font-weight: 300;margin: 0;padding: 0;}
         div.desc     {color: #777;margin-top: 0.5em}
       </style>
-<title>REST API Resources</title>  </head>
+  </head>
 
   <body>
     <div class = "root">
-    <h1>REST API Resources</h1>
-    <table>
+        <table>
       <tbody>
         <tr><td>Timelines are collections of Tweets, ordered with the most recent first.</td></tr>
       </tbody>
