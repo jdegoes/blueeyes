@@ -65,12 +65,6 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
     }
   }
 
-  def remove(filter: Option[MongoFilter]) {
-    writeLock{
-      process(filter, remove _)
-    }
-  }
-
   def count(filter: Option[MongoFilter]) = safeProcess(filter, {found: List[JObject] => found.size})
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) =
@@ -87,7 +81,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, returnNew: Boolean, upsert: Boolean) =
     selectAndUpdate(filter, sort, value, selection, returnNew, upsert, false).headOption
 
-  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection,
+  private def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection,
                       returnNew: Boolean, upsert: Boolean, multi: Boolean) = {
     writeLock{
       val selected          = select(MongoSelection(Set()), filter, sort, None, None, None, false).toList
@@ -106,12 +100,24 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       remove(objects)
       insert0(updated)
 
-      updated
+      val toReturn = if (returnNew) updated else objects.filter(_ != JObject(Nil))
+      selectExistingFields(toReturn, selection.selection).collect{case jvo: JObject => jvo}
     }
   }
 
-  def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection) = {
-    None
+  def remove(filter: Option[MongoFilter]) { selectAndRemove(filter, None, MongoSelection(Set()), true) }
+
+  def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection) =
+    selectAndRemove(filter, sort, selection, false)
+
+  private def selectAndRemove(filter: Option[MongoFilter], sort: Option[MongoSort], selection: MongoSelection, multi: Boolean) = {
+    writeLock{
+      val selected = select(MongoSelection(Set()), filter, sort, None, None, None, false).toList
+      val jvos     = if (multi) selected else selected.headOption.toList
+
+      remove(jvos)
+      selectExistingFields(jvos, selection.selection).collect{case jvo: JObject => jvo}.headOption
+    }
   }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) = explanation
@@ -126,7 +132,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
       val realLimit = limit.orElse(filter.flatMap(nearFilter(_)).map(v => 100))
       val limited   = realLimit.map(skipped.take(_)).getOrElse(skipped)
 
-      val found  = selectExistingFields(limited, selection.selection).map(_.asInstanceOf[JObject])
+      val found  = selectExistingFields(limited, selection.selection).collect{case jvo: JObject => jvo}
       val result = if (isSnapshot) found.distinct else found
 
       new IterableViewImpl[JObject, Iterator[JObject]](result.iterator)
