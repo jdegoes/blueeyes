@@ -102,6 +102,19 @@ case class MongoUpdateQuery(collection: MongoCollection, value: MongoUpdate, fil
                             multi: Boolean = false) extends MongoQuery with UpdateQueryBehaviour{
   def where  (newFilter: MongoFilter) : MongoUpdateQuery = copy(filter = Some(newFilter))
 }
+case class MongoSelectAndUpdateQuery(collection: MongoCollection, update: MongoUpdate, filter: Option[MongoFilter] = None, sort: Option[MongoSort] = None,
+                                    selection: MongoSelection, returnNew: Boolean = false, upsert: Boolean = false) extends MongoQuery with SelectAndUpdateQueryBehaviour{
+  def where  (newFilter: MongoFilter)   : MongoSelectAndUpdateQuery = copy(filter = Some(newFilter))
+  def sortBy(newSort: MongoSort)        : MongoSelectAndUpdateQuery = copy(sort = Some(newSort))
+  def returnNew(newReturnNew: Boolean)  : MongoSelectAndUpdateQuery = copy(returnNew = newReturnNew)
+  def select(selection: JPath*)         : MongoSelectAndUpdateQuery = copy(selection = MongoSelection(Set(selection: _*)))
+}
+case class MongoSelectAndRemoveQuery(collection: MongoCollection, filter: Option[MongoFilter] = None, sort: Option[MongoSort] = None,
+                                    selection: MongoSelection) extends MongoQuery with SelectAndRemoveQueryBehaviour{
+  def where  (newFilter: MongoFilter)   : MongoSelectAndRemoveQuery = copy(filter = Some(newFilter))
+  def sortBy(newSort: MongoSort)        : MongoSelectAndRemoveQuery = copy(sort = Some(newSort))
+  def select(selection: JPath*)         : MongoSelectAndRemoveQuery = copy(selection = MongoSelection(Set(selection: _*)))
+}
 case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCollection, outputCollection: Option[String] = None, filter: Option[MongoFilter] = None)
                             extends MongoQuery with MapReduceQueryBehaviour{
   def where (newFilter: MongoFilter)    = copy(filter = Some(newFilter))
@@ -142,6 +155,9 @@ trait MongoQueryBuilder{
 
   def multiSelect(filters: MongoFilter*)        = new FromQueryEntryPoint(MongoMultiSelectQuery(filters, _))
   def select(selection: JPath*)                 = new FromQueryEntryPoint(MongoSelectQuery(MongoSelection(Set(selection: _*)), _))
+  def selectAndUpdate(collection: MongoCollection) = new SetQueryEntryPoint(MongoSelectAndUpdateQuery(collection, _, None, None, MongoSelection(Set()), false, false))
+  def selectAndUpsert(collection: MongoCollection) = new SetQueryEntryPoint(MongoSelectAndUpdateQuery(collection, _, None, None, MongoSelection(Set()), false, true))
+  def selectAndRemove                           = new FromQueryEntryPoint(MongoSelectAndRemoveQuery(_, None, None, MongoSelection(Set())))
   def selectAll                                 = select()
   def distinct(selection: JPath)                = new FromQueryEntryPoint(MongoDistinctQuery(selection, _))
   def selectOne(selection: JPath*)              = new FromQueryEntryPoint(MongoSelectOneQuery(MongoSelection(Set(selection: _*)), _))

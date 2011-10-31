@@ -11,6 +11,15 @@ class MongoQueryBuilderSpec  extends Specification{
   "creates select query" in{
     select("foo", "bar").from("collection") mustEqual ( MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection") )
   }
+  "creates selectAndUpdate query" in{
+    selectAndUpdate("collection").set(jObject) mustEqual ( MongoSelectAndUpdateQuery("collection", jObject, None, None, MongoSelection(Set()), false, false) )
+  }
+  "creates selectAndUpsert query" in{
+    selectAndUpsert("collection").set(jObject) mustEqual ( MongoSelectAndUpdateQuery("collection", jObject, None, None, MongoSelection(Set()), false, true) )
+  }
+  "creates selectAndRemove query" in{
+    selectAndRemove.from("collection") mustEqual ( MongoSelectAndRemoveQuery("collection", None, None, MongoSelection(Set())) )
+  }
   "creates group query" in{
     group(JObject(Nil), "dummy", "foo", "bar").from("collection") mustEqual ( MongoGroupQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", JObject(Nil), "dummy") )
   }
