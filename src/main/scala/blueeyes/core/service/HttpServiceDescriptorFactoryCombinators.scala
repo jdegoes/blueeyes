@@ -53,7 +53,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       })
 
       val underlying = f(monitor)(context)
-      val descriptor = underlying.copy(request = (state: S) => {new MonitorHttpRequestService(underlying.request(state), monitor)}, shutdown = (state: S) => {
+      val descriptor = underlying.copy(request = (state: S) => new MonitorHttpRequestService(underlying.request(state), monitor), shutdown = (state: S) => {
         underlying.shutdown(state).map(_ => monitor.shutdown())
       })
       val startTime = System.currentTimeMillis
@@ -291,7 +291,7 @@ The default health monitor automatically exports information on number of reques
       def monitor(validation: Validation[NotServed, Future[HttpResponse[T]]]) = {
         validation match{
           case Success(response) =>
-            healthMonitor.request(overagePath)
+            healthMonitor.call(overagePath)
             healthMonitor.count(countPath)
             healthMonitor.trapFuture(errorPath)(response)
 
@@ -300,7 +300,7 @@ The default health monitor automatically exports information on number of reques
               healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
             }
           case Failure(DispatchError(error)) =>
-            healthMonitor.request(overagePath)
+            healthMonitor.call(overagePath)
             healthMonitor.count(countPath)
             healthMonitor.error(errorPath)(error)
           case failure =>

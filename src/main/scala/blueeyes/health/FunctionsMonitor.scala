@@ -39,7 +39,7 @@ private[health] trait FunctionsMonitor {
     timeFuture(path)(f)
   }
 
-  def error[T <: Throwable](path: JPath)(t: T)
+  def error(path: JPath)(t: Throwable)
 
   def trackTime(path: JPath)(ns: Long)
 }

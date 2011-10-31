@@ -1,8 +1,8 @@
-package blueeyes
-package persistence.cache
+package blueeyes.persistence.cache
 
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
+import blueeyes.health.HealthMonitor
 import blueeyes.util.ClockSystem._
 import blueeyes.util.metrics.Duration
 
@@ -10,9 +10,9 @@ import scala.collection.JavaConversions._
 import scalaz.Semigroup
 
 import akka.actor.{Actor, ActorRef, Scheduler}
-import Actor._
+import akka.actor.Actor._
 
-abstract class Stage[K, V] {
+abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
   private sealed trait StageIn
   private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends StageIn
   private object     FlushAll extends StageIn
@@ -83,6 +83,7 @@ abstract class Stage[K, V] {
             else keysToRemove
         }
 
+        monitor.sample("flush_size")(keysToRemove.size)
         cache --= keysToRemove
 
         flushScheduled = false
@@ -90,6 +91,8 @@ abstract class Stage[K, V] {
         if (cache.size > 0) scheduleFlush
 
       case FlushAll =>
+        monitor.sample("cache_size")(cache.size)
+        monitor.sample("actor_queue_size")( actor.mailboxSize)
         cache.clear()
         self.reply(())
     }
@@ -100,9 +103,15 @@ abstract class Stage[K, V] {
     }
 
     private def putToCache(request: PutAll) {
+      var putSize = 0
       request.pairs.foreach { tuple => 
-        cache.put(tuple._1, cache.get(tuple._1).map(current => current.withValue(request.semigroup.append(current.value, tuple._2))).getOrElse(ExpirableValue(tuple._2)))
+        putSize += 1
+        cache.put(
+          tuple._1, 
+          cache.get(tuple._1).map(current => current.withValue(request.semigroup.append(current.value, tuple._2))).getOrElse(ExpirableValue(tuple._2)))
       }
+
+      monitor.sample("put_size")( putSize)
     }
 
     private def removeEldestEntries {
@@ -139,7 +148,9 @@ abstract class Stage[K, V] {
 }
 
 object Stage {
-  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit): Stage[K, V] = new Stage[K, V]() {
+  def apply[K, V](policy: ExpirationPolicy, capacity: Int, evict: (K, V) => Unit): Stage[K, V] = apply(policy, capacity)(evict)
+
+  def apply[K, V](policy: ExpirationPolicy, capacity: Int, monitor: HealthMonitor = HealthMonitor.Noop)(evict: (K, V) => Unit): Stage[K, V] = new Stage[K, V](monitor) {
     def expirationPolicy = policy
 
     def maximumCapacity = capacity

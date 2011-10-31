@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.health.HealthMonitor
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 
@@ -7,7 +8,8 @@ case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacit
 
 /** A stage for updates to Mongo.
  */
-class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings) extends Stage[MongoFilterCollection, MongoUpdate] {
+class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings, monitor: HealthMonitor = HealthMonitor.Noop) 
+extends Stage[MongoFilterCollection, MongoUpdate](monitor) {
   def flush(filter: MongoFilterCollection, update: MongoUpdate) = {
     database.unverified {
       upsert(filter.collection).set(update).where(filter.filter)
@@ -20,8 +22,8 @@ class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings
 }
 
 object MongoStage {
-  def apply(database: Database, mongoStageSettings: MongoStageSettings) = {
-    new MongoStage(database, mongoStageSettings)
+  def apply(database: Database, mongoStageSettings: MongoStageSettings, monitor: HealthMonitor = HealthMonitor.Noop) = {
+    new MongoStage(database, mongoStageSettings, monitor)
   }
 }
 
