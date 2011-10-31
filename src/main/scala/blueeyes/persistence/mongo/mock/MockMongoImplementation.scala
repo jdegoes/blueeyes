@@ -74,7 +74,7 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def count(filter: Option[MongoFilter]) = safeProcess(filter, {found: List[JObject] => found.size})
 
   def distinct(selection: JPath, filter: Option[MongoFilter]) =
-      safeProcess(filter, {found: List[JObject] => found.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).filter(_.isDefined).map(_.get).distinct})
+      safeProcess(filter, {found: List[JObject] => found.map(jobject => selectByPath(selection, jobject, (v) => {Some(v)}, (p, v) => {v})).collect{case Some(v) => v}.distinct})
 
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String) =
     safeProcess(filter, {found: List[JObject] => GroupFunction(selection, initial, reduce, found)})
@@ -130,6 +130,14 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
   def requestDone() {}
 
   def getLastError: Option[com.mongodb.BasicDBObject] = None
+
+  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection,
+                      remove: Boolean, returnNew: Boolean, upsert: Boolean) = {
+    filter match{
+      case None if (upsert) => throw new MongoException(13330, "exception: upsert mode requires query field")
+    }
+    None
+  }
 
   override def ensureIndex(name: String, keys: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     writeLock {

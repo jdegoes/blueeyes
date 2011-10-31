@@ -193,16 +193,30 @@ private[mongo] object QueryBehaviours{
 
   trait UpdateQueryBehaviour extends MongoQueryBehaviour {
     type QueryResult = Unit
-    def query(collection: DatabaseCollection) {
-      value match {
-        case MongoUpdateNothing =>
-        case _ => collection.update(filter, value, upsert, multi)
-      }
+    def query(collection: DatabaseCollection) = value match {
+      case MongoUpdateNothing =>
+      case _ => collection.update(filter, value, upsert, multi)
     }
 
     def value : MongoUpdate
     def filter: Option[MongoFilter]
     def upsert: Boolean
     def multi : Boolean
+  }
+
+  trait SelectAndUpdateQueryBehaviour  extends MongoQueryBehaviour {
+    type QueryResult = Option[JObject]
+    def query(collection: DatabaseCollection) = update match {
+      case MongoUpdateNothing if (!remove) => throw new MongoException("""findAndModifyFailed failed: "exception: must specify remove or update"""")
+      case _ => collection.selectAndUpdate(filter, sort, update, selection, remove, returnNew, upsert)
+    }
+
+    def update: MongoUpdate
+    def filter: Option[MongoFilter]
+    def sort: Option[MongoSort]
+    def selection: MongoSelection
+    def remove: Boolean
+    def returnNew: Boolean
+    def upsert: Boolean
   }
 }

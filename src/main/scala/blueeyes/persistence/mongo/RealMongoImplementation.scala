@@ -93,7 +93,9 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def requestStart() { collection.getDB.requestStart() }
 
   def insert(objects: List[JObject]) = { 
-    objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map(collection.insert(_)) 
+    objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map{objects: List[DBObject] =>
+      collection.insert(objects)
+    }
   }
 
   def remove(filter: Option[MongoFilter]) { collection.remove(toMongoFilter(filter)) }
@@ -126,9 +128,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def dropIndexes() { collection.dropIndexes() }
 
   def explain(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): JObject =
-    MongoToJson(find(selection, filter, sort, skip, limit, hint, isSnapshot).explain()) ||| {
-      errors => sys.error("Errors occurred deserializing the explain object: " + errors.list.mkString("; "))
-    }
+    dbo2jvo(find(selection, filter, sort, skip, limit, hint, isSnapshot).explain())
 
   def select(selection : MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean) =
     iterator(find(selection, filter, sort, skip, limit, hint, isSnapshot).iterator)
@@ -164,15 +164,13 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     if (error != null && error.get("err") != null) Some(error) else None
   }
 
-  private def find(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): DBCursor = {
-    val sortObject   = sort.map(v => JObject(JField(JPathExtension.toMongoField(v.sortField), JInt(v.sortOrder.order)) :: Nil)) map {
-      v => MongoToJson(v) ||| {
-        errors => sys.error("Errors occurred deserializing the database object: " + errors.list.mkString("; "))
-      }
-    }
+  def selectAndUpdate(filter: Option[MongoFilter], sort: Option[MongoSort], value: MongoUpdate, selection: MongoSelection, remove: Boolean, returnNew: Boolean, upsert: Boolean) =
+    Option(collection.findAndModify(toMongoFilter(filter), toMongoKeys(selection), toMongoSort2(sort), remove, value.toJValue, returnNew, upsert)).map(dbo2jvo(_))
 
+
+  private def find(selection: MongoSelection, filter: Option[MongoFilter], sort: Option[MongoSort], skip: Option[Int], limit: Option[Int], hint: Option[Hint], isSnapshot: Boolean): DBCursor = {
     val cursor        = collection.find(toMongoFilter(filter), toMongoKeys(selection))
-    val sortedCursor  = sortObject.map(cursor.sort(_)).getOrElse(cursor)
+    val sortedCursor  = toMongoSort(sort).map(cursor.sort(_)).getOrElse(cursor)
     val skippedCursor = skip.map(sortedCursor.skip(_)).getOrElse(sortedCursor)
     val limitedCursor = limit.map(skippedCursor.limit(_)).getOrElse(skippedCursor)
     val hintedCursor  = hint.map{value => value match{
@@ -182,8 +180,11 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     if (isSnapshot) hintedCursor.snapshot() else hintedCursor
   }
 
+  private def toMongoSort(sort: Option[MongoSort]): Option[DBObject] = sort.map(toMongoSort(_)) map { jvo2dbo(_) }
+  private def toMongoSort2(sort: Option[MongoSort]): DBObject = jvo2dbo(sort.map(toMongoSort(_)).getOrElse(JObject(Nil)))
+  private def toMongoSort(sort: MongoSort) = JObject(JField(JPathExtension.toMongoField(sort.sortField), JInt(sort.sortOrder.order)) :: Nil)
   private def toMongoKeys(selection : MongoSelection): JObject = toMongoKeys(selection.selection)
-  private def toMongoKeys(keysPaths: Iterable[JPath]): JObject      = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
+  private def toMongoKeys(keysPaths: Iterable[JPath]): JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 
   private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v ||| {
@@ -192,6 +193,10 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   private implicit def jvo2dbo(obj: JObject): DBObject = MongoToJson.unapply(obj) ||| {
     errors => sys.error("An error occurred serializing the JSON object to mongo: " + errors.list.mkString("; "))
+  }
+
+  private def dbo2jvo(dbo: DBObject): JObject = MongoToJson(dbo) ||| {
+    errors => sys.error("Errors occurred deserializing the explain object: " + errors.list.mkString("; "))
   }
 }
 

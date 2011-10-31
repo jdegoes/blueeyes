@@ -23,7 +23,7 @@ object ByteRanges extends RegexParsers with HttpNumberImplicits{
     digitalParser ~ ("-" ~> digitalParser) ^^ {case first ~ last => BytePair(Some(LongNumber(first.toLong)), LongNumber(last.toLong))} |
     "-" ~> digitalParser ^^ {case last => BytePair(None, LongNumber(last.toLong))}
   )
-  private def bytePairsParser = repsep(bytePairParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.filter(_ != None).map(_.get) }
+  private def bytePairsParser = repsep(bytePairParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.collect{case Some(v) => v} }
 
   private def parser = opt(regex("""[a-zA-Z]+""".r) <~ "=") ~ bytePairsParser ^^ {case unit ~ pairs => unit.flatMap(unitValue => pairs match {
     case x :: xs => Some(ByteRangeList(pairs, unitValue))

@@ -36,7 +36,7 @@ object CacheDirectives extends RegexParsers with HttpNumberImplicits{
     "s-maxage="         ~> digitalValueParser ^^ {case v => `s-maxage`(Some(v.toLong))}
   )?
 
-  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.filter(_ != None).map(_.get) }
+  private def parser = repsep(elementParser, regex("""[ ]*,[ ]*""".r)) ^^ {case values => values.collect{case Some(v) => v} }
 
   def parseCacheDirectives(inString: String) = parser(new CharSequenceReader(inString)) match {
     case Success(result, _) => result

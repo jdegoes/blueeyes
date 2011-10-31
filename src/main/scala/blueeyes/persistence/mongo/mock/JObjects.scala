@@ -15,9 +15,9 @@ private[mock] trait JObjectFields{
     if (!selection.isEmpty) {
       val allJFields = jobjects.map(jobject => selection.map(selectByPath(_, jobject, transformer, jobjectRestorer)))
       allJFields.map(jfields => {
-        val definedJFields = jfields.filter(_ != None).map(_.get)
+        val definedJFields = jfields.collect{case Some(v) => v}
         definedJFields.headOption.map(head => definedJFields.tail.foldLeft(head){(jobject, jfield) => jobject.merge(jfield).asInstanceOf[JObject]})
-      }).filter(_ != None).map(_.get)
+      }).collect{case Some(v) => v}
     } else jobjects
   }
 
