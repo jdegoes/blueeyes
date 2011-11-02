@@ -90,30 +90,36 @@ case class OrMetadata           (metadata: Metadata*) extends Metadata(12)
 
 object Metadata {
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
-    private def paths(m: Metadata*) = m.foldLeft((List.empty[(Option[DescriptionMetadata], PathPatternMetadata)], List.empty[Metadata])) {
-      case ((p, (d @ DescriptionMetadata(desc)) :: m), pathm : PathPatternMetadata) => ((Some(d), pathm) :: p, m)
-      case ((p, m), pathm : PathPatternMetadata) => ((None, pathm) :: p, m)
-      case ((p, m), om) => (p, om :: m)
+    private def paths(m: List[Metadata]) = {
+      val merge = m.foldLeft((List[Metadata](), None: Option[Metadata], None: Option[DescriptionMetadata], None: Option[PathPatternMetadata])){
+        case ((ms, Some(d1 @ DescriptionMetadata(_)), d, p), p1 @ PathPatternMetadata(_)) =>
+          val desc = d.map(v => DescriptionMetadata(v.description + d1.description)).getOrElse(d1)
+          val path = p.map(v => PathPatternMetadata(v.pattern ~ p1.pattern)).getOrElse(p1)
+          (ms, None, Some(desc), Some(path))
+        case ((ms, last, d, p), p1 @ PathPatternMetadata(_)) =>
+          val path = p.map(v => PathPatternMetadata(v.pattern ~ p1.pattern)).getOrElse(p1)
+          (ms ::: last.toList, None, d, Some(path))
+        case ((ms, last, d, p), m) => (ms ::: last.toList, Some(m), d, p)
+      }
+      merge._3.toList ::: merge._4.toList ::: merge._1 ::: merge._2.toList
+    }
+
+    private def mergeDesc(m: Metadata*) = {
+      val merge = m.tail.foldLeft((List[Metadata](), m.head)){
+        case ((ms, DescriptionMetadata(desc1)), DescriptionMetadata(desc2)) => (ms, DescriptionMetadata(desc1 + desc2))
+        case ((ms, last), m) => (ms ::: List(last), m)
+      }
+      merge._1 ::: List(merge._2)
     }
 
     def append(a: Metadata, b: => Metadata) = {
-      val (ap, am) = a match {
-        case AndMetadata(ams @ _*) => paths(ams: _*)
-        case other => paths(other)
+      val ab = (a, b) match {
+        case (AndMetadata(ams @ _*), AndMetadata(bms @ _*)) => ams ++ bms
+        case (AndMetadata(ams @ _*), other) => ams :+ other
+        case (other, AndMetadata(bms @ _*)) => other +: bms
+        case _ => Seq(a, b)
       }
-
-      val (bp, bm) = b match {
-        case AndMetadata(bms @ _*) => paths(bms: _*)
-        case other => paths(other)
-      }
-
-      val pm = ap ::: bp match {
-        case Nil => List[Metadata]()
-        case abp =>
-          val (desc, path) = abp.tail.foldLeft(abp.head){case ((md, mp), (d, p)) => (md.map(_.description) ⊹ d.map(_.description) map (DescriptionMetadata(_)),  PathPatternMetadata(mp.pattern ~ p.pattern))}
-          desc.toList ::: List(path)
-      }
-      AndMetadata(am ++ bm ++ pm: _*)
+      AndMetadata(paths(mergeDesc(ab: _*)): _*)
     }
   }  
 
@@ -148,18 +154,18 @@ object Metadata {
         metadata.map(m => Nest(formatMetadata(m)): Printable[String]).toList.intersperse(Append(Break, Break)): _*)
 
       case AndMetadata(metadata @ _*) => metadata match{
-        case Seq(metadata, DescriptionMetadata(desc)) => formatMetadata(metadata) match {
+        case Seq(DescriptionMetadata(desc), metadata) => formatMetadata(metadata) match {
           case Value(valueType, value, valueDesc) => Value(valueType, value, Some(desc + valueDesc.getOrElse("")))
           case p => Append(Description(desc), Break, p)
         }
         case _ =>
           val grouped = metadata.reverse.foldLeft(List[Metadata]()) {
-            case (x :: xs, d: DescriptionMetadata) => AndMetadata(x, d) :: xs
+            case (x :: xs, d: DescriptionMetadata) => AndMetadata(d, x) :: xs
             case (xs, m) => m :: xs
           }
           val sorted = grouped.sortWith{
-            case (AndMetadata(metadata @ _, DescriptionMetadata(desc)), m) => metadata.compare(m) < 0
-            case (m, AndMetadata(metadata @ _, DescriptionMetadata(desc))) => m.compare(metadata) < 0
+            case (AndMetadata(DescriptionMetadata(desc), metadata @ _), m) => metadata.compare(m) < 0
+            case (m, AndMetadata(DescriptionMetadata(desc), metadata @ _)) => m.compare(metadata) < 0
             case (m1, m2) => m1.compare(m2) < 0
           }
           Append(sorted.map(formatMetadata).toList.intersperse(Break): _*)
