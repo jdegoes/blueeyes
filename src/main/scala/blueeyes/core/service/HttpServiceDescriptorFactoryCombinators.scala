@@ -58,17 +58,18 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       })
       val startTime = System.currentTimeMillis
 
-      descriptor ~> path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health", (Some("""Exports real-time metrics on health status, for use in continuous deployment.
-The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests"""))) {
-        get {
-          request: HttpRequest[T] => {
-            val version       = context.serviceVersion
-            val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
-            val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
-            val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
-            val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
+      descriptor ~> describe("""Exports real-time metrics on health status, for use in continuous deployment. The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests""")
+        { path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
+          get {
+            request: HttpRequest[T] => {
+              val version       = context.serviceVersion
+              val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
+              val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
+              val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
+              val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
 
-            health map {health => HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))}
+              health map {health => HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))}
+            }
           }
         }
       }

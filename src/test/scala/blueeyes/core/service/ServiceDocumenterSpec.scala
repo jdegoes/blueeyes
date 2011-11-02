@@ -1,9 +1,10 @@
 package blueeyes.core.service
 
 import org.specs.Specification
-import blueeyes.core.http.HttpRequest
 import blueeyes.util.printer.HtmlPrinter
 import net.lag.configgy.Config
+import blueeyes.core.http.{HttpResponse, HttpRequest}
+import blueeyes.concurrent.Future
 
 class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators{
   import Metadata._
@@ -40,7 +41,6 @@ class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombina
         <tr><td>Sample service</td></tr>
       </tbody>
     </table>
-
 
 <div class="nested">
         <table>
@@ -98,15 +98,19 @@ class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombina
 </html>"""
 
       implicit val printer = HtmlPrinter
-      val handler : HttpService[Int, Int] = {
-        path("/details", Some("Personal ")) {
+      val handler : HttpService[Int, Future[HttpResponse[Int]]] = {
+        path("/details") {
           path("/bar") {
-            path("/john", Some("john details")) {
-              get { (request: HttpRequest[Int]) => 0 }
+            describe("Personal john details"){
+              path("/john") {
+                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
+              }
             }
           }~
-          path("/kate", Some("kate details")) {
-            get { (request: HttpRequest[Int]) => 0 }
+          describe("Personal kate details"){
+            path("/kate") {
+              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
+            }
           }
         }
       }

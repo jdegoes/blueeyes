@@ -27,7 +27,8 @@ class MetadataFormatterSpec extends Specification {
         AndMetadata(
           HttpMethodMetadata(HttpMethods.GET),
           EncodingMetadata(Encodings.gzip, Encodings.deflate),
-          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+          DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+          ParameterMetadata('callback, None)
         ),
         HttpMethodMetadata(HttpMethods.POST),
         HttpMethodMetadata(HttpMethods.PUT),
@@ -65,7 +66,6 @@ class MetadataFormatterSpec extends Specification {
         <tr><td>Timelines are collections of Tweets, ordered with the most recent first.</td></tr>
       </tbody>
     </table>
-
 
 <div class="nested">
         <table>
@@ -218,21 +218,27 @@ class MetadataFormatterSpec extends Specification {
         OrMetadata(
         AndMetadata(
           HttpMethodMetadata(HttpMethods.GET),
-          PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
+          DescriptionMetadata("Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always..."),
+          PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format")),
           EncodingMetadata(Encodings.gzip, Encodings.deflate),
-          ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+          DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+          ParameterMetadata('callback, None)
         ),
           AndMetadata(
             HttpMethodMetadata(HttpMethods.GET),
-            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
+            DescriptionMetadata("Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always..."),
+            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format")),
             EncodingMetadata(Encodings.gzip, Encodings.deflate),
-            ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+            DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+            ParameterMetadata('callback, None)
           ),
           AndMetadata(
             HttpMethodMetadata(HttpMethods.GET),
-            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format"), Some("""Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always...""")),
+            DescriptionMetadata("Returns the 20 most recent statuses, including retweets if they exist, posted by the authenticating user and the user's they follow. This is the same timeline seen by a user when they login to twitter.com. This method is identical to statuses/friends_timeline, except that this method always..."),
+            PathPatternMetadata(LiteralPathPattern("/statuses/home_timeline.format")),
             EncodingMetadata(Encodings.gzip, Encodings.deflate),
-            ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+            DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+            ParameterMetadata('callback, None)
           ),
         HttpMethodMetadata(HttpMethods.DELETE)
       ))) must_== expected

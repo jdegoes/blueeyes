@@ -88,10 +88,10 @@ case class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, Strin
   val metadata = None
 }
 
-case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B], desc: Option[String]) extends DelegatingService[A, B, A, B] {
+case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   val service = PathService.shift(path, _: HttpRequest[A]).toSuccess(inapplicable).flatMap(delegate.service)
 
-  lazy val metadata = Some(PathPatternMetadata(path, desc))
+  lazy val metadata = Some(PathPatternMetadata(path))
 }
 
 object PathService {
@@ -229,7 +229,7 @@ extends DelegatingService[T, S, T, RangeHeaderValues => S] {
     }
   }
 
-  lazy val metadata = Some(RequestHeaderMetadata(Left(HttpHeaders.Range), None, Some("A numeric range must be specified for the request.")))
+  lazy val metadata = Some(AndMetadata(RequestHeaderMetadata(Left(HttpHeaders.Range), None), DescriptionMetadata("A numeric range must be specified for the request.")))
 }
 
 case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
@@ -283,7 +283,8 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
   val metadata = Some(OrMetadata(
     AndMetadata(
       HttpMethodMetadata(HttpMethods.GET),
-      ParameterMetadata('callback, None, Some("A callback method identifier is required when using JsonP with a \"GET\" request."))
+      DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+      ParameterMetadata('callback, None)
     ),
     HttpMethodMetadata(HttpMethods.POST),
     HttpMethodMetadata(HttpMethods.PUT),
@@ -377,23 +378,23 @@ extends DelegatingService[T, HttpResponse[T], T, HttpResponse[T]]{
   def metadata = None
 }
 
-class ParameterService[T, S](parameter: Symbol, default: => Option[String], desc: Option[String], val delegate: HttpService[T, String => S]) 
+class ParameterService[T, S](parameter: Symbol, default: => Option[String], val delegate: HttpService[T, String => S])
 extends DelegatingService[T, S, T, String => S]{
   def service = (r: HttpRequest[T]) => {
     r.parameters.get(parameter).orElse(default)
-    .toSuccess(DispatchError(BadRequest, "Parameter " + parameter + desc.map(" ("+_+")").getOrElse("") + " is required."))
+    .toSuccess(DispatchError(BadRequest, "Parameter " + parameter + " is required."))
     .flatMap(value => delegate.service(r.copy(parameters = r.parameters + (parameter -> value))).map(_.apply(value)))
   }
 
-  lazy val metadata = Some(ParameterMetadata(parameter, default, desc))
+  lazy val metadata = Some(ParameterMetadata(parameter, default))
 }
 
 object ParameterService {
-  def apply[T, S](parameter: Symbol, default: => Option[String], desc: Option[String], delegate: HttpService[T, String => S]) = 
-    new ParameterService(parameter, default, desc, delegate)
+  def apply[T, S](parameter: Symbol, default: => Option[String], delegate: HttpService[T, String => S]) =
+    new ParameterService(parameter, default, delegate)
 }
 
-case class PathParameterService[A, B](path: RestPathPattern, sym: Symbol, desc: Option[String], delegate: HttpService[A, String => B]) 
+case class PathParameterService[A, B](path: RestPathPattern, sym: Symbol, delegate: HttpService[A, String => B])
 extends DelegatingService[A, B, A, String => B]{
   val service = (req: HttpRequest[A]) => {
     for { 
@@ -408,7 +409,7 @@ extends DelegatingService[A, B, A, String => B]{
   lazy val metadata = Some(PathPatternMetadata(path))
 }
 
-case class PathDataService[A, B, X](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, X], desc: Option[String], delegate: HttpService[A, X => B]) 
+case class PathDataService[A, B, X](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, X], delegate: HttpService[A, X => B])
 extends DelegatingService[A, B, A, X => B]{
   val service = (req: HttpRequest[A]) => {
     for { 
@@ -421,7 +422,7 @@ extends DelegatingService[A, B, A, X => B]{
     }
   }
 
-  lazy val metadata = Some(PathPatternMetadata(path, desc))
+  lazy val metadata = Some(PathPatternMetadata(path))
 }
 
 case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
@@ -430,7 +431,7 @@ case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate:
   val metadata = None
 }
 
-class CookieService[A, B](ident: Symbol, default: => Option[String], desc: Option[String], val delegate: HttpService[A, String => B]) 
+class CookieService[A, B](ident: Symbol, default: => Option[String], val delegate: HttpService[A, String => B])
 extends DelegatingService[A, B, A, String => B] {
   val service = (req: HttpRequest[A]) => {
     extractCookie(req, ident, default).toSuccess(DispatchError(BadRequest, "No cookie was found for the identifier " + ident))
@@ -442,12 +443,12 @@ extends DelegatingService[A, B, A, String => B] {
     cookieValues.headOption.orElse(default)
   }
 
-  lazy val metadata = Some(CookieMetadata(ident, default, desc))
+  lazy val metadata = Some(CookieMetadata(ident, default))
 }
 
 object CookieService {
-  def apply[A, B](ident: Symbol, default: => Option[String], desc: Option[String], delegate: HttpService[A, String => B]) =
-    new CookieService(ident, default, desc, delegate)
+  def apply[A, B](ident: Symbol, default: => Option[String], delegate: HttpService[A, String => B]) =
+    new CookieService(ident, default, delegate)
 }
 
 case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
