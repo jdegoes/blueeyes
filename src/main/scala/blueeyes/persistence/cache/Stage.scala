@@ -104,14 +104,14 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
     private def putToCache(request: PutAll) {
       var putSize = 0
-      request.pairs.foreach { tuple => 
+      for ((key, value) <- request.pairs) {
         putSize += 1
-        cache.put(
-          tuple._1, 
-          cache.get(tuple._1).map(current => current.withValue(request.semigroup.append(current.value, tuple._2))).getOrElse(ExpirableValue(tuple._2)))
+        cache.put(key, cache.get(key).map(current => current.withValue(request.semigroup.append(current.value, value))).getOrElse(ExpirableValue(value)))
       }
 
-      monitor.sample("put_size")( putSize)
+      monitor.sample("put_size") {
+        putSize
+      }
     }
 
     private def removeEldestEntries {

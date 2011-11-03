@@ -35,7 +35,7 @@ object ExpirationPolicy {
   /** Creates a new policy from the specified time to idle and time to live
    * settings, using the specified time unit.
    */
-  def apply(timeToIdle: Option[Long], timeToLive: Option[Long], unit: TimeUnit): ExpirationPolicy = {
-    new ExpirationPolicy(timeToIdle.map(unit.toNanos _), timeToLive.map(unit.toNanos _))
+  def apply(timeToIdle: Option[Long], timeToLive: Option[Long], timeUnit: TimeUnit): ExpirationPolicy = {
+    new ExpirationPolicy(timeToIdle.map(timeUnit.toNanos _), timeToLive.map(timeUnit.toNanos _))
   }
 }
