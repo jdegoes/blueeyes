@@ -352,6 +352,7 @@ object JsonpService {
       )))
 
       r.copy(
+        status = HttpStatus(OK),
         content = r.content.map { content =>
           fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
         } orElse {
