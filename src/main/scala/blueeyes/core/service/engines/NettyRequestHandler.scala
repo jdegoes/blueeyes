@@ -1,7 +1,6 @@
 package blueeyes.core.service.engines
 
 
-import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
@@ -16,6 +15,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
+import blueeyes.concurrent.{ReadWriteLock, Future}
 
 /** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
@@ -98,7 +98,8 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
 
   private val log   = Logger.get
   private var done  = false
-  @volatile
+
+  private val lock = new ReadWriteLock{}
   private var nextChunkFuture: Future[ByteChunk] = _
 
   setNextChunkFuture(Future.sync(chunk))
@@ -114,7 +115,6 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
     }.orElse{
       nextChunkFuture.deliverTo{nextChunk =>
         channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
-        setNextChunkFuture(Future.sync(nextChunk))
       }
       None
     }.orNull
@@ -137,13 +137,15 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
 
   private def setNextChunkFuture(future: Future[ByteChunk]){
     future.trap{errors: List[Throwable] =>
-      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput"))
+      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput."))
       errors match{
         case x :: xs => throw x
         case _ =>
       }
     }
-    nextChunkFuture = future
+    lock.writeLock{
+      nextChunkFuture = future
+    }
   }
 }
 
