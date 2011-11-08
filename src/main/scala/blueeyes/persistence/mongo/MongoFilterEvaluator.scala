@@ -90,7 +90,6 @@ private[mongo] object Evaluators{
       case $all         => AllFieldFilterEvaluator
       case $size        => SizeFieldFilterEvaluator
       case $exists      => ExistsFieldFilterEvaluator
-      case $notExists   => NotExistsFieldFilterEvaluator
       case $type        => TypeFieldFilterEvaluator
       case $regex       => RegexFilterEvaluator
       case $near        => NearFilterEvaluator
@@ -176,7 +175,10 @@ private[mongo] object Evaluators{
     }
   }
   case object ExistsFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v1 != JNothing
+    def apply(v1: JValue, v2: JValue) = v2 match{
+      case JBool(value) => if (value) v1 != JNothing else v1 == JNothing
+      case _ => false
+    }
   }
   case object NotExistsFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v1 == JNothing
