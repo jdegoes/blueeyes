@@ -1,6 +1,6 @@
 package blueeyes.core.service.test
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.util.RichThrowableImplicits._
@@ -10,20 +10,19 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
+import org.specs2.specification.{Fragments, Step}
 
 class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
   private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
   private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
-  shareVariables()
 
-  doBeforeSpec {
+  override def is = args(sequential = true) ^ super.is
+  override def map(fs: =>Fragments) = Step {
     setMockCongiguration
     startServer
-  }
-
-  doAfterSpec {
+  } ^ fs ^ Step {
     resetMockCongiguration
     stopServer
   }
@@ -45,17 +44,18 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   }
 
   def resetMockCongiguration = {
-    sys.props.put(ConfigurableMongo.MongoSwitch, mongoSwitch.getOrElse(null))
-    sys.props.put(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch.getOrElse(null))
+    def setProp(key: String, value: Option[String]) = value match{
+      case Some(x) => sys.props.put(key, x)
+      case None => sys.props.remove(key)
+    }
+    setProp(ConfigurableMongo.MongoSwitch, mongoSwitch)
+    setProp(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch)
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()
 
   private def startServer = waitForResponse[Unit](httpServer.start, Some(startTimeOut), why => throw why)
   private def stopServer  = waitForResponse[Unit](httpServer.stop,  Some(stopTimeOut),  why => throw why)
-
-  // Revert main function of HttpServer to Specification's main function:
-  override def main(args: Array[String]) { httpServer.main(args) }
 
   lazy val rootConfig = {
     Configgy.configureFromString(configuration)

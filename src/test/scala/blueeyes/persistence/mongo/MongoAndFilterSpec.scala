@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import org.specs.{ScalaCheck, Specification}
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -9,8 +8,11 @@ import org.scalacheck.Prop._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
+import org.specs2.ScalaCheck
 
-class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
+class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with MustThrownMatchers{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val filter3    = MongoFilterBuilder(JPath("rar")).<(MongoPrimitiveInt(6))
@@ -26,15 +28,15 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
 
   "MongoAndFilter" should{
     "convert to the same JValue, no matter the order of constructions" in{
-      forAll { filters: (MongoAndFilter, MongoAndFilter) => filters._1.filter == filters._2.filter } must pass
+      check { filters: (MongoAndFilter, MongoAndFilter) => filters._1.filter == filters._2.filter }
     }
 
     "should equal, no matter the order of constructions" in{
-      forAll { filters: (MongoAndFilter, MongoAndFilter) => filters._1 == filters._2 } must pass
+      check { filters: (MongoAndFilter, MongoAndFilter) => filters._1 == filters._2 }
     }
 
     "should have the same hashCodes, no matter the order of constructions" in{
-      forAll { filters: (MongoAndFilter, MongoAndFilter) => filters._1.hashCode == filters._1.hashCode } must pass
+      check { filters: (MongoAndFilter, MongoAndFilter) => filters._1.hashCode == filters._1.hashCode }
     }
 
     "create valid json for or filter" in {

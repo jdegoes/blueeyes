@@ -2,10 +2,11 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import com.mongodb.MongoException
+import org.specs2.matcher.MustThrownMatchers
 
-class WhereFilterScriptBuilderSpec extends Specification with Evaluators.WhereFilterScriptBuilder{
+class WhereFilterScriptBuilderSpec extends Specification with Evaluators.WhereFilterScriptBuilder with MustThrownMatchers{
   private val scriptPattern = """var obj = %s; obj.evaluate = %s; obj.evaluate()"""
   private val jObject       = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
   private val json          = Printer.compact(Printer.render(jObject))

@@ -1,17 +1,14 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
-import org.specs.mock.Mockito
-import org.specs.util.TimeConversions._
+import org.specs2.mutable.Specification
 import MongoQueryBuilder._
-import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
+import org.specs2.mock.Mockito
 
 class InsertQueryBehaviourSpec extends Specification with Mockito {
-  private val collection  = mock[DatabaseCollection]
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
   "Call collection method" in{
-
+    val collection  = mock[DatabaseCollection]
     collection.getLastError returns None
 
     val query  = insert(jObject).into("collection")

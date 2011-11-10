@@ -13,12 +13,13 @@ import akka.routing.Routing._
 import akka.dispatch.Dispatchers
 import akka.util.Duration
 
-import org.specs.{ScalaCheck, Specification}
-
 import java.util.concurrent.TimeUnit
 import org.scalacheck.Gen._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
+import org.specs2.matcher.MustThrownMatchers
 
-class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck{
+class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck with MustThrownMatchers{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
   if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
 
@@ -27,8 +28,9 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
 
   private val collection    = "test-collection"
 
+  override def is = args(skipAll = true) ^ super.is
+
   "Mongo" should {
-    skip("run manually")
     "insert multiple quiries concurrently" in{
       val start = System.currentTimeMillis
 
@@ -38,18 +40,20 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
         actor
       }
       val futures = Future(actors.map(actor => fromAkka[(Future[Option[JObject]], String, String)](actor !!! ("send", 2000)).toBlueEyes): _*)
-      futures.value must eventually (beSomething)
+      futures.value must eventually (beSome)
 
       futures.value.get.foreach{ v =>
         val (selectFuture, name, value) = v
-        selectFuture.value must eventually (beSomething)
+        selectFuture.value must eventually (beSome)
         selectFuture.value.get.get \ name mustEqual(JString(value))
       }
 
       val removeFuture = database(remove.from(collection))
-      removeFuture.value must eventually (beSomething)
+      val result = removeFuture.value must eventually (beSome)
 
       println("Execution time = " + (System.currentTimeMillis - start))
+
+      result
     }
   }
 

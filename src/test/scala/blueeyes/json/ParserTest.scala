@@ -17,10 +17,11 @@
 package blueeyes {
 package json {
 
-import _root_.org.scalacheck._
+//import _root_.org.scalacheck._
 import _root_.org.scalacheck.Prop._
-import _root_.org.specs.Specification
-import _root_.org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
+import org.scalacheck.Gen
 
 object ParserSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
@@ -29,13 +30,13 @@ object ParserSpec extends Specification with ArbitraryJValue with ScalaCheck {
 
   "Any valid json can be parsed" in {
     val parsing = (json: JValue) => { parse(Printer.pretty(render(json))); true }
-    forAll(parsing) must pass
+    check(parsing)
   }
 
   "Buffer size does not change parsing result" in {
     val bufSize = Gen.choose(2, 64)
-    val parsing = (x: JValue, s1: Int, s2: Int) => { parseVal(x, s1) == parseVal(x, s2) }
-    forAll(genObject, bufSize, bufSize)(parsing) must pass
+    val parsing = (x: JValue, s1: Int, s2: Int) => { parseVal(x, s1) mustEqual parseVal(x, s2) }
+    forAll(genObject, bufSize, bufSize)(parsing)
   }
 
   "Parsing is thread safe" in {

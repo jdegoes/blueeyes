@@ -16,10 +16,8 @@
 
 package blueeyes.json
 
-import org.scalacheck._
-import org.scalacheck.Prop.forAll
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 object XmlSpec extends Specification with ArbitraryXml with ArbitraryJValue with ScalaCheck {
   import Xml._
@@ -30,11 +28,11 @@ object XmlSpec extends Specification with ArbitraryXml with ArbitraryJValue with
 
   "Valid XML can be converted to JSON and back (symmetric op)" in {
     val conversion = (xml: Node) => { toXml(toJson(xml)).text == xml.text }
-    forAll(conversion) must pass
+    check(conversion)
   }
 
   "JSON can be converted to XML, and back to valid JSON (non symmetric op)" in {
     val conversion = (json: JValue) => { parse(compact(render(toJson(toXml(json))))); true }
-    forAll(conversion) must pass
+    check(conversion)
   }
 }

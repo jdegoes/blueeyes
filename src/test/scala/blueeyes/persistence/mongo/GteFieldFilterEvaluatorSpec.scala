@@ -1,38 +1,38 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import Evaluators._
 
 class GteFieldFilterEvaluatorSpec extends Specification {
   "returns true when one string greater then another string" in {
-    GteFieldFilterEvaluator(JString("b"), JString("a")) must be (true)
+    GteFieldFilterEvaluator(JString("b"), JString("a")) must be_==(true)
   }
   "returns false when one string less then another string" in {
-    GteFieldFilterEvaluator(JString("a"), JString("b")) must be (false)
+    GteFieldFilterEvaluator(JString("a"), JString("b")) must be_==(false)
   }
   "returns true when one number greater then another number" in {
-    GteFieldFilterEvaluator(JInt(2), JInt(1)) must be (true)
+    GteFieldFilterEvaluator(JInt(2), JInt(1)) must be_==(true)
   }
   "returns false when one number less then another number" in {
-    GteFieldFilterEvaluator(JInt(1), JInt(2)) must be (false)
+    GteFieldFilterEvaluator(JInt(1), JInt(2)) must be_==(false)
   }
   "returns true when one double greater then another double" in {
-    GteFieldFilterEvaluator(JDouble(2.2), JDouble(1.1)) must be (true)
+    GteFieldFilterEvaluator(JDouble(2.2), JDouble(1.1)) must be_==(true)
   }
   "returns false when one double less then another double" in {
-    GteFieldFilterEvaluator(JDouble(1.1), JDouble(2.2)) must be (false)
+    GteFieldFilterEvaluator(JDouble(1.1), JDouble(2.2)) must be_==(false)
   }
   "returns true when one boolean greater then another boolean" in {
-    GteFieldFilterEvaluator(JBool(true), JBool(false)) must be (true)
+    GteFieldFilterEvaluator(JBool(true), JBool(false)) must be_==(true)
   }
   "returns false when one boolean less then another boolean" in {
-    GteFieldFilterEvaluator(JBool(false), JBool(true)) must be (false)
+    GteFieldFilterEvaluator(JBool(false), JBool(true)) must be_==(false)
   }
   "returns false when different object are compared" in {
-    GteFieldFilterEvaluator(JBool(false), JInt(1)) must be (false)
+    GteFieldFilterEvaluator(JBool(false), JInt(1)) must be_==(false)
   }
   "returns true when objecta are the same" in {
-    GteFieldFilterEvaluator(JInt(1), JInt(1)) must be (true)
+    GteFieldFilterEvaluator(JInt(1), JInt(1)) must be_==(true)
   }
 }

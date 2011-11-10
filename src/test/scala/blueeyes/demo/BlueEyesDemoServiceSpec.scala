@@ -9,8 +9,9 @@ import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.data.BijectionsChunkJson
+import org.specs2.matcher.MustThrownMatchers
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson with MustThrownMatchers{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   override def configuration = """
@@ -44,12 +45,12 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
   "Demo Service" should {
     "create contact" in {
       val f = service.header("X-Forwarded-For", "71.196.138.244").header("Content-Type", "application/json").post("/contacts")(contact.serialize)
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
     }
 
     "return contact list" in {
       val f = service.get("/contacts")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
 
@@ -58,7 +59,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
     }
     "return contact" in {
       val f = service.get("/contacts/Sherlock")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
 
@@ -67,7 +68,7 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
     }
     "search contact" in {
       val f = service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter)
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
 

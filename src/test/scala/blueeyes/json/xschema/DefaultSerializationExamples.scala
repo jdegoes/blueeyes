@@ -15,9 +15,10 @@
  */
 package blueeyes.json.xschema {
 
-import _root_.org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-object DefaultSerializationExamples extends Specification {
+object DefaultSerializationExamples extends Specification  with MustThrownMatchers{
   import _root_.blueeyes.json.JsonAST._
   
   import DefaultSerialization._

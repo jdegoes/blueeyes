@@ -1,9 +1,10 @@
 package blueeyes.health.metrics.histogram
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import ValueStrategy._
+import org.specs2.matcher.MustThrownMatchers
 
-class StaticHistogramSpec extends Specification{
+class StaticHistogramSpec extends Specification with MustThrownMatchers{
   "builds Histogram" in{
     val histogram = new StaticHistogram[Double](new DynamicLengthBucketsStrategy()).histogram(Map(1.2 -> 2l, 1.5 -> 2l, 5.9 -> 1l, 12.1 -> 3l).toList.sortWith((e1, e2) => (e1._1 < e2._1)))
     histogram mustEqual(Map(1 -> 4, 4 -> 1, 7 -> 0, 10-> 3))

@@ -2,13 +2,14 @@ package blueeyes.persistence.mongo
 
 import BijectionsMongoValue._
 import blueeyes.json.JsonAST._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import org.joda.time.DateTime
 import java.util.regex.Pattern
 import java.util.regex.Pattern._
 import com.mongodb.{DBObject, BasicDBList, BasicDBObject}
+import org.specs2.matcher.MustThrownMatchers
 
-class MongoValueBijectionSpec extends Specification {
+class MongoValueBijectionSpec extends Specification  with MustThrownMatchers{
   "fromDBObject" should{
     "convert string type" in {
       testFromMongoObject("string", "foo", MongoString("foo"))
@@ -56,26 +57,16 @@ class MongoValueBijectionSpec extends Specification {
       testFromMongoObject("array", array, MongoArray(List(MongoString("1"), MongoString("2"))))
     }
     "convert BasicDBList type" in {
-      try {
-        val array = new BasicDBList()
-        array.add("1")
-        array.add("2")
-        testFromMongoObject("array", array, MongoArray(List(MongoString("1"), MongoString("2"))))
-      }
-      catch {
-        case e: Throwable => e.printStackTrace()
-      }
+      val array = new BasicDBList()
+      array.add("1")
+      array.add("2")
+      testFromMongoObject("array", array, MongoArray(List(MongoString("1"), MongoString("2"))))
     }
     "convert BasicDBList type" in {
-      try {
-        val array = new BasicDBList()
-        array.add(new java.lang.Integer(1))
-        array.add("2")
-        testFromMongoObject("array", array, MongoArray(List(MongoInt(1), MongoString("2"))))
-      }
-      catch {
-        case e: Throwable => e.printStackTrace()
-      }
+      val array = new BasicDBList()
+      array.add(new java.lang.Integer(1))
+      array.add("2")
+      testFromMongoObject("array", array, MongoArray(List(MongoInt(1), MongoString("2"))))
     }
     //"remove reserved mongo keys" in {
     //  val dbObject = new BasicDBObject()

@@ -1,15 +1,15 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
-import org.specs.mock.Mockito
+import org.specs2.mutable.Specification
 import MongoQueryBuilder._
 import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
+import org.specs2.mock.Mockito
 
 class EnsureIndexQueryBehaviourSpec extends Specification with Mockito {
-  private val collection  = mock[DatabaseCollection]
   "Call collection method" in {
+    val collection  = mock[DatabaseCollection]
     collection.getLastError returns None
 
     val query = ensureUniqueIndex("index").on("address.city", "address.street").in("collection")

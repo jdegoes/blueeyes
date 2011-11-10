@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo.mock
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JPathImplicits._
 import blueeyes.persistence.mongo.MongoFilterOperators._
 import com.mongodb.MongoException
@@ -10,8 +10,9 @@ import blueeyes.json.{JsonParser, JPath}
 
 import scalaz._
 import Scalaz._
+import org.specs2.matcher.MustThrownMatchers
 
-class MockDatabaseCollectionSpec extends Specification{
+class MockDatabaseCollectionSpec extends Specification with MustThrownMatchers{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(50), JInt(50)))) :: Nil)
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(60), JInt(60)))) :: Nil)
@@ -50,12 +51,12 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val result = collection.group(MongoSelection(Set(JPath("address.city"))), None, initial, "function(obj,prev) { prev.csum += obj.address.code }")
 
-    result.elements.size must be (3)
-    result.elements.contains(parse("""{"address.city":null,"csum":13.0} """)) must be (true)
-    result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be (true)
+    result.elements.size must be_== (3)
+    result.elements.contains(parse("""{"address.city":null,"csum":13.0} """)) must be_==(true)
+    result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be_==(true)
 
     val withNaN = result.elements.filter(v => v.asInstanceOf[JObject].fields.head == JField("address.city", JString("C"))).head.asInstanceOf[JObject]
-    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be (true)
+    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be_==(true)
   }
 
   "store jobjects" in{
@@ -342,8 +343,8 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.update(None, MongoUpdateObject(jObject2), false, false)
 
     val result = collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList
-    result.contains(jObject2) must be (true)
-    (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be (true)
+    result.contains(jObject2) must be_==(true)
+    (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be_==(true)
   }
   "insert by update when upsert is true" in{
     val collection = newCollection

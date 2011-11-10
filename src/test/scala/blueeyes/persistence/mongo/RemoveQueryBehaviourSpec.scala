@@ -1,15 +1,16 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
-import org.specs.mock.Mockito
+import org.specs2.mutable.Specification
 import MongoQueryBuilder._
 import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
+import org.specs2.mock.Mockito
 
 class RemoveQueryBehaviourSpec extends Specification with Mockito {
-  private val collection  = mock[DatabaseCollection]
 
   "Call collection method" in{
+    val collection  = mock[DatabaseCollection]
+
     collection.getLastError returns None
 
     val filter = Some("name" === "Joe")
@@ -20,6 +21,8 @@ class RemoveQueryBehaviourSpec extends Specification with Mockito {
     there was one(collection).remove(filter)
   }
   "Call collection method with dummy JObject when filter is not specified" in{
+    val collection  = mock[DatabaseCollection]
+
     collection.getLastError returns None
 
     val query = remove.from("collection")

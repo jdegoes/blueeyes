@@ -17,9 +17,10 @@
 package blueeyes {
 package json {
 
-import _root_.org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-object DiffExamples extends Specification {
+object DiffExamples extends Specification with MustThrownMatchers {
   import JsonAST._
   import JsonParser._
   import MergeExamples.{scala1, scala2, lotto1, lotto2, mergedLottoResult}

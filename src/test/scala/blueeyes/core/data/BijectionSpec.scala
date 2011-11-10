@@ -1,8 +1,9 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class BijectionSpec extends Specification{
+class BijectionSpec extends Specification with MustThrownMatchers{
   "Bijection.identity: creates Bijection which does not change data" in{
     Bijection.identity[String]("foo")         mustEqual ("foo")
     Bijection.identity[String].unapply("foo") mustEqual ("foo")

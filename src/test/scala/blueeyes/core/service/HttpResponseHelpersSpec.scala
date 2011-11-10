@@ -1,11 +1,11 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
-import org.specs.matcher.Matchers._
 import blueeyes.concurrent.Future
+import org.specs2.matcher.MustThrownMatchers
 
 class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers{
   

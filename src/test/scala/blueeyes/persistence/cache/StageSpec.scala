@@ -1,8 +1,8 @@
 package blueeyes
 package persistence.cache
 
-import org.specs.Specification
-import org.specs.util.TimeConversions._
+import org.specs2.mutable.Specification
+import org.specs2.time.TimeConversions._
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 import blueeyes.concurrent.Future
@@ -18,8 +18,9 @@ import akka.dispatch.Dispatchers
 import akka.util.Duration
 
 import java.util.concurrent.TimeUnit
+import org.specs2.matcher.MustThrownMatchers
 
-class StageSpec extends Specification{
+class StageSpec extends Specification with MustThrownMatchers{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2
@@ -38,10 +39,10 @@ class StageSpec extends Specification{
       stage.put("foo", "bar")
       stage.put("bar", "baz")
 
-      evicted must eventually (be (true))
+      evicted must eventually (be_==(true))
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      stop.isDone must eventually (be_==(true))
     }
 
     "evict when stage is over capacity" in{
@@ -51,10 +52,10 @@ class StageSpec extends Specification{
       stage.put("foo2", "bar2")
       stage.put("bar2", "baz2")
 
-      evicted must eventually (be (true))
+      evicted must eventually (be_==(true))
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      stop.isDone must eventually (be_==(true))
     }
 
     "evict when stage is flushed" in{
@@ -64,10 +65,10 @@ class StageSpec extends Specification{
       stage.put("foo3", "bar3")
       stage.flushAll
 
-      evicted must eventually (be (true))
+      evicted must eventually (be_==(true))
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      stop.isDone must eventually (be_==(true))
     }
 
     "evict automatically" in{
@@ -76,12 +77,12 @@ class StageSpec extends Specification{
       val stage = newStage(Some(10), None, {(key: String, value: String) => evicted = key == "foo4" && value == "bar4"})
       stage.put("foo4", "bar4")
 
-      evicted must eventually (be (true))
+      evicted must eventually (be_==(true))
 
       stage.flushAll
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      stop.isDone must eventually (be_==(true))
     }
 
     "evict automatically more then one time" in{
@@ -98,7 +99,7 @@ class StageSpec extends Specification{
       evictCount must eventually (beEqualTo(2))
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      stop.isDone must eventually (be_==(true))
     }
 
     "evict all messages when multiple threads send messages" in{
@@ -114,17 +115,19 @@ class StageSpec extends Specification{
       }
 
       val futures   = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
-      futures.value must eventually(200, 300.milliseconds) (beSomething)
+      futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll
-      flushFuture.value must eventually (beSomething)
+      flushFuture.value must eventually (beSome)
 
       collected mustEqual(messagesCount * threadsCount)
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      val result = stop.isDone must eventually (be_==(true))
 
       actors.foreach(_.stop())
+
+      result
     }
 
     "evict all messages when multiple threads send messages with different keys" in{
@@ -149,17 +152,19 @@ class StageSpec extends Specification{
       }
 
       val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
-      futures.value must eventually(200, 300.milliseconds) (beSomething)
+      futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll
-      flushFuture.value must eventually (beSomething)
+      flushFuture.value must eventually (beSome)
 
       collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
 
       val stop = stage.stop
-      stop.isDone must eventually (be (true))
+      val result = stop.isDone must eventually (be_==(true))
 
       actors.foreach(_.stop())
+
+      result
     }
   }
 

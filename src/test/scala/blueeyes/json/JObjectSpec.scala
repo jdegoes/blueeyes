@@ -1,6 +1,6 @@
 package blueeyes.json
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 import JsonAST._
 

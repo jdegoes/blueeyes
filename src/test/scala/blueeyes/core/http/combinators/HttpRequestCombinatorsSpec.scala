@@ -1,14 +1,15 @@
 package blueeyes.core.http.combinators
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpMethods._
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
+import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators{
+class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators with MustThrownMatchers{
   type Handler[T, S] = HttpRequest[Future[T]] => Future[HttpResponse[S]]
   
   "refineContentType should return bad request type cannot be refined to specified subtype" in {

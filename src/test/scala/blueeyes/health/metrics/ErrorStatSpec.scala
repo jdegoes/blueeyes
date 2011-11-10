@@ -1,9 +1,10 @@
 package blueeyes.health.metrics
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
+import org.specs2.matcher.MustThrownMatchers
 
-class ErrorStatSpec extends Specification{
+class ErrorStatSpec extends Specification with MustThrownMatchers{
   "counts errors" in{
     val stats = new ErrorStat()
 

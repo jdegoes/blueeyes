@@ -1,9 +1,10 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import Encodings._
+import org.specs2.matcher.MustThrownMatchers
 
-class EncodingSpec extends Specification {
+class EncodingSpec extends Specification with MustThrownMatchers {
 
   "Encodings:  Should produce a encoding" in {
     Encodings.parseEncodings("compress") mustEqual List(compress)

@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import com.mongodb._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 import java.util.regex.Pattern
 import java.util.regex.Pattern._

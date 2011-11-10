@@ -1,11 +1,12 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import scala.util.matching.Regex
 
 import blueeyes.core.http.{HttpRequest, HttpMethods}
+import org.specs2.matcher.MustThrownMatchers
 
-class RestPathPatternSpec extends Specification{
+class RestPathPatternSpec extends Specification with MustThrownMatchers{
   import RestPathPattern._
 
   "path matching and regex extraction" should {
@@ -108,13 +109,13 @@ class RestPathPatternSpec extends Specification{
       ("/foo/bar/'param" $).apply("/foo/bar/value") mustEqual(Map('param -> "value"))
     }
     "not match beyond end of path when final element is symbol" in {
-      ("/foo/bar/'param" $).isDefinedAt("/foo/bar/value/") mustBe(false)
+      ("/foo/bar/'param" $).isDefinedAt("/foo/bar/value/") must_==(false)
     }
     "match end of path when final element is string" in {
       ("/foo/bar/adCode.html" $).apply("/foo/bar/adCode.html") mustEqual(Map())
     }
     "not match beyond end of path when final element is string" in {
-      ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") mustBe(false)
+      ("/foo/bar/adCode.html" $).isDefinedAt("/foo/bar/adCode.html2") must_==(false)
     }
   }
 
@@ -145,10 +146,10 @@ class RestPathPatternSpec extends Specification{
       (RestPathPattern.Root/ "foo" / "bar" / """(?<id>[a-z]+_[0-9])""").isDefinedAt("/foo/bar/HadesSux") mustEqual(false)
     }
     "match for the other syntax and positive look ahead" in {
-      ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path) $).isDefinedAt("/foo/bar/example.html") mustBe (true)
+      ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path) $).isDefinedAt("/foo/bar/example.html") must_== (true)
     }
     "use the implicit for Regex (removed the $)" in {
-      ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path)).isDefinedAt("/foo/bar/example.html") mustBe (true)
+      ("/foo/bar" / new Regex("""([a-z]+)(\.html)""", "path") ~ List('path)).isDefinedAt("/foo/bar/example.html") must_== (true)
     }
     "recover the parameter with positive look ahead" in {
       val pattern: RestPathPattern = "/darth" / new Regex("""([a-z]+)(\.gif)""", "path") ~ List('path)
@@ -158,7 +159,7 @@ class RestPathPatternSpec extends Specification{
 
   "Symbol pattern" should {
     "match string with period" in {
-      ("/foo/bar/'name" $).isDefinedAt("/foo/bar/foocubus.gif") mustBe (true)
+      ("/foo/bar/'name" $).isDefinedAt("/foo/bar/foocubus.gif") must_== (true)
     }
   }
 
@@ -178,19 +179,19 @@ class RestPathPatternSpec extends Specification{
     }
   }
 
-  private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) {
+  private def testPath(path: String, isDefinedAt: List[(String, Map[Symbol, String])], isNotDefinedAt: List[String]) = {
     val pattern = RestPathPattern(path)
 
-    isDefinedAt.foreach { pair =>
+    { pair: (String, Map[Symbol, String]) =>
       val path = pair._1
       val map  = pair._2
 
       pattern.isDefinedAt(path) mustEqual(true)
       pattern.apply(path) mustEqual(map)
-    }
+    } forall isDefinedAt
 
-    isNotDefinedAt.foreach { path =>
+    { path: String =>
       pattern.isDefinedAt(path) mustEqual(false)
-    }
+    } forall  isNotDefinedAt
   }
 }

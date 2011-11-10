@@ -1,20 +1,4 @@
-package blueeyes.core.service
-
-import org.specs2.mutable.Specification
-
-import blueeyes.core.http._
-import blueeyes.util.printer._
-import blueeyes.core.http.HttpMethods._
-import RestPathPatternParsers._
-import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
-
-class MetadataSpec extends Specification with HttpRequestHandlerCombinators with MustThrownMatchers{
-  import Metadata._
-
-  "serviceToMetadata" should{
-    "extract metadata from services" in{
-      val expected = """<html>
+<html>
 
   <head>
       <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -33,11 +17,19 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators with
         h1           {font-size: 3em;font-weight: 300;margin: 0;padding: 0;}
         div.desc     {color: #777;margin-top: 0.5em}
       </style>
-  </head>
+<title>REST API Resources | Foo (1.0.0)</title>  </head>
 
   <body>
     <div class = "root">
-    <div class="nested">
+    <h1>REST API Resources | Foo (1.0.0)</h1>
+
+    <table>
+      <tbody>
+        <tr><td>Sample service</td></tr>
+      </tbody>
+    </table>
+
+<div class="nested">
         <table>
           <tbody>
             <tr>
@@ -90,25 +82,4 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators with
         </table></div>
      </div>
   </body>
-</html>"""
-
-      val handler : HttpService[Int, Future[HttpResponse[Int]]] = {
-        path("/details") {
-          path("/bar") {
-            describe("Personal john details"){
-              path("/john") {
-                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
-              }
-            }
-          }~
-          describe("Personal kate details"){
-            path("/kate") {
-              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
-            }
-          }
-        }
-      }
-      HtmlPrinter.printFormatted(serviceToMetadata(handler)) mustEqual (expected)
-    }
-  }
-}
+</html>

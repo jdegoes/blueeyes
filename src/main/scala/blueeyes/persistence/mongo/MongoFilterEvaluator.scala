@@ -180,9 +180,6 @@ private[mongo] object Evaluators{
       case _ => false
     }
   }
-  case object NotExistsFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v1 == JNothing
-  }
   case object RegexFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
       case (JString(value), JObject(List(JField("$regex", JString(regexValue)), JField("$options", JString(options))))) =>

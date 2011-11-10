@@ -1,9 +1,10 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.core.http.MimeTypes._
+import org.specs2.matcher.MustThrownMatchers
 
-class PragmaDirectiveSpec extends Specification {
+class PragmaDirectiveSpec extends Specification with MustThrownMatchers {
 
   "Pragma: Parsing should return 'no-cache'"  in {
     HttpHeaders.Pragma(PragmaDirectives.parsePragmaDirectives(" No-Cache ").get).value mustEqual ("no-cache")

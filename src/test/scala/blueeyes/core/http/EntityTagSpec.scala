@@ -1,9 +1,10 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.core.http.MimeTypes._
+import org.specs2.matcher.MustThrownMatchers
 
-class EntityTagSpec extends Specification {
+class EntityTagSpec extends Specification with MustThrownMatchers {
 
   /* Some more work should be done on entity tags */
   "If-Match:  Should return strings on well-formed input" in {

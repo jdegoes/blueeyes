@@ -1,9 +1,10 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import Bijection._
+import org.specs2.matcher.MustThrownMatchers
 
-class BijectionsChunkXMLSpec extends Specification with BijectionsChunkXML with BijectionsByteArray {
+class BijectionsChunkXMLSpec extends Specification with BijectionsChunkXML with BijectionsByteArray  with MustThrownMatchers{
   "BijectionsChunkXML" should{
     "parser valid XML" in{
       XMLToChunk.unapply(new MemoryChunk(XMLToByteArray(<f></f>))) mustEqual(<f></f>)

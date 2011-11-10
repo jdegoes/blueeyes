@@ -12,8 +12,10 @@ import java.io.File
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
+import org.specs2.matcher.MustThrownMatchers
+import org.specs2.specification.{Step, Fragments}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson with MustThrownMatchers{
   override def configuration = """
     services {
       foo {
@@ -53,9 +55,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
-  doAfterSpec {
-    findLogFile foreach { _.delete }
-  }
+  override def map(fs: =>Fragments) = super.map(fs) ^ Step(findLogFile foreach { _.delete })
 
   private def findLogFile = {
     new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
@@ -64,41 +64,41 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   "service" should {
     "support health monitor service" in {
       val f = service.get("/foo")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
       f.value.get.content must beNone
       f.value.get.status  mustEqual(HttpStatus(OK))
     }
 
     "support health monitor statistics" in {
       val f = service.get[JValue]("/blueeyes/services/email/v1/health")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
 
       val content  = response.content.get
       content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(JArray(JInt(1) :: Nil))
-      content \ "requests" \ "GET" \ "timing" mustNotEq(JNothing)
-      content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity"       mustNotEq(JNothing)
+      content \ "requests" \ "GET" \ "timing" mustNotEqual(JNothing)
+      content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity"       mustNotEqual(JNothing)
 
       content \ "service" \ "name"    mustEqual(JString("email"))
       content \ "service" \ "version" mustEqual(JString("1.2.3"))
-      content \ "uptimeSeconds"       mustNotEq(JNothing)
+      content \ "uptimeSeconds"       mustNotEqual(JNothing)
     }
 
     "add service locator" in {
       import BijectionsChunkString._
       val f = service.get[String]("/proxy")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
       response.status  mustEqual(HttpStatus(OK))
       response.content must beSome("it works!")
     }
-  }
 
-  specifyExample("RequestLogging: Creates logRequest") in{
-    findLogFile mustNot be (None)
+    "RequestLogging: Creates logRequest" in{
+      findLogFile must_!=(None)
+    }
   }
 }
 

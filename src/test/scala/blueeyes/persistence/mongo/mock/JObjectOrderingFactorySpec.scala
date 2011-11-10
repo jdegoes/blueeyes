@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo.mock
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.persistence.mongo._
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._

@@ -1,8 +1,9 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class TrailerSpec extends Specification {
+class TrailerSpec extends Specification with MustThrownMatchers {
 
   "Trailer/HttpHeaderFields: Should parse correctly, if parsing for trailer" in {
     HttpHeaders.Trailer(HttpHeaderField.parseAll("Accept, Age, Date, Max-Forwards, Content-Length", "trailer"): _*).value mustEqual "Accept, Age, Date, Max-Forwards"

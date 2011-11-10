@@ -1,10 +1,12 @@
 package blueeyes.core.service.engines.security
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import net.lag.configgy.Configgy
 import org.apache.commons.codec.binary.Base64
+import org.specs2.matcher.MustThrownMatchers
 
-class ConfigCertificateKeyEntrySpec extends Specification with CertificateData{
+class ConfigCertificateKeyEntrySpec extends Specification with CertificateData with MustThrownMatchers{
+  override def is = args(sequential = true) ^ super.is
 
   private val configuration = """server {
   ssl{

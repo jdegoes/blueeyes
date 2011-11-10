@@ -1,11 +1,12 @@
 package blueeyes.core.http
 
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 import org.scalacheck._
 import org.scalacheck.Prop.forAll
+import org.specs2.matcher.MustThrownMatchers
 
-class URISpec extends Specification with URIGen with ScalaCheck{
+class URISpec extends Specification with URIGen with ScalaCheck with MustThrownMatchers{
   "URL.toString" should{
     "be created using scheme" in {URI(Some("foo"), None, None, None, None, None, None).toString mustEqual("foo:")}
     "be created using scheme, userinfo and host" in {URI(Some("foo"), Some("john:smith"), Some("google"), None, None, None, None).toString mustEqual("foo://john:smith@google")}
@@ -17,7 +18,7 @@ class URISpec extends Specification with URIGen with ScalaCheck{
 
   "URI" should{
     "parser uri" in {
-      forAll{n: String => URI(n).toString == n } must pass
+      check {n: String => URI(n).toString == n }
     }
   }
 

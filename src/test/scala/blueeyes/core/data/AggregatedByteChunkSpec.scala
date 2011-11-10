@@ -1,11 +1,12 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.util.metrics.DataSize
 import DataSize._
+import org.specs2.matcher.MustThrownMatchers
 
-class AggregatedByteChunkSpec extends Specification{
+class AggregatedByteChunkSpec extends Specification with MustThrownMatchers{
   "AggregatedByteChunk" should {
     "aggregate full content when size is not specified" in{
       val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))

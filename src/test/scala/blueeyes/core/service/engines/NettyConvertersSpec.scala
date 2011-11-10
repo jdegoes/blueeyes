@@ -1,7 +1,6 @@
 package blueeyes.core.service.engines
 
-import org.specs.Specification
-import org.specs.specification.PendingUntilFixed
+import org.specs2.mutable.Specification
 
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
@@ -12,10 +11,12 @@ import blueeyes.core.http._
 import scala.collection.JavaConversions._
 
 import blueeyes.core.http.HttpVersions._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkString, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import blueeyes.core.http.MimeTypes._
+import org.specs2.execute.PendingUntilFixed
+import org.specs2.matcher.MustThrownMatchers
 
-class NettyConvertersSpec extends Specification with PendingUntilFixed with NettyConverters with BijectionsChunkString{
+class NettyConvertersSpec extends Specification with PendingUntilFixed with NettyConverters with BijectionsChunkString with MustThrownMatchers{
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
@@ -104,11 +105,11 @@ class NettyConvertersSpec extends Specification with PendingUntilFixed with Nett
 
   "convert netty NettyHttpRequest with multiple headers values to service HttpRequest" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
-    nettyRequest.addHeader("Retry-After", "1")
-    nettyRequest.addHeader("Retry-After", "2")
+    nettyRequest.addHeader("TCodings", "1")
+    nettyRequest.addHeader("TCodings", "2")
 
     val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
 
-    request.headers.raw mustEqual(Map("Retry-After" -> "1,2"))
-  } pendingUntilFixed
+    request.headers.raw mustEqual(Map("TCodings" -> "1,2"))
+  }
 }

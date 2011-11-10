@@ -1,7 +1,7 @@
 package blueeyes.parsers
 
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 import org.scalacheck._
 import org.scalacheck.Prop.forAllNoShrink
 import scala.util.parsing.combinator._
@@ -103,8 +103,8 @@ class RegularExpressionGrammarSpec extends Specification with ScalaCheck{
     }
   }
 
-  private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)) == n) must pass
-  private def passTestCaseInsensitive(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)).toLowerCase == n.toLowerCase) must pass
+  private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)) mustEqual  n)
+  private def passTestCaseInsensitive(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)).toLowerCase mustEqual n.toLowerCase)
 
   def >> (regexp : List[RegexAtom]): String = regexp.map(_.toString).mkString("")
 }

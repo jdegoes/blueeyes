@@ -1,8 +1,9 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class HttpReflectiveServiceListSpec extends Specification{
+class HttpReflectiveServiceListSpec extends Specification with MustThrownMatchers{
 
   "HttpReflectiveServiceList: finds service if it is declared as varuable" in{
     val serviceList = new HttpReflectiveServiceList[Unit]{

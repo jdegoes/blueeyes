@@ -2,8 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
-import org.specs.Specification
-import org.specs.util._
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
@@ -16,54 +15,60 @@ import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 import java.io.File
+import org.specs2.matcher.MustThrownMatchers
+import org.specs2.specification.{Step, Fragments}
+import org.specs2.time.TimeConversions._
 
-class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString{
+class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with MustThrownMatchers{
 
   private val configPattern = """server{
   port = %d
   sslPort = %d
 }"""
 
-  shareVariables()
-
-  val duration = 350
+  val duration = 350.milliseconds
   val retries = 50
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
+  
+  override def is = args(sequential = true) ^ super.is
+  override def map(fs: =>Fragments) = Step {
+    var error: Option[Throwable] = None
+    do{
+      val sampleServer = new SampleServer()
+      val doneSignal   = new CountDownLatch(1)
+
+      Configgy.configureFromString(configPattern.format(port, port + 1))
+
+      val startFuture = sampleServer.start
+
+      startFuture.deliverTo { _ =>
+        error = None
+        doneSignal.countDown()
+      }
+      startFuture.ifCanceled{v =>
+        println("Error trying to start server on ports " + port + ", " + (port + 1))
+        error = v
+        port  = port + 2
+        doneSignal.countDown()
+      }
+
+      server = Some(sampleServer)
+
+      doneSignal.await()
+    }while(error != None)
+  } ^ fs ^ Step {
+    Context.dataFile.delete
+    server.foreach(_.stop)
+  }
+  
 
   "HttpServer" should {
-    doFirst{
-      var error: Option[Throwable] = None
-      do{
-        val sampleServer = new SampleServer()
-        val doneSignal   = new CountDownLatch(1)
-
-        Configgy.configureFromString(configPattern.format(port, port + 1))
-
-        val startFuture = sampleServer.start
-
-        startFuture.deliverTo { _ =>
-          error = None
-          doneSignal.countDown()
-        }
-        startFuture.ifCanceled{v =>
-          println("Error trying to start server on ports " + port + ", " + (port + 1))
-          error = v
-          port  = port + 2
-          doneSignal.countDown()
-        }
-
-        server = Some(sampleServer)
-
-        doneSignal.await()
-      }while(error != None)
-    }
-
     "return empty response"in{
       val response = client.post("/empty/response")("")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content must beNone
     }
@@ -72,28 +77,28 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
       val response = client.post("/file/write")("foo")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
 
-      Context.dataFile.exists must be (true)
+      Context.dataFile.exists must be_==(true)
       Context.dataFile.length mustEqual("foo".length)
     }
     "read file"in{
       Context.dataFile.delete
 
       val postResponse = client.post("/file/write")("foo")
-      postResponse.value must eventually(retries, new Duration(duration))(beSomething)
+      postResponse.value must eventually(retries, duration)(beSome)
 
       val response = client.get("/file/read")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome("foo")
     }
     "return html by correct URI" in{
       val response =  client.get("/bar/foo/adCode.html")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.context)
     }
@@ -101,59 +106,54 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
     "return not found error by wrong URI" in{
       val response = client.post("/foo/foo/adCode.html")("foo")
 
-      response.isCanceled must eventually(retries, new Duration(duration)) (be (true))
+      response.isCanceled must eventually(retries, duration) (be_==(true))
       response.error.get.asInstanceOf[HttpException].failure mustEqual (NotFound)
     }
     "return Internall error when handling request crushes" in{
       val response = client.get("/error")
 
-      response.isCanceled must eventually(retries, new Duration(duration)) (be (true))
+      response.isCanceled must eventually(retries, duration) (be_==(true))
       response.error.get.asInstanceOf[HttpException].failure mustEqual (InternalServerError)
     }
     "return Http error when handling request throws HttpException" in{
       val response = client.get("/http/error")
 
-      response.isCanceled must eventually(retries, new Duration(duration))(be (true))
+      response.isCanceled must eventually(retries, duration)(be_==(true))
       response.error.get.asInstanceOf[HttpException].failure mustEqual (BadRequest)
     }
 
     "return html by correct URI with parameters" in{
       val response = client.parameters('bar -> "zar").get("/foo")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content must beSome(Context.context)
     }
     "return huge content"in{
       val response = client.get[ByteChunk]("/huge")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
     "return huge delayed content"in{
       val response = client.get[ByteChunk]("/huge/delayed")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
     }
     "return html by correct URI by https" in{
       val response = sslClient.get("/bar/foo/adCode.html")
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.content.get mustEqual(Context.context)
     }
     "return huge content by htpps"in{
       val response = sslClient.get[ByteChunk]("/huge")
 
-      response.value must eventually(retries, new Duration(duration))(beSomething)
+      response.value must eventually(retries, duration)(beSome)
       response.value.get.status.code must be (OK)
       response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
-    }
-
-    doLast{
-      Context.dataFile.delete
-      server.foreach(_.stop)
     }
   }
 
@@ -161,7 +161,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
     val result = new Future[String]()
     readContent(chunk, new ofByte(), result)
 
-    result.value must eventually(retries, new Duration(duration)) (beSomething)
+    result.value must eventually(retries, duration) (beSome)
     result.value.get
   }
   private def readContent(chunk: ByteChunk, buffer: ofByte, result: Future[String]) {

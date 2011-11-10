@@ -1,14 +1,12 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
-import org.specs.mock.MocksCreation
-import MongoQueryBuilder._
-import org.mockito.Mockito.{times, when}
-import org.mockito.Mockito
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
+import org.specs2.mock._
+import org.specs2.matcher.MustThrownMatchers
 
-class MongoQueryBehaviourSpec extends Specification with MocksCreation{
+class MongoQueryBehaviourSpec extends Specification with Mockito with MustThrownMatchers{
   private object query extends QueryBehaviours.MongoQueryBehaviour {
     type QueryResult = Int
     def query(collection: DatabaseCollection): Int = 1
@@ -17,27 +15,26 @@ class MongoQueryBehaviourSpec extends Specification with MocksCreation{
   "MongoQueryBehaviourSpec: calls underlying query" in{
     val collection  = mock[DatabaseCollection]
 
-    when(collection.getLastError).thenReturn(None)
+    collection.getLastError returns None
 
     val result: Int    = query(collection)
 
-    Mockito.verify(collection, times(1)).requestStart
-    Mockito.verify(collection, times(1)).getLastError
-    Mockito.verify(collection, times(1)).requestDone
+    there was one(collection).requestStart
+    there was one(collection).getLastError
+    there was one(collection).requestDone
 
 
-    result.value must eventually (be(1))
+    result.value must eventually (be_==(1))
   }
   "MongoQueryBehaviourSpec: throw error when operation failed" in{
-    import org.specs.util.TimeConversions._
     val collection  = mock[DatabaseCollection]
 
-    when(collection.getLastError).thenReturn(Some(new com.mongodb.BasicDBObject()))
+    collection.getLastError returns Some(new com.mongodb.BasicDBObject())
 
-    query(collection) must throwAnException[MongoException]
+    query(collection) must throwAn[MongoException]
 
-    Mockito.verify(collection, times(1)).requestStart
-    Mockito.verify(collection, times(1)).getLastError
-    Mockito.verify(collection, times(1)).requestDone
+    there was one(collection).requestStart
+    there was one(collection).getLastError
+    there was one(collection).requestDone
   }
 }

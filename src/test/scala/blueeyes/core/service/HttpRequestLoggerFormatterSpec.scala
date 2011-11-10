@@ -1,18 +1,18 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.parsers.W3ExtendedLogAST.{FieldIdentifier, FieldsDirective}
 
-class HttpRequestLoggerFormatterSpec extends Specification {
+class HttpRequestLoggerFormatterSpec extends Specification{
   "HttpRequestLoggerFormatter" should{
     "create w3c formatter" in{
-      HttpRequestLoggerFormatter("w3c").isInstanceOf[HttpRequestLoggerW3CFormatter] must be (true)
+      HttpRequestLoggerFormatter("w3c").isInstanceOf[HttpRequestLoggerW3CFormatter] must_==(true)
     }
     "create json formatter" in{
-      HttpRequestLoggerFormatter("json").isInstanceOf[HttpRequestLoggerJsonFormatter] must be (true)
+      HttpRequestLoggerFormatter("json").isInstanceOf[HttpRequestLoggerJsonFormatter] must_==(true)
     }
     "create custom formatter" in{
-      HttpRequestLoggerFormatter("blueeyes.core.service.HttpRequestLoggerFormatterImpl").isInstanceOf[HttpRequestLoggerFormatterImpl] must be (true)
+      HttpRequestLoggerFormatter("blueeyes.core.service.HttpRequestLoggerFormatterImpl").isInstanceOf[HttpRequestLoggerFormatterImpl] must_==(true)
     }
   }
 }

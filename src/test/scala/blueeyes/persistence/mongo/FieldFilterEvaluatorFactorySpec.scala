@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.persistence.mongo.MongoFilterOperators._
 import Evaluators._
 import blueeyes.json.JPathImplicits

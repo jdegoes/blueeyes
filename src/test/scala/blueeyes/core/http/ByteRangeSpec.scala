@@ -1,8 +1,9 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class ByteRangeSpec extends Specification {
+class ByteRangeSpec extends Specification  with MustThrownMatchers{
 
   "Range: Should parse correctly on good input" in {
     HttpHeaders.Range(ByteRanges.parseByteRanges("bytes=0-500, 699-2000, -4").get).value mustEqual "bytes=0-500, 699-2000, -4"

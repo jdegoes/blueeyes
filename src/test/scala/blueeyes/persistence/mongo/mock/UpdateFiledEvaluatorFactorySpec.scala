@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo.mock
 
 import blueeyes.persistence.mongo.MongoUpdateOperators._
 import MockMongoUpdateEvaluators._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class UpdateFiledEvaluatorFactorySpec extends Specification {
   "creates $inc Evaluator" in {

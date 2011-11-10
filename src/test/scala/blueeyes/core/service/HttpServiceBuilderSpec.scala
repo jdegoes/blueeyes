@@ -1,13 +1,12 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import org.mockito.Mockito.{times}
-import org.mockito.Mockito
-import org.specs.mock.MocksCreation
+import org.specs2.mock._
+import org.specs2.matcher.MustThrownMatchers
 
-class HttpServiceBuilderSpec extends Specification with MocksCreation{
+class HttpServiceBuilderSpec extends Specification with Mockito{
   "ServiceBuilder startup: creates StartupDescriptor with specified startup function" in{
     var executed = false
     val builder  = new ServiceBuilder[Unit]{
@@ -16,7 +15,7 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
 
     builder.descriptor.startup()
 
-    executed must be (true)
+    executed must be_==(true)
   }
   "ServiceBuilder startup: creates StartupDescriptor with specified request function" in{
     val function = mock[Function[Unit, AsyncHttpService[Unit]]]
@@ -26,7 +25,7 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
 
     builder.descriptor.request()
 
-    Mockito.verify(builder.descriptor.request, times(1)).apply(())
+    there was one(builder.descriptor.request).apply(())
   }
   "ServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in{
     val function = mock[Function[Unit, Future[Unit]]]
@@ -36,6 +35,6 @@ class HttpServiceBuilderSpec extends Specification with MocksCreation{
 
     builder.descriptor.shutdown()
 
-    Mockito.verify(builder.descriptor.shutdown, times(1)).apply(())
+    there was one(builder.descriptor.shutdown).apply(())
   }
 }

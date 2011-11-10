@@ -1,9 +1,10 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import HttpHeaders._
+import org.specs2.matcher.MustThrownMatchers
 
-class HttpHeadersSpec extends Specification {
+class HttpHeadersSpec extends Specification with MustThrownMatchers {
   "HttpHeaders" should {
     "find headers by type" in{
       val headers = HttpHeaders(List("authorization" -> "foo"))
@@ -24,8 +25,6 @@ class HttpHeadersSpec extends Specification {
     }
 
     "parse custom tuples" in {
-      val headers = 
-
       HttpHeader(("Blargh" -> "foo")) must_== CustomHeader("Blargh", "foo")
     }
   }

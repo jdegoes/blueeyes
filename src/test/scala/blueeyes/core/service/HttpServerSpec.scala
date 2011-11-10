@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
@@ -8,8 +8,9 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
+import org.specs2.matcher.MustThrownMatchers
 
-class HttpServerSpec extends Specification with BijectionsChunkString{
+class HttpServerSpec extends Specification with BijectionsChunkString with MustThrownMatchers{
 
   private val server = new TestServer()
 
@@ -18,7 +19,7 @@ class HttpServerSpec extends Specification with BijectionsChunkString{
 
   "HttpServer.start" should {
     "executes start up function" in{
-      server.startupCalled must be (true)
+      server.startupCalled must be_==(true)
     }
     "set status to Starting" in{
       server.status must be (RunningStatus.Started)
@@ -49,7 +50,7 @@ class HttpServerSpec extends Specification with BijectionsChunkString{
     "execute shut down function" in {
       server.stop
 
-      server.shutdownCalled must be (true)
+      server.shutdownCalled must be_==(true)
     }
     
     "set status to Stopped" in {

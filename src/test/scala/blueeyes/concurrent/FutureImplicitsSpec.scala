@@ -1,45 +1,41 @@
 package blueeyes.concurrent
 
 import Future._
-import org.specs.Specification
-import org.specs.util.TimeConversions._
+import org.specs2.mutable.Specification
+import org.specs2.time.TimeConversions._
 
-import akka.actor.Actor
+import org.specs2.matcher.MustThrownMatchers
+import org.specs2.specification.BeforeAfterExample
+import akka.actor.{Actor, ActorRef}
 
-class FutureImplicitsSpec extends Specification {
+class FutureImplicitsSpec extends Specification with MustThrownMatchers with BeforeAfterExample{
+
+  override def is = args(sequential = true) ^ super.is
+
+  private var actor: ActorRef = _
   "FutureImplicitsSpec" should{
     "convert Akka future when value is delivered" in{
-      val actor = Actor.actorOf[GetActor]
-      actor.start
-
       val result = actor !!! "success"
       result.toBlueEyes.value must eventually (beSome("foo"))
-
-      actor.stop
     }
 
     "convert Akka future for long running actor when value is delivered" in{
-      val actor = Actor.actorOf[GetActor]
-      actor.start
-
       val result = actor !!! ("long", 10000)
       result.toBlueEyes.value must eventually(20, 1.second) (beSome("foo"))
-
-      actor.stop
     }
 
     "convert Akka future when future has error" in{
-      val actor = Actor.actorOf[GetActor]
-      actor.start
-
       val result = actor !!! "error"
-      result.toBlueEyes.isCanceled must eventually (be(true))
-
-      actor.stop
+      result.toBlueEyes.isCanceled must eventually (be_==(true))
     }
   }
 
+  protected def before = {
+    actor = Actor.actorOf[GetActor]
+    actor.start
+  }
 
+  protected def after = actor.stop
 }
 
 class GetActor extends Actor{

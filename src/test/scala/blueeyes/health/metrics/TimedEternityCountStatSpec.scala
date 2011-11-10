@@ -1,9 +1,10 @@
 package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST._
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class TimedEternityCountStatSpec extends Specification{
+class TimedEternityCountStatSpec extends Specification with MustThrownMatchers{
   private val clock = new Clock()
   "EternityTimedCountStat" should{
     "creates JValue" in{

@@ -17,9 +17,10 @@
 package blueeyes {
 package json {
 
-import _root_.org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-object XmlExamples extends Specification {
+object XmlExamples extends Specification with MustThrownMatchers {
   import JsonAST._
   import JsonDSL._
   import JsonParser.parse

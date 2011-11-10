@@ -1,8 +1,9 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import org.specs2.matcher.MustThrownMatchers
 
-class EmailsSpec extends Specification{
+class EmailsSpec extends Specification with MustThrownMatchers{
   "Emails" should{
     "return the correct email name with a well-formed email" in {
       Emails("johnsmith@socialmedia.com ") must beSome(Email("johnsmith@socialmedia.com"))

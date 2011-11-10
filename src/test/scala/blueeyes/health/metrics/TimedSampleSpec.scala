@@ -1,22 +1,23 @@
 package blueeyes.health.metrics
 
-import org.specs.Specification
-import IntervalLength._
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
+import org.specs2.matcher.MustThrownMatchers
+import java.util.concurrent.TimeUnit
 
-class TimedSampleSpec extends Specification{
+class TimedSampleSpec extends Specification with MustThrownMatchers{
   private val clock = new Clock()
   "TimedSample" should{
     "create histogram" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 7))(clock.now _)
+      val timedSample = new TimedSampleImpl(interval(IntervalLength(3, TimeUnit.SECONDS), 7))(clock.now _)
       fill(timedSample)
 
       val histogram = timedSample.details
       histogram.value must eventually (beSome(Map(96 -> 0.0, 99 -> 2.0, 102 -> 5.0, 105 -> 0.0, 108 -> 0.0, 111 -> 3.0, 114 -> 4.0)))
     }
     "removes expired data" in{
-      val timedSample = new TimedSampleImpl(interval(3.seconds, 3))(clock.now _)
+      val timedSample = new TimedSampleImpl(interval(IntervalLength(3, TimeUnit.SECONDS), 3))(clock.now _)
       fill(timedSample)
 
       val histogram = timedSample.details

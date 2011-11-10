@@ -1,10 +1,11 @@
 package blueeyes.util.logging
 
 import RollPolicies._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.{Calendar, GregorianCalendar}
+import org.specs2.matcher.MustThrownMatchers
 
-class RollSpec extends Specification with Roll{
+class RollSpec extends Specification with Roll with MustThrownMatchers{
   "Roll: calculates nextRollTime with Never policy" in {
     val next = calendar(1)
     next.add(Calendar.YEAR, 100)

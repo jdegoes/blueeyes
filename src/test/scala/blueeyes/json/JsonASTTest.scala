@@ -18,9 +18,8 @@ package blueeyes
 package json
 
 import org.scalacheck._
-import org.scalacheck.Prop.forAll
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   import JsonAST._
@@ -29,34 +28,34 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
   "Functor identity" in {
     val identityProp = (json: JValue) => json == (json mapUp identity)
-    forAll(identityProp) must pass
+    check(identityProp)
   }
 
   "Functor composition" in {
     val compositionProp = (json: JValue, fa: JValue => JValue, fb: JValue => JValue) =>
       json.mapUp(fb).mapUp(fa) == json.mapUp(fa compose fb)
 
-    forAll(compositionProp) must pass
+    check(compositionProp)
   }
 
   "Monoid identity" in {
     val identityProp = (json: JValue) => (json ++ JNothing == json) && (JNothing ++ json == json)
-    forAll(identityProp) must pass
+    check(identityProp)
   }
 
   "Monoid associativity" in {
     val assocProp = (x: JValue, y: JValue, z: JValue) => x ++ (y ++ z) == (x ++ y) ++ z
-    forAll(assocProp) must pass
+    check(assocProp)
   }
 
   "Merge identity" in {
     val identityProp = (json: JValue) => (json merge JNothing) == json && (JNothing merge json) == json
-    forAll(identityProp) must pass
+    check(identityProp)
   }
 
   "Merge idempotency" in {
     val idempotencyProp = (x: JValue) => (x merge x) == x
-    forAll(idempotencyProp) must pass
+    check(idempotencyProp)
   }
 
   "Diff identity" in {
@@ -64,12 +63,12 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       (json diff JNothing) == Diff(JNothing, JNothing, json) &&
       (JNothing diff json) == Diff(JNothing, json, JNothing)
 
-    forAll(identityProp) must pass
+    check(identityProp)
   }
 
   "Diff with self is empty" in {
     val emptyProp = (x: JValue) => (x diff x) == Diff(JNothing, JNothing, JNothing)
-    forAll(emptyProp) must pass
+    check(emptyProp)
   }
 
   "Diff is subset of originals" in {
@@ -77,22 +76,22 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       val Diff(c, a, d) = x diff y
       y == (y merge (c merge a))
     }
-    forAll(subsetProp) must pass
+    check(subsetProp)
   }
 
   "Diff result is same when fields are reordered" in {
     val reorderProp = (x: JObject) => (x diff reorderFields(x)) == Diff(JNothing, JNothing, JNothing)
-    forAll(reorderProp) must pass
+    check(reorderProp)
   }
 
   "Remove all" in {
     val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
-    forAll(removeAllProp) must pass
+    check(removeAllProp)
   }
 
   "Remove nothing" in {
     val removeNothingProp = (x: JValue) => (x remove { _ => false }) == x
-    forAll(removeNothingProp) must pass
+    check(removeNothingProp)
   }
 
   "Remove removes only matching elements (in case of a field, the field is removed)" in {
@@ -102,7 +101,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
       removed.flatten.forall(_.getClass != x)
     }
-    forAll(removeProp) must pass
+    check(removeProp)
   }
 
   "Set and retrieve an arbitrary jvalue at an arbitrary path" in {
@@ -155,7 +154,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       (!badPath(jv, p)) ==> ((p == JPath.Identity && jv.set(p, toSet) == toSet) || (jv.set(p, toSet).get(p) == toSet))
     }
 
-    forAll(setProp) must pass
+    check(setProp)
   }
 
   private def reorderFields(json: JValue) = json mapUp {

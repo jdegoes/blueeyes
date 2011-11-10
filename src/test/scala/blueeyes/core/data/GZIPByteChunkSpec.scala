@@ -1,11 +1,12 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.zip.GZIPInputStream
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import blueeyes.concurrent.Future
+import org.specs2.matcher.MustThrownMatchers
 
-class GZIPByteChunkSpec extends Specification{
+class GZIPByteChunkSpec extends Specification with MustThrownMatchers{
   "GZICompressedByteChunk" should{
     "compress one chunk" in{
       testCompressed(new MemoryChunk("foo".getBytes, () => None), "foo")
@@ -19,7 +20,7 @@ class GZIPByteChunkSpec extends Specification{
     val compressed = GZIPByteChunk(chunk)
     val future     = AggregatedByteChunk(compressed, None)
 
-    future.isDelivered must eventually (be(true))
+    future.isDelivered must eventually (be_==(true))
 
     new String(decopress(future.value.get)) mustEqual(data)
   }
