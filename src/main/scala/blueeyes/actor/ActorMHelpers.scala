@@ -5,7 +5,7 @@ import scalaz.Scalaz._
 
 trait ActorMHelpers {
   def receive[M[_], A, B](fn: A => ActorMState[M, A, B]): ActorM[M, A, B] = new Actor[A, M[B]] {
-    final def receive(a: A) = value(a)
+    final def receive(a: A) = fn(a)
   }
 
   def receiveSome[M[_], A, B, E >: MatchError](fn: PartialFunction[A, ActorMState[M, A, Validation[E, B]]])(pure: Pure[M]): ActorM[M, A, Validation[E, B]] = {
