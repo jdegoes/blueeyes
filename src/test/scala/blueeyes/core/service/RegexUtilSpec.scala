@@ -3,9 +3,8 @@ package blueeyes.core.service
 import org.specs2.mutable.Specification
 import blueeyes.parsers.RegularExpressionAST._
 import blueeyes.parsers.RegularExpressionPatten
-import org.specs2.matcher.MustThrownMatchers
 
-class RegexUtilSpec extends  Specification with RegexUtil with MustThrownMatchers{
+class RegexUtilSpec extends  Specification with RegexUtil{
   "RegexUtil" should{
     "extract name with single named group" in{
       testExtract("(?<bar>:[a-z]+@)", ("(:[a-z]+@)", List("bar"), List("bar")))

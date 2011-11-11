@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import com.mongodb.MongoException
 import org.specs2.mock._
-import org.specs2.matcher.MustThrownMatchers
 
-class MongoQueryBehaviourSpec extends Specification with Mockito with MustThrownMatchers{
+class MongoQueryBehaviourSpec extends Specification with Mockito{
   private object query extends QueryBehaviours.MongoQueryBehaviour {
     type QueryResult = Int
     def query(collection: DatabaseCollection): Int = 1

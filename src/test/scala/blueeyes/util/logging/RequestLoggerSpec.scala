@@ -6,10 +6,9 @@ import RollPolicies._
 import java.io.File
 import scala.io.Source
 import blueeyes.core.service.HttpRequestLoggerW3CFormatter
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.AfterExample
 
-class RequestLoggerSpec extends Specification with MustThrownMatchers with AfterExample{
+class RequestLoggerSpec extends Specification with AfterExample{
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
   private val formatter  = new HttpRequestLoggerW3CFormatter()
 

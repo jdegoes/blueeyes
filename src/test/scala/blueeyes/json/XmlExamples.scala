@@ -18,9 +18,8 @@ package blueeyes {
 package json {
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-object XmlExamples extends Specification with MustThrownMatchers {
+object XmlExamples extends Specification {
   import JsonAST._
   import JsonDSL._
   import JsonParser.parse

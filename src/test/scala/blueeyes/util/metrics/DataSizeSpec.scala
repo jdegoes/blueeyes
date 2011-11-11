@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 import org.scalacheck.Prop._
 import org.scalacheck._
-import org.specs2.matcher.MustThrownMatchers
 
-class DataSizeSpec extends Specification with ScalaCheck with MustThrownMatchers{
+class DataSizeSpec extends Specification with ScalaCheck{
   private val sizes = Map[DataSizeUnit, Double](Bytes -> 1.0, KiloBytes -> 1024.0, MegaBytes -> 1048576.0, GigaBytes -> 1073741824.0, TeraBytes -> 1099511627776.0, PetaBytes -> 1125899906842624.0, ExaBytes -> 1152921504606846976.0, ZettaBytes -> 1180591620717411303424.0, YottaBytes -> 1.2089258196146292E24)
 
   val dataSizeUnitGen          = Gen.oneOf(Bytes, KiloBytes, MegaBytes, GigaBytes, TeraBytes, PetaBytes, ExaBytes, ZettaBytes, YottaBytes)

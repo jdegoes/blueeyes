@@ -18,9 +18,8 @@ import akka.dispatch.Dispatchers
 import akka.util.Duration
 
 import java.util.concurrent.TimeUnit
-import org.specs2.matcher.MustThrownMatchers
 
-class StageSpec extends Specification with MustThrownMatchers{
+class StageSpec extends Specification{
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2

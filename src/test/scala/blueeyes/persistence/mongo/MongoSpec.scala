@@ -12,11 +12,10 @@ import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
 import org.scalacheck.Prop._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
-class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits with MustThrownMatchers{
+class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
   if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
 

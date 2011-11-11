@@ -2,9 +2,8 @@ package blueeyes.core.http
 
 import org.specs2.mutable.Specification
 import HttpCookies._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpCookieSpec extends Specification with MustThrownMatchers{
+class HttpCookieSpec extends Specification{
 
   "HttpCookies: Should parse simple cookies" in{
     check("Cat=Mittens", CookieData("Cat", "Mittens"))

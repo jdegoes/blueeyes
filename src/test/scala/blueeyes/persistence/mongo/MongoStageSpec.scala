@@ -15,11 +15,10 @@ import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
 import akka.actor.{Actor}
 import scalaz._
 import Scalaz._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
-class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo with MustThrownMatchers{
+class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {
     def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 |+| v2

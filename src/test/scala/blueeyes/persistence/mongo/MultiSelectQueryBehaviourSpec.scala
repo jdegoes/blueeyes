@@ -3,10 +3,9 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import IterableViewImpl._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mock._
 
-class MultiSelectQueryBehaviourSpec extends Specification with Mockito with MustThrownMatchers{
+class MultiSelectQueryBehaviourSpec extends Specification with Mockito{
   private val keys      = MongoSelection(Set())
 
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)

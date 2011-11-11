@@ -2,9 +2,8 @@ package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST.JInt
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class CounterSpec extends Specification  with MustThrownMatchers{
+class CounterSpec extends Specification {
   "a counter of zero" should {
     def makeCounter = new Counter(0)
 

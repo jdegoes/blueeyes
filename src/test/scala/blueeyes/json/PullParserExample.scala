@@ -1,9 +1,8 @@
 package blueeyes.json
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-object PullParserExample extends Specification  with MustThrownMatchers{
+object PullParserExample extends Specification {
   import JsonParser._
 
   "Pull parsing example" in {

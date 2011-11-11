@@ -1,10 +1,8 @@
 package blueeyes.core.http
 
 import org.specs2.mutable.Specification
-import blueeyes.core.http.MimeTypes._
-import org.specs2.matcher.MustThrownMatchers
 
-class LanguageRangeSpec extends Specification with MustThrownMatchers {
+class LanguageRangeSpec extends Specification{
 
   "Language-Range:  Should produce en-uk from \"en-uk\"" in {
     LanguageRanges.parseLanguageRanges("en-uk")(0).value mustEqual "en-uk"

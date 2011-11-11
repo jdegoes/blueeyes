@@ -4,11 +4,10 @@ import Future._
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
 
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.BeforeAfterExample
 import akka.actor.{Actor, ActorRef}
 
-class FutureImplicitsSpec extends Specification with MustThrownMatchers with BeforeAfterExample{
+class FutureImplicitsSpec extends Specification with BeforeAfterExample{
 
   override def is = args(sequential = true) ^ super.is
 

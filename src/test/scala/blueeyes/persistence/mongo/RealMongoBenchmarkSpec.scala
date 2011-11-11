@@ -17,9 +17,8 @@ import java.util.concurrent.TimeUnit
 import org.scalacheck.Gen._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
-import org.specs2.matcher.MustThrownMatchers
 
-class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck with MustThrownMatchers{
+class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
   if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
 

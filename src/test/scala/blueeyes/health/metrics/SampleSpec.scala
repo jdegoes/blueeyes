@@ -2,9 +2,8 @@ package blueeyes.health.metrics
 
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
-import org.specs2.matcher.MustThrownMatchers
 
-class SampleSpec extends Specification with MustThrownMatchers{
+class SampleSpec extends Specification{
   private val sample = new Sample(10)
   "stores raw data" in{
     sample += 1.1

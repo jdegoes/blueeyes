@@ -12,10 +12,9 @@ import java.io.File
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.{Step, Fragments}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson with MustThrownMatchers{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
   override def configuration = """
     services {
       foo {

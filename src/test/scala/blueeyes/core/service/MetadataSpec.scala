@@ -7,9 +7,8 @@ import blueeyes.util.printer._
 import blueeyes.core.http.HttpMethods._
 import RestPathPatternParsers._
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 
-class MetadataSpec extends Specification with HttpRequestHandlerCombinators with MustThrownMatchers{
+class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
   import Metadata._
 
   "serviceToMetadata" should{

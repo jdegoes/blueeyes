@@ -3,9 +3,8 @@ package blueeyes.core.service.engines
 import org.specs2.mutable.Specification
 import net.lag.configgy.Configgy
 import java.net.{InetSocketAddress, InetAddress}
-import org.specs2.matcher.MustThrownMatchers
 
-class InetInterfaceLookupSpec extends Specification with MustThrownMatchers{
+class InetInterfaceLookupSpec extends Specification{
   override def is = args(sequential = true) ^ super.is
   "creates socket address when address is not configured" in{
     Configgy.configureFromString("")

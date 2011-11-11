@@ -1,9 +1,8 @@
 package blueeyes.core.http
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpDateTimeSpec extends Specification with MustThrownMatchers {
+class HttpDateTimeSpec extends Specification{
 
   "Date:  Should return an HttpDate object with correct inputs" in {
     HttpHeaders.Date(HttpDateTimes.parseHttpDateTimes("  MON, 01-JAN-2001 00:00:00 UTC  ").get).value mustEqual "Mon, 01 Jan 2001 00:00:00 GMT"

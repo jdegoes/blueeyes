@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
 import blueeyes.json.Printer
 import blueeyes.json.JsonAST._
-import org.specs2.matcher.MustThrownMatchers
 
-class MockMongoDatabaseSpec extends Specification with MongoImplicits with MustThrownMatchers{
+class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
   "create collection" in{
     val mongo     = new MockMongo()

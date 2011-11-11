@@ -3,9 +3,8 @@ package blueeyes.core.service.engines.security
 import org.apache.commons.codec.binary.Base64
 import org.specs2.mutable.Specification
 import EncoderUtil._
-import org.specs2.matcher.MustThrownMatchers
 
-class CertificateDecoderSpec extends Specification with CertificateData with MustThrownMatchers{
+class CertificateDecoderSpec extends Specification with CertificateData{
 
   "CertificateKeyEntry must create key and certificate" in {
     val entry = CertificateDecoder(encodedPrivateKey, encodedCertificate)

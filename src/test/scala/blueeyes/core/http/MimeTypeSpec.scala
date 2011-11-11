@@ -2,9 +2,8 @@ package blueeyes.core.http
 
 import org.specs2.mutable.Specification
 import blueeyes.core.http.MimeTypes._
-import org.specs2.matcher.MustThrownMatchers
 
-class MimeTypeSpec extends Specification with MustThrownMatchers {
+class MimeTypeSpec extends Specification{
 
   "MimeType:  parsing should parse an example correctly" in {
     val mimeTypeExample = "text/plain; q=0.5, text/html, application/x-dvi; q=0.8, text/x-c, audio/basic"

@@ -19,9 +19,8 @@ import DataSize._
 import java.net.URLEncoder.{encode => encodeUrl}
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk, Bijection, GZIPByteChunk}
 import scalaz.Success
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with FutureMatchers  with MustThrownMatchers{
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with FutureMatchers{
   import BijectionsChunkFutureJson._
   import BijectionsChunkString._
 

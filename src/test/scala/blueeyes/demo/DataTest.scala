@@ -9,13 +9,12 @@ package blueeyes.demo {
   import blueeyes.demo.Serialization._
   import blueeyes.demo.Constants._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
 object ExampleProductData {
     lazy val ExampleContact: blueeyes.demo.Contact = JObject(Nil).deserialize[blueeyes.demo.Contact]
   }
 
-  object DataProductSerializationExamples extends Specification  with MustThrownMatchers{
+  object DataProductSerializationExamples extends Specification {
     "Deserialization of Contact succeeds even when information is missing" in {
       ExampleProductData.ExampleContact.isInstanceOf[blueeyes.demo.Contact] must be_==(true)
     }

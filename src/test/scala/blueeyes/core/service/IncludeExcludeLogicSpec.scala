@@ -2,9 +2,8 @@ package blueeyes.core.service
 
 import org.specs2.mutable.Specification
 import util.matching.Regex
-import org.specs2.matcher.MustThrownMatchers
 
-class IncludeExcludeLogicSpec extends Specification with MustThrownMatchers{
+class IncludeExcludeLogicSpec extends Specification{
   "IncludeExcludeLogic" should{
     "include if neither einclude nor exclude are specified" in{
       new IncludeExcludeLogic(Nil, Nil)("/foo") must be_==(true)

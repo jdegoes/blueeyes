@@ -14,9 +14,8 @@ import blueeyes.core.http.HttpVersions._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import blueeyes.core.http.MimeTypes._
 import org.specs2.execute.PendingUntilFixed
-import org.specs2.matcher.MustThrownMatchers
 
-class NettyConvertersSpec extends Specification with PendingUntilFixed with NettyConverters with BijectionsChunkString with MustThrownMatchers{
+class NettyConvertersSpec extends Specification with PendingUntilFixed with NettyConverters with BijectionsChunkString{
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }

@@ -1,9 +1,8 @@
 package blueeyes.core.http
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestSpec extends Specification with MustThrownMatchers {
+class HttpRequestSpec extends Specification{
   "HttpRequest.apply" should {
     "parse query string properly" in {
       val ps = HttpRequest(method = HttpMethods.GET, uri = "http://foo.com?a=b&c=d&e").parameters

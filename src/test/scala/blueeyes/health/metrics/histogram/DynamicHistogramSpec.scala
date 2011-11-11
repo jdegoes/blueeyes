@@ -3,9 +3,8 @@ package blueeyes.health.metrics.histogram
 import org.specs2.mutable.Specification
 import ValueStrategy._
 import java.util.concurrent.TimeUnit
-import org.specs2.matcher.MustThrownMatchers
 
-class DynamicHistogramSpec extends Specification with MustThrownMatchers{
+class DynamicHistogramSpec extends Specification{
   private val clock = new Clock()
   implicit private val clockF = clock.now _
   "DynamicHistogram" should{

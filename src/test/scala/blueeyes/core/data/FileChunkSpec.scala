@@ -4,10 +4,9 @@ import org.specs2.mutable.Specification
 import java.io.File
 import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.{AfterExample, BeforeAfterExample}
 
-class FileSinkSpec extends Specification with Data with MustThrownMatchers with BeforeAfterExample{
+class FileSinkSpec extends Specification with Data with BeforeAfterExample{
 
   override def is = args(sequential = true) ^ super.is
 
@@ -61,7 +60,7 @@ class FileSinkSpec extends Specification with Data with MustThrownMatchers with 
   protected def after = dataFile.delete
 }
 
-class FileSourceSpec extends Specification with Data with AfterExample with MustThrownMatchers{
+class FileSourceSpec extends Specification with Data with AfterExample{
 
   "FileSource" should {
     "read all data" in{
