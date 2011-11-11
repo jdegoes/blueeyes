@@ -54,7 +54,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
-  override def map(fs: =>Fragments) = super.map(fs) ^ Step(findLogFile foreach { _.delete })
+  override protected def afterFragment = Some(Step(findLogFile foreach { _.delete }))
 
   private def findLogFile = {
     new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
