@@ -28,16 +28,16 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     stopServer
   }
 
-  override def map(fs: =>Fragments) = beforeFragment.map(specBefore ^ _).getOrElse(Fragments.create(specBefore)) ^
+  override def map(fs: =>Fragments) = specBefore ^ beforeFragment ^
     fs ^
-    afterFragment.map(_ ^ specAfter).getOrElse(Fragments.create(specAfter))
+    afterFragment ^ specAfter
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def configuration  = ""
 
-  protected def beforeFragment: Option[Fragment] = None
-  protected def afterFragment: Option[Fragment]  = None
+  protected def beforeFragment: Fragment = Step(())
+  protected def afterFragment: Fragment  = Step(())
 
   private val httpServer = new HttpServer{
     def services = self.services
