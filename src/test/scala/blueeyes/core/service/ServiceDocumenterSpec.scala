@@ -5,9 +5,8 @@ import blueeyes.util.printer.HtmlPrinter
 import net.lag.configgy.Config
 import blueeyes.core.http.{HttpResponse, HttpRequest}
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 
-class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators with MustThrownMatchers{
+class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators{
   import Metadata._
 
   "ServiceDocumente" should{

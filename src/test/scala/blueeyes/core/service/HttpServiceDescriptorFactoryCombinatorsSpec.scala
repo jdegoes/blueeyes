@@ -12,10 +12,9 @@ import java.io.File
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.{Step, Fragments}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson with MustThrownMatchers{
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
   override def configuration = """
     services {
       foo {
@@ -55,7 +54,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
-  override def map(fs: =>Fragments) = super.map(fs) ^ Step(findLogFile foreach { _.delete })
+  override protected def afterFragment = Step(findLogFile foreach { _.delete })
 
   private def findLogFile = {
     new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption

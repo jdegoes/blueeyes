@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import scala.util.matching.Regex
 
 import blueeyes.core.http.{HttpRequest, HttpMethods}
-import org.specs2.matcher.MustThrownMatchers
 
-class RestPathPatternSpec extends Specification with MustThrownMatchers{
+class RestPathPatternSpec extends Specification{
   import RestPathPattern._
 
   "path matching and regex extraction" should {

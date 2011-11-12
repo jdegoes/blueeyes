@@ -4,9 +4,8 @@ import QueryParser._
 import java.net.URI
 import org.specs2.mutable.Specification
 import java.net.URLEncoder._
-import org.specs2.matcher.MustThrownMatchers
 
-class QueryParserSpec extends Specification  with MustThrownMatchers{
+class QueryParserSpec extends Specification {
   val baseURI = "http://www.socialmedia.com/test?"
   val encoding = "UTF-8"
 

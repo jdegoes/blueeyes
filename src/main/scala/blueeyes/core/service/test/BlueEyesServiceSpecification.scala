@@ -10,7 +10,7 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
-import org.specs2.specification.{Fragments, Step}
+import org.specs2.specification.{Fragment, Fragments, Step}
 
 class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
@@ -19,17 +19,25 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
 
   override def is = args(sequential = true) ^ super.is
-  override def map(fs: =>Fragments) = Step {
+  private val specBefore = Step {
     setMockCongiguration
     startServer
-  } ^ fs ^ Step {
+  }
+  private val specAfter = Step {
     resetMockCongiguration
     stopServer
   }
 
+  override def map(fs: =>Fragments) = specBefore ^ beforeFragment ^
+    fs ^
+    afterFragment ^ specAfter
+
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def configuration  = ""
+
+  protected def beforeFragment: Fragment = Step(())
+  protected def afterFragment: Fragment  = Step(())
 
   private val httpServer = new HttpServer{
     def services = self.services

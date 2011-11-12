@@ -5,9 +5,8 @@ import MongoQueryBuilder._
 import org.mockito.Matchers._
 import blueeyes.json.JsonAST._
 import org.specs2.mock.Mockito
-import org.specs2.matcher.MustThrownMatchers
 
-class UpdateQueryBehaviourSpec  extends Specification with Mockito with MustThrownMatchers{
+class UpdateQueryBehaviourSpec  extends Specification with Mockito{
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)
 
   "Call collection method" in{

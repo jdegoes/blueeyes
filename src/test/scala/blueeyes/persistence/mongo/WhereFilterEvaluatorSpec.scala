@@ -3,9 +3,8 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import Evaluators._
-import org.specs2.matcher.MustThrownMatchers
 
-class WhereFilterEvaluatorSpec extends Specification with MustThrownMatchers{
+class WhereFilterEvaluatorSpec extends Specification{
   private val jObject      = JObject(JField("address", JObject( JField("code", JInt(1)) :: Nil)) :: Nil)
 
   "WhereFilterEvaluator" should{

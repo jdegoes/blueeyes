@@ -6,9 +6,8 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JPath
 import org.specs2.mock._
-import org.specs2.matcher.MustThrownMatchers
 
-class SelectOneQueryBehaviourSpec extends Specification with Mockito with MustThrownMatchers{
+class SelectOneQueryBehaviourSpec extends Specification with Mockito{
 
   private val keys     = MongoSelection(Set(JPath("foo"), JPath("bar")))
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road 1")) ::  Nil)) :: Nil)

@@ -5,9 +5,8 @@ import org.specs2.mutable.Specification
 
 import ValueStrategy._
 import blueeyes.health.metrics.Timer
-import org.specs2.matcher.MustThrownMatchers
 
-class TimerHistogramSpec extends Specification with MustThrownMatchers{
+class TimerHistogramSpec extends Specification{
   "TimerHistogram" should{
     "create Timer Histogram" in{
       val histogram = new StaticHistogram[Timer](new DynamicLengthBucketsStrategy()).histogram(Map(1.2 -> 2l, 1.5 -> 2l, 5.9 -> 1l, 12.1 -> 3l).toList.sortWith((e1, e2) => (e1._1 < e2._1)))

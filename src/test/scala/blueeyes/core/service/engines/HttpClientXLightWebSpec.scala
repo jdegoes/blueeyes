@@ -15,10 +15,9 @@ import blueeyes.concurrent.Future.FutureFunctor
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.{Step, Fragments}
 
-class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators  with MustThrownMatchers{
+class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators {
   val duration = 250.milliseconds
   val retries = 30
 

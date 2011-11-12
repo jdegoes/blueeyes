@@ -1,10 +1,9 @@
 package blueeyes.health.metrics
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 import java.util.concurrent.TimeUnit
 
-class IntervalParserSpec extends Specification with MustThrownMatchers{
+class IntervalParserSpec extends Specification{
   "IntervalParser" should{
     "parse 'seconds' interval" in{
       IntervalParser.parse("30s x 10") mustEqual (interval(IntervalLength(30, TimeUnit.SECONDS), 10))

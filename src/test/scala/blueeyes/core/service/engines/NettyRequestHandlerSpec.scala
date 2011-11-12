@@ -14,12 +14,11 @@ import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
 import scalaz.Scalaz._
 import blueeyes.core.service.NotServed
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mock._
 import org.mockito.{Matchers, ArgumentMatcher}
 import scalaz.{Success, Validation}
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with Mockito with BijectionsChunkString with MustThrownMatchers{
+class NettyRequestHandlerSpec extends Specification with NettyConverters with Mockito with BijectionsChunkString{
   private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]

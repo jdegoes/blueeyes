@@ -10,9 +10,8 @@ import blueeyes.json.{JsonParser, JPath}
 
 import scalaz._
 import Scalaz._
-import org.specs2.matcher.MustThrownMatchers
 
-class MockDatabaseCollectionSpec extends Specification with MustThrownMatchers{
+class MockDatabaseCollectionSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(50), JInt(50)))) :: Nil)
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(60), JInt(60)))) :: Nil)

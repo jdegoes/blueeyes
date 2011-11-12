@@ -1,9 +1,8 @@
 package blueeyes.core.http
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class CharSetSpec extends Specification  with MustThrownMatchers{
+class CharSetSpec extends Specification{
 
   "CharSets:  Should produce a charset of type US-ASCII from \"US-ASCII\"" in {
     CharSets.parseCharSets("US-ASCII")(0).value mustEqual "US-ASCII"

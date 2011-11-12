@@ -2,9 +2,8 @@ package blueeyes.health
 
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST.JInt
-import org.specs2.matcher.MustThrownMatchers
 
-class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits with MustThrownMatchers{
+class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{
   "ExportedStatistic: gets lazy value" in{
     var value: Int = 0
     def lazyF: Int = value

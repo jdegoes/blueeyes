@@ -10,9 +10,8 @@ import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.BijectionsChunkString._
 import org.apache.commons.codec.binary.Base64
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestLoggerSpec extends Specification with ClockMock with MustThrownMatchers{
+class HttpRequestLoggerSpec extends Specification with ClockMock{
 
   private val DateFormatter = DateTimeFormat.forPattern("yyyy-MM-dd")
   private val TimeFormatter = DateTimeFormat.forPattern("HH:mm:ss.S")

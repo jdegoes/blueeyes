@@ -9,10 +9,9 @@ import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.ScalaCheck
 
-class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with MustThrownMatchers{
+class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val filter3    = MongoFilterBuilder(JPath("rar")).<(MongoPrimitiveInt(6))

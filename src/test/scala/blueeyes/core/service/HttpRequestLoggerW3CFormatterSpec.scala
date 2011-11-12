@@ -3,9 +3,8 @@ package blueeyes.core.service
 import org.specs2.mutable.Specification
 import org.apache.commons.codec.binary.Base64
 import blueeyes.parsers.W3ExtendedLogAST._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestLoggerW3CFormatterSpec extends Specification  with MustThrownMatchers{
+class HttpRequestLoggerW3CFormatterSpec extends Specification{
   private val formatter = new HttpRequestLoggerW3CFormatter()
   "HttpRequestLoggerW3CFormatter" should{
     "format values in one line" in{

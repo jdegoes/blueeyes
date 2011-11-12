@@ -15,11 +15,10 @@ import security.BlueEyesKeyStoreFactory
 import javax.net.ssl.TrustManagerFactory
 import net.lag.configgy.{ConfigMap, Configgy}
 import java.io.File
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.specification.{Step, Fragments}
 import org.specs2.time.TimeConversions._
 
-class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with MustThrownMatchers{
+class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString{
 
   private val configPattern = """server{
   port = %d

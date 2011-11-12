@@ -2,9 +2,8 @@ package blueeyes.core.service.engines
 
 import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{HttpMethod, DefaultHttpRequest, HttpVersion}
-import org.specs2.matcher.MustThrownMatchers
 
-class FullURIHttpRequestDecoderSpec extends Specification with MustThrownMatchers{
+class FullURIHttpRequestDecoderSpec extends Specification{
   "creates full uri" in{
     val decoder = new FullURIHttpRequestDecoder("http", "google", 8080, 8192)
     val message = decoder.createMessage(Array("GET", "/foo", "HTTP/1.1")).asInstanceOf[DefaultHttpRequest]

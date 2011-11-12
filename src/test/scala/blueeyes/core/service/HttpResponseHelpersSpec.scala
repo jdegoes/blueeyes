@@ -5,7 +5,6 @@ import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 
 class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers{
   

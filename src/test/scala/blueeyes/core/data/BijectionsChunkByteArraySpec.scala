@@ -3,9 +3,8 @@ package blueeyes.core.data
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 
-class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArray with BijectionsChunkByteArray with MustThrownMatchers{
+class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArray with BijectionsChunkByteArray{
   private val jObject1 = JObject(List(JField("foo", JString("bar"))))
   private val jObject2 = JObject(List(JField("bar", JString("foo"))))
   private val bijection = chunksToChunksArrayByte[JValue]

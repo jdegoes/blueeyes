@@ -1,9 +1,8 @@
 package blueeyes.util
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class CommandLineArgumentsSpec extends Specification  with MustThrownMatchers{
+class CommandLineArgumentsSpec extends Specification {
   "No parameters or values should be parsed properly" in {
     val c = CommandLineArguments()
     

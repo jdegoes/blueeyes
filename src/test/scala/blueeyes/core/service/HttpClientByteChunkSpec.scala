@@ -6,9 +6,8 @@ import blueeyes.core.http._
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
 import blueeyes.util.metrics.DataSize
 import DataSize._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpClientByteChunkSpec extends Specification with MustThrownMatchers{
+class HttpClientByteChunkSpec extends Specification{
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
       val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")

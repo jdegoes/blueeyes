@@ -6,9 +6,8 @@ import scala.util.Random
 import blueeyes.util.SpecialCharToStringTranscoder
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
-import org.specs2.matcher.MustThrownMatchers
 
-class URITranscodersSpec extends Specification with ScalaCheck  with MustThrownMatchers{
+class URITranscodersSpec extends Specification with ScalaCheck{
   private val random = new Random()
 
   private def unicodeChar = Gen((p: Gen.Params) => {

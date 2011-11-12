@@ -2,9 +2,8 @@ package blueeyes.core.http
 
 import org.specs2.mutable.Specification
 import HttpHeaders._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpHeadersSpec extends Specification with MustThrownMatchers {
+class HttpHeadersSpec extends Specification{
   "HttpHeaders" should {
     "find headers by type" in{
       val headers = HttpHeaders(List("authorization" -> "foo"))

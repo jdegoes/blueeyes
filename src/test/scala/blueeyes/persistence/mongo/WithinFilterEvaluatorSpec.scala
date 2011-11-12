@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.Evaluators.WithinFilterEvaluator
 import com.mongodb.MongoException
-import org.specs2.matcher.MustThrownMatchers
 
-class WithinFilterEvaluatorSpec extends Specification  with MustThrownMatchers{
+class WithinFilterEvaluatorSpec extends Specification {
   private val withinRadius       = JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(10.0) :: JDouble(10.0) :: Nil) :: JDouble(500.0) :: Nil)) :: Nil)) :: Nil)
   private val withinBox          = JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(-10.0) :: JDouble(-20.0) :: Nil) :: JArray(JDouble(20.0) :: JDouble(20.0) :: Nil) :: Nil)) :: Nil)) :: Nil)
   private val withinPolygon      = JObject(JField("$within", JObject(JField("$polygon", JArray(JArray(JDouble(-20.0) :: JDouble(30.0) :: Nil) :: JArray(JDouble(-20.0) :: JDouble(10.0) :: Nil) :: JArray(JDouble(-10.0) :: JDouble(10.0) :: Nil) :: JArray(JDouble(-10.0) :: JDouble(30.0) :: Nil) :: Nil)) :: Nil)) :: Nil)

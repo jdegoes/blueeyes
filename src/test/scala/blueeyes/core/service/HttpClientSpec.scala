@@ -6,9 +6,8 @@ import blueeyes.core.data.BijectionsByteArray
 import blueeyes.concurrent.Future
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpClientSpec extends Specification with BijectionsByteArray with MustThrownMatchers{
+class HttpClientSpec extends Specification with BijectionsByteArray{
 
   override def is = args(sequential = true) ^ super.is
 

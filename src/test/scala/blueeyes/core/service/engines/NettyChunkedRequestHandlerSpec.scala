@@ -9,11 +9,10 @@ import org.jboss.netty.channel._
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mock._
 import org.specs2.specification.BeforeExample
 
-class NettyChunkedRequestHandlerSpec extends Specification with Mockito with NettyConverters with MustThrownMatchers with BeforeExample{
+class NettyChunkedRequestHandlerSpec extends Specification with Mockito with NettyConverters with BeforeExample{
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]

@@ -1,11 +1,9 @@
 package blueeyes.persistence.mongo.mock
 
-import blueeyes.json.JsonAST._
 import blueeyes.persistence.mongo.MongoImplicits._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class MockMongoSpec extends Specification with MustThrownMatchers{
+class MockMongoSpec extends Specification{
   "create database" in{
     val mongo = new MockMongo()
 

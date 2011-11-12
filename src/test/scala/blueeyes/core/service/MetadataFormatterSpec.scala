@@ -5,9 +5,8 @@ import blueeyes.util.printer._
 
 import org.specs2.mutable.Specification
 import blueeyes.core.service.RestPathPatternParsers.LiteralPathPattern
-import org.specs2.matcher.MustThrownMatchers
 
-class MetadataFormatterSpec extends Specification  with MustThrownMatchers{
+class MetadataFormatterSpec extends Specification{
 
   "pretty-printing service metadata" should {
     "pretty-print a simple set of metadata" in {

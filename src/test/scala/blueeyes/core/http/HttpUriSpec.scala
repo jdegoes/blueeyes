@@ -1,9 +1,8 @@
 package blueeyes.core.http
 
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpUriSpec extends Specification with MustThrownMatchers {
+class HttpUriSpec extends Specification{
   "Host:  Should parse correct host uri" in {
     HttpHeaders.Host(URI.opt("http://www.socialmedia.com/coolServer/index.html").get).value mustEqual "www.socialmedia.com"
   }

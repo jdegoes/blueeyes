@@ -4,7 +4,6 @@ import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import org.specs2.mock._
-import org.specs2.matcher.MustThrownMatchers
 
 class HttpServiceBuilderSpec extends Specification with Mockito{
   "ServiceBuilder startup: creates StartupDescriptor with specified startup function" in{

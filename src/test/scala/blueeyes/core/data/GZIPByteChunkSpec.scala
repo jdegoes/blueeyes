@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import java.util.zip.GZIPInputStream
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 
-class GZIPByteChunkSpec extends Specification with MustThrownMatchers{
+class GZIPByteChunkSpec extends Specification{
   "GZICompressedByteChunk" should{
     "compress one chunk" in{
       testCompressed(new MemoryChunk("foo".getBytes, () => None), "foo")

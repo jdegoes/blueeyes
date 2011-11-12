@@ -14,10 +14,9 @@ import blueeyes.concurrent.Future
 import scalaz._
 import Scalaz._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.ScalaCheck
 
-class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with MustThrownMatchers{
+class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
 
   def getPatch = for{
     filter <- getMongoFieldFilter

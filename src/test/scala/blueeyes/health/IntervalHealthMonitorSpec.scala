@@ -6,10 +6,9 @@ import blueeyes.json.JPathImplicits._
 import blueeyes.concurrent.Future
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JsonParser, Printer, JPath}
-import org.specs2.matcher.MustThrownMatchers
 import java.util.concurrent.TimeUnit
 
-class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits with MustThrownMatchers{
+class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits{
 
   private val monitor = new IntervalHealthMonitor(eternity)
 

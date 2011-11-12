@@ -9,9 +9,8 @@ import blueeyes.persistence.mongo._
 import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.data.BijectionsChunkJson
-import org.specs2.matcher.MustThrownMatchers
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson with MustThrownMatchers{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   override def configuration = """

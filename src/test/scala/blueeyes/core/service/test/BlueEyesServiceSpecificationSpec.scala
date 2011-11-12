@@ -11,10 +11,9 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import TestService._
 import org.specs2.time.TimeConversions._
 import blueeyes.concurrent.test.FutureMatchers
-import org.specs2.matcher.MustThrownMatchers
 
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers with MustThrownMatchers{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers{
   "Service Specification" should {
     "support get by valid URL" in {
       val f = service.get[String]("/bar/id/bar.html")

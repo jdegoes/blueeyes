@@ -7,9 +7,8 @@ import org.joda.time.DateTime
 import java.util.regex.Pattern
 import java.util.regex.Pattern._
 import com.mongodb.{DBObject, BasicDBList, BasicDBObject}
-import org.specs2.matcher.MustThrownMatchers
 
-class MongoValueBijectionSpec extends Specification  with MustThrownMatchers{
+class MongoValueBijectionSpec extends Specification {
   "fromDBObject" should{
     "convert string type" in {
       testFromMongoObject("string", "foo", MongoString("foo"))

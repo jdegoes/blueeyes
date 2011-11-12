@@ -4,9 +4,8 @@ import org.specs2.mutable.Specification
 import blueeyes.json.Printer
 import blueeyes.json.JsonAST._
 import blueeyes.parsers.W3ExtendedLogAST._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpRequestLoggerJsonFormatterSpec extends Specification with MustThrownMatchers{
+class HttpRequestLoggerJsonFormatterSpec extends Specification{
   private val formatter = new HttpRequestLoggerJsonFormatter()
   "HttpRequestLoggerJsonFormatter" should{
     "create valid json for values without prefix" in{

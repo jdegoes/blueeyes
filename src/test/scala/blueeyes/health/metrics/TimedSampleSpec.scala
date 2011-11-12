@@ -3,10 +3,9 @@ package blueeyes.health.metrics
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
-import org.specs2.matcher.MustThrownMatchers
 import java.util.concurrent.TimeUnit
 
-class TimedSampleSpec extends Specification with MustThrownMatchers{
+class TimedSampleSpec extends Specification{
   private val clock = new Clock()
   "TimedSample" should{
     "create histogram" in{

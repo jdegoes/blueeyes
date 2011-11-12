@@ -5,9 +5,8 @@ import blueeyes.json.JsonAST._
 import blueeyes.core.http.HttpStatus
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
-import org.specs2.matcher.MustThrownMatchers
 
-class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService with MustThrownMatchers{
+class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService{
    "Server Health Monitor Service" should{
     "get server health" in {
       val f = service.get[JValue]("/blueeyes/server/health")

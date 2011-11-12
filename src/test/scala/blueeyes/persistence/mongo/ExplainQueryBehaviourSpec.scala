@@ -3,10 +3,9 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath, JsonParser}
-import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mock._
 
-class ExplainQueryBehaviourSpec extends Specification with Mockito with MustThrownMatchers{
+class ExplainQueryBehaviourSpec extends Specification with Mockito{
   private val explanation = JsonParser.parse("""{
     "cursor" : "BasicCursor",
     "nscanned" : 3,

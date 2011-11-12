@@ -3,10 +3,9 @@ package blueeyes.concurrent
 import org.specs2.mutable.Specification
 import blueeyes.util.metrics.Duration
 import org.specs2.time.TimeConversions._
-import org.specs2.matcher.MustThrownMatchers
 import java.util.concurrent.TimeUnit
 
-class ScheduledExecutorSpec extends Specification with MustThrownMatchers{
+class ScheduledExecutorSpec extends Specification{
   "ScheduledExecutor.once" should {
     "execute function" in{
       val f = ScheduledExecutor.once((a: Int) => Future.sync[Int](a), 1, Duration(10, TimeUnit.MILLISECONDS))

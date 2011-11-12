@@ -4,10 +4,9 @@ import blueeyes.concurrent.Future
 import blueeyes.util.metrics.Duration
 import Duration._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 import java.util.concurrent.TimeUnit
 
-class TimerTest extends Specification  with MustThrownMatchers{
+class TimerTest extends Specification {
   val precision = 5.0 // milliseconds
 
   "timing an event" should {

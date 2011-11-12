@@ -2,9 +2,8 @@ package blueeyes.concurrent
 
 import Future._
 import org.specs2.mutable.Specification
-import org.specs2.matcher.MustThrownMatchers
 
-class FutureSpec extends Specification  with MustThrownMatchers{
+class FutureSpec extends Specification{
   "Future" should {
     "support cancel" in { 
       val f = Future.dead[String](new Exception("error"))

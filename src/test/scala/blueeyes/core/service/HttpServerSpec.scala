@@ -8,9 +8,8 @@ import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import net.lag.configgy.Configgy
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
-import org.specs2.matcher.MustThrownMatchers
 
-class HttpServerSpec extends Specification with BijectionsChunkString with MustThrownMatchers{
+class HttpServerSpec extends Specification with BijectionsChunkString{
 
   private val server = new TestServer()
 

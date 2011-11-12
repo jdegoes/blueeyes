@@ -3,9 +3,8 @@ package blueeyes.js
 import org.specs2.mutable.Specification
 import blueeyes.json.{JsonParser}
 import blueeyes.json.JsonAST._
-import org.specs2.matcher.MustThrownMatchers
 
-class RhinoScriptSpec extends Specification with MustThrownMatchers{
+class RhinoScriptSpec extends Specification{
   "RhinoScript" should{
     "execute script which return JObject" in{
       val result = RhinoScript("""var f = function(x){x.foo.bar += 1; return x}; f({foo: {bar: 1}, name: "hello"})""")()
