@@ -10,7 +10,7 @@ import scalaz.Scalaz._
  * This trait is invariant because some actors may have complex dependencies 
  * between input / output types and some other polymorphic type.
  */
-trait ActorV[A, B] extends Serializable { self =>
+trait ActorV[A, B] extends (A => ActorState[A, B]) with Serializable { self =>
   final def apply(a: A): ActorState[A, B] = receive(a)
 
   final def ! (a: A): ActorState[A, B] = receive(a)
