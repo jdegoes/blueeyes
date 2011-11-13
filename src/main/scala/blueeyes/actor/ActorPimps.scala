@@ -161,17 +161,8 @@ trait ActorPimps {
     /** Converts a synchronous actor into an aynchronous actor.
      */
     def async: ActorAsync[A, B] = {
-      def unwrap[A, B](future: Future[ActorState[A, B]]): ActorStateAsync[A, B] = {
-        (future.map(_._1), ActorMHelpers.receive[Future, A, B] { a: A =>
-          unwrap(future.map {
-            case (_, next) => next ! a
-          })
-        })
-      }
-
-      ActorMHelpers.receive[Future, A, B] { a: A =>
-        unwrap(Future.async(value ! a))
-      }
+      // TODO
+      throw new Exception("Not implemented")
     }
 
     /** Workaround invariance of actor.

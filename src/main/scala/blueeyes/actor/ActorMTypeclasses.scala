@@ -3,6 +3,8 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
+import blueeyes.concurrent.Future
+
 trait ActorMTypeclasses {
   import ActorMHelpers._
 
@@ -18,43 +20,61 @@ trait ActorMTypeclasses {
     }
   }
 
-  implicit def ActorMApply[M[_], A](implicit monad: Monad[M]) = new Apply[({type λ[α]=ActorM[M, A, α]})#λ] {
-    // Holy shit, batman!
-    def apply[B, C](actor1: ActorM[M, A, B => C], actor2: ActorM[M, A, B]): ActorM[M, A, C] = receive { a: A =>
-      ((actor1 ! a), (actor2 ! a)) match {
-        case ((bToC, next1), (b, next2)) =>
-          unwrapM(b.map { b: B =>
-            unwrapM(bToC.map { bToC =>
-              val c = bToC(b)
+  implicit def ActorMFunctor[M[_], A](implicit monad: Monad[M]) = new Functor[({type λ[α]=ActorM[M, A, α]})#λ] {
+    def fmap[B, C](actor: ActorM[M, A, B], f: B => C): ActorM[M, A, C] = receive { a: A =>
+      val (mb, next) = (actor ! a)
 
-              (monad.pure(c), apply(next1, next2))
-            })
-          })
+      (mb.map(f), fmap(next, f))
+    }
+  }
+
+  implicit def ActorOptionApply[A](implicit monad: Monad[Option]) = new Apply[({type λ[α]=ActorM[Option, A, α]})#λ] {
+    def apply[B, C](actor1: ActorM[Option, A, B => C], actor2: ActorM[Option, A, B]): ActorM[Option, A, C] = receive { a: A =>
+      ((actor1 ! a), (actor2 ! a)) match {
+        case ((Some(bToC), next1), (Some(b), next2)) =>
+          (monad.pure(bToC(b)), apply(next1, next2))
+
+        case ((_, next1), (_, next2)) =>
+          (None, apply(next1, next2))
       }
     }
   }
 
-  implicit def ActorMCategory[M[_]](implicit monad: Monad[M]) = new Category[({type λ[α, β]=ActorM[M, α, β]})#λ] {
+  implicit def ActorFutureCategory(implicit monad: Monad[Future]) = new Category[({type λ[α, β]=ActorM[Future, α, β]})#λ] {
     def id[A] = {
-      lazy val lazySelf: ActorM[M, A, A] = receive[M, A, A] { a: A => (monad.pure(a), lazySelf) }
+      lazy val lazySelf: ActorM[Future, A, A] = receive[Future, A, A] { a: A => (monad.pure(a), lazySelf) }
 
       lazySelf
     }
 
-    def compose[A, B, C](f: ActorM[M, B, C], g: ActorM[M, A, B]): ActorM[M, A, C] = receive[M, A, C] { a: A =>
-      (g ! a) match {
-        case (b, next1) =>
-          unwrapM[M, A, C](b.map { b: B =>
-            (f ! b) match {
-              case (c, next2) => (c, compose(next2, next1))
-            }
-          })
+    def compose[A, B, C](f: ActorM[Future, B, C], g: ActorM[Future, A, B]): ActorM[Future, A, C] = {
+      // TODO
+      throw new Exception("Not implemented")
+    }
+  }
+
+  implicit def ActorOptionCategory(implicit monad: Monad[Option]) = new Category[({type λ[α, β]=ActorM[Option, α, β]})#λ] {
+    def id[A] = {
+      lazy val lazySelf: ActorM[Option, A, A] = receive[Option, A, A] { a: A => (monad.pure(a), lazySelf) }
+
+      lazySelf
+    }
+
+    def compose[A, B, C](f: ActorM[Option, B, C], g: ActorM[Option, A, B]): ActorM[Option, A, C] = receive[Option, A, C] { a: A =>
+      val (mb, next1) = g ! a
+
+      mb.map { b =>
+        val (mc, next2) = f ! b
+
+        (mc, compose(next2, next1))
+      }.getOrElse {
+        (None, compose(f, next1))
       }
     }
   }
 
-  implicit def ActorMArrow[M[_]](implicit monad: Monad[M]) = new Arrow[({type λ[α, β]=ActorM[M, α, β]})#λ] {
-    val category = ActorMCategory
+  implicit def ActorMArrow[M[_]](implicit monad: Monad[M], cat: Category[({type λ[α, β]=ActorM[M, α, β]})#λ]) = new Arrow[({type λ[α, β]=ActorM[M, α, β]})#λ] {
+    val category = cat
     
     def arrow[A, B](f: A => B): ActorM[M, A, B] = moore(f)
 
@@ -75,23 +95,8 @@ trait ActorMTypeclasses {
     }
   }
 
-  implicit def ActorMApplicative[M[_], A](implicit monad: Monad[M]): Applicative[({type λ[α]=ActorM[M, A, α]})#λ] = 
-    Applicative.applicative[({type λ[α] = ActorM[M, A, α]})#λ](ActorMPure[M, A], ActorMApply[M, A])
-
   implicit def ActorMStatePure[M[_], A](implicit monad: Monad[M]) = new Pure[({type λ[α]=ActorMState[M, A, α]})#λ] {
     def pure[B](b: => B): ActorMState[M, A, B] = (monad.pure(b), ActorMPure.pure(b))
   }
-
-  implicit def ActorMStateApply[M[_], A](implicit monad: Monad[M]) = new Apply[({type λ[α]=ActorMState[M, A, α]})#λ] {
-    def apply[B, C](state1: ActorMState[M, A, B => C], state2: ActorMState[M, A, B]): ActorMState[M, A, C] = {
-      val (bToCM, next1) = state1
-      val (bM,    next2) = state2
-
-      (for (bToC <- bToCM; b <- bM) yield bToC(b), ActorMApply.apply(next1, next2))
-    }
-  }
-
-  implicit def ActorMStateApplicative[M[_], A](implicit monad: Monad[M]): Applicative[({type λ[α]=ActorMState[M, A, α]})#λ] = 
-    Applicative.applicative[({type λ[α] = ActorMState[M, A, α]})#λ](ActorMStatePure[M, A], ActorMStateApply[M, A])
 }
 object ActorMTypeclasses extends ActorMTypeclasses

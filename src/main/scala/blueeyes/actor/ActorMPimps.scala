@@ -48,13 +48,8 @@ trait ActorMPimps {
     }
 
     def ~> [C, D] (that: ActorM[M, (C, ActorM[M, A, B]), (D, ActorM[M, A, B])])(implicit monad: Monad[M]): ActorM[M, C, D] = {
-      receive { c: C =>
-        val (mv, that2) = that ! ((c, value))
-
-        unwrapM(mv.map {
-          case (d, this2) => (monad.pure(d), this2 ~> that2)
-        })
-      }
+      // TODO:
+      null
     }
     
     def * [AA, BB](that: ActorM[M, AA, BB])(implicit monad: Monad[M]): ActorM[M, (A, AA), (B, BB)] = receive {
@@ -82,7 +77,9 @@ trait ActorMPimps {
 
           val mz2 = for (b <- mb; z <- mz) yield f(z, b)
 
-          unwrapM[M, A, Z](for (z2 <- mz2) yield (mz2, next.scan(z2)(f)))
+          // for (z2 <- mz2) yield (mz2, next.scan(z2)(f))
+          // TODO:
+          null
         }
       }
 
@@ -98,9 +95,9 @@ trait ActorMPimps {
       }
     }
 
-    def ifTrue[C](f: B => Boolean)(then: ActorM[M, B, C], orElse: ActorM[M, B, C])(implicit monad: Monad[M]): ActorM[M, A, C] = switch(orElse)(f -> then)
+    def ifTrue[C](f: B => Boolean)(then: ActorM[M, B, C], orElse: ActorM[M, B, C])(implicit monad: Monad[M], category: Category[({type λ[α, β]=ActorM[M, α, β]})#λ]): ActorM[M, A, C] = switch(orElse)(f -> then)
 
-    def switch[C](defaultCase: ActorM[M, B, C])(cases: (B => Boolean, ActorM[M, B, C])*)(implicit monad: Monad[M]): ActorM[M, A, C] = {
+    def switch[C](defaultCase: ActorM[M, B, C])(cases: (B => Boolean, ActorM[M, B, C])*)(implicit monad: Monad[M], category: Category[({type λ[α, β]=ActorM[M, α, β]})#λ]): ActorM[M, A, C] = {
       def reduce(t: (B => Boolean, ActorM[M, B, C]), orElse: ActorM[M, B, C]): ActorM[M, B, C] = {
         val (p1, a1) = t
 
@@ -127,28 +124,23 @@ trait ActorMPimps {
   }
 
   case class TupledOutputPimpM[M[_], A, B1, B2](value: ActorM[M, A, (B1, B2)]) extends NewType[ActorM[M, A, (B1, B2)]] {
-    def >- [B](f: (B1, B2) => B)(implicit monad: Monad[M]): ActorM[M, A, B] = receive { a: A =>
-      val (mv, next) = value ! a
-
-      unwrapM(mv.map {
-        case ((b1, b2)) =>
-          val c = f(b1, b2)
-
-          (monad.pure(c), next >- (f))
-      })
-    }
+    def >- [B](f: (B1, B2) => B)(implicit monad: Monad[M]): ActorM[M, A, B] = value.postmap(f.tupled)
   }
 
   case class ValidatedPimpM[M[_], A, E, B](value: ActorM[M, A, Validation[E, B]]) extends NewType[ActorM[M, A, Validation[E, B]]] {
-    def | [AA >: A, BB <: B, EE <: E](that: ActorM[M, AA, Validation[EE, BB]])(implicit monad: Monad[M]): ActorM[M, A, Validation[E, B]] = {
+    def | [AA >: A, BB <: B, EE <: E](that: ActorM[M, AA, Validation[EE, BB]])(implicit monad: Monad[M], pipe: Pipe[M]): ActorM[M, A, Validation[E, B]] = {
       receive { a: A =>
-        val (result, next) = value ! a
+        pipe.pipe[A, Validation[E, B], Validation[E, B]](a, value) { (v1: Validation[E, B], next1: ActorM[M, A, Validation[E, B]]) =>
+          v1 match {
+            case Failure(_) =>
+              pipe.pipe(a, that.variant[A, Validation[E, B]]) { (v2: Validation[E, B], next2: ActorM[M, A, Validation[E, B]]) =>
+                (monad.pure(v2), next1 | next2)
+              }
 
-        unwrapM(result.map { 
-          case Failure(_) => (that ! a).variant[A, Validation[E, B]].mapElements(identity, next | _)
-
-          case x => (monad.pure(x), next | that.variant[A, Validation[E, B]])
-        })
+            case x @ Success(_) =>
+              (monad.pure(x), next1 | that)
+          }
+        }
       }
     }
 
@@ -157,11 +149,8 @@ trait ActorMPimps {
         val (result1, self2) = value ! a
         val (result2, that2) = (that ! a).variant[A, Validation[E, B]]
 
-        unwrapM(result1.map { 
-          case Failure(_) => (result2, self2 || that2)
-
-          case x @ Success(_) => (monad.pure(x), self2 || that.variant[A, Validation[E, B]])
-        })
+        // TODO:
+        null
       }
     }
   }
@@ -171,14 +160,8 @@ trait ActorMPimps {
      * order actor.
      */
     def <~ (that: ActorM[M, C, D])(implicit monad: Monad[M]): ActorM[M, A, B] = {
-      receive { a: A =>
-        val (mv, self2) = value ! ((a, that))
-
-        unwrapM(mv.map {
-          case ((b, that2)) =>
-            (monad.pure(b), self2 <~ that2)
-        })
-      }
+      // TODO
+      null
     }
   }
 

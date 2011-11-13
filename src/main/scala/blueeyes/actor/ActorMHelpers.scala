@@ -48,17 +48,5 @@ trait ActorMHelpers {
 
     lazySelf
   }
-
-  private[actor] def unwrapM[M[_]: Monad, A, B](m: M[ActorMState[M, A, B]]): ActorMState[M, A, B] = {
-    val mb = m.map(_._1).join
-
-    val next = receive { a: A =>
-      unwrapM(m.map {
-        case (_, n) => n ! a
-      })
-    }
-
-    (mb, next)
-  }
 }
 object ActorMHelpers extends ActorMHelpers
