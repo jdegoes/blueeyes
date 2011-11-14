@@ -62,7 +62,7 @@ trait FutureMatchers { self: MustExpectations =>
         }
       } catch {        
         case (_ : TimeoutException | _ : InterruptedException) => Retry("Delivery of future timed out")
-        case failure: FailureException => Retry("Assertion failed on retry " + (totalRetries - retries) + ": " + failure.getMessage)
+        case failure: FailureException => Retry("Assertion failed on retry " + (totalRetries - retries) + ": " + failure.f.message)
         case ex: Throwable => Retry("Caught exception in matching delivered value: " + ex.fullStackTrace)
       }  
 
