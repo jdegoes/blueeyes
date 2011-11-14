@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class LRUMapSpec extends Specification{
   "LRUMap.put: adds new value" in {
@@ -14,7 +14,7 @@ class LRUMapSpec extends Specification{
     map.put("foo", "bar")
     map.put("baz", "foo")
 
-    evicted        must be (true)
+    evicted        must be_==(true)
     map.get("foo") must be  (null)
     map.get("baz") mustEqual("foo")
   }

@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import org.specs.{ScalaCheck, Specification}
 import org.scalacheck.Gen
 import org.scalacheck._
 import Gen._
@@ -10,10 +9,12 @@ import org.scalacheck.Prop._
 import MongoUpdateOperators._
 import MongoFilterOperators._
 import blueeyes.json.JsonAST._
-import blueeyes.json.{ArbitraryJValue, JPath}
+import blueeyes.json.{ArbitraryJValue}
 
 import scalaz._
 import Scalaz._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class MongoUpdateSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
 
@@ -26,17 +27,17 @@ class MongoUpdateSpec extends Specification with ScalaCheck with MongoImplicits 
 
   "MongoUpdate" should{
     "convert to the same JValue, no matter the order of constructions" in{
-      forAll { updates: (MongoUpdate, MongoUpdate) =>
+      check { updates: (MongoUpdate, MongoUpdate) =>
         updates._1.toJValue == updates._2.toJValue
-      } must pass
+      }
     }
 
     "should equal, no matter the order of constructions" in{
-      forAll { updates: (MongoUpdate, MongoUpdate) => updates._1 == updates._2 } must pass
+      check { updates: (MongoUpdate, MongoUpdate) => updates._1 == updates._2 }
     }
 
     "should have the same hashCodes, no matter the order of constructions" in{
-      forAll { updates: (MongoUpdate, MongoUpdate) => updates._1.hashCode == updates._1.hashCode } must pass
+      check { updates: (MongoUpdate, MongoUpdate) => updates._1.hashCode == updates._1.hashCode }
     }
   }
 }

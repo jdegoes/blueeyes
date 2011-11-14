@@ -1,9 +1,9 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.core.http.MimeTypes._
 
-class ConnectionTokenSpec extends Specification {
+class ConnectionTokenSpec extends Specification{
 
   "Connection:  Should return \"foo\" when passeed \" foo 0r91j2 \\n\"." in {
     HttpHeaders.Connection(ConnectionTokens.parseConnectionTokens(" foo 0r91j2\n ").get).value mustEqual "foo"

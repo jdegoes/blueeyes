@@ -1,9 +1,10 @@
 package blueeyes.util.logging
 
 import RollPolicies._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.Date
 import java.text.SimpleDateFormat
+import java.text.ParseException
 
 class NameFormatSpec extends Specification with NameFormat{
   private val baseName = "w3.log"
@@ -20,8 +21,8 @@ class NameFormatSpec extends Specification with NameFormat{
     checkName(Weekly(3), new SimpleDateFormat("yyyyMMdd"))
   }
 
-  private def checkName(policy: Policy, format: SimpleDateFormat){
+  private def checkName(policy: Policy, format: SimpleDateFormat) = {
     val name = timedName(baseName, policy, 0)
-    format.parse(name.substring(3, name.length - 4))
+    format.parse(name.substring(3, name.length - 4)) must not(throwAn[ParseException])
   }
 }

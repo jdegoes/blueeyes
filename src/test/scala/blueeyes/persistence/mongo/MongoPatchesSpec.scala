@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import mock.MockDatabase
-import org.specs.{ScalaCheck, Specification}
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -14,6 +13,8 @@ import MongoFilterImplicits._
 import blueeyes.concurrent.Future
 import scalaz._
 import Scalaz._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
 
@@ -30,27 +31,27 @@ class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits
 
   "MongoPatches" should{
     "commit all patches when patch is added one by one" in{
-      forAll{ patches: List[(MongoFilter, List[MongoUpdate])] =>
+      check{ patches: List[(MongoFilter, List[MongoUpdate])] =>
         checkCommit(patches, createMongoPatches(patches))
-      } must pass
+      }
     }
     "commit all patches when patches are merged" in{
-      forAll{ patches: (List[(MongoFilter, List[MongoUpdate])], List[(MongoFilter, List[MongoUpdate])]) =>
+      check{ patches: (List[(MongoFilter, List[MongoUpdate])], List[(MongoFilter, List[MongoUpdate])]) =>
         checkCommit(patches._1 ::: patches._2, createMongoPatches(patches._1) ++ createMongoPatches(patches._2))
-      } must pass
+      }
     }
+  }
 
-    def createMongoPatches(patches: List[(MongoFilter, List[MongoUpdate])]) = {
-      patches.foldLeft(MongoPatches.empty) { (mongoPatch, patches) => patches._2.foldLeft(mongoPatch){ (mongoPatch, update) => mongoPatch + (patches._1, update)}}
-    }
+  def createMongoPatches(patches: List[(MongoFilter, List[MongoUpdate])]) = {
+    patches.foldLeft(MongoPatches.empty) { (mongoPatch, patches) => patches._2.foldLeft(mongoPatch){ (mongoPatch, update) => mongoPatch + (patches._1, update)}}
+  }
 
-    def checkCommit(patches: List[(MongoFilter, List[MongoUpdate])], mongoPatches: MongoPatches) = {
-      val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.asMA.sum)))
+  def checkCommit(patches: List[(MongoFilter, List[MongoUpdate])], mongoPatches: MongoPatches) = {
+    val database     = new MongoDatabaseImpl(patches.map(v => (v._1, v._2.asMA.sum)))
 
-      mongoPatches.commit(database, "foo")
+    mongoPatches.commit(database, "foo")
 
-      database.queries.isEmpty
-    }
+    database.queries.isEmpty
   }
 
   class MongoDatabaseImpl(var queries: List[(MongoFilter, MongoUpdate)]) extends MockDatabase(new MockMongo()) {

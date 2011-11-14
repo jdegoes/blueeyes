@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 class CacheSpec extends Specification{
@@ -20,7 +20,7 @@ class CacheSpec extends Specification{
     map.put("foo", "bar")
     map.put("baz", "foo")
 
-    evicted        must be (true)
+    evicted        must be_==(true)
     map.get("foo") must beNone
     map.get("baz") must beSome("foo")
   }
@@ -28,20 +28,20 @@ class CacheSpec extends Specification{
   "Cache.concurrent.put: evicts when idle time is expired" in{
     val map = Cache.concurrent(settings(Some(50)))
     map.put("baz", "bar")
-    map.contains("baz") must eventually (be (false))
+    map.contains("baz") must eventually (be_==(false))
   }
   "Cache.concurrent.put: evicts when live time is expired" in{
     val map = Cache.concurrent(settings(None, Some(200)))
     map.put("baz", "bar")
-    map.contains("baz")  must eventually (be (false))
+    map.contains("baz")  must eventually (be_==(false))
   }
   "Cache.concurrent: evict is called when entry is expired" in{
     var expired = false
     val map = Cache.concurrent(settings(None, Some(200), {(key: String, value: String) => expired = key == "foo" && value == "bar"}))
     map.put("foo", "bar")
 
-    map.contains("foo") must eventually (be (false))
-    expired must be (true)
+    map.contains("foo") must eventually (be_==(false))
+    expired must be_==(true)
   }
   "Cache.concurrent: adds new Entry" in {
     val map = Cache.concurrent(settings())

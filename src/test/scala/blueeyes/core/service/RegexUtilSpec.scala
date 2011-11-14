@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.parsers.RegularExpressionAST._
 import blueeyes.parsers.RegularExpressionPatten
 

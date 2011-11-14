@@ -1,7 +1,7 @@
 package blueeyes.util.logging
 
 import RollPolicies._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.{Calendar, GregorianCalendar}
 
 class RollSpec extends Specification with Roll{

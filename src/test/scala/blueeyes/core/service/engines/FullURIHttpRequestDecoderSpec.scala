@@ -1,6 +1,6 @@
 package blueeyes.core.service.engines
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{HttpMethod, DefaultHttpRequest, HttpVersion}
 
 class FullURIHttpRequestDecoderSpec extends Specification{

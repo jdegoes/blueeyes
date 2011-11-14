@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import blueeyes.json.JsonParser.ParseException
 

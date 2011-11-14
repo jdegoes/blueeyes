@@ -1,17 +1,4 @@
-package blueeyes.core.service
-
-import org.specs2.mutable.Specification
-import blueeyes.util.printer.HtmlPrinter
-import net.lag.configgy.Config
-import blueeyes.core.http.{HttpResponse, HttpRequest}
-import blueeyes.concurrent.Future
-
-class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators{
-  import Metadata._
-
-  "ServiceDocumente" should{
-    "create service docuementation" in{
-      val expected = """<html>
+<html>
 
   <head>
       <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -95,26 +82,4 @@ class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombina
         </table></div>
      </div>
   </body>
-</html>"""
-
-      implicit val printer = HtmlPrinter
-      val handler : HttpService[Int, Future[HttpResponse[Int]]] = {
-        path("/details") {
-          path("/bar") {
-            describe("Personal john details"){
-              path("/john") {
-                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
-              }
-            }
-          }~
-          describe("Personal kate details"){
-            path("/kate") {
-              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
-            }
-          }
-        }
-      }
-      ServiceDocumenter.printFormatted(ServiceContext(new Config(), "Foo", ServiceVersion(1, 0, "0"), Some("Sample service"), "localhost", 8080, 8081), handler) mustEqual (expected)
-    }
-  }
-}
+</html>

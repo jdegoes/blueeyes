@@ -1,6 +1,6 @@
 package blueeyes.core.service.engines.security
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.io.File
 
 class JavaKeyToolSpec extends Specification{
@@ -10,7 +10,7 @@ class JavaKeyToolSpec extends Specification{
 
     val keyStorePathFile = new File(keyStorePath)
 
-    keyStorePathFile.exists must be (true)
+    keyStorePathFile.exists must be_==(true)
 
     keyStorePathFile.delete
   }

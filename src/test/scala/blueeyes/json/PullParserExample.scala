@@ -1,6 +1,6 @@
 package blueeyes.json
 
-import _root_.org.specs.Specification
+import org.specs2.mutable.Specification
 
 object PullParserExample extends Specification {
   import JsonParser._

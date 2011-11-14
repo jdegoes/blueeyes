@@ -1,15 +1,14 @@
 package blueeyes.concurrent
 
 import Future._
-import org.specs.Specification
-import org.specs.util._
+import org.specs2.mutable.Specification
 
-class FutureSpec extends Specification {
+class FutureSpec extends Specification{
   "Future" should {
     "support cancel" in { 
       val f = Future.dead[String](new Exception("error"))
 
-      f.error must eventually (beSomething)
+      f.error must eventually (beSome)
     }
   }
 
@@ -119,7 +118,7 @@ class FutureSpec extends Specification {
     "propagate cancel" in {
       val f = Future.dead[String](new Exception("error"))
       
-      f.map(s => s + s).error must eventually (beSomething)
+      f.map(s => s + s).error must eventually (beSome)
     }
     
     "cancel mapped future when mapping function throws error" in {
@@ -139,7 +138,7 @@ class FutureSpec extends Specification {
     
       f.flatMap { s =>
         "future should not deliver this handler".future
-      }.error must eventually (beSomething)
+      }.error must eventually (beSome)
     }
     
     "cancel mapped future when mapping function throws error" in {

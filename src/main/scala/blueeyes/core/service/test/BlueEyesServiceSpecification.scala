@@ -1,6 +1,6 @@
 package blueeyes.core.service.test
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.util.RichThrowableImplicits._
@@ -10,27 +10,32 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
 import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
+import org.specs2.specification.{Fragment, Fragments, Step}
 
 class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
   private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
   private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
-  shareVariables()
 
-  doBeforeSpec {
+  override def is = args(sequential = true) ^ super.is
+  private val specBefore = Step {
     setMockCongiguration
     startServer
   }
-
-  doAfterSpec {
+  private val specAfter = Step {
     resetMockCongiguration
     stopServer
   }
 
+  override def map(fs: =>Fragments) = specBefore ^ Step({beforeSpec}) ^ fs ^ Step({afterSpec}) ^ specAfter
+
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def configuration  = ""
+
+  protected def beforeSpec: Any = ()
+  protected def afterSpec: Any = ()
 
   private val httpServer = new HttpServer{
     def services = self.services
@@ -45,17 +50,18 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   }
 
   def resetMockCongiguration = {
-    sys.props.put(ConfigurableMongo.MongoSwitch, mongoSwitch.getOrElse(null))
-    sys.props.put(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch.getOrElse(null))
+    def setProp(key: String, value: Option[String]) = value match{
+      case Some(x) => sys.props.put(key, x)
+      case None => sys.props.remove(key)
+    }
+    setProp(ConfigurableMongo.MongoSwitch, mongoSwitch)
+    setProp(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch)
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()
 
   private def startServer = waitForResponse[Unit](httpServer.start, Some(startTimeOut), why => throw why)
   private def stopServer  = waitForResponse[Unit](httpServer.stop,  Some(stopTimeOut),  why => throw why)
-
-  // Revert main function of HttpServer to Specification's main function:
-  override def main(args: Array[String]) { httpServer.main(args) }
 
   lazy val rootConfig = {
     Configgy.configureFromString(configuration)

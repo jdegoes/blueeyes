@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import com.mongodb.MongoException
 
 class WhereFilterScriptBuilderSpec extends Specification with Evaluators.WhereFilterScriptBuilder{

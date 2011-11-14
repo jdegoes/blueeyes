@@ -1,14 +1,14 @@
 package blueeyes.health.metrics
 
-import org.specs.Specification
-import IntervalLength._
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
+import java.util.concurrent.TimeUnit
 
 class TimedAverageStatSpec extends Specification{
   private val clock = new Clock()
   "TimedAverageStat" should{
     "creates JValue" in{
-      val config = interval(3.seconds, 3)
+      val config = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
       val timedSample = TimedAverageStat(config)(clock.now _)
       fill(timedSample)
 
@@ -17,10 +17,10 @@ class TimedAverageStatSpec extends Specification{
       histogram.value must eventually (beSome(JObject(JField("perSecond", JObject(JField(config.toString, histogramValue) :: Nil)) :: Nil)))
     }
     "creates TimedSample if the configuration is interval" in{
-      TimedAverageStat(interval(3.seconds, 7))(clock.now _).isInstanceOf[TimedSample[_]] must be (true)
+      TimedAverageStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7))(clock.now _).isInstanceOf[TimedSample[_]] must be_==(true)
     }
     "creates EternityTimedSample if the configuration is eternity" in{
-      TimedAverageStat(eternity)(clock.now _).isInstanceOf[EternityTimedNumbersSample] must be (true)
+      TimedAverageStat(eternity)(clock.now _).isInstanceOf[EternityTimedNumbersSample] must be_==(true)
     }
   }
 

@@ -1,11 +1,11 @@
 package blueeyes.json.xschema.codegen {
-  import _root_.org.specs.Specification
 
   import _root_.blueeyes.json.JsonAST._
   import _root_.blueeyes.json.JsonParser._
   import java.io._
+import org.specs2.mutable.Specification
 
-  object XCodeGeneratorExamples extends Specification {
+object XCodeGeneratorExamples extends Specification {
     import _root_.java.io._
     import _root_.blueeyes.json.xschema.SampleSchemas._
     import _root_.blueeyes.json.xschema.DefaultSerialization._

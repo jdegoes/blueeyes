@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class BijectionSpec extends Specification{
   "Bijection.identity: creates Bijection which does not change data" in{

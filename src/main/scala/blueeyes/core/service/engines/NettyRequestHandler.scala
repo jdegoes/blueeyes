@@ -1,21 +1,21 @@
 package blueeyes.core.service.engines
 
 
-import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.http._
-import blueeyes.core.data.{GZIPByteChunk, ByteChunk, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
 
 import net.lag.logging.Logger
 
-import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
+import org.jboss.netty.buffer.{ChannelBuffers}
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
-import scalaz.{Failure, Success}
+import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
+import blueeyes.concurrent.{ReadWriteLock, Future}
 
 /** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
@@ -92,13 +92,14 @@ private[engines] class NettyRequestHandler(requestHandler: AsyncCustomHttpServic
   }
 }
 
-import NettyChunkedInput._
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
 
   private val log   = Logger.get
   private var done  = false
+
+  private val lock = new ReadWriteLock{}
   private var nextChunkFuture: Future[ByteChunk] = _
 
   setNextChunkFuture(Future.sync(chunk))
@@ -110,11 +111,10 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
   def nextChunk = {
     nextChunkFuture.value.map{chunk =>
       val data = chunk.data
-      ChannelBuffers.wrappedBuffer(Integer.toHexString(data.length).getBytes ++ CRLF ++ data ++ CRLF)
+      if (!data.isEmpty) new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data)) else new DefaultHttpChunkTrailer()
     }.orElse{
       nextChunkFuture.deliverTo{nextChunk =>
         channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
-        channel.write(new NettyChunkedInput(nextChunk, channel))
       }
       None
     }.orNull
@@ -137,17 +137,16 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
 
   private def setNextChunkFuture(future: Future[ByteChunk]){
     future.trap{errors: List[Throwable] =>
-      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput"))
+      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput."))
       errors match{
         case x :: xs => throw x
         case _ =>
       }
     }
-    nextChunkFuture = future
+    lock.writeLock{
+      nextChunkFuture = future
+    }
   }
-}
-object NettyChunkedInput{
- val CRLF = List[Byte]('\r', '\n')
 }
 
 private[engines] class ChunkedContent(content: Option[ByteChunk]){

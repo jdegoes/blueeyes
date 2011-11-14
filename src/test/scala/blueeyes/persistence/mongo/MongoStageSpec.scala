@@ -1,7 +1,6 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
-import org.specs.{ScalaCheck, Specification}
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -9,7 +8,6 @@ import org.scalacheck.Prop._
 
 import blueeyes.persistence.cache.ExpirationPolicy
 import scalaz.Semigroup
-import org.specs.util.TimeConversions._
 import scala.util.Random
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
@@ -17,6 +15,8 @@ import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
 import akka.actor.{Actor}
 import scalaz._
 import Scalaz._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
 
@@ -43,7 +43,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
 
   "MongoStage" should{
     "store all updates" in {
-      forAll{updates: List[(MongoFilter, MongoUpdate)] =>
+      check{updates: List[(MongoFilter, MongoUpdate)] =>
         val mockMongo        = new MockMongo()
         val mockDatabase     = mockMongo.database( "mydb" )
         val collection       = "mycollection"
@@ -59,17 +59,17 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
 
         val start = System.currentTimeMillis
         val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
-        futures.value must eventually(200, 300.milliseconds) (beSomething)
+        futures.value must eventually(200, 300.milliseconds) (beSome)
 
         val flushFuture = mongStage.flushAll
-        flushFuture.value must eventually (beSomething)
+        flushFuture.value must eventually (beSome)
 
         val pass = updates.foldLeft(true){(result, filterAndUdate) =>
           result && {
             val update = filterAndUdate._2.asInstanceOf[UpdateFieldFunctions.IncF]
 
             val resultFuture = mockDatabase(select().from(collection).where(filterAndUdate._1))
-            resultFuture.isDelivered must eventually (be(true))
+            resultFuture.isDelivered must eventually (be_==(true))
 
             val objects  = resultFuture.value.get.toList
             val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
@@ -79,7 +79,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         }
         actors.foreach(_.stop())
         pass
-      } must pass
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 package blueeyes.core.http.combinators
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._

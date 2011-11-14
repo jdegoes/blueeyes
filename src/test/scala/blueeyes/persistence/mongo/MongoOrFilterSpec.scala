@@ -1,6 +1,5 @@
 package blueeyes.persistence.mongo
 
-import org.specs.{ScalaCheck, Specification}
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -10,6 +9,8 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
@@ -27,17 +28,17 @@ class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicit
 
   "MongoOrFilter" should{
     "convert to the same JValue, no matter the order of constructions" in{
-      forAll { filters: (MongoOrFilter, MongoOrFilter) =>
+      check { filters: (MongoOrFilter, MongoOrFilter) =>
         def orValue(filter: MongoOrFilter) = filter.filter.sort
 
         orValue(filters._1) == orValue(filters._2)
-      } must pass
+      }
     }
     "should equal, no matter the order of constructions" in{
-      forAll { filters: (MongoOrFilter, MongoOrFilter) => filters._1 == filters._2 } must pass
+      check { filters: (MongoOrFilter, MongoOrFilter) => filters._1 == filters._2 }
     }
     "should have the same hashCodes, no matter the order of constructions" in{
-      forAll { filters: (MongoOrFilter, MongoOrFilter) => filters._1.hashCode == filters._1.hashCode } must pass
+      check { filters: (MongoOrFilter, MongoOrFilter) => filters._1.hashCode == filters._1.hashCode }
     }
 
     "create valid json for or filter" in {

@@ -33,9 +33,9 @@ sealed abstract class Metadata(private val sortOrder: Int) extends Ordered[Metad
   def compare(other: Metadata) = sortOrder compare other.sortOrder
 }
 
-case class PathPatternMetadata(pattern: RestPathPattern, desc: Option[String] = None) extends Metadata(1) {
+case class PathPatternMetadata(pattern: RestPathPattern) extends Metadata(1) {
   override def compare(other: Metadata) = other match {
-    case PathPatternMetadata(p, _) => pattern.toString.compare(p.toString)
+    case PathPatternMetadata(p) => pattern.toString.compare(p.toString)
     case _ => super.compare(other)
   }
 }
@@ -61,24 +61,22 @@ sealed abstract class HeaderMetadata[T <: HttpHeader](sortOrder: Int) extends Me
   def header: Either[HttpHeaderField[T], T]
 
   def default: Option[T]
-
-  def desc: Option[String]
 }
 
-case class RequestHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None, desc: Option[String] = None) extends HeaderMetadata[T](3)
+case class RequestHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None) extends HeaderMetadata[T](3)
 
-case class ResponseHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None, desc: Option[String] = None) extends HeaderMetadata[T](4)
+case class ResponseHeaderMetadata[T <: HttpHeader](header: Either[HttpHeaderField[T], T], default: Option[T] = None) extends HeaderMetadata[T](4)
 
-case class ParameterMetadata(parameter: Symbol, default: Option[String], desc: Option[String] = None) extends Metadata(5) {
+case class ParameterMetadata(parameter: Symbol, default: Option[String]) extends Metadata(5) {
   override def compare(other: Metadata) = other match {
-    case ParameterMetadata(p, _, _) => parameter.toString.compare(p.toString)
+    case ParameterMetadata(p, _) => parameter.toString.compare(p.toString)
     case _ => super.compare(other)
   }
 }
 
-case class CookieMetadata(ident: Symbol,     default: Option[String], desc: Option[String] = None) extends Metadata(6) {
+case class CookieMetadata(ident: Symbol,     default: Option[String]) extends Metadata(6) {
   override def compare(other: Metadata) = other match {
-    case CookieMetadata(i, _, _) => ident.toString.compare(i.toString)
+    case CookieMetadata(i, _) => ident.toString.compare(i.toString)
     case _ => super.compare(other)
   }
 }
@@ -92,27 +90,36 @@ case class OrMetadata           (metadata: Metadata*) extends Metadata(12)
 
 object Metadata {
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
-    private def paths(m: Metadata*) = m.foldLeft((List.empty[PathPatternMetadata], List.empty[Metadata])) {
-      case ((p, m), pathm : PathPatternMetadata) => (pathm :: p, m)
-      case ((p, m), om) => (p, om :: m)
+    private def paths(m: List[Metadata]) = {
+      val merge = m.foldLeft((List[Metadata](), None: Option[Metadata], None: Option[DescriptionMetadata], None: Option[PathPatternMetadata])){
+        case ((ms, Some(d1 @ DescriptionMetadata(_)), d, p), p1 @ PathPatternMetadata(_)) =>
+          val desc = d.map(v => DescriptionMetadata(v.description + d1.description)).getOrElse(d1)
+          val path = p.map(v => PathPatternMetadata(v.pattern ~ p1.pattern)).getOrElse(p1)
+          (ms, None, Some(desc), Some(path))
+        case ((ms, last, d, p), p1 @ PathPatternMetadata(_)) =>
+          val path = p.map(v => PathPatternMetadata(v.pattern ~ p1.pattern)).getOrElse(p1)
+          (ms ::: last.toList, None, d, Some(path))
+        case ((ms, last, d, p), m) => (ms ::: last.toList, Some(m), d, p)
+      }
+      merge._3.toList ::: merge._4.toList ::: merge._1 ::: merge._2.toList
+    }
+
+    private def mergeDesc(m: Metadata*) = {
+      val merge = m.tail.foldLeft((List[Metadata](), m.head)){
+        case ((ms, DescriptionMetadata(desc1)), DescriptionMetadata(desc2)) => (ms, DescriptionMetadata(desc1 + desc2))
+        case ((ms, last), m) => (ms ::: List(last), m)
+      }
+      merge._1 ::: List(merge._2)
     }
 
     def append(a: Metadata, b: => Metadata) = {
-      val (ap, am) = a match {
-        case AndMetadata(ams @ _*) => paths(ams: _*)
-        case other => paths(other)
+      val ab = (a, b) match {
+        case (AndMetadata(ams @ _*), AndMetadata(bms @ _*)) => ams ++ bms
+        case (AndMetadata(ams @ _*), other) => ams :+ other
+        case (other, AndMetadata(bms @ _*)) => other +: bms
+        case _ => Seq(a, b)
       }
-
-      val (bp, bm) = b match {
-        case AndMetadata(bms @ _*) => paths(bms: _*)
-        case other => paths(other)
-      }
-
-      val pm = ap ::: bp match{
-        case Nil => List[Metadata]()
-        case abp => List(abp.tail.foldLeft(abp.head){(m, p) => PathPatternMetadata(m.pattern ~ p.pattern, m.desc ⊹ p.desc)})
-      }
-      AndMetadata(pm ++ am ++ bm: _*)
+      AndMetadata(paths(mergeDesc(ab: _*)): _*)
     }
   }  
 
@@ -120,25 +127,23 @@ object Metadata {
     def format(m: Metadata) = formatMetadata(m)
 
     def formatMetadata(m: Metadata): Printable[String] = m match {
-      case PathPatternMetadata(pattern, desc) => Value("Service path", pattern.toString, desc)
+      case PathPatternMetadata(pattern) => Value("Service path", pattern.toString, None)
       case HttpMethodMetadata(method)         => Value("HTTP method", method.toString, None)
 
-      case RequestHeaderMetadata(header, _, desc)  => header match{
-        case Right(value : `Content-Type`) => Value("Accept", value.value, desc)
-        case _ => Value("Request Header", header.fold(_.name, _.header), desc)
+      case RequestHeaderMetadata(header, _)  => header match{
+        case Right(value : `Content-Type`) => Value("Accept", value.value, None)
+        case _ => Value("Request Header", header.fold(_.name, _.header), None)
       }
-      case ResponseHeaderMetadata(header, _, desc) => header match{
-        case Right(value : `Content-Type`) => Value("Produce", value.value, desc)
-        case _ => Value("Response Header", header.fold(_.name, _.header), desc)
+      case ResponseHeaderMetadata(header, _) => header match{
+        case Right(value : `Content-Type`) => Value("Produce", value.value, None)
+        case _ => Value("Response Header", header.fold(_.name, _.header), None)
       }
 
-      case ParameterMetadata(parameter, default, desc) =>
-        Value("Request Parameter", parameter.toString, Some(desc.getOrElse("")
-              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
+      case ParameterMetadata(parameter, default) =>
+        Value("Request Parameter", parameter.toString, Some(default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
 
-      case CookieMetadata(parameter, default, desc) =>
-        Value("HTTP cookie", parameter.toString, Some(desc.getOrElse("")
-              + default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
+      case CookieMetadata(parameter, default) =>
+        Value("HTTP cookie", parameter.toString, Some(default.map("; a default of " + _ + " will be used if no value is specified.").getOrElse(" (required)")))
 
       case EncodingMetadata(encodings @ _*) => Value("Supported encodings", encodings.mkString(", "), None)
       case DescriptionMetadata(desc) => Append(Description(desc), Break)
@@ -148,7 +153,23 @@ object Metadata {
         Append(Seq(Nest(ValueCaption("Parameter Type", "Parameter", "Description")), Break) ++
         metadata.map(m => Nest(formatMetadata(m)): Printable[String]).toList.intersperse(Append(Break, Break)): _*)
 
-      case AndMetadata(metadata @ _*) => Append(metadata.sorted.map(formatMetadata).toList.intersperse(Break): _*)
+      case AndMetadata(metadata @ _*) => metadata match{
+        case Seq(DescriptionMetadata(desc), metadata) => formatMetadata(metadata) match {
+          case Value(valueType, value, valueDesc) => Value(valueType, value, Some(desc + valueDesc.getOrElse("")))
+          case p => Append(Description(desc), Break, p)
+        }
+        case _ =>
+          val grouped = metadata.reverse.foldLeft(List[Metadata]()) {
+            case (x :: xs, d: DescriptionMetadata) => AndMetadata(d, x) :: xs
+            case (xs, m) => m :: xs
+          }
+          val sorted = grouped.sortWith{
+            case (AndMetadata(DescriptionMetadata(desc), metadata @ _), m) => metadata.compare(m) < 0
+            case (m, AndMetadata(DescriptionMetadata(desc), metadata @ _)) => m.compare(metadata) < 0
+            case (m1, m2) => m1.compare(m2) < 0
+          }
+          Append(sorted.map(formatMetadata).toList.intersperse(Break): _*)
+      }
 
       case _ => Empty
     }
@@ -167,7 +188,7 @@ object Metadata {
     }
 
     def nePath(m: Option[Metadata]) = m.flatMap{
-      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern, _) => None
+      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern) => None
       case _ => m
     }
 

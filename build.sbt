@@ -13,7 +13,7 @@ libraryDependencies ++= Seq(
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
-  "org.jboss.netty"             % "netty"               % "3.2.4.Final",
+  "org.jboss.netty"             % "netty"               % "3.2.6.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.6.5",
   "se.scalablesolutions.akka"   % "akka-actor"          % "1.1.2",
   "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.1.2",
@@ -21,9 +21,9 @@ libraryDependencies ++= Seq(
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
   "org.scalaz"                  %% "scalaz-core"        % "6.0.2",
-  "org.mockito"                 % "mockito-all"         % "1.8.5"         % "provided",
-  "org.scala-tools.testing"     %% "specs"              % "1.6.9"         % "provided",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"           % "provided"
+  "org.specs2"                  %% "specs2"             % "1.6.1"   % "provided",
+  "org.mockito"                 % "mockito-all"         % "1.8.5"   % "provided",
+  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"     % "provided"
 )
 
 

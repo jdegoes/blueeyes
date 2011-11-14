@@ -1,26 +1,32 @@
 package blueeyes.persistence.mongo.mock
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
 import blueeyes.json.Printer
 import blueeyes.json.JsonAST._
 
 class MockMongoDatabaseSpec extends Specification with MongoImplicits{
-  private val mongo     = new MockMongo()
 
   "create collection" in{
-    database.collection("bar") must notBeNull
+    val mongo     = new MockMongo()
+    mongoDatabase(mongo).collection("bar") must not beNull
   }
   "return the same collection for the same name" in{
-    database.collection("bar") must be (database.collection("bar"))
+    val mongo     = new MockMongo()
+    mongoDatabase(mongo).collection("bar") must be (mongoDatabase(mongo).collection("bar"))
   }
 
   "return all collections" in{
+    val mongo    = new MockMongo()
+    val database = mongoDatabase(mongo)
     database.collection("bar")
     database.collections.toList.map(v => (v.name, v.database)) mustEqual(List(("bar", database)))
   }
 
   "dump empty collections content" in{
+    val mongo     = new MockMongo()
+    val database = mongoDatabase(mongo)
+
     database.collection("bar")
     val b = new StringBuilder()
 
@@ -29,10 +35,13 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
     b.toString mustEqual(Printer.pretty(Printer.render(JObject(List(JField("bar", JArray(Nil)))))))
   }
   "dump not empty collections content" in{
+    val mongo     = new MockMongo()
+    
     val jobject  = JObject(JField("foo", JArray(List(JString("1")))) :: JField("baz", JString("foo")) :: Nil)
     val jobject2 = JObject(JField("bar", JArray(List(JString("1")))) :: JField("foo", JString("baz")) :: Nil)
+    val database: MockDatabase = mongoDatabase(mongo)
     val future1  = database(insert(jobject, jobject2).into("bar"))
-    future1.value must eventually (beSomething)
+    future1.value must eventually (beSome)
 
     val b = new StringBuilder()
     database.dump((v: String) => b.append(v))
@@ -41,8 +50,11 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
   }
 
   "adToSet really adds to set for not existsing object" in{
+    val mongo     = new MockMongo()
+
+    val database = mongoDatabase(mongo)
     val future1 = database(upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))
-    future1.value must eventually (beSomething)
+    future1.value must eventually (beSome)
 
     val future2 = database(select().from("bar"))
 
@@ -85,5 +97,5 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 //    future3.value.get.iterator.toList mustEqual (JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil)
 //  }
 
-  private def database = mongo.database("foo").asInstanceOf[MockDatabase]
+  private def mongoDatabase(mongo: MockMongo) = mongo.database("foo").asInstanceOf[MockDatabase]
 }

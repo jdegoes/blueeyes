@@ -1,6 +1,6 @@
 package blueeyes.js
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.{JsonParser}
 import blueeyes.json.JsonAST._
 

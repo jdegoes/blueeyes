@@ -1,7 +1,7 @@
 package blueeyes.util.metrics
 
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 import org.scalacheck.Prop._
 import org.scalacheck._
 
@@ -19,9 +19,9 @@ class DataSizeSpec extends Specification with ScalaCheck{
 
   "DataSize" should{
     "convert different units" in{
-      forAll { (dataSize: DataSize, unit: DataSizeUnit) =>
+      check { (dataSize: DataSize, unit: DataSizeUnit) =>
         dataSize.convert(unit) == DataSize(dataSize.size * (dataSize.unit.bytesInUnit / unit.bytesInUnit), unit)
-      } must pass
+      }
     }
   }
 }

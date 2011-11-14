@@ -4,7 +4,8 @@ import org.scalacheck._
 import org.scalacheck.Prop.forAllNoShrink
 import scala.util.Random
 import blueeyes.util.SpecialCharToStringTranscoder
-import org.specs.{ScalaCheck, Specification}
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class URITranscodersSpec extends Specification with ScalaCheck{
   private val random = new Random()
@@ -43,5 +44,5 @@ class URITranscodersSpec extends Specification with ScalaCheck{
       passTest(queryGen, URITranscoders.queryTranscoder)
     }
   }
-  private def passTest(gen: Gen[String], trascoder: SpecialCharToStringTranscoder) = forAllNoShrink(gen){n: String => trascoder.decode(trascoder.encode(n)) == n} must pass
+  private def passTest(gen: Gen[String], trascoder: SpecialCharToStringTranscoder) = forAllNoShrink(gen){n: String => trascoder.decode(trascoder.encode(n)) must be_==(n)}
 }

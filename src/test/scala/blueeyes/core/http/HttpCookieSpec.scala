@@ -1,6 +1,6 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import HttpCookies._
 
 class HttpCookieSpec extends Specification{
@@ -34,10 +34,9 @@ class HttpCookieSpec extends Specification{
     check("_livingsocial_sessionid=a8f08366-42d7-4e19-bc65-d9f08f536ff5", CookieData("_livingsocial_sessionid", "a8f08366-42d7-4e19-bc65-d9f08f536ff5"))
   }
 
-  private def check(cookieStr: String, cookie: HttpCookie*){
-    CookiesPattern.isDefinedAt(cookieStr)  must be (true)
+  private def check(cookieStr: String, cookie: HttpCookie*) = {
+    CookiesPattern.isDefinedAt(cookieStr)  must be_==(true)
     CookiesPattern.apply(cookieStr)        mustEqual(List(cookie: _*))
-
   }
 }
 

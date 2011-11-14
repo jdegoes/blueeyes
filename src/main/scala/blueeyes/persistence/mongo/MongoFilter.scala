@@ -33,8 +33,7 @@ object MongoFilterOperators {
   case object $mod         extends MongoFilterOperator { def unary_! : MongoFilterOperator = sys.error("The $mod operator does not have a negation"); }
   case object $all         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $all operator does not have a negation"); }
   case object $size        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $size operator does not have a negation"); }
-  case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = $notExists }
-  case object $notExists   extends MongoFilterOperator { def unary_! : MongoFilterOperator  = $exists }
+  case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $exists operator does not have a negation"); }
   case object $type        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
   case object $or          extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
   case object $each        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
@@ -87,7 +86,6 @@ sealed case class MongoFieldFilter(lhs: JPath, operator: MongoFilterOperator, rh
   def filter: JValue = {
     val value = operator match {
       case $eq | $regex | $near | $nearSphere | $within => rhs.toJValue
-      case $notExists => JObject(JField($exists.symbol, JBool(false)) :: Nil)
 
       case _ => JObject(JField(operator.symbol, rhs.toJValue) :: Nil)
     }

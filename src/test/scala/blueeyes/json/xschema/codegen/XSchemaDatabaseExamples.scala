@@ -1,6 +1,6 @@
 package blueeyes.json.xschema.codegen {
 
-import _root_.org.specs.Specification
+import _root_.org.specs2.mutable.Specification
 
 import java.io.{Writer, PrintWriter}
 

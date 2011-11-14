@@ -1,9 +1,8 @@
 package blueeyes
 package persistence.cache.functional
 
-import org.specs.Specification
-import org.specs.ScalaCheck
-import org.specs.specification.PendingUntilFixed
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 import scala.util.Random
@@ -65,7 +64,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
   "information content" should {
     "be invariant" in {
 
-      forAll { (operations: List[StageIn[Int, String]], stage: StageActor[Int, String]) => 
+      check { (operations: List[StageIn[Int, String]], stage: StageActor[Int, String]) =>
         val (discarded, finalStage) = operations.foldLeft((Map.empty[Int, String], stage)) { 
           case ((discarded1, stage), operation) =>
             val (discarded2, stage2) = stage.apply(operation) 
@@ -88,7 +87,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
         }.sum
 
         (discarded <+> finalFlushed) == expectedDiscarded
-      } must pass
+      }
     }
   }
 
@@ -98,14 +97,14 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
         val (expired, nextStage) = BigStage.putAll(toAdd, 100)
 
         expired must beEmpty
-      } must pass
+      }
     }
 
     "when adding to a stage over capacity" >> {
       "evict" in {
         import scala.collection.immutable.ListMap
 
-        forAll { (toAdd: Map[Int, String]) =>
+        check { (toAdd: Map[Int, String]) =>
           val (expired, nextStage) = SmallStage.putAll(toAdd, 100)
 
           if (toAdd.size > SmallStage.maxCapacity) {
@@ -113,20 +112,20 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
           } else {
             expired.isEmpty
           }
-        } must pass
+        }
       }
     }
   }
 
   "expireAll" should {
     "evict everything" in {
-      forAll { (toAdd: Map[Int, String]) => 
+      check { (toAdd: Map[Int, String]) =>
         val (_, nextStage) = BigStage.putAll(toAdd, 100)
 
         val (expired, _) = nextStage.expireAll
 
         expired == toAdd
-      } must pass
+      }
     }
   }
 
@@ -177,7 +176,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
     }
 
     "evict by access time" in {
-      forAll { (input: AllTimedInput) => 
+      check { (input: AllTimedInput) =>
         val AllTimedInput(list, accessTimeCutoff) = input
         val sortedList = list.sortBy(_.time)
 
@@ -201,11 +200,11 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
 
         (removed  == expectedRemoved)  :| ("Expected removed: " + expectedRemoved  + " but found " + removed) && 
         (retained == expectedRetained) :| ("Expected retained: " + expectedRetained + " but found " + retained)
-      } must pass
+      }
     }
 
     "evict by creation time" in {
-      forAll { (input: AllTimedInput) => 
+      check { (input: AllTimedInput) =>
         val AllTimedInput(list, creationTimeCutoff) = input
         val sortedList = list.sortBy(_.time)
 
@@ -229,7 +228,7 @@ class StageSpec extends Specification with ScalaCheck { //with org.specs.runner.
 
         (removed  == expectedRemoved)  :| ("Expected removed: " + expectedRemoved  + " but found " + removed) && 
         (retained == expectedRetained) :| ("Expected retained: " + expectedRetained + " but found " + retained)
-      } must pass
+      }
     }
   }
 

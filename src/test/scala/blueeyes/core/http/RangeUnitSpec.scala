@@ -1,9 +1,8 @@
 package blueeyes.core.http
 
-import org.specs.Specification
-import blueeyes.core.http.MimeTypes._
+import org.specs2.mutable.Specification
 
-class RangeUnitSpec extends Specification {
+class RangeUnitSpec extends Specification{
 
   "Range-Units:  Should parse \"bytes\" as Some(bytes) produce None for \"cats\"" in {
     RangeUnits.parseRangeUnits("bytes").map(_.toString).getOrElse("") mustEqual "bytes"

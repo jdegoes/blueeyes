@@ -16,7 +16,7 @@
 
 package blueeyes.json
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 object Examples extends Specification {
   import JsonAST._

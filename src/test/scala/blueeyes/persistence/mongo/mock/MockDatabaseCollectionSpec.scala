@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo.mock
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JPathImplicits._
 import blueeyes.persistence.mongo.MongoFilterOperators._
 import com.mongodb.MongoException
@@ -16,8 +16,9 @@ class MockDatabaseCollectionSpec extends Specification{
   private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(50), JInt(50)))) :: Nil)
   private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(60), JInt(60)))) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
-//  private val jObjectWithArray = JObject(JField("array", JArray( JString("C") :: Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
+  private val foo  = JsonParser.parse("""{ "id" : 2001, "x" : 1, "y" : 1 }""").asInstanceOf[JObject]
+  private val bar  = JsonParser.parse("""{ "id" : 2002, "x" : 1, "y" : 0 }""").asInstanceOf[JObject]
 
   private val jobjectsWithArray = parse("""{ "foo" : [{"shape" : "square", "color" : "purple", "thick" : false}, {"shape" : "circle", "color" : "red", "thick" : true}] } """) :: parse("""{ "foo" : [{"shape" : "square", "color" : "red", "thick" : true}, {"shape" : "circle", "color" : "purple", "thick" : false}] }""") :: Nil
   private val unsetTest = parse("""{ "channelId" : "foo", "feeds" { "bar" : {"field" : "one" }, "baz" : {"field" : "one" }  } }""")
@@ -49,12 +50,12 @@ class MockDatabaseCollectionSpec extends Specification{
 
     val result = collection.group(MongoSelection(Set(JPath("address.city"))), None, initial, "function(obj,prev) { prev.csum += obj.address.code }")
 
-    result.elements.size must be (3)
-    result.elements.contains(parse("""{"address.city":null,"csum":13.0} """)) must be (true)
-    result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be (true)
+    result.elements.size must be_== (3)
+    result.elements.contains(parse("""{"address.city":null,"csum":13.0} """)) must be_==(true)
+    result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be_==(true)
 
     val withNaN = result.elements.filter(v => v.asInstanceOf[JObject].fields.head == JField("address.city", JString("C"))).head.asInstanceOf[JObject]
-    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be (true)
+    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be_==(true)
   }
 
   "store jobjects" in{
@@ -190,6 +191,60 @@ class MockDatabaseCollectionSpec extends Specification{
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject1.set("address.street", JString("3")) :: Nil).toStream)
   }
+  "select and upsert jobject" in{
+    val collection = newCollection
+
+    collection.selectAndUpdate(Some("address.city" === "A"), None, MongoUpdateObject(jObject2), MongoSelection(Set()), false, true) must beNone
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject2 :: Nil)
+
+  }
+  "select jobjects by or filter" in{
+    val collection = newCollection
+    collection.insert(foo :: bar :: Nil)
+
+    collection.select(MongoSelection(Set()), Some("x" === 1 || "y" === 1), None, None, None, None, false).toList mustEqual(foo :: bar :: Nil)
+  }
+  "select, upsert and return new jobject" in{
+    val collection = newCollection
+
+    collection.selectAndUpdate(Some("address.city" === "A"), None, MongoUpdateObject(jObject2), MongoSelection(Set()), true, true) must beSome(jObject2)
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject2 :: Nil)
+
+  }
+  "select and update jobject field" in{
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.selectAndUpdate(Some("address.city" === "A"), None, "address.street" set ("3"), MongoSelection(Set()), false, false) must beSome(jObject)
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject1 :: jObject.set("address.street", JString("3")) :: Nil).toStream)
+  }
+  "select, update and return selected fields" in{
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.selectAndUpdate(Some("address.city" === "A"), None, "address.street" set ("3"), MongoSelection(Set(JPath("address.city"), JPath("address.street"))), true, false) must beSome(JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("3")) ::  Nil)) :: Nil))
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject1 :: jObject.set("address.street", JString("3")) :: Nil).toStream)
+  }
+  "select and update jobject field occording order" in{
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.selectAndUpdate(None, Some(JPath("address.city") <<), "address.street" set ("3"), MongoSelection(Set()), false, false) must beSome(jObject1)
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject :: jObject1.set("address.street", JString("3")) :: Nil).toStream)
+  }
+  "select and update jobject field and return new" in{
+    val collection = newCollection
+
+    collection.insert(jObject :: jObject1 :: Nil)
+    collection.selectAndUpdate(Some("address.city" === "A"), None, "address.street" set ("3"), MongoSelection(Set()), true, false) must beSome(jObject.set("address.street", JString("3")))
+
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual((jObject1 :: jObject.set("address.street", JString("3")) :: Nil).toStream)
+  }
   "update not existing jobject field" in{
     val collection = newCollection
 
@@ -287,8 +342,8 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.update(None, MongoUpdateObject(jObject2), false, false)
 
     val result = collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList
-    result.contains(jObject2) must be (true)
-    (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be (true)
+    result.contains(jObject2) must be_==(true)
+    (if (result.contains(jObject)) !result.contains(jObject1) else result.contains(jObject1)) must be_==(true)
   }
   "insert by update when upsert is true" in{
     val collection = newCollection
@@ -388,6 +443,27 @@ class MockDatabaseCollectionSpec extends Specification{
     collection.insert(jobjects)
     collection.remove(Some(MongoFieldFilter("address.city", $eq,"A")))
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
+  }
+  "select and remove jobject when filter is Not specified" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.selectAndRemove(None, None, MongoSelection(Set()))
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject1 :: jObject2 :: jObject3 :: Nil)
+  }
+  "select and remove jobject which match filter" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.selectAndRemove(Some(MongoFieldFilter("address.city", $eq,"C")), None, MongoSelection(Set()))
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: jObject1 :: jObject2:: Nil)
+  }
+  "select and remove according order" in{
+    val collection = newCollection
+
+    collection.insert(jobjects)
+    collection.selectAndRemove(None, Some(JPath("address.city") <<), MongoSelection(Set()))
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(jObject :: jObject1 :: jObject2:: Nil)
   }
   "select all jobjects when filter is not specified" in{
     val collection = newCollection

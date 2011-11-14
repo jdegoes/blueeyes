@@ -12,7 +12,8 @@ import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
 import org.scalacheck.Prop._
-import org.specs.{ScalaCheck, Specification}
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
@@ -30,8 +31,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   def genJObjects = Gen.containerOfN[List, JObject](size, genObject)
   implicit def arbJObjects: Arbitrary[List[JObject]] = Arbitrary(genJObjects)
 
+  override def is = args(skipAll = true) ^ super.is
+
   "Mongo" should{
-    skip("run manually")
     "Explain query" in{
       val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
       val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
@@ -43,11 +45,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
       val explanation = oneQuery(select().from(collection).where("address.city" === "B").hint("myindex").explain, realDatabase)
 
-      explanation \ "cursor" must notEq(JNothing)
-      explanation \ "nscannedObjects" must notEq(JNothing)
-      explanation \ "nscanned" must notEq(JNothing)
+      explanation \ "cursor" must_!=(JNothing)
+      explanation \ "nscannedObjects" must_!=(JNothing)
+      explanation \ "nscanned" must_!=(JNothing)
     }
-    skip("run manually")
     "Select the same value with hints" in{
       val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
       val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
@@ -60,11 +61,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       var passed = checkSelectPass(select().from(collection).where("address.city" === "B").hint("myindex")) &&
         checkSelectPass(select().from(collection).where("address.city" === "B").hint(List(JPath("address.city"), JPath("address.street"))))
 
-      passed must be(true)
+      passed must be_==(true)
     }
-    skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator" in{
-      forAll { values: List[JObject] =>
+      check { values: List[JObject] =>
         query(insert(values: _*).into(collection))
 
         val value  = values.head
@@ -79,11 +79,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
-    skip("run manually")
     "Remove the same value form Mock and Real Mongo for existing object" in{
-      forAll { values: List[JObject] =>
+      check { values: List[JObject] =>
         query(remove.from(collection))
         query(insert(values: _*).into(collection))
 
@@ -100,11 +99,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
-    skip("run manually")
     "Insert the same value form Mock and Real Mongo for existing object" in{
-      forAll { values: List[JObject] =>
+      check { values: List[JObject] =>
         query(remove.from(collection))
         query(insert(values.tail: _*).into(collection))
 
@@ -119,11 +117,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
-    skip("run manually")
     "Upsert the same value form Mock and Real Mongo for existing object" in{
-      forAll { values: List[JObject] =>
+      check { values: List[JObject] =>
         query(remove.from(collection))
         query(insert(values: _*).into(collection))
 
@@ -141,11 +138,10 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
-    skip("run manually")
     "Select the same value form Mock and Real Mongo for And operator for every field" in{
-      forAll { vv: List[JObject] =>
+      check { vv: List[JObject] =>
         val values = List(JsonParser.parse("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
         query(insert(values: _*).into(collection))
 
@@ -165,12 +161,11 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
 
-    skip("run manually")
     "Select the same value form Mock and Real Mongo for OR operator" in{
-      forAll { values: List[JObject] =>
+      check { values: List[JObject] =>
         query(insert(values: _*).into(collection))
 
         val value1  = values.head
@@ -188,7 +183,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
         query(remove.from(collection))
 
         passed
-      } must pass
+      }
     }
   }
 
@@ -237,7 +232,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   private def oneQuery[T <: MongoQuery](query: T, database: Database) = {
     val future = database(query)
 
-    future.isDelivered must eventually (be(true))
+    future.isDelivered must eventually (be_==(true))
 
     future.value.get
   }

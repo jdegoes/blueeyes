@@ -1,8 +1,8 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
-class CacheDirectiveSpec extends Specification {
+class CacheDirectiveSpec extends Specification{
 
   "Cache-Directive: Should parse a cache directive with a field correctly" in {
     val testString1 = "private=\"this\", no-cache, max-age=10, no-transform"

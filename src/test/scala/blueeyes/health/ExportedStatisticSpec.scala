@@ -1,6 +1,6 @@
 package blueeyes.health
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST.JInt
 
 class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{
@@ -12,7 +12,7 @@ class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{
 
     value = 2
 
-    statistic.details must be (2)
+    statistic.details must_== (2)
   }
   "ExportedStatistic: creates JValue" in{
     var value: Int = 0

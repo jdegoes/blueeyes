@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit.{NANOSECONDS, MILLISECONDS}
 import java.lang.System.{nanoTime}
 

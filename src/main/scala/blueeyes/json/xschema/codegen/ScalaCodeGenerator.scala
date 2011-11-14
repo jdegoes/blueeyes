@@ -103,7 +103,7 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     code.using("namespace" -> namespace) {
       code.add("package " + namespace + " ").block {
         code.add("""
-          import _root_.org.specs.Specification
+          import _root_.org.specs2.mutable.Specification
 
           import blueeyes.json.JsonParser._
           import blueeyes.json.JsonAST._
@@ -151,19 +151,19 @@ class BaseScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
           code.add("""
             "Deserialization of ${name} succeeds even when information is missing" in {
-              ExampleProductData.Example${name}.isInstanceOf[${type}] must be (true)
+              ExampleProductData.Example${name}.isInstanceOf[${type}] must be_== (true)
             }""").newline
           
           if (defn.isSingleton) {
             code.add("""
               "Serialization of ${name} has non-zero information content" in {
-                Decomposers.${name}Decomposer.decompose(ExampleProductData.Example${name}) mustNot be (JObject(Nil))
+                Decomposers.${name}Decomposer.decompose(ExampleProductData.Example${name}) must not be (JObject(Nil))
               }""")
           }
           else {
             code.add("""
               "Serialization of ${name} has non-zero information content" in {
-                ExampleProductData.Example${name}.serialize mustNot be (JObject(Nil))
+                ExampleProductData.Example${name}.serialize must not be (JObject(Nil))
               }
             """)
           }

@@ -1,11 +1,12 @@
 package blueeyes.parsers
 
-import org.specs.{Specification, ScalaCheck}
 import util.parsing.input.CharSequenceReader
 import org.scalacheck.Gen
 import org.scalacheck.Prop.forAllNoShrink
 import W3ExtendedLogAST._
 import W3ExtendedLogGen._
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 class W3ExtendedLogGrammarSpec extends Specification with ScalaCheck{
   implicit def stringToInput(s: String) = new CharSequenceReader(s)
@@ -40,7 +41,7 @@ class W3ExtendedLogGrammarSpec extends Specification with ScalaCheck{
     passTest(directives, "\n")
   }
 
-  private def passTest(gen: Gen[String], delim: String = "") = forAllNoShrink(gen)(n => >>(W3ExtendedLog(n), delim) == n) must pass
+  private def passTest(gen: Gen[String], delim: String = "") = forAllNoShrink(gen)(n => >>(W3ExtendedLog(n), delim) must_== n)
 
   def >> (directives : List[Directive], delim: String) = directives.map(_.toString).mkString(delim)
 }

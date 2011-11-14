@@ -16,23 +16,22 @@
 
 package blueeyes.json
 
-import org.specs.{Specification, ScalaCheck}
+import org.specs2.mutable.Specification
 import org.scalacheck.{Gen, Arbitrary, Prop}
 import Prop.forAll
 import Arbitrary._
 
 import JsonAST._
 
-import scala.util.matching.Regex
+import org.specs2.ScalaCheck
 
 object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   "Parser" should {
     "parse all valid JPath strings" in {
-      forAll { (jpath: JPath) =>
-        JPath(jpath.toString) mustEqual jpath
-      } must pass
+      check { (jpath: JPath) =>
+        JPath(jpath.toString) == jpath
+      }
     }
-
 
     "forgivingly parse initial field name without leading dot" in {
       JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
@@ -46,7 +45,7 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
         for (jv <- arbitrary[JObject]) yield (jv, jv.flattenWithPath)
       }
 
-      forAll { (testData: (JValue, List[(JPath, JValue)])) => 
+      check { (testData: (JValue, List[(JPath, JValue)])) =>
         testData match {
           case (obj, allPathValues) => 
             val allProps = allPathValues.map {
@@ -54,7 +53,7 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
             }
             allProps.foldLeft[Prop](true)(_ && _)
         }
-      } must pass
+      }
     }
 
     "extract a second level node" in {

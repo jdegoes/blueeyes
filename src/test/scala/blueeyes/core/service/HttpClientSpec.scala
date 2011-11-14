@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.core.http._
 import blueeyes.core.data.BijectionsByteArray
 import blueeyes.concurrent.Future
@@ -8,6 +8,8 @@ import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
 class HttpClientSpec extends Specification with BijectionsByteArray{
+
+  override def is = args(sequential = true) ^ super.is
 
   private val initialRequest = HttpRequest[String](HttpMethods.GET, "/baz")
 
@@ -49,7 +51,7 @@ class HttpClientSpec extends Specification with BijectionsByteArray{
   "sets remote host header request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress(), "X-Cluster-Client-Ip" -> InetAddress.getLocalHost.getHostAddress()),
       remoteHost = Some(InetAddress.getLocalHost))) {client => client.remoteHost(InetAddress.getLocalHost)} }
 
-  private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]){
+  private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]) = {
     builder(mockClient).custom(method, uri.toString)
 
     mockClient.request.get mustEqual(expectation)

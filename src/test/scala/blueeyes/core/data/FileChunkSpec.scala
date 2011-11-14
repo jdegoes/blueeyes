@@ -1,46 +1,42 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.io.File
 import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
+import org.specs2.specification.{AfterExample, BeforeAfterExample}
 
-class FileSinkSpec extends Specification with Data{
+class FileSinkSpec extends Specification with Data with BeforeAfterExample{
+
+  override def is = args(sequential = true) ^ super.is
 
   "FileSink" should {
     "write data" in{
-      dataFile.delete
       val result = FileSink(dataFile, chunk)
 
       result.value must eventually (beSome(()))
-      dataFile.exists must be (true)
+      dataFile.exists must_==(true)
       dataFile.length mustEqual(data.flatten.length)
     }
     "cancel result when write failed" in{
-
-      dataFile.delete
       val error  = new RuntimeException
       val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, () => throw error))
 
-      result.isCanceled must eventually (be(true))
+      result.isCanceled must eventually (be_==(true))
       result.error must beSome(error)
-      dataFile.exists must be (true)
+      dataFile.exists must_==(true)
       dataFile.length mustEqual(data.head.toArray.length)
     }
     "cancel result when write getting next chunk failed" in{
-      dataFile.delete
-
       val error  = new RuntimeException
       val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, () => Some(Future.dead[ByteChunk](error))))
 
-      result.isCanceled must eventually (be(true))
+      result.isCanceled must eventually (be_==(true))
       result.error must beSome(error)
-      dataFile.exists must be (true)
+      dataFile.exists must_==(true)
       dataFile.length mustEqual(data.head.toArray.length)
     }
     "cancel writing when result is canceled" in{
-      dataFile.delete
-
       val nextChunk = new Future[ByteChunk]()
       def next   = {
         import scala.actors.Actor.actor
@@ -52,21 +48,32 @@ class FileSinkSpec extends Specification with Data{
       }
       val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, next _))
       result.cancel
-      nextChunk.isCanceled must eventually (be(true))
+      nextChunk.isCanceled must eventually (be_==(true))
 
-      dataFile.exists must be (true)
+      dataFile.exists must_==(true)
       dataFile.length mustEqual(data.head.toArray.length)
     }
-    doLast{
-      dataFile.delete
-    }
   }
+
+  protected def before = dataFile.delete
+
+  protected def after = dataFile.delete
 }
 
-class FileSourceSpec extends Specification with Data{
+class FileSourceSpec extends Specification with Data with AfterExample{
 
   "FileSource" should {
     "read all data" in{
+      def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
+        buffer ++= chunk.data
+
+        val next = chunk.next
+        next match{
+          case None =>  buffer
+          case Some(x) => readContent(x.value.get, buffer)
+        }
+      }
+
       val result = FileSink(dataFile, chunk)
       result.value must eventually (beSome(()))
 
@@ -74,20 +81,9 @@ class FileSourceSpec extends Specification with Data{
 
       new String(readContent(chunk, new ofByte()).result) mustEqual(new String(data.flatten.toArray))
     }
-    def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
-      buffer ++= chunk.data
-
-      val next = chunk.next
-      next match{
-        case None =>  buffer
-        case Some(x) => readContent(x.value.get, buffer)
-      }
-    }
-
-    doLast{
-      dataFile.delete
-    }
   }
+
+  protected def after = dataFile.delete
 }
 
 trait Data{

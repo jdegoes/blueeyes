@@ -6,7 +6,7 @@ import scala.util.Random
 import scalaz.Semigroup
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
-import org.specs.util.TimeConversions._
+import org.specs2.time.TimeConversions._
 import akka.actor.Actor
 
 object StageProfile{

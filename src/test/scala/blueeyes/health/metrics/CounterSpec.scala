@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST.JInt
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class CounterSpec extends Specification {
   "a counter of zero" should {

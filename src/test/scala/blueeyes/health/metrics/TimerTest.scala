@@ -3,7 +3,8 @@ package blueeyes.health.metrics
 import blueeyes.concurrent.Future
 import blueeyes.util.metrics.Duration
 import Duration._
-import org.specs.Specification
+import org.specs2.mutable.Specification
+import java.util.concurrent.TimeUnit
 
 class TimerTest extends Specification {
   val precision = 5.0 // milliseconds
@@ -17,7 +18,7 @@ class TimerTest extends Specification {
     "records the duration of the event" in {
       val timer = new Timer
       timer.time { Thread.sleep(10) }
-      timer.mean.ms.time mustNotBe(0.0)
+      timer.mean.ms.time must be_!=(0.0)
     }
 
     "records the duration of the event specified by future" in {
@@ -29,7 +30,7 @@ class TimerTest extends Specification {
       Thread.sleep(10)
       future.deliver(())
 
-      timer.mean.ms.time mustNotBe(0.0)
+      timer.mean.ms.time must_!=(0.0)
     }
 
     "records the existence of the event" in {
@@ -67,11 +68,11 @@ class TimerTest extends Specification {
   "timing a series of events" should {
     val timer = new Timer
     timer ++= List(
-      10.milliseconds,
-      20.milliseconds,
-      20.milliseconds,
-      30.milliseconds,
-      40.milliseconds
+      Duration(10, TimeUnit.MILLISECONDS),
+      Duration(20, TimeUnit.MILLISECONDS),
+      Duration(20, TimeUnit.MILLISECONDS),
+      Duration(30, TimeUnit.MILLISECONDS),
+      Duration(40, TimeUnit.MILLISECONDS)
     )
 
     "calculates the maximum duration" in {
@@ -98,8 +99,8 @@ class TimerTest extends Specification {
   "timing crazy-variant values" should {
     val timer = new Timer
     timer ++= List(
-      Long.MaxValue.milliseconds,
-      0.milliseconds
+      Duration(Long.MaxValue, TimeUnit.MILLISECONDS),
+      Duration(0, TimeUnit.MILLISECONDS)
     )
 
     "calculates the standard deviation without overflowing" in {

@@ -12,7 +12,7 @@ import blueeyes.util.metrics.DataSize
 
 import scala.xml.NodeSeq
 import scalaz.Scalaz._
-import scalaz.{Success, Validation, Failure}
+import scalaz.Validation
 
 
 trait HttpRequestHandlerCombinators {
@@ -27,14 +27,14 @@ trait HttpRequestHandlerCombinators {
    * }
    * }}}
    */
-  def path[T, S](path: RestPathPattern, desc: Option[String] = None): HttpService[T, S] => HttpService[T, S] =
-    (h: HttpService[T, S]) => new PathService[T, S] (path, h, desc)
+  def path[T, S](path: RestPathPattern): HttpService[T, S] => HttpService[T, S] =
+    (h: HttpService[T, S]) => new PathService[T, S] (path, h)
 
-  def pathParameter[A, B](path: RestPathPattern, sym: Symbol, desc: Option[String] = None) = 
-    (h: HttpService[A, String => B]) => new PathParameterService(path, sym, desc, h)
+  def pathParameter[A, B](path: RestPathPattern, sym: Symbol) =
+    (h: HttpService[A, String => B]) => new PathParameterService(path, sym, h)
 
-  def pathData[A, B, C](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, B], desc: Option[String] = None) = 
-    (h: HttpService[A, B => C]) => new PathDataService(path, sym, f, desc, h)
+  def pathData[A, B, C](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, B]) =
+    (h: HttpService[A, B => C]) => new PathDataService(path, sym, f, h)
 
   /** The path end combinator creates a handler that is defined only for paths
    * that are fully matched.
@@ -146,12 +146,12 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def parameter[T, S](parameter: Symbol, default: => Option[String] = None, desc: Option[String] = None) = {
-    ParameterService[T, S](parameter, default, desc, _: HttpService[T, String => S])
+  def parameter[T, S](parameter: Symbol, default: => Option[String] = None) = {
+    ParameterService[T, S](parameter, default, _: HttpService[T, String => S])
   }
 
-  def convertedParameter[T, S, E1](parameter: Symbol, convert: String => E1, default: => Option[String] = None, desc: Option[String] = None) = {
-    (s: HttpService[T, E1 => S]) => ParameterService[T, S](parameter, default, desc, s.map((_: E1 => S) compose convert))
+  def convertedParameter[T, S, E1](parameter: Symbol, convert: String => E1, default: => Option[String] = None) = {
+    (s: HttpService[T, E1 => S]) => ParameterService[T, S](parameter, default, s.map((_: E1 => S) compose convert))
   }
 
   /** A special-case extractor for cookie supporting a default value.
@@ -163,12 +163,12 @@ trait HttpRequestHandlerCombinators {
    * }
    * </pre>
    */
-  def cookie[T, S](ident: Symbol, default: => Option[String] = None, desc: Option[String] = None) = {
-    CookieService[T, S](ident, default, desc, _: HttpService[T, String => S])
+  def cookie[T, S](ident: Symbol, default: => Option[String] = None) = {
+    CookieService[T, S](ident, default, _: HttpService[T, String => S])
   }
 
-  def convertedCookie[T, S, E1](ident: Symbol, convert: String => E1, default: => Option[String] = None, desc: Option[String] = None) = {
-    (s: HttpService[T, E1 => S]) => CookieService[T, S](ident, default, desc, s.map((_: E1 => S) compose convert))
+  def convertedCookie[T, S, E1](ident: Symbol, convert: String => E1, default: => Option[String] = None) = {
+    (s: HttpService[T, E1 => S]) => CookieService[T, S](ident, default, s.map((_: E1 => S) compose convert))
   }
 
 
@@ -273,9 +273,13 @@ trait HttpRequestHandlerCombinators {
 
   def forwarding[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U]) = (h: HttpService[T, HttpResponse[T]]) => new ForwardingService[T, U](f, httpClient, h)
 
-  def metadata[T, S](metadata: Metadata*)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(AndMetadata(metadata: _*)), h)
+  def metadata[T, S](metadata: Metadata*)(h: HttpService[T, Future[HttpResponse[S]]]) = MetadataService(Some(AndMetadata(metadata: _*)), h)
 
-  def describe[T, S](description: String)(h: HttpService[T, HttpResponse[S]]) = MetadataService(Some(DescriptionMetadata(description)), h)
+  def metadata2[T, S, E1](metadata: Metadata*)(h: HttpService[T, E1 => Future[HttpResponse[S]]]) = MetadataService(Some(AndMetadata(metadata: _*)), h)
+
+  def describe[T, S](description: String)(h: HttpService[T, Future[HttpResponse[S]]]) = MetadataService(Some(DescriptionMetadata(description)), h)
+
+  def describe2[T, S, E1](description: String)(h: HttpService[T, E1 => Future[HttpResponse[S]]]) = MetadataService(Some(DescriptionMetadata(description)), h)
 
   /** The decodeUrl combinator creates a handler that decode HttpRequest URI.
    */

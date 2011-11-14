@@ -38,70 +38,91 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
       request { demoConfig: BlueEyesDemoConfig =>
         import demoConfig._
 
-        path("/contacts", Some("Gets all contacts.")){
-          produce(application/json) {
-            get { request: HttpRequest[ByteChunk] =>
-              database(select(".name").from(collection)) map { records =>
-                HttpResponse[JValue](
-                  content = Some(JArray(records.map(_ \\ "name").toList))
-                )
+        describe("Gets all contacts."){
+          path("/contacts"){
+            produce(application/json) {
+              get { request: HttpRequest[ByteChunk] =>
+                database(select(".name").from(collection)) map { records =>
+                  HttpResponse[JValue](
+                    content = Some(JArray(records.map(_ \\ "name").toList))
+                  )
+                }
               }
             }
           }
         }~
-        path("/contacts", Some("Adds new contact.")){
-          jvalue {
-            post { request: HttpRequest[Future[JValue]] =>
-              request.content map { 
-                _.flatMap(v => database(insert(v --> classOf[JObject]).into(collection)) map (_ => HttpResponse[JValue]()))
-              } getOrElse {
-                Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest)))
+        describe("Adds new contact."){
+          path("/contacts"){
+            jvalue {
+              post { request: HttpRequest[Future[JValue]] =>
+                request.content map {
+                  _.flatMap(v => database(insert(v --> classOf[JObject]).into(collection)) map (_ => HttpResponse[JValue]()))
+                } getOrElse {
+                  Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest)))
+                }
               }
             }
           }
         }~
         path("/contacts"){
-          path("/search", Some("Searchs contacts by criteria.")) {
-            jvalue{
-              post {
-                refineContentType[JValue, JObject] { request =>
-                  searchContacts(request.content, demoConfig) map {
-                    v => HttpResponse[JValue](content = Some(JArray(v)))
+          describe("Searchs contacts by criteria."){
+            path("/search") {
+              jvalue{
+                post {
+                  refineContentType[JValue, JObject] { request =>
+                    searchContacts(request.content, demoConfig) map {
+                      v => HttpResponse[JValue](content = Some(JArray(v)))
+                    }
                   }
                 }
               }
             }
-          } ~
-          path("/'name", Some("Searches a conatact by name.")) {
-            produce(application/json) {
-              get { request: HttpRequest[ByteChunk] =>
-                database(selectOne().from(collection).where("name" === request.parameters('name))) map {
-                  v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound)
+          }~
+          describe("Searches a conatact by name."){
+            path("/'name") {
+              produce(application/json) {
+                get { request: HttpRequest[ByteChunk] =>
+                  database(selectOne().from(collection).where("name" === request.parameters('name))) map {
+                    v => HttpResponse[JValue](content=v, status=if (!v.isEmpty) OK else NotFound)
+                  }
                 }
               }
             }
           }~
-          path("/'name", Some("Deletes a conatact by name.")) {
-            delete { request: HttpRequest[ByteChunk] =>
-              database(remove.from(collection).where("name" === request.parameters('name))) map {
-                _ => HttpResponse[ByteChunk]()
+          describe("Deletes a conatact by name."){
+            path("/'name") {
+              delete { request: HttpRequest[ByteChunk] =>
+                database(remove.from(collection).where("name" === request.parameters('name))) map {
+                  _ => HttpResponse[ByteChunk]()
+                }
               }
             }
-          } ~
-          path("/file/read", Some("Reads a file.")){
-            compress{
-              produce(image / jpeg){
-                get { request: HttpRequest[ByteChunk] =>
-                  val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("~/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
-                  Future.sync[HttpResponse[ByteChunk]](response)
+          }~
+          describe("Reads a file."){
+            path("/file/read"){
+              compress{
+                produce(image / jpeg){
+                  get { request: HttpRequest[ByteChunk] =>
+                    val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("~/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
+                    Future.sync[HttpResponse[ByteChunk]](response)
+                  }
                 }
               }
             }
           }
         }~
-        path("/ping", Some("Ping service.")) {
-          produce(text/plain) {
-            get { request: HttpRequest[ByteChunk] =>
+        describe("Ping service."){
+          path("/ping") {
+            produce(text/plain) {
+              get { request: HttpRequest[ByteChunk] =>
+                Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
+              }
+            }
+          }
+        }~
+        describe("Jsonp service."){
+          path("/Jsonp") {
+            jsonp[ByteChunk] { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
             }
           }

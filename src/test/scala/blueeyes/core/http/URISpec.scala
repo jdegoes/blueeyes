@@ -1,7 +1,7 @@
 package blueeyes.core.http
 
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 import org.scalacheck._
 import org.scalacheck.Prop.forAll
 
@@ -17,7 +17,7 @@ class URISpec extends Specification with URIGen with ScalaCheck{
 
   "URI" should{
     "parser uri" in {
-      forAll{n: String => URI(n).toString == n } must pass
+      check {n: String => URI(n).toString == n }
     }
   }
 

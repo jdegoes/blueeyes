@@ -1,6 +1,6 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class EmailsSpec extends Specification{
   "Emails" should{

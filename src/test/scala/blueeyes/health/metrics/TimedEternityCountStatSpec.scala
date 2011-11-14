@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST._
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class TimedEternityCountStatSpec extends Specification{
   private val clock = new Clock()

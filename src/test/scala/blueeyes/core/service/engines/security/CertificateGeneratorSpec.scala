@@ -1,6 +1,6 @@
 package blueeyes.core.service.engines.security
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class CertificateGeneratorSpec extends Specification{
   "Creates key and certificate" in{

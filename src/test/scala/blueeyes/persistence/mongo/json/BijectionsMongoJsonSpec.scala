@@ -5,7 +5,7 @@ import blueeyes.json.JsonAST._
 import BijectionsMongoJson._
 import BijectionsMongoJson.MongoToJson._
 import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 class BijectionsMongoJsonSpec extends Specification {
   "MongoToJValue" should{
@@ -43,26 +43,16 @@ class BijectionsMongoJsonSpec extends Specification {
       toJson("array", array) mustEqual (JArray(List(JString("1"), JString("2"))))
     }
     "convert BasicDBList type" in {
-      try {
-        val array = new BasicDBList()
-        array.add("1")
-        array.add("2")
-        toJson("array", array) mustEqual(JArray(List(JString("1"), JString("2"))))
-      }
-      catch {
-        case e: Throwable => e.printStackTrace()
-      }
+      val array = new BasicDBList()
+      array.add("1")
+      array.add("2")
+      toJson("array", array) mustEqual(JArray(List(JString("1"), JString("2"))))
     }
     "convert BasicDBList type" in {
-      try {
-        val array = new BasicDBList()
-        array.add(new java.lang.Integer(1))
-        array.add("2")
-        toJson("array", array) mustEqual(JArray(List(JInt(1), JString("2"))))
-      }
-      catch {
-        case e: Throwable => e.printStackTrace()
-      }
+      val array = new BasicDBList()
+      array.add(new java.lang.Integer(1))
+      array.add("2")
+      toJson("array", array) mustEqual(JArray(List(JInt(1), JString("2"))))
     }
 //    "remove reserved mongo keys" in {
 //      val dbObject = new BasicDBObject()

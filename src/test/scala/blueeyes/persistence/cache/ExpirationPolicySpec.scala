@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit.{NANOSECONDS, MILLISECONDS}
 
 import blueeyes.util.ClockMock
@@ -13,13 +13,13 @@ class ExpirationPolicySpec extends Specification {
 
   "eternal" should {
     "be true when timeToIdleNanos and timeToLiveNanos are not defined" in {
-      ExpirationPolicy(None, None, NANOSECONDS).eternal must be (true)  
+      ExpirationPolicy(None, None, NANOSECONDS).eternal must be_==(true)
     }
     "ExpirationPolicy: eternal is 'false' when timeToIdleNanos is defined" in {
-      ExpirationPolicy(Some(1), None, NANOSECONDS).eternal must be (false)
+      ExpirationPolicy(Some(1), None, NANOSECONDS).eternal must be_==(false)
     }
     "ExpirationPolicy: eternal is 'false' when timeToLiveNanos is defined" in {
-      ExpirationPolicy(None, Some(1), NANOSECONDS).eternal must be (false)
+      ExpirationPolicy(None, Some(1), NANOSECONDS).eternal must be_==(false)
     }
   }
 

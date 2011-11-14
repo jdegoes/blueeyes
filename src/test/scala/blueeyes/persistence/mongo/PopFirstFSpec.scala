@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import UpdateFieldFunctions._
 
 class PopFirstFSpec extends Specification{

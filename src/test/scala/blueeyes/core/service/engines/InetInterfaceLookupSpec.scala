@@ -1,10 +1,11 @@
 package blueeyes.core.service.engines
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import net.lag.configgy.Configgy
 import java.net.{InetSocketAddress, InetAddress}
 
 class InetInterfaceLookupSpec extends Specification{
+  override def is = args(sequential = true) ^ super.is
   "creates socket address when address is not configured" in{
     Configgy.configureFromString("")
 

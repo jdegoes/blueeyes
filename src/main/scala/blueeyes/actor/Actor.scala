@@ -10,9 +10,7 @@ import scalaz.Scalaz._
  * This trait is invariant because some actors may have complex dependencies 
  * between input / output types and some other polymorphic type.
  */
-trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[A, B]] with Serializable { self =>
-  final val value: A => ActorState[A, B] = (a: A) => receive(a)
-
+trait ActorV[A, B] extends Serializable { self =>
   final def apply(a: A): ActorState[A, B] = receive(a)
 
   final def ! (a: A): ActorState[A, B] = receive(a)
@@ -48,14 +46,6 @@ trait ActorV[A, B] extends (A => ActorState[A, B]) with NewType[A => ActorState[
   final def !+! (as: Seq[A])(implicit semigroup: Semigroup[B]): ActorState[A, B] = !+! (as(0), as.tail: _*)
 
   protected def receive(a: A): ActorState[A, B]
-
-  override def equals(that: Any): Boolean = that match {
-    case that: ActorV[_, _] => this.value == that.value
-
-    case _ => false
-  }
-
-  override def hashCode: Int = value.hashCode
 }
 
 object Actor  extends ActorModule

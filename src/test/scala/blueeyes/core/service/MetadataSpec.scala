@@ -1,11 +1,12 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
 import blueeyes.core.http._
 import blueeyes.util.printer._
 import blueeyes.core.http.HttpMethods._
 import RestPathPatternParsers._
+import blueeyes.concurrent.Future
 
 class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
   import Metadata._
@@ -90,15 +91,19 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
   </body>
 </html>"""
 
-      val handler : HttpService[Int, Int] = {
-        path("/details", Some("Personal ")) {
+      val handler : HttpService[Int, Future[HttpResponse[Int]]] = {
+        path("/details") {
           path("/bar") {
-            path("/john", Some("john details")) {
-              get { (request: HttpRequest[Int]) => 0 }
+            describe("Personal john details"){
+              path("/john") {
+                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
+              }
             }
           }~
-          path("/kate", Some("kate details")) {
-            get { (request: HttpRequest[Int]) => 0 }
+          describe("Personal kate details"){
+            path("/kate") {
+              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
+            }
           }
         }
       }

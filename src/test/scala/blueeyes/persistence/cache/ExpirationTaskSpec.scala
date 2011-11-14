@@ -1,6 +1,6 @@
 package blueeyes.persistence.cache
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit.{NANOSECONDS}
 
 class ExpirationTaskSpec extends Specification{
@@ -11,13 +11,13 @@ class ExpirationTaskSpec extends Specification{
 
     new ExpirationTask(expirable, {hasExpired: Expirable[String, String] => true}, {evict: Expirable[String, String] => evicted = true}).run()
 
-    evicted must be (true)
+    evicted must be_==(true)
   }
   "ExpirationTask: expirable is evicted when hasExpired is 'true'" in{
     var evicted = false
 
     new ExpirationTask(expirable, {hasExpired: Expirable[String, String] => false}, {evict: Expirable[String, String] => evicted = true}).run()
 
-    evicted must be (false)
+    evicted must be_==(false)
   }
 }

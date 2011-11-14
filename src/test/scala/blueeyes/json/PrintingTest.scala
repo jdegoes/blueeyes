@@ -18,8 +18,8 @@ package blueeyes.json
 
 import org.scalacheck._
 import org.scalacheck.Prop.forAll
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
@@ -29,7 +29,7 @@ object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
   "rendering does not change semantics" in {
     val rendering = (json: Document) => parse(Printer.pretty(json)) == parse(Printer.compact(json))
 
-    forAll(rendering) must pass
+    check(rendering)
   }
 
   private def parse(json: String) = scala.util.parsing.json.JSON.parseRaw(json)

@@ -43,7 +43,15 @@ private[mongo] object Evaluators{
   }
 
   object MongoOrFilterEvaluator{
-    def apply(values: List[JValue], filter: MongoOrFilter) = filter.queries.distinct.foldLeft(List[JValue]()){ (result, currentFilter) => result.union(values.filter(currentFilter)) }
+    def apply(values: List[JValue], filter: MongoOrFilter) = {
+      val uniqueFilter = filter.queries.distinct
+      values.filter{jvo => uniqueFilter.foldLeft(false){(result, filter) =>
+        result || (List(jvo).filter(filter) match{
+          case x :: xs => true
+          case Nil     => false
+        })
+      }}
+    }
   }
 
   object MongoAndFilterEvaluator{
@@ -167,7 +175,10 @@ private[mongo] object Evaluators{
     }
   }
   case object ExistsFieldFilterEvaluator extends FieldFilterEvaluator{
-    def apply(v1: JValue, v2: JValue) = v1 != JNothing
+    def apply(v1: JValue, v2: JValue) = v2 match{
+      case JBool(value) => if (value) v1 != JNothing else v1 == JNothing
+      case _ => false
+    }
   }
   case object RegexFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {

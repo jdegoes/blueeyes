@@ -1,7 +1,7 @@
 package blueeyes.core.service.engines.security
 
 import org.apache.commons.codec.binary.Base64
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import EncoderUtil._
 
 class CertificateDecoderSpec extends Specification with CertificateData{

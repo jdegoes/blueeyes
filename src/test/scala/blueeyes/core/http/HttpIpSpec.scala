@@ -1,8 +1,8 @@
 package blueeyes.core.http
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
-class HttpIpSpec extends Specification {
+class HttpIpSpec extends Specification{
 
   "HttpIp: Should recover the ip from \"111.11.11.1\" "in {
     HttpIps.parseHttpIps("111.11.11.1")(0).toString mustEqual "111.11.11.1"

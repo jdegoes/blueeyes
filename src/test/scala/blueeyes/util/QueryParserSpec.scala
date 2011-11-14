@@ -2,8 +2,7 @@ package blueeyes.util
 
 import QueryParser._
 import java.net.URI
-import org.specs.Specification
-import org.specs.util._
+import org.specs2.mutable.Specification
 import java.net.URLEncoder._
 
 class QueryParserSpec extends Specification {
@@ -16,7 +15,7 @@ class QueryParserSpec extends Specification {
     var params = parseQuery(query)
     params must (haveKey('a) and haveKey('b))
     params must (havePair(('a, "1")) and havePair(('b, "2")))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support value-less query params" in {
@@ -24,7 +23,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery()
     var params = parseQuery(query)
     params must haveKey('usermode)
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support empty query string" in {
@@ -32,7 +31,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery()
     var params = parseQuery(query)
     params must beEmpty
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support query string with fragment appended" in {
@@ -40,7 +39,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams + "#fragment").getRawQuery()
     var params = parseQuery(query)
     params must havePairs(('flag, "true"))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support query string with <space>" in {
@@ -48,7 +47,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery
     var params = parseQuery(query)
     params must havePair(('flag, "true"))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support query string with extra '?' in param name" in {
@@ -56,7 +55,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery
     var params = parseQuery(query)
     params must (havePair(('flag, "true")) and havePair((Symbol("path?"), "foo")))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support query string with random '?'" in {
@@ -64,7 +63,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery
     var params = parseQuery(query)
     params must (havePair(('flag, "true")) and havePair((Symbol("path??path2"), "")))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 
   "Support empty parameter block '&&'" in {
@@ -72,7 +71,7 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery
     var params = parseQuery(query)
     params must (havePair(('flag, "true")) and havePair(('foo, "bar")))
-    unparseQuery(params) must beEqual(queryParams.replace("&&", "&"))
+    unparseQuery(params) must_==(queryParams.replace("&&", "&"))
   }
 
   "Support empty URI as param value" in {
@@ -80,6 +79,6 @@ class QueryParserSpec extends Specification {
     val query = URI.create(baseURI + queryParams).getRawQuery
     var params = parseQuery(query)
     params must havePair(('site, "http://www.google.com?search=blah"))
-    unparseQuery(params) must beEqual(queryParams)
+    unparseQuery(params) must_==(queryParams)
   }
 }

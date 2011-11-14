@@ -1,6 +1,6 @@
 package blueeyes.health.metrics.histogram
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import ValueStrategy._
 
 class StaticHistogramSpec extends Specification{

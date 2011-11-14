@@ -1,7 +1,7 @@
 package blueeyes.actor
 
-import org.specs.Specification
-import org.specs.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
 
 import scala.util.Random
 
@@ -10,12 +10,6 @@ import blueeyes.concurrent.Future._
 
 import scalaz._
 import scalaz.Scalaz._
-
-import org.scalacheck.Prop._
-import org.scalacheck._
-import org.scalacheck.Gen._
-import org.scalacheck.Arbitrary.arbitrary
-import org.scalacheck.Shrink
 
 class ActorSpec extends Specification with ScalaCheck {
   import ActorModule._

@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 
 class SampleSpec extends Specification{
@@ -33,7 +33,7 @@ class SampleSpec extends Specification{
     sample += 1.1
     sample += 2.2
 
-    sample.details              mustNotEq (None)
+    sample.details              mustNotEqual (None)
   }
 
   "composes Sample" in{

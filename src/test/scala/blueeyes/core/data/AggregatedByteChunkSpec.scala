@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.util.metrics.DataSize
 import DataSize._

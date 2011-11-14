@@ -1,12 +1,8 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 
-import blueeyes.json.JsonAST._
-import blueeyes.concurrent.Future
-import blueeyes.core.http._
-
-class HttpRequestHandlerImplicitsSpec extends Specification with HttpRequestHandlerImplicits {
+class HttpRequestHandlerImplicitsSpec extends Specification with HttpRequestHandlerImplicits{
   "HttpRequestHandlerImplicits.identifierToIdentifierWithDefault: creates IdentifierWithDefault" in {
     import HttpRequestHandlerImplicits._
     val identifierWithDefault = 'foo ?: "bar"

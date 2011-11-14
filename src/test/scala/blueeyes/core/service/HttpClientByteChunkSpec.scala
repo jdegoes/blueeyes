@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import org.specs.Specification
+import org.specs2.mutable.Specification
 import blueeyes.concurrent.Future
 import blueeyes.core.http._
 import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}

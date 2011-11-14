@@ -10,20 +10,20 @@ class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with S
    "Server Health Monitor Service" should{
     "get server health" in {
       val f = service.get[JValue]("/blueeyes/server/health")
-      f.value must eventually(beSomething)
+      f.value must eventually(beSome)
 
       val response = f.value.get
 
       response.status  mustEqual(HttpStatus(OK))
       val content = response.content.get
 
-      content \ "runtime" must notEq(JNothing)
-      content \ "memory" must notEq(JNothing)
-      content \ "threads" must notEq(JNothing)
-      content \ "operatingSystem" must notEq(JNothing)
-      content \ "server" \ "hostName" must notEq(JNothing)
-      content \ "server" \ "port" must notEq(JNothing)
-      content \ "server" \ "sslPort" must notEq(JNothing)
+      content \ "runtime" must_!=(JNothing)
+      content \ "memory" must_!=(JNothing)
+      content \ "threads" must_!=(JNothing)
+      content \ "operatingSystem" must_!=(JNothing)
+      content \ "server" \ "hostName" must_!=(JNothing)
+      content \ "server" \ "port" must_!=(JNothing)
+      content \ "server" \ "sslPort" must_!=(JNothing)
     }
   }
 }
