@@ -85,8 +85,9 @@ case class TitleMetadata        (title: String) extends Metadata(7)
 case class DescriptionMetadata  (description: String) extends Metadata(8)
 case class DataSizeMetadata     (dataSize: DataSize)  extends Metadata(9)
 case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(10)
-case class AndMetadata          (metadata: Metadata*) extends Metadata(11)
-case class OrMetadata           (metadata: Metadata*) extends Metadata(12)
+case class AboutMetadata        (metadata: Metadata, about: Metadata) extends Metadata(11)
+case class AndMetadata          (metadata: Metadata*) extends Metadata(12)
+case class OrMetadata           (metadata: Metadata*) extends Metadata(13)
 
 object Metadata {
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
@@ -150,10 +151,14 @@ object Metadata {
       case TitleMetadata(title) => Append(Title(title), Break)
 
       case OrMetadata(metadata @ _*) =>
+        //TODO: is OrMetadata really only used for parameters?
         Append(Seq(Nest(ValueCaption("Parameter Type", "Parameter", "Description")), Break) ++
         metadata.map(m => Nest(formatMetadata(m)): Printable[String]).toList.intersperse(Append(Break, Break)): _*)
 
-      case AndMetadata(metadata @ _*) => metadata match{
+      case AboutMetadata(metadata, about) => 
+        formatMetadata(metadata) ~ Break ~ Nest(formatMetadata(about))
+
+      case AndMetadata(metadata @ _*) => metadata match {
         case Seq(DescriptionMetadata(desc), metadata) => formatMetadata(metadata) match {
           case Value(valueType, value, valueDesc) => Value(valueType, value, Some(desc + valueDesc.getOrElse("")))
           case p => Append(Description(desc), Break, p)
