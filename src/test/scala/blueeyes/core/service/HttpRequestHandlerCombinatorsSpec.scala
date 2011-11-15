@@ -55,7 +55,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")).
       toOption.get.map(_.content.map(ChunkToString)) must whenDelivered {
-        _ must beSome("""jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});""")
+        beSome("""jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});""")
       }
     }
 
@@ -70,13 +70,14 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
 
-      handler.service {
-        HttpRequest[ByteChunk](
-          method = HttpMethods.GET,
-          uri = "/?callback=jsFunc&method=POST&content=" + encodeUrl("{\"bar\":123}", "UTF-8"))
-      }.toOption.get must whenDelivered {
-        _.content.map(ChunkToString) must beSome {
-          """jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});"""
+      val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
+                                           uri = "/?callback=jsFunc&method=POST&content=" + encodeUrl("{\"bar\":123}", "UTF-8"))
+
+      handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
+        case Success(future) => future must whenDelivered {
+          beSome {
+            """jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});"""
+          }
         }
       }
     }
@@ -92,13 +93,14 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
 
-      handler.service {
-        HttpRequest[ByteChunk](
-          method = HttpMethods.GET,
-          uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
-      }.toOption.get must whenDelivered {
-        _.content.map(ChunkToString) must beSome {
-          """jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});"""
+      val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
+                                           uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
+
+      handler.service(request).map(_.map(_.content.map(ChunkToString))) must {
+        beLike {
+          case Success(future) => future must whenDelivered {
+            beSome("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});""")
+          }
         }
       }
     }
@@ -114,13 +116,12 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
 
-      handler.service {
-        HttpRequest[ByteChunk](
-          method = HttpMethods.GET,
-          uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
-      }.toOption.get must whenDelivered {
-        _.content.map(ChunkToString) must beSome {
-          """jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});"""
+      val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
+                                           uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
+
+      handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
+        case Success(future) => future must whenDelivered {
+          beSome("""jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});""")
         }
       }
     }
@@ -136,13 +137,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
 
-      handler.service {
-        HttpRequest[ByteChunk](
-          method = HttpMethods.GET,
-          uri = "/?callback=jsFunc&method=GET")
-      }.toOption.get must whenDelivered {
-        _.content.map(ChunkToString) must beSome {
-          """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});"""
+      val request = HttpRequest[ByteChunk]( method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")
+
+      handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
+        case Success(future) => future must whenDelivered {
+          beSome {
+            """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});"""
+          }
         }
       }
     }
@@ -159,15 +160,15 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         }
       }
 
-      errorHandler.service {
-        HttpRequest[ByteChunk](
-          method = HttpMethods.GET,
-          uri = "/?callback=jsFunc&method=GET")
-      }.toOption.get must whenDelivered {
-        _ must beLike { 
-          case HttpResponse(HttpStatus(code, _), _, Some(byteChunk), _) =>
-            (code must_== OK) and 
-            (ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});""")
+      val request = HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET") 
+      
+      errorHandler.service(request) must beLike {
+        case Success(future) => future must whenDelivered {
+          beLike { 
+            case HttpResponse(HttpStatus(code, _), _, Some(byteChunk), _) =>
+              (code must_== OK) and 
+              (ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});""")
+          }
         }
       }     
     }
@@ -353,7 +354,9 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
 
       svc.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah")) must beLike {
         case Success(future) => future must whenDelivered {
-          _.content must beSome(JString("/foo/blah blah"))
+          beLike {
+            case HttpResponse(_, _, Some(content), _) => content must_== JString("/foo/blah blah")
+          }
         }
       }
     }
