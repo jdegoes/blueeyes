@@ -22,30 +22,21 @@ val emailService = {
 }
 */
 trait ServiceBuilder[T] {
-  protected case class StartupDescriptor[S](startup: () => Future[S]) {
-    def -> (request: RequestDescriptor[S]) = new StartupAndShutdownDescriptor(request)
-    class StartupAndShutdownDescriptor(request: RequestDescriptor[S]){
-      def -> (shutdown: ShutdownDescriptor[S]) = ServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
-    }
-  }
-  protected case class RequestDescriptor[S](request: S => AsyncHttpService[T])
-  protected case class ShutdownDescriptor[S](shutdown: S => Future[Unit])
-  
-  protected def startup[S](startup: => Future[S]): StartupDescriptor[S] = {
+  protected def startup[S](startup: => Future[S]): StartupDescriptor[T, S] = {
     val thunk = () => startup
     
-    StartupDescriptor[S](thunk)
+    StartupDescriptor[T, S](thunk)
   }
   
-  protected def request[S](request: S => AsyncHttpService[T]): RequestDescriptor[S] = RequestDescriptor[S](request)
+  protected def request[S](request: S => AsyncHttpService[T]): RequestDescriptor[T, S] = RequestDescriptor[T, S](request)
   
-  protected def request(request: => AsyncHttpService[T]): RequestDescriptor[Unit] = RequestDescriptor[Unit]((u) => request)
+  protected def request(request: => AsyncHttpService[T]): RequestDescriptor[T, Unit] = RequestDescriptor[T, Unit]((u) => request)
   
   protected def shutdown[S](shutdown: S => Future[Unit]): ShutdownDescriptor[S] = ShutdownDescriptor[S](shutdown)
   
   protected def shutdown(shutdown: => Future[Unit]): ShutdownDescriptor[Unit] = ShutdownDescriptor[Unit]((u) => shutdown)
   
-  protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[Unit]): ServiceDescriptor[T, Unit] = 
+  protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[T, Unit]): ServiceDescriptor[T, Unit] =
     ServiceDescriptor[T, Unit](() => ().future, rd.request, _ => ().future)
 
   def service(name: String, version: String, desc: Option[String] = None)(descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]): Service[T] = new ServiceImpl[T](name, version, desc, descriptorFactory)
@@ -54,3 +45,13 @@ trait ServiceBuilder[T] {
     def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
   }
 }
+
+case class StartupDescriptor[T, S](startup: () => Future[S]) {
+  def -> (request: RequestDescriptor[T, S]) = new StartupAndShutdownDescriptor(request)
+  class StartupAndShutdownDescriptor(request: RequestDescriptor[T, S]){
+    def -> (shutdown: ShutdownDescriptor[S]) = ServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
+  }
+}
+case class RequestDescriptor[T, S](request: S => AsyncHttpService[T])
+case class ShutdownDescriptor[S](shutdown: S => Future[Unit])
+

@@ -75,9 +75,7 @@ trait NettyEngine extends HttpServerEngine with HttpServer{ self =>
 
       allChannels.close().awaitUninterruptibly()
       try {
-        servers.foreach{server =>
-          server.releaseExternalResources()
-        }
+        servers.foreach(_.releaseExternalResources())
         servers = Nil
       }
       finally{
@@ -132,12 +130,6 @@ private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpst
     e.getChannel.getConfig.setOption("backlog", backlog)
     super.channelOpen(ctx, e)
   }
-}
-
-private[engines] object InetInterfaceLookup {
-  def socketAddres(config: ConfigMap, port: Int) = config.getString("address").map(v => new InetSocketAddress(v, port)).getOrElse(new InetSocketAddress(port))
-
-  def host(config: ConfigMap) = config.getString("address").getOrElse(InetAddress.getLocalHost.getHostName)
 }
 
 private[engines] class FullURIHttpRequestDecoder(protocol: String, host: String, port: Int, chunkSize: Int) extends HttpRequestDecoder(4096, 8192, 2){
