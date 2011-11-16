@@ -14,9 +14,14 @@ private[mongo] object QueryBehaviours{
   }
 
   trait MongoQueryBehaviour extends QueryBehaviour {
+    /**
+     * This should only be true for ops that can be verified via a call to getLastError
+     */
+    val isVerifiable : Boolean
+
     override def apply(collection: DatabaseCollection, isVerified: Boolean = true) = {
       val result = try{
-        if (isVerified) verifiedQuery(collection) else unverifiedQuery(collection)
+        if (isVerified && isVerifiable) verifiedQuery(collection) else unverifiedQuery(collection)
       } catch {
         case error: Throwable => Failure(error)
       }
@@ -43,6 +48,7 @@ private[mongo] object QueryBehaviours{
   }
 
   trait EnsureIndexQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.ensureIndex(name, keys, unique, options) }
 
@@ -53,22 +59,28 @@ private[mongo] object QueryBehaviours{
   }
 
   trait DropIndexQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.dropIndex(name) }
 
     def name: String
   }
+
   trait DropIndexesQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.dropIndexes() }
   }
 
   trait InsertQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = true
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.insert(objects) }
     def objects: List[JObject]
   }
+
   trait MapReduceQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = MapReduceOutput
     def query(collection: DatabaseCollection): MapReduceOutput = {
       collection.mapReduce(map, reduce, outputCollection, filter)
@@ -81,12 +93,15 @@ private[mongo] object QueryBehaviours{
   }
 
   trait RemoveQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = true
     type QueryResult = Unit
     def query(collection: DatabaseCollection) { collection.remove(filter) }
 
     def filter: Option[MongoFilter]
   }
+
   trait CountQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Long
     def query(collection: DatabaseCollection) = collection.count(filter)
 
@@ -94,6 +109,7 @@ private[mongo] object QueryBehaviours{
   }
 
   trait SelectQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = IterableView[JObject, Iterator[JObject]]
     def query(collection: DatabaseCollection) = {
       collection.select(selection, filter, sort, skip, limit, hint, isSnapshot)
@@ -107,7 +123,9 @@ private[mongo] object QueryBehaviours{
     def hint       : Option[Hint]
     def isSnapshot : Boolean
   }
+
   trait ExplainQueryBehaviour  extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = JObject
     def query(collection: DatabaseCollection) = {
       collection.explain(selection, filter, sort, skip, limit, hint, isSnapshot)
@@ -121,7 +139,9 @@ private[mongo] object QueryBehaviours{
     def hint      : Option[Hint]
     def isSnapshot : Boolean
   }
+
   trait GroupQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = JArray
     def query(collection: DatabaseCollection) = collection.group(selection, filter, initial, reduce)
 
@@ -130,7 +150,9 @@ private[mongo] object QueryBehaviours{
     def initial   : JObject
     def filter    : Option[MongoFilter]
   }
+
   trait DistinctQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = List[JValue]
     def query(collection: DatabaseCollection) = collection.distinct(selection, filter)
 
@@ -139,6 +161,7 @@ private[mongo] object QueryBehaviours{
   }
 
   trait SelectOneQueryBehaviour extends MongoQueryBehaviour { self =>
+    val isVerifiable = false
     type QueryResult = Option[JObject]
     private val selectQuery = new SelectQueryBehaviour() {
       def limit     = Some(1)
@@ -159,7 +182,9 @@ private[mongo] object QueryBehaviours{
     def sort      : Option[MongoSort]
     def hint      : Option[Hint]
   }
+
   trait MultiSelectQuery extends MongoQueryBehaviour { self =>
+    val isVerifiable = false
     type QueryResult = IterableView[Option[JObject], Seq[Option[JObject]]]
     import MongoFilterEvaluator._
     import IterableViewImpl._
@@ -192,6 +217,7 @@ private[mongo] object QueryBehaviours{
   }
 
   trait UpdateQueryBehaviour extends MongoQueryBehaviour {
+    val isVerifiable = true
     type QueryResult = Unit
     def query(collection: DatabaseCollection) = value match {
       case MongoUpdateNothing =>
@@ -205,6 +231,7 @@ private[mongo] object QueryBehaviours{
   }
 
   trait SelectAndUpdateQueryBehaviour  extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Option[JObject]
     def query(collection: DatabaseCollection) = update match {
       case MongoUpdateNothing => throw new MongoException("""findAndModifyFailed failed: "exception: must specify remove or update"""")
@@ -218,7 +245,9 @@ private[mongo] object QueryBehaviours{
     def returnNew: Boolean
     def upsert: Boolean
   }
+
   trait SelectAndRemoveQueryBehaviour  extends MongoQueryBehaviour {
+    val isVerifiable = false
     type QueryResult = Option[JObject]
     def query(collection: DatabaseCollection) = collection.selectAndRemove(filter, sort, selection)
 
