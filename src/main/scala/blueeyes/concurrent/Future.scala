@@ -5,7 +5,7 @@ import akka.actor.Scheduler
 import akka.util.Duration
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
-import scalaz.{Validation, Success, Failure, Semigroup, Monad, Functor}
+import scalaz.{Validation, Success, Failure, Semigroup, Monad, Functor, Apply, Pointed, Applicative}
 import scalaz.Scalaz._
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
@@ -22,7 +22,7 @@ import scalaz.Scalaz._
  * the exceptions will not terminate calling code. All such "swallowed" exceptions
  * are reported to the thread's default exception handler.
  */
-class Future[T]{
+sealed class Future[T] { self =>
   import scala.collection.mutable.ArrayBuffer
 
   private val lock = new ReadWriteLock{}
@@ -98,7 +98,23 @@ class Future[T]{
    */
   def cancel(e: Throwable): Boolean = cancel(Some(e))
 
-  def cancel(o: Option[Throwable]): Boolean = internalCancel(o)
+  def cancel(o: Option[Throwable]): Boolean = cancel(o, !isDone)
+
+  protected def cancel(error: Option[Throwable], iff: => Boolean): Boolean = {
+    def setError: Boolean = {
+      _error      = error
+      _isCanceled = true
+      true
+    }
+
+    if (lock.writeLock(iff && !_isCanceled && setError)) {
+      deliverAndHandleError(_error, _canceled.toList, errorHandlers)
+      _canceled.clear()
+      true
+    } else {
+      false
+    }
+  }
 
   /** Installs a handler that will be called if and only if the future is
    * canceled.
@@ -145,32 +161,26 @@ class Future[T]{
    * }}}
    */
   def orElse(defaultFactory: Option[Throwable] => T): Future[T] = {
-    val self = this
-
     lazy val f = new Future[T] {
       def fatal(why: Option[Throwable]) = {
-        super.forceCancel(why)
+        super.cancel(why, true)
       }
 
       override def cancel(why: Option[Throwable]): Boolean = {
         self.cancel(why)
-
         false
       }
 
-      override def forceCancel(why: Option[Throwable]): Future[T] = {
-        self.forceCancel(why)
-      }
+      override protected def cancel(why: Option[Throwable], iff: => Boolean) = self.cancel(why, iff)
     }
 
-    deliverTo { result =>
+    self.deliverTo { result =>
       f.deliver(result)
     }
 
-    ifCanceled { why =>
+    self.ifCanceled { why =>
       trapError(defaultFactory(why)) match {
         case Failure(why)     => f.fatal(Some(why))
-
         case Success(result) => f.deliver(result)
       }
     }
@@ -239,7 +249,7 @@ class Future[T]{
     }
 
     ifCanceled { why =>
-      fut.forceCancel(why)
+      fut.cancel(why, true)
     }
 
     fut
@@ -270,12 +280,12 @@ class Future[T]{
         f(t).deliverTo { s =>
           fut.deliver(s)
         }.ifCanceled {
-          fut.forceCancel
+          fut.cancel(_, true)
         }
       }
     }
 
-    ifCanceled(fut.forceCancel)
+    ifCanceled(fut.cancel(_, true))
 
     fut
   }
@@ -293,7 +303,7 @@ class Future[T]{
       }
     }
 
-    ifCanceled(fut.forceCancel)
+    ifCanceled(fut.cancel(_, true))
 
     fut
   }
@@ -311,7 +321,7 @@ class Future[T]{
       }
     }
 
-    ifCanceled(fut.forceCancel)
+    ifCanceled(fut.cancel(_, true))
 
     fut
   }
@@ -327,11 +337,11 @@ class Future[T]{
 
     deliverTo { t =>
       cancelFutureOnError(fut) {
-        if (f(t)) fut.deliver(t) else fut.forceCancel(None)
+        if (f(t)) fut.deliver(t) else fut.cancel(None, true)
       }
     }
 
-    ifCanceled(fut.forceCancel)
+    ifCanceled(fut.cancel(_, true))
 
     fut
   }
@@ -372,8 +382,8 @@ class Future[T]{
     f1.deliverTo(v => deliverZip)
     f2.deliverTo(v => deliverZip)
 
-    f1.ifCanceled(zipped.forceCancel)
-    f2.ifCanceled(zipped.forceCancel)
+    f1.ifCanceled(zipped.cancel(_, true))
+    f2.ifCanceled(zipped.cancel(_, true))
 
     zipped
   }
@@ -397,54 +407,19 @@ class Future[T]{
    */
   def toEither: Either[Throwable, T] = if (isCanceled) Left(error.get) else Right(value.get)
 
-  protected def forceCancel(error: Option[Throwable]): Future[T] = {
-    lock.writeLock {
-      if (_isCanceled) false
-      else {
-        _error      = error
-        _isCanceled = true
-
-        true
-      }
-    } match {
-      case false =>
-
-      case true =>
-        deliverAndHandleError(error, _canceled.toList, errorHandlers)
-
-        _canceled.clear()
-    }
-
-    this
-  }
-
-  private def internalCancel(error: Option[Throwable]): Boolean = {
-    lock.writeLock {
-      if (isDone) Left(false)           // <-- Already done, can't be canceled
-      else if (isCanceled) Left(true)   // <-- Already canceled, nothing to do
-      else Right(())
-    } match {
-      case Left(canceled) => canceled
-
-      case Right(()) => forceCancel(error); true
-    }
-  }
 
   private def cancelFutureOnError[T](future: Future[_])(f: => T): Unit = {
-    try {
-      f
-    }
+    try f
     catch {
       case error: Throwable => future.cancel(error)
     }
   }
 
   private def trapError[T](f: => T): Validation[Throwable, T] = {
-    try {
-      Success(f)
-    }
+    try Success(f)
     catch {
-      case error: Throwable => handleErrors(errorHandlers)(error :: Nil)
+      case error: Throwable => 
+        handleErrors(errorHandlers)(error :: Nil)
         Failure(error)
     }
   }
@@ -566,8 +541,15 @@ object Future extends FutureImplicits {
     akka.dispatch.Future(t, futureDispatch.timeout)(futureDispatch.dispatcher).toBlueEyes
   }
 
-  implicit val FutureMonad: Monad[Future] = new Monad[Future] {
+  trait FuturePointed extends Pointed[Future] {
     def pure[A](a: => A) = async(a)
+  }
+
+  trait FutureApply extends Apply[Future] {
+    override def apply[A, B](f: Future[A ⇒ B], a: Future[A]): Future[B] = f.flatMap(a.map)
+  }
+
+  implicit val FutureMonad: Monad[Future] = new Monad[Future] with FuturePointed {
     def bind[A, B](a: Future[A], f: A => Future[B]) = a.flatMap(f) 
   }
 
@@ -578,6 +560,8 @@ object Future extends FutureImplicits {
   implicit val FutureFunctor: Functor[Future] = new Functor[Future] {
     def fmap[A, B](future: Future[A], f: A => B): Future[B] = future.map(f)
   }
+
+  //implicit val FutureApplicative: Applicative[Future] = new Applicative[Future] with FuturePointed with FutureApply
 
   /*implicit val FutureTraversable: Traversable[Future] = new Traversable[Future] {
     // Cannot implement without blocking

@@ -90,35 +90,35 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
       val response = client.get("/file/read")
 
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content must beSome("foo")
+      (response.value must eventually(retries, duration)(beSome)) and 
+      (response.value.get.status.code must be (OK)) and
+      (response.value.get.content must beSome("foo")) 
     }
     "return html by correct URI" in{
       val response =  client.get("/bar/foo/adCode.html")
 
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content must beSome(Context.context)
+      (response.value must eventually(retries, duration)(beSome)) and
+      (response.value.get.status.code must be (OK)) and
+      (response.value.get.content must beSome(Context.context))
     }
 
-    "return not found error by wrong URI" in{
+    "return NotFound when accessing a nonexistent URI" in{
       val response = client.post("/foo/foo/adCode.html")("foo")
 
-      response.isCanceled must eventually(retries, duration) (be_==(true))
-      response.error.get.asInstanceOf[HttpException].failure mustEqual (NotFound)
+      (response.isCanceled must eventually(retries, duration)(beTrue)) and
+      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (NotFound) })
     }
-    "return Internall error when handling request crushes" in{
+    "return InternalServerError when handling request crashes" in{
       val response = client.get("/error")
 
-      response.isCanceled must eventually(retries, duration) (be_==(true))
-      response.error.get.asInstanceOf[HttpException].failure mustEqual (InternalServerError)
+      (response.isCanceled must eventually(retries, duration)(beTrue)) and
+      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (InternalServerError) })
     }
     "return Http error when handling request throws HttpException" in{
       val response = client.get("/http/error")
 
-      response.isCanceled must eventually(retries, duration)(be_==(true))
-      response.error.get.asInstanceOf[HttpException].failure mustEqual (BadRequest)
+      (response.isCanceled must eventually(retries, duration)(beTrue)) and 
+      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (BadRequest) })
     }
 
     "return html by correct URI with parameters" in{
