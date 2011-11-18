@@ -133,14 +133,8 @@ trait HttpHeaderImplicits {
 }
 
 object HttpHeader extends HttpHeaderImplicits {
-  def apply(t: (String, String)): HttpHeader = {
-    def extract(l: List[HttpHeaderField[_ <: HttpHeader]]): HttpHeader = l match {
-      case x :: xs => x.parse(t).getOrElse(extract(xs))
-      case Nil => HttpHeaders.CustomHeader(t._1, t._2)
-    }
-
-    extract(HttpHeaderField.All)
-  }
+  private val All = Map(HttpHeaderField.All.map(field => (field.name.toLowerCase, field)): _*)
+  def apply(t: (String, String)): HttpHeader = All.get(t._1.toLowerCase).flatMap(_.parse(t)).getOrElse(HttpHeaders.CustomHeader(t._1, t._2))
 }
 
 sealed trait HttpHeaderRequest extends HttpHeader

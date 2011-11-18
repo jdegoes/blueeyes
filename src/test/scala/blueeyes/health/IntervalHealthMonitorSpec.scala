@@ -60,11 +60,12 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
   }
 
   "composes errors into JValue as array" in{
-    val config  = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
+    val config  = interval(IntervalLength(1, TimeUnit.SECONDS), 3)
     val monitor = new IntervalHealthMonitor(config)
     monitor.error("foo")(new NullPointerException())
+    Thread.sleep(1100)
 
-    val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"3s x 3":[1,0,0]}},"count":{"3s x 3":[1,0,0]}}}""")
+    val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
     jValue.value must eventually(beSome(monitorJson))
   }

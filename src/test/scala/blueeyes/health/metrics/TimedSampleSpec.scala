@@ -42,6 +42,7 @@ class TimedSampleSpec extends Specification{
     set(timedSample, 114100)
     set(timedSample, 114020)
     set(timedSample, 115000)
+    set(timedSample, 118000)
   }
 
   private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
