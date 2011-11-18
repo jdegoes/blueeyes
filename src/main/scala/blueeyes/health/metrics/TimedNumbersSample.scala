@@ -20,7 +20,6 @@ abstract class EternityTimedNumbersSample(implicit clock: () => Long) extends As
 
   def details = Future.sync(Map[Long, Double](startTime -> _count.get))
 
-
   def shutdown() {}
 
   def config = eternity

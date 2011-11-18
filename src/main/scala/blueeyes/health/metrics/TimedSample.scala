@@ -8,7 +8,7 @@ import histogram.{DynamicHistogram, ValueStrategy}
 
 abstract class TimedSample[V](val config: interval)(implicit valueStrategy: ValueStrategy[V], clock: () => Long) extends AsyncStatistic[Long, Map[Long, V]]{
 
-  private val actor = actorOf(new TimedSampleActor(DynamicHistogram.empty(config.granularity.length, config.samples, config.granularity.unit))).start()
+  private val actor = actorOf(new TimedSampleActor(DynamicHistogram.empty(config.granularity.length, config.samples + 1, config.granularity.unit))).start()
 
   def +=(elem: Long): this.type = {
     actor ! DataRequest(clock(), elem)
@@ -25,7 +25,10 @@ abstract class TimedSample[V](val config: interval)(implicit valueStrategy: Valu
 private[metrics] class TimedSampleActor[V](var histogram: DynamicHistogram[V]) extends Actor {
   def receive = {
     case data: DataRequest  => histogram = histogram += (data.timeMs, data.data)
-    case DetailsRequest     => self.reply(histogram.histogram)
+    case DetailsRequest     =>
+      val details    = histogram.histogram
+      val incomplete = details.keySet.toList.sortWith(_ > _).head
+      self.reply(details - incomplete)
     case CountRequest       => self.reply(histogram.count)
     case _ => sys.error("wrong message.")
   }
@@ -33,5 +36,5 @@ private[metrics] class TimedSampleActor[V](var histogram: DynamicHistogram[V]) e
 
 private[metrics] sealed trait TimedSampleRequest
 private[metrics] case class DataRequest(timeMs: Long, data: Long)
-private[metrics] case object DetailsRequest
+private[metrics] case  object DetailsRequest
 private[metrics] case object CountRequest
