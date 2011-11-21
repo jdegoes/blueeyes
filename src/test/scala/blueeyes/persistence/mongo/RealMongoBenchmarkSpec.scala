@@ -38,7 +38,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
         actor.start()
         actor
       }
-      val futures = Future(actors.map(actor => fromAkka[(Future[Option[JObject]], String, String)](actor !!! ("send", 2000)).toBlueEyes): _*)
+      val futures = Future(actors.map(actor => fromAkka[(Future[Option[JObject]], String, String)](actor.?("send", 2000).mapTo[Tuple3[Future[Option[JObject]], String, String]]).toBlueEyes): _*)
       futures.value must eventually (beSome)
 
       futures.value.get.foreach{ v =>

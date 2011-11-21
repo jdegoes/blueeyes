@@ -92,7 +92,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
       case FlushAll =>
         monitor.sample("cache_size")(cache.size)
-        monitor.sample("actor_queue_size")( actor.mailboxSize)
+        monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
         cache.clear()
         self.reply(())
     }
@@ -129,7 +129,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs)
 
-  def flushAll(): Future[Unit] = (actor.!!![Unit](FlushAll)).toBlueEyes
+  def flushAll(): Future[Unit] = actor.?(FlushAll).mapTo[Unit].toBlueEyes
 
   def stop(): Future[Unit] = {
     val stopFuture = new Future[Unit]()

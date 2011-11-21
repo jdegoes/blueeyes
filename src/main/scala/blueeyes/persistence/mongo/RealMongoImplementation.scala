@@ -66,6 +66,7 @@ class RealMongoActor extends Actor {
 }
 
 private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Database {
+  implicit val timeout = Actor.Timeout(1000 * 60 * 60)
   private val poolSize = 10
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
@@ -80,9 +81,8 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
     mongoActor.stop()
   }
 
-  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]  =
-//    Future.sync(query(query.collection, isVerified))
-    mongoActor.!!![T#QueryResult](MongoQueryTask(query, query.collection, isVerified), 1000 * 60 * 60).toBlueEyes
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
+    mongoActor.?(MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{

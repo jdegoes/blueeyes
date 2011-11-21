@@ -6,7 +6,8 @@ import akka.actor.Actor
 import akka.actor.Actor._
 import histogram.{DynamicHistogram, ValueStrategy}
 
-abstract class TimedSample[V](val config: interval)(implicit valueStrategy: ValueStrategy[V], clock: () => Long) extends AsyncStatistic[Long, Map[Long, V]]{
+abstract class TimedSample[V](val config: interval)(implicit valueStrategy: ValueStrategy[V], clock: () => Long, m: Manifest[V]) extends AsyncStatistic[Long, Map[Long, V]]{
+  private implicit val timeout = Actor.Timeout(1000 * 60 * 60)
 
   private val actor = actorOf(new TimedSampleActor(DynamicHistogram.empty(config.granularity.length, config.samples + 1, config.granularity.unit))).start()
 
@@ -15,9 +16,9 @@ abstract class TimedSample[V](val config: interval)(implicit valueStrategy: Valu
     this
   }
 
-  def count = actor.!!![Long](CountRequest, 1000 * 60 * 60).toBlueEyes
+  def count = actor.?(CountRequest).mapTo[Long].toBlueEyes
 
-  def details: Future[Map[Long, V]] = actor.!!![Map[Long, V]](DetailsRequest, 1000 * 60 * 60).toBlueEyes
+  def details: Future[Map[Long, V]] = actor.?(DetailsRequest).mapTo[Map[Long, V]].toBlueEyes
 
   def shutdown() { actor.stop() }
 }

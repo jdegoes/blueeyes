@@ -40,9 +40,9 @@ case class MongoQueryTask(query: MongoQuery, collection: DatabaseCollection, isV
 abstract class Database {
   def mongo: Mongo
 
-  def apply[T <: MongoQuery](query: T): Future[T#QueryResult]  = applyQuery(query, true)
+  def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  = applyQuery(query, true)
 
-  def unverified[T <: MongoQuery](query: T): Future[T#QueryResult]  = applyQuery(query, false)
+  def unverified[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  = applyQuery(query, false)
 
   def collections: Set[MongoCollectionHolder]
 
@@ -75,7 +75,7 @@ abstract class Database {
     case MongoCollectionHolder(realCollection, name, database)  => realCollection
   }
 
-  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean): Future[T#QueryResult]
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]
 
   protected def collection(collectionName: String): DatabaseCollection
 }

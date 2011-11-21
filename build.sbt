@@ -15,8 +15,8 @@ libraryDependencies ++= Seq(
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.6.Final",
   "org.mongodb"                 % "mongo-java-driver"   % "2.6.5",
-  "se.scalablesolutions.akka"   % "akka-actor"          % "1.1.2",
-  "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.1.2",
+  "se.scalablesolutions.akka"   % "akka-actor"          % "1.2",
+  "se.scalablesolutions.akka"   % "akka-typed-actor"    % "1.2",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
@@ -25,15 +25,6 @@ libraryDependencies ++= Seq(
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )
-
-
-ivyXML :=
-  <dependencies>
-    <dependency org="se.scalablesolutions.akka" name="akka-actor" rev="1.1.2">
-      <exclude module="configgy"/>
-    </dependency>
-  </dependencies>
-
 
 resolvers ++= Seq(
   "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",

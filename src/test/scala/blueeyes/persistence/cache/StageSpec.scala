@@ -102,6 +102,7 @@ class StageSpec extends Specification{
     }
 
     "evict all messages when multiple threads send messages" in{
+      implicit val timeout = Actor.Timeout(100000)
       val messagesCount = 100
       val threadsCount  = 20
 
@@ -113,7 +114,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures   = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
+      val futures   = Future(actors.map(actor => fromAkka[Unit](actor.?("Send").mapTo[Unit]).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll
@@ -130,6 +131,8 @@ class StageSpec extends Specification{
     }
 
     "evict all messages when multiple threads send messages with different keys" in{
+      implicit val timeout = Actor.Timeout(100000)
+
       val messagesCount           = 50
       val threadsPerMessagesType  = 10
       val threadsCount            = 20
@@ -150,7 +153,7 @@ class StageSpec extends Specification{
         actor
       }
 
-      val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
+      val futures = Future(actors.map(actor => fromAkka[Unit](actor.?("Send").mapTo[Unit]).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll
