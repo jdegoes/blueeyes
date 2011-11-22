@@ -106,7 +106,7 @@ class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput
 
   def close() {nextChunkFuture.cancel()}
 
-  def isEndOfInput = !hasNextChunk()
+  def isEndOfInput = !hasNextChunk
 
   def nextChunk = {
     nextChunkFuture.value.map{chunk =>
