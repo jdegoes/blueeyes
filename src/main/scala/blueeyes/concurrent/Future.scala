@@ -1,7 +1,6 @@
 package blueeyes.concurrent
 
 import akka.dispatch.{Future => AkkaFuture, MessageDispatcher, Dispatchers}
-import akka.actor.Scheduler
 import akka.util.Duration
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer

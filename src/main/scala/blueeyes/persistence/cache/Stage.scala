@@ -9,12 +9,12 @@ import blueeyes.util.metrics.Duration
 import scala.collection.JavaConversions._
 import scalaz.Semigroup
 
-import akka.actor.{Actor, ActorRef, Scheduler}
+import akka.actor.{Actor, ActorRef, Scheduler, PoisonPill, ActorKilledException}
 import akka.actor.Actor._
 
 abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
   private sealed trait StageIn
-  private case class PutAll(pairs: Iterable[(K, V)])(implicit val semigroup: Semigroup[V]) extends StageIn
+  private case class PutAll(pairs: Iterable[(K, V)], semigroup: Semigroup[V]) extends StageIn
   private object     FlushAll extends StageIn
   private object     FlushAllBySchedule extends StageIn
 
@@ -60,7 +60,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
     override def foreach[U](f: ((K, ExpirableValue[V])) => U): Unit = impl.foreach(f)
   }
 
-  private class StageActor extends Actor{
+  private class StageActor extends Actor {
     import scala.math._
     import java.util.concurrent.TimeUnit
 
@@ -69,8 +69,8 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
     private val duration        = Duration(min(expirationPolicy.timeToIdleNanos.getOrElse(2000000000l), expirationPolicy.timeToLiveNanos.getOrElse(2000000000l)) / 2, TimeUnit.NANOSECONDS)
 
     def receive = {
-      case request: PutAll =>
-        putToCache(request)
+      case PutAll(pairs, semigroup) =>
+        putToCache(pairs, semigroup)
         removeEldestEntries
         scheduleFlush
 
@@ -93,20 +93,20 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
       case FlushAll =>
         monitor.sample("cache_size")(cache.size)
         monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
-        cache.clear()
+        cache --= cache.keys
         self.reply(())
     }
 
     private def scheduleFlush: Unit = if (!flushScheduled) {
-       Scheduler.scheduleOnce(actor, FlushAllBySchedule, duration.time.toLong, duration.unit)
-       flushScheduled = true
+      Scheduler.scheduleOnce(actor, FlushAllBySchedule, duration.time.toLong, duration.unit)
+      flushScheduled = true
     }
 
-    private def putToCache(request: PutAll) {
+    private def putToCache(pairs:  Iterable[(K, V)], semigroup: Semigroup[V]) {
       var putSize = 0
-      for ((key, value) <- request.pairs) {
+      for ((key, value) <- pairs) {
         putSize += 1
-        cache.put(key, cache.get(key).map(current => current.withValue(request.semigroup.append(current.value, value))).getOrElse(ExpirableValue(value)))
+        cache.put(key, cache.get(key).map(current => current.withValue(semigroup.append(current.value, value))).getOrElse(ExpirableValue(value)))
       }
 
       monitor.sample("put_size") {
@@ -125,25 +125,16 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def += (tuple: (K, V))(implicit sg: Semigroup[V]) = put(tuple._1, tuple._2)
 
-  def put(k: K, v: V)(implicit sg: Semigroup[V]) = actor ! PutAll((k, v) :: Nil)
+  def put(k: K, v: V)(implicit sg: Semigroup[V]) = actor ! PutAll((k, v) :: Nil, sg)
 
-  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs)
+  def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs, sg)
 
-  def flushAll(): Future[Unit] = actor.?(FlushAll).mapTo[Unit].toBlueEyes
+  def flushAll(): Future[Unit] = (actor ? FlushAll).mapTo[Unit].toBlueEyes
 
-  def stop(): Future[Unit] = {
-    val stopFuture = new Future[Unit]()
-    val flushFuture = flushAll()
-
-    def stopActorAndFinish = {
-      actor.stop()
-      stopFuture.deliver(())
-    }
-
-    stopFuture.ifCanceled{v => stopActorAndFinish}
-    stopFuture.deliver{v: Unit => stopActorAndFinish}
-
-    stopFuture
+  private val running = new java.util.concurrent.atomic.AtomicBoolean(true)
+  def stop = {
+    if (running.getAndSet(false)) (actor ? FlushAll).flatMap(_ => actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () }
+    else akka.dispatch.Future(())
   }
 }
 

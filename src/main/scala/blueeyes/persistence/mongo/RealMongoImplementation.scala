@@ -14,6 +14,7 @@ import scala.collection.JavaConversions._
 
 import akka.actor.Actor._
 import akka.actor.Actor
+import akka.actor.PoisonPill
 import akka.routing.Routing._
 import akka.routing.CyclicIterator
 import akka.dispatch.Dispatchers
@@ -76,10 +77,7 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  def disconnect() {
-    actors.foreach(_.stop())
-    mongoActor.stop()
-  }
+  def disconnect(timeout: Long) = akka.dispatch.Future.sequence[Any, List](actors.map(_ ? PoisonPill), timeout).flatMap(_ => mongoActor ? PoisonPill)
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
     mongoActor.?(MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
