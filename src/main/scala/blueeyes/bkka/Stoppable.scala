@@ -30,7 +30,7 @@ object Stoppable {
   }
 
   /**
-   * Stop the specified stoppable, returning a future containing a list of the results
+   * Stops the specified stoppable, returning a future containing a list of the results
    * of the stoppable graph in breadth-first order. When this future is completed, 
    * everything will be stopped.
    *
@@ -39,17 +39,21 @@ object Stoppable {
    * in stopping will stop the stopping process, leaving the system in a potentially 
    * indeterminate state.
    */
-  def stop(stoppable: Stoppable)(implicit timeout: Actor.Timeout): Future[List[Any]] = {
-    def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
-      if (q.isEmpty) Future(Nil)
-      else {
-        val (xs, remainder) = q.dequeue
-        Future.sequence(xs.map(_.stop), timeout.duration.toMillis).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+  implicit def stoppableStop(implicit timeout: Actor.Timeout): Stop[Stoppable] = new Stop[Stoppable] {
+    def stop(stoppable: Stoppable) = {
+      def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
+        if (q.isEmpty) Future(Nil)
+        else {
+          val (xs, remainder) = q.dequeue
+          Future.sequence(xs.map(_.stop), timeout.duration.toMillis).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+        }
       }
+      
+      _stop(Queue(List(stoppable)))
     }
-    
-    _stop(Queue(List(stoppable)))
   }
+
+  def stop(stoppable: Stoppable)(implicit timeout: Actor.Timeout) = stoppableStop(timeout).stop(stoppable)
 }
 
 
