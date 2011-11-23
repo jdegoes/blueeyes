@@ -53,10 +53,10 @@ trait NettyEngine extends AbstractNettyEngine{ self =>
   }
 }
 
-trait HttpNettyEngine  extends HttpServerEngine with HttpServer{ self =>
+trait HttpNettyEngine extends AbstractNettyEngine{ self =>
   def nettyServers = List(new HttpNettyServer(self))
 }
 
-trait HttpsNettyEngine extends HttpServerEngine with HttpServer{ self =>
+trait HttpsNettyEngine extends AbstractNettyEngine{ self =>
   def nettyServers = List(new HttpsNettyServer(self))
 }
