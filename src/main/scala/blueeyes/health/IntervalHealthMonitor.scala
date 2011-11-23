@@ -57,11 +57,9 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
 
   def errorStats = _errorsStats.toMap
 
-
-  def shutdown() {
-    val statistics  = List[Map[JPath, AsyncStatistic[_, _]]](timerStats, countStats, timedSampleStats, errorStats).map(_.values.toList).flatten
-
-    statistics.foreach(_.shutdown())
+  def shutdown(implicit timeout: akka.actor.Actor.Timeout) = {
+    val statistics  = List[Map[JPath, AsyncStatistic[_, _]]](timerStats, countStats, timedSampleStats, errorStats).flatMap(_.values.toList)
+    akka.dispatch.Future.sequence(statistics.map(_.shutdown), timeout.duration.toMillis).map(_ => ())
   }
 
   private def errorsCountJValue = {

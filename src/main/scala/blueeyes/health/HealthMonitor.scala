@@ -47,15 +47,20 @@ trait HealthMonitor { self =>
     def trap[T](path: JPath)(f: => T): T = self.trap(prefix \ path)(f)
 
     def toJValue: Future[JValue] = self.toJValue
-    def shutdown() = self.shutdown
+    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = self.shutdown
   }
 
   def toJValue: Future[JValue]
 
-  def shutdown()
+  def shutdown(implicit timeout: akka.actor.Actor.Timeout): akka.dispatch.Future[Unit]
 }
 
 object HealthMonitor {
+  import blueeyes.bkka.Stop
+  implicit def stop(implicit timeout: akka.actor.Actor.Timeout): Stop[HealthMonitor] = new Stop[HealthMonitor] {
+    def stop(m: HealthMonitor) = m.shutdown
+  }
+
   object Noop extends HealthMonitor {
     def call(path: JPath) = ()
     def increment(path: JPath)(c: Long) = ()
@@ -73,6 +78,6 @@ object HealthMonitor {
 
     override def withPrefix(prefix: JPath) = this
     def toJValue: Future[JValue] = Future.sync(JNothing)
-    def shutdown() = ()
+    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future(())
   }
 }

@@ -88,13 +88,6 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
 }
 
-object RealDatabase {
-  implicit def stop: Stop[RealDatabase] = new Stop[RealDatabase] {
-    def stop(db: RealDatabase) = db.disconnect
-  }
-}
-
-
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
   type V[B] = ValidationNEL[String, B]
 

@@ -29,5 +29,5 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
 
   def toJValue = Future[JValue](healthMonitors.map(_.toJValue): _*).map(_.asMA.sum)
 
-  def shutdown() = healthMonitors.foreach(_.shutdown())
+  def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future.sequence(healthMonitors.map(_.shutdown), timeout.duration.toMillis).map(_ => ())
 }

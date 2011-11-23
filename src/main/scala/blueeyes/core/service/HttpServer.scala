@@ -155,8 +155,11 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       _status = RunningStatus.Started
     }.ifCanceled { why =>
       _status = RunningStatus.Errored
-      
-      log.error("Unable to start server: " + why)
+
+      why match {
+        case Some(error) => log.error(error, "Unable to start server: " + error.getMessage)
+        case None => log.error("Unable to start server (no reason given)")
+      }
     }
   }
   
@@ -193,10 +196,13 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       log.info("Server stopped")
       
       _status = RunningStatus.Stopped
-    }.ifCanceled { e =>
+    } ifCanceled { why =>
       _status = RunningStatus.Errored
       
-      log.info("Unable to stop server: " + e)
+      why match {
+        case Some(error) => log.error(error, "Unable to stop server: " + error.getMessage)
+        case None => log.error("Unable to stop server (no reason given)")
+      }
     }
   }
   

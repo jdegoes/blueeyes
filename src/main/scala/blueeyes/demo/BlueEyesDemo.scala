@@ -24,6 +24,8 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
 }
 
 trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo{
+  implicit val shutdownTimeout = akka.actor.Actor.Timeout(10000)
+
   import BijectionsChunkJson._
   import BijectionsChunkString._
   import BijectionsChunkFutureJson._

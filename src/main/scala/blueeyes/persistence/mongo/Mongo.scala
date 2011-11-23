@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
+import blueeyes.bkka.Stop
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
@@ -78,6 +79,12 @@ abstract class Database {
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]
 
   protected def collection(collectionName: String): DatabaseCollection
+}
+
+object Database {
+  implicit def stop: Stop[Database] = new Stop[Database] {
+    def stop(db: Database) = db.disconnect
+  }
 }
 
 private[mongo] trait DatabaseCollection{

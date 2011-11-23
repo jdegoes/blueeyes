@@ -1,6 +1,7 @@
 package blueeyes.core.service
 
 import net.lag.logging.Logger
+import blueeyes.bkka._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
@@ -42,10 +43,9 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))(f)
-  def healthMonitor[T, S](default: IntervalConfig*)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = {
+  def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T], timeout: akka.actor.Actor.Timeout): ServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))(f)
+  def healthMonitor[T, S](default: IntervalConfig*)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T], timeout: akka.actor.Actor.Timeout): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-
       val intervals = context.config.getConfigMap("healthMonitor").map(_.getList("intervals").map(IntervalParser.parse(_))).getOrElse(default).toList
       val monitor   = new CompositeHealthMonitor(intervals match {
         case x :: xs => intervals
@@ -53,9 +53,11 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       })
 
       val underlying = f(monitor)(context)
-      val descriptor = underlying.copy(request = (state: S) => new MonitorHttpRequestService(underlying.request(state), monitor), shutdown = (state: S) => {
-        underlying.shutdown(state).map{_ => monitor.shutdown(); None}
-      })
+      val descriptor = underlying.copy(
+        request  = (state: S) => new MonitorHttpRequestService(underlying.request(state), monitor), 
+        shutdown = (state: S) => underlying.shutdown(state).map(_.map(s => Stoppable(monitor, s :: Nil)).orElse(Some(Stoppable(monitor))))
+      )
+
       val startTime = System.currentTimeMillis
 
       descriptor ~> describe("""Exports real-time metrics on health status, for use in continuous deployment. The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests""")
