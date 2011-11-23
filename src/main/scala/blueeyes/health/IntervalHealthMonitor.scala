@@ -99,7 +99,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
 
   private val sampleSize = 1000
 
-  private implicit def clock() = System.currentTimeMillis()
+  private implicit def clock = blueeyes.util.Clock.System
   private def timedSampleStat(path: JPath):  AsyncStatistic[Long, Map[Long, Double]] = createIfAbsent[JPath, AsyncStatistic[Long, Map[Long, Double]]](path, _timedSampleStats, newTimedSample(path) _)
   private def newTimedSample(path: JPath)(): AsyncStatistic[Long, Map[Long, Double]] = TimedAverageStat(intervalConfig)
 

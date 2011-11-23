@@ -1,9 +1,10 @@
 package blueeyes.health.metrics.histogram
 
 import blueeyes.persistence.cache.functional.TemporalCache
+import blueeyes.util.Clock
 import java.util.concurrent.TimeUnit
 
-case class DynamicHistogram[V] private (private val cache: TemporalCache[Long, V], length: Int, capacity: Int, unit: TimeUnit)(implicit valueStrategy: ValueStrategy[V], clock: () => Long) {
+case class DynamicHistogram[V] private (private val cache: TemporalCache[Long, V], length: Int, capacity: Int, unit: TimeUnit)(implicit valueStrategy: ValueStrategy[V], clock: Clock) {
   def +=(timeMs: Long, stat: Long) = {
     val bucket   = bucketNumber(timeMs)
     val value    = cache.get(bucket).getOrElse(valueStrategy.zero)
@@ -13,7 +14,7 @@ case class DynamicHistogram[V] private (private val cache: TemporalCache[Long, V
   }
 
   def histogram: Map[Long, V] = {
-    val lastBucket = bucketNumber(clock())
+    val lastBucket = bucketNumber(clock.now().getMillis)
     val newCache   = expire(lastBucket, cache)
     val value      = newCache.keys.foldLeft(Map[Long, V]()){(value, key) => value + Tuple2(key, cache.get(key).get)}
 
@@ -41,5 +42,5 @@ case class DynamicHistogram[V] private (private val cache: TemporalCache[Long, V
 }
 
 object DynamicHistogram {
-  def empty[V](length: Int, capacity: Int, unit: TimeUnit)(implicit valueStrategy: ValueStrategy[V], clock: () => Long): DynamicHistogram[V] = DynamicHistogram[V](TemporalCache.empty[Long, V], length, capacity, unit)
+  def empty[V](length: Int, capacity: Int, unit: TimeUnit)(implicit valueStrategy: ValueStrategy[V], clock: Clock): DynamicHistogram[V] = DynamicHistogram[V](TemporalCache.empty[Long, V], length, capacity, unit)
 }

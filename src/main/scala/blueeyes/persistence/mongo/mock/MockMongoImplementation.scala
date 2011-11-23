@@ -38,7 +38,7 @@ private[mongo] class MockDatabase(val mongo: Mongo) extends Database {
 
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 
-  def disconnect(timeout: Long) = akka.dispatch.Future.empty[Any]()
+  lazy val disconnect = akka.dispatch.Future(())
 }
 
 private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock with MongoFilters {

@@ -5,12 +5,11 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.Printer
 import java.util.concurrent.TimeUnit
 
-class TimedTimerStatSpec extends Specification{
-  private val clock = new Clock()
+class TimedTimerStatSpec extends Specification with TimedStatFixtures {
   "TimedTimerStat" should{
     "creates JValue" in{
       val config = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
-      val timedSample = TimedTimerStat(config)(clock.now _)
+      val timedSample = TimedTimerStat(config)
       fill(timedSample)
 
       val values = ("minimumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("maximumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("averageTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("standardDeviation", List(JDouble(0.0), JDouble(0.0), JDouble(0.0))) :: Nil
@@ -18,10 +17,10 @@ class TimedTimerStatSpec extends Specification{
       jValue.value must eventually (beSome(JObject(values.map(kv => JField(kv._1, JObject(JField(config.toString, JArray(kv._2)) :: Nil))))))
     }
     "creates TimedSample if the configuration is interval" in{
-      TimedTimerStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7))(clock.now _).isInstanceOf[TimedSample[_]] must be_==(true)
+      TimedTimerStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7)) must beAnInstanceOf[TimedSample[_]] 
     }
     "creates EternityTimedSample if the configuration is eternity" in{
-      TimedTimerStat(eternity)(clock.now _).isInstanceOf[EternityTimedTimersSample] must be_==(true)
+      TimedTimerStat(eternity) must beAnInstanceOf[EternityTimedTimersSample] 
     }
   }
 
@@ -51,13 +50,5 @@ class TimedTimerStatSpec extends Specification{
     timedSample += 1
 
     Thread.sleep(50)
-  }
-
-  class Clock{
-    private var _now: Long = 0
-
-    def now() = _now
-
-    def setNow(value: Long){_now = value}
   }
 }

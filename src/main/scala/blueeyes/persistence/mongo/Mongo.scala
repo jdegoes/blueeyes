@@ -68,7 +68,7 @@ abstract class Database {
     }
   }
 
-  def disconnect(timeout: Long): akka.dispatch.Future[Any]
+  def disconnect: akka.dispatch.Future[Unit]
 
   implicit protected def databaseCollection(mongoCollection: MongoCollection) = mongoCollection match{
     case MongoCollectionReference(name)         => collection(name)

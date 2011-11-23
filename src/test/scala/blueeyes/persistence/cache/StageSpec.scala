@@ -1,5 +1,4 @@
-package blueeyes
-package persistence.cache
+package blueeyes.persistence.cache
 
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
@@ -11,11 +10,11 @@ import blueeyes.concurrent.Future._
 import scala.util.Random
 import scalaz._
 
-import akka.actor.Actor._
-import akka.actor.Actor
-import akka.routing.Routing._
-import akka.dispatch.Dispatchers
-import akka.util.Duration
+import _root_.akka.actor.Actor._
+import _root_.akka.actor.Actor
+import _root_.akka.routing.Routing._
+import _root_.akka.dispatch.Dispatchers
+import _root_.akka.util.Duration
 
 import java.util.concurrent.TimeUnit
 
@@ -120,7 +119,7 @@ class StageSpec extends Specification{
 
       collected mustEqual(messagesCount * threadsCount)
 
-      actors.foreach(_ ! akka.actor.PoisonPill)
+      actors.foreach(_ ! _root_.akka.actor.PoisonPill)
       
       // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
       val stopFuture = stage.stop
@@ -157,7 +156,7 @@ class StageSpec extends Specification{
 
       collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
 
-      actors.foreach(_ ! akka.actor.PoisonPill)
+      actors.foreach(_ ! _root_.akka.actor.PoisonPill)
       
       // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
       val stopFuture = stage.stop

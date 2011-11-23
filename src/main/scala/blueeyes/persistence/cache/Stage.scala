@@ -1,5 +1,6 @@
 package blueeyes.persistence.cache
 
+import blueeyes.bkka.Stop
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.health.HealthMonitor
@@ -131,11 +132,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def flushAll(): Future[Unit] = (actor ? FlushAll).mapTo[Unit].toBlueEyes
 
-  private val running = new java.util.concurrent.atomic.AtomicBoolean(true)
-  def stop = {
-    if (running.getAndSet(false)) (actor ? FlushAll).flatMap(_ => actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () }
-    else akka.dispatch.Future(())
-  }
+  lazy val stop = (actor ? FlushAll).flatMap(_ => actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () }
 }
 
 object Stage {
@@ -147,5 +144,9 @@ object Stage {
     def maximumCapacity = capacity
 
     def flush(k: K, v: V): Unit = evict(k, v)
+  }
+
+  implicit def stop[K, V]: Stop[Stage[K, V]] = new Stop[Stage[K, V]] {
+    def stop(s: Stage[K, V]) = s.stop
   }
 }
