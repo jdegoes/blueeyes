@@ -28,6 +28,8 @@ import scalaz.Scalaz._
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
+  val disconnectTimeout = akka.actor.Actor.Timeout(config.getLong("shutdownTimeout", 30000L))
+
   private lazy val mongo = {
     val options = new MongoOptions()
     options.connectionsPerHost = 1000
@@ -51,7 +53,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
     mongo
   }
 
-  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName))
+  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
 }
 
 object RealMongoActor {
@@ -68,8 +70,7 @@ class RealMongoActor extends Actor {
   }
 }
 
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Database {
-  implicit val timeout = Actor.Timeout(1000 * 60 * 60)
+private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout) extends Database {
   private val poolSize = 10
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
@@ -79,7 +80,7 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }))
+  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
                         .flatMap(_ => (mongoActor ? PoisonPill) recover { case ex: ActorKilledException => () })
                         .mapTo[Unit]
                         
