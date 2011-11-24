@@ -15,6 +15,10 @@ private[engines] class HttpsNettyServerProvider(val server: HttpServer) extends 
   def engineType = "https"
 
   def enginePort = server.sslPort
+
+  def config = server.config
+
+  def log = server.log
 }
 
 private[engines] class HttpsPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,

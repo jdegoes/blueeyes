@@ -7,6 +7,7 @@ import org.jboss.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import blueeyes.core.service.HttpServer
 import org.jboss.netty.channel._
+import net.lag.configgy.ConfigMap
 
 class NettyServer(provider: NettyServerProvider){
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
@@ -65,18 +66,16 @@ trait AbstractNettyServerProvider extends NettyServerProvider{
   def startEngine(channelGroup: ChannelGroup) = {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-    bootstrap.setParentHandler(new SetBacklogHandler(server.config.getInt("backlog", 10000)))
+    bootstrap.setParentHandler(new SetBacklogHandler(config.getInt("backlog", 10000)))
     bootstrap.setPipelineFactory(pipelineFactory(channelGroup))
-    val channel = bootstrap.bind(InetInterfaceLookup.socketAddres(server.config, enginePort))
+    val channel = bootstrap.bind(InetInterfaceLookup.socketAddres(config, enginePort))
 
     (bootstrap, channel)
   }
 
   def pipelineFactory(channelGroup: ChannelGroup): ChannelPipelineFactory
 
-  def server: HttpServer
-
-  def log = server.log
+  def config: ConfigMap
 
   private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler{
     override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
