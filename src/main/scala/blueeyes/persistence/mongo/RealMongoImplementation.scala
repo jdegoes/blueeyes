@@ -86,6 +86,8 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
+
+  override def toString = "Mongo Database: " + database.getName
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
