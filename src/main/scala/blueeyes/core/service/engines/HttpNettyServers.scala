@@ -8,12 +8,16 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 import net.lag.logging.Logger
 
-private[engines] class HttpNettyServerProvider(val server: HttpServer) extends AbstractNettyServerProvider{
+private[engines] class HttpNettyServerProvider(server: HttpServer) extends AbstractNettyServerProvider{
   def pipelineFactory(channelGroup: ChannelGroup) = new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, server, channelGroup)
 
   def engineType = "http"
 
   def enginePort = server.port
+
+  def config = server.config
+
+  def log = server.log
 }
 
 private[engines] class HttpPipelineFactory(val protocol: String, host: String, port: Int, chunkSize: Int,
