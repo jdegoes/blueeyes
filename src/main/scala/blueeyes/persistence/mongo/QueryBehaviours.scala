@@ -10,7 +10,7 @@ import scalaz.{Validation, Success, Failure}
 private[mongo] object QueryBehaviours{
   trait QueryBehaviour {
     type QueryResult
-    def apply(collection: DatabaseCollection, isVerified: Boolean): QueryResult
+    def apply(collection: DatabaseCollection, isVerified: Boolean): QueryResult 
   }
 
   trait MongoQueryBehaviour extends QueryBehaviour {
@@ -75,7 +75,10 @@ private[mongo] object QueryBehaviours{
   trait InsertQueryBehaviour extends MongoQueryBehaviour {
     val isVerifiable = true
     type QueryResult = Unit
-    def query(collection: DatabaseCollection) { collection.insert(objects) }
+    def query(collection: DatabaseCollection) { 
+      println("%")
+      collection.insert(objects) 
+    }
     def objects: List[JObject]
   }
 

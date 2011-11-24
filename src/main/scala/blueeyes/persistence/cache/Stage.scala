@@ -92,10 +92,11 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
         if (cache.size > 0) scheduleFlush
 
       case FlushAll =>
-        monitor.sample("cache_size")(cache.size)
+        val cacheSize = cache.size
+        monitor.sample("cache_size")(cacheSize)
         monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
         cache --= cache.keys
-        self.reply(())
+        self.reply(cacheSize)
     }
 
     private def scheduleFlush: Unit = if (!flushScheduled) {
@@ -130,7 +131,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs, sg)
 
-  def flushAll(): Future[Unit] = (actor ? FlushAll).mapTo[Unit].toBlueEyes
+  def flushAll: Future[Int] = (actor ? FlushAll).mapTo[Int].toBlueEyes
 
   lazy val stop = (actor ? FlushAll).flatMap(_ => actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () }
 }

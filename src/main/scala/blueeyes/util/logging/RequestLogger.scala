@@ -48,13 +48,9 @@ class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => Stri
 
   def apply(logEntry: String) { logStage += ("log", new StringBuilder(logEntry).append("\n")) }
 
-  def close: Future[Unit] = {
-    val flushFuture = logStage.flushAll()
-    flushFuture.map((v: Unit) => fileHandler.close())
-  }
+  def close: Future[Unit] = logStage.flushAll.map(_ => fileHandler.close())
 
   def fileName: Option[String] = fileHandler.fileName
-
 }
 
 class FileHandler(baseFileName: String, policy: Policy, fileHeader: () => String) extends RichThrowableImplicits with NameFormat with Roll{
