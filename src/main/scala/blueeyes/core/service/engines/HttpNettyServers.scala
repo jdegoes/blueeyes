@@ -20,7 +20,7 @@ private[engines] class HttpNettyServerProvider(server: HttpServer) extends Abstr
   def log = server.log
 }
 
-private[engines] class HttpPipelineFactory(val protocol: String, host: String, port: Int, chunkSize: Int,
+private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,
                                            requestHandler: AsyncCustomHttpService[ByteChunk], channelGroup: ChannelGroup) extends ChannelPipelineFactory {
   def getPipeline: ChannelPipeline = {
     val pipeline = Channels.pipeline()
