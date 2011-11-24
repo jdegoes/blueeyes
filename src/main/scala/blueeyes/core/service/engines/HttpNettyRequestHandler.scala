@@ -94,7 +94,7 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
 
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
+private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
 
   private val log   = Logger.get
   private var done  = false

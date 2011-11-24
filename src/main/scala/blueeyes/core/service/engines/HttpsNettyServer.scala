@@ -9,7 +9,7 @@ import security.BlueEyesKeyStoreFactory._
 import org.jboss.netty.channel.ChannelPipeline
 import org.jboss.netty.handler.ssl.SslHandler
 
-class HttpsNettyServerProvider(val server: HttpServer) extends AbstractNettyServerProvider{
+private[engines] class HttpsNettyServerProvider(val server: HttpServer) extends AbstractNettyServerProvider{
   def pipelineFactory(channelGroup: ChannelGroup) = new HttpsPipelineFactory("https", server.host, server.sslPort, server.chunkSize, server, channelGroup, server.config)
 
   def engineType = "https"

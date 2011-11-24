@@ -13,7 +13,7 @@ import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.core.http.HttpRequest
 
-class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
+private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
