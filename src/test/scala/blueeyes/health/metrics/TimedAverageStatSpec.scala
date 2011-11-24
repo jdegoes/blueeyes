@@ -4,23 +4,24 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import java.util.concurrent.TimeUnit
 
-class TimedAverageStatSpec extends Specification{
-  private val clock = new Clock()
+class TimedAverageStatSpec extends Specification with TimedStatFixtures {
   "TimedAverageStat" should{
     "creates JValue" in{
       val config = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
-      val timedSample = TimedAverageStat(config)(clock.now _)
+      val timedSample = TimedAverageStat(config)
       fill(timedSample)
 
       val histogram      = timedSample.toJValue
       val histogramValue = JArray(List(JDouble(1.3333333333333333), JDouble(1.0), JDouble(0.0)))
       histogram.value must eventually (beSome(JObject(JField("perSecond", JObject(JField(config.toString, histogramValue) :: Nil)) :: Nil)))
     }
+
     "creates TimedSample if the configuration is interval" in{
-      TimedAverageStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7))(clock.now _).isInstanceOf[TimedSample[_]] must be_==(true)
+      TimedAverageStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7)) must beAnInstanceOf[TimedSample[_]]
     }
+
     "creates EternityTimedSample if the configuration is eternity" in{
-      TimedAverageStat(eternity)(clock.now _).isInstanceOf[EternityTimedNumbersSample] must be_==(true)
+      TimedAverageStat(eternity) must beAnInstanceOf[EternityTimedNumbersSample]
     }
   }
 
@@ -45,13 +46,5 @@ class TimedAverageStatSpec extends Specification{
     timedSample += 1
 
     Thread.sleep(50)
-  }
-
-  class Clock{
-    private var _now: Long = 0
-
-    def now() = _now
-
-    def setNow(value: Long){_now = value}
   }
 }

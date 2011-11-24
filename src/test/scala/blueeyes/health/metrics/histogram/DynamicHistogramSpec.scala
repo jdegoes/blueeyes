@@ -1,12 +1,11 @@
-package blueeyes.health.metrics.histogram
+package blueeyes.health.metrics
+package histogram
 
 import org.specs2.mutable.Specification
 import ValueStrategy._
 import java.util.concurrent.TimeUnit
 
-class DynamicHistogramSpec extends Specification{
-  private val clock = new Clock()
-  implicit private val clockF = clock.now _
+class DynamicHistogramSpec extends Specification with TimedStatFixtures {
   "DynamicHistogram" should{
     "build Histogram" in{
       val histogram = DynamicHistogram.empty[Long](3, 3, TimeUnit.SECONDS)
@@ -46,13 +45,5 @@ class DynamicHistogramSpec extends Specification{
       clock.setNow(now)
       histogram += (now, 1)
     }
-  }
-
-  class Clock{
-    private var _now: Long = 0
-
-    def now() = _now
-
-    def setNow(value: Long){_now = value}
   }
 }

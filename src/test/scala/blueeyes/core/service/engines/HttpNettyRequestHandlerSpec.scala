@@ -18,7 +18,7 @@ import org.specs2.mock._
 import org.mockito.{Matchers, ArgumentMatcher}
 import scalaz.{Success, Validation}
 
-class NettyRequestHandlerSpec extends Specification with NettyConverters with Mockito with BijectionsChunkString{
+class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString{
   private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
@@ -30,7 +30,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Mo
 
   override def is = args(sequential = true) ^ super.is
   "write OK response service when path is match" in {
-    val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
+    val nettyHandler  = new HttpNettyRequestHandler(handler, Logger.get)
 
     val event        = mock[MessageEvent]
     val future       = new Future[HttpResponse[ByteChunk]]().deliver(response)
@@ -51,7 +51,7 @@ class NettyRequestHandlerSpec extends Specification with NettyConverters with Mo
   }
 
   "cancel Future when connection closed" in {
-    val nettyHandler  = new NettyRequestHandler(handler, Logger.get)
+    val nettyHandler  = new HttpNettyRequestHandler(handler, Logger.get)
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]
     val future       = new Future[HttpResponse[ByteChunk]]()

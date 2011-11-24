@@ -3,13 +3,11 @@ package blueeyes.health.metrics
 import blueeyes.json.JsonAST._
 import org.specs2.mutable.Specification
 
-class TimedEternityCountStatSpec extends Specification{
-  private val clock = new Clock()
+class TimedEternityCountStatSpec extends Specification with TimedStatFixtures {
   "EternityTimedCountStat" should{
     "creates JValue" in{
-      val timedSample = TimedCountStat(eternity)(clock.now _)
+      val timedSample = TimedCountStat(eternity)
       fill(timedSample)
-
 
       timedSample.toJValue.value must eventually (beSome(JObject(JField(eternity.toString, JArray(List(JInt(4)))) :: Nil)))
     }
@@ -25,13 +23,5 @@ class TimedEternityCountStatSpec extends Specification{
   private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
     clock.setNow(now)
     timedSample += 1
-  }
-
-  class Clock{
-    private var _now: Long = 0
-
-    def now() = _now
-
-    def setNow(value: Long){_now = value}
   }
 }

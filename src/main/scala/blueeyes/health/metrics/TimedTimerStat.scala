@@ -2,6 +2,8 @@ package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST._
 import blueeyes.concurrent.Future
+import blueeyes.util.Clock
+import akka.actor.Actor
 
 import histogram.ValueStrategy._
 
@@ -20,16 +22,16 @@ private[metrics] trait TimedTimerStatReport extends AsyncStatistic[Long, Map[Lon
 }
 
 object TimedTimerStat {
-  def apply(intervalConfig: IntervalConfig)(implicit clock: () => Long): AsyncStatistic[Long, Map[Long, Timer]] = intervalConfig match{
+  def apply(intervalConfig: IntervalConfig)(implicit clock: Clock): AsyncStatistic[Long, Map[Long, Timer]] = intervalConfig match {
     case e: interval => new TimedTimersSample(e) with TimedTimerStatReport
     case eternity    => new EternityTimedTimersSample with TimedTimerStatReport
   }
 }
 
-abstract class TimedTimersSample(intervalConfig: interval)(implicit clock: () => Long) extends TimedSample[Timer](intervalConfig)
+abstract class TimedTimersSample(intervalConfig: interval)(implicit clock: Clock) extends TimedSample[Timer](intervalConfig)
 
-abstract class EternityTimedTimersSample(implicit clock: () => Long) extends AsyncStatistic[Long, Map[Long, Timer]]{
-  private val startTime = clock()
+abstract class EternityTimedTimersSample(implicit clock: Clock) extends AsyncStatistic[Long, Map[Long, Timer]] {
+  private val startTime = clock.now.getMillis()
   private val _timer    = new Timer()
 
   def +=(element: Long) = {
@@ -41,7 +43,7 @@ abstract class EternityTimedTimersSample(implicit clock: () => Long) extends Asy
 
   def details = Future.sync(Map[Long, Timer](startTime -> _timer))
 
-  def shutdown() {}
+  def shutdown = akka.dispatch.Future(())
 
   def config = eternity
 }

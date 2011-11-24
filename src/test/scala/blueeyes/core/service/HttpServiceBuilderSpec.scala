@@ -27,13 +27,18 @@ class HttpServiceBuilderSpec extends Specification with Mockito{
     there was one(builder.descriptor.request).apply(())
   }
   "ServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in{
-    val function = mock[Function[Unit, Future[Unit]]]
+    var shutdownCalled = false
+
+    // We need "real" behavior here to allow the Stoppable hooks to run properly
     val builder  = new ServiceBuilder[Unit]{
-      val descriptor = shutdown(function)
+      val descriptor = shutdown {
+	shutdownCalled = true; Future.sync(())
+      }
     }
 
-    builder.descriptor.shutdown()
+    val result = builder.descriptor.shutdown()
 
-    there was one(builder.descriptor.shutdown).apply(())
+    result.isDone must eventually(be_==(true))
+    shutdownCalled must_== true
   }
 }

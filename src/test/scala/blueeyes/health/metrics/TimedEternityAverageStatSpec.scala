@@ -3,11 +3,10 @@ package blueeyes.health.metrics
 import blueeyes.json.JsonAST._
 import org.specs2.mutable.Specification
 
-class TimedEternityAverageStatSpec extends Specification{
-  private val clock = new Clock()
+class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures {
   "TimedEternityAverageStat" should{
     "creates JValue" in{
-      val timedSample = TimedAverageStat(eternity)(clock.now _)
+      val timedSample = TimedAverageStat(eternity)
       fill(timedSample)
 
       val histogramValue = JArray(List(JDouble(4)))
@@ -25,11 +24,5 @@ class TimedEternityAverageStatSpec extends Specification{
   private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
     clock.setNow(now)
     timedSample += 1
-  }
-
-  class Clock{
-    private var _now: Long = 0
-    def now() = _now
-    def setNow(value: Long){_now = value}
   }
 }

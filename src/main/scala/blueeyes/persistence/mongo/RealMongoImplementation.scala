@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.bkka.Stop
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPath}
 import blueeyes.persistence.mongo.json.BijectionsMongoJson._
@@ -14,6 +15,7 @@ import scala.collection.JavaConversions._
 
 import akka.actor.Actor._
 import akka.actor.Actor
+import akka.actor.ActorKilledException
 import akka.actor.PoisonPill
 import akka.routing.Routing._
 import akka.routing.CyclicIterator
@@ -77,11 +79,21 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB) extends Databa
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  def disconnect(timeout: Long) = akka.dispatch.Future.sequence[Any, List](actors.map(_ ? PoisonPill), timeout).flatMap(_ => mongoActor ? PoisonPill)
+  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }))
+                        .flatMap(_ => (mongoActor ? PoisonPill) recover { case ex: ActorKilledException => () })
+                        .mapTo[Unit]
+                        
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
-    mongoActor.?(MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
+    (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
 }
+
+object RealDatabase {
+  implicit def stop: Stop[RealDatabase] = new Stop[RealDatabase] {
+    def stop(db: RealDatabase) = db.disconnect
+  }
+}
+
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
   type V[B] = ValidationNEL[String, B]

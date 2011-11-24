@@ -1,13 +1,14 @@
 package blueeyes.core.service
 
+import blueeyes.bkka.Stoppable
 import blueeyes.concurrent.Future
 
-case class ServiceDescriptor[T, S](startup: () => Future[S], request: S => AsyncHttpService[T], shutdown: S => Future[Unit]) { self =>
+case class ServiceDescriptor[T, S](startup: () => Future[S], request: S => AsyncHttpService[T], shutdown: S => Future[Option[Stoppable]]) { self =>
   def ~ [R](that: ServiceDescriptor[T, R]): ServiceDescriptor[T, (S, R)] = {
     ServiceDescriptor[T, (S, R)](
       startup  = () => self.startup().zip(that.startup()),
       request  = (pair: (S, R)) => self.request(pair._1) ~ (that.request(pair._2)),
-      shutdown = (pair: (S, R)) => self.shutdown(pair._1).zip(that.shutdown(pair._2)).map(_ => Unit)
+      shutdown = (pair: (S, R)) => self.shutdown(pair._1).flatMap(_ => that.shutdown(pair._2))
     )
   }
 
