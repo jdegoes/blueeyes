@@ -148,21 +148,21 @@ trait ActorPimps {
     }
 
     /** Lifts the output values into a monad.
-     *
-     * Note: Don't use this to create an asynchronous actor (using the Future 
-     * monad), or the resulting actor will block! Blame strictness.
      */
-    def lift[M[_]](implicit monad: Monad[M]): ActorM[M, A, B] = ActorMHelpers.receive { a: A =>
-      val (b, next) = value ! a
-
-      (monad.pure(b), next.lift[M])
+    def lift[M[_]](implicit monad: Monad[M]): ActorM[M, A, B] = ActorMHelpers.receive[M, A, B] { a: A =>
+      monad.pure(value ! a) map {
+        case (b, next) =>
+          (b, next.lift[M])
+      }
     }
 
     /** Converts a synchronous actor into an aynchronous actor.
      */
-    def async: ActorAsync[A, B] = {
-      // TODO
-      throw new Exception("Not implemented")
+    def async: ActorAsync[A, B] = ActorMHelpers.receive[Future, A, B] { a: A =>
+      Future.async(value ! a) map {
+        case (b, next) =>
+          (b, next.async)
+      }
     }
 
     /** Workaround invariance of actor.
