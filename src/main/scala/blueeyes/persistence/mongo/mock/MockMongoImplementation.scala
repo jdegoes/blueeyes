@@ -34,11 +34,11 @@ private[mongo] class MockDatabase(val mongo: Mongo) extends Database {
     })
   }
 
-  def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean) = Future.sync(query(query.collection, isVerified))
+  def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]) = Future.sync(query(query.collection, isVerified))
 
   def collections = databaseCollections.entrySet.map(entry => MongoCollectionHolder(entry.getValue, entry.getKey, this)).toSet
 
-  def disconnect() {}
+  lazy val disconnect = akka.dispatch.Future(())
 }
 
 private[mongo] class MockDatabaseCollection(val name: String, val database: MockDatabase) extends DatabaseCollection with JObjectFields with MockIndex with ReadWriteLock with MongoFilters {

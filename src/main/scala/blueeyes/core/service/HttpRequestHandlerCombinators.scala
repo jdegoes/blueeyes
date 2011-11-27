@@ -253,9 +253,9 @@ trait HttpRequestHandlerCombinators {
    * HTTP method and content using the query string parameters "method" and
    * "content", respectively.
    */
-  def jsonp[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], bstr: Bijection[T, String]): HttpService[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
+  def jsonp[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T): HttpService[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
 
-  def jsonp2[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit b1: Bijection[T, Future[JValue]], bstr: Bijection[T, String]): HttpService[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
+  def jsonp2[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T): HttpService[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.

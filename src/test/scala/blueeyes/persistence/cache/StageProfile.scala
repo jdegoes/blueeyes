@@ -16,6 +16,7 @@ object StageProfile{
   }
 
   def main(args: Array[String]){
+    implicit val timeout = Actor.Timeout(100000)
     println("START")
     Thread.sleep(10000)
     println("REAL START")
@@ -39,7 +40,7 @@ object StageProfile{
       actor
     }
 
-    val futures = Future((actors map {actor => (actor !!! ("Send", 100000)).toBlueEyes}): _*)
+    val futures = Future((actors map {actor => actor.?("Send").mapTo[Unit].toBlueEyes}): _*)
     awaitFuture(futures)
 
 //    val flushFuture = stage.flushAll

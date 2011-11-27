@@ -122,7 +122,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         }~
         describe("Jsonp service."){
           path("/Jsonp") {
-            jsonp { request: HttpRequest[Future[JValue]] =>
+            jsonp[ByteChunk] { request: HttpRequest[Future[JValue]] =>
               Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
             }
           }

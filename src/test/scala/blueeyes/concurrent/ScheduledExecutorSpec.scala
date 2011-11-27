@@ -20,20 +20,21 @@ class ScheduledExecutorSpec extends Specification{
       @volatile var executedIfCancelled = false
       @volatile var executionCount      = 0
 
-      val f = ScheduledExecutor.forever((a: Int) => {
+      val f = (a: Int) => {
         exectionTime   = System.currentTimeMillis
         executionCount = executionCount + 1
         if (cancelled) executedIfCancelled = true
 
         Future.sync[Int](a)
-      }, 1, Duration(100, TimeUnit.MILLISECONDS))
+      }
 
+      val future = ScheduledExecutor.forever(f, 1, Duration(100, TimeUnit.MILLISECONDS))
       Thread.sleep(2000)
 
-      f.cancel
+      future.cancel
       cancelled = true
 
-      executedIfCancelled must eventually (be_==(false))
+      executedIfCancelled must eventually(beFalse)
 
       executionCount must beGreaterThan(10)
       exectionTime   must beCloseTo(System.currentTimeMillis, 500)

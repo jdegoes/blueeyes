@@ -13,7 +13,7 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
   private implicit val mergeMonoid = MergeMonoid
   private val healthMonitors = configs.map(new IntervalHealthMonitor(_))
 
-  def request(path: JPath) {healthMonitors.foreach(_.request(path))}
+  def call(path: JPath) {healthMonitors.foreach(_.call(path))}
 
   def increment(path: JPath)(c: Long) {healthMonitors.foreach(_.increment(path)(c))}
 
@@ -25,7 +25,7 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
 
   def export[T](path: JPath, value: => T)(implicit converter: (T) => JValue) {healthMonitors.foreach(_.export(path, value))}
 
-  def error[T <: Throwable](path: JPath)(t: T) {healthMonitors.foreach(_.error(path)(t))}
+  def error(path: JPath)(t: Throwable) {healthMonitors.foreach(_.error(path)(t))}
 
   def toJValue = Future[JValue](healthMonitors.map(_.toJValue): _*).map(_.asMA.sum)
 

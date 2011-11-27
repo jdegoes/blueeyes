@@ -1,6 +1,8 @@
 package blueeyes.health.metrics
 
 import blueeyes.json.JsonAST._
+import blueeyes.util.Clock
+import akka.actor.Actor
 
 private[metrics] trait TimedAverageStatReport extends AsyncStatistic[Long, Map[Long, Double]]{
   def toJValue = details.map { details =>
@@ -15,15 +17,15 @@ private[metrics] trait TimedAverageStatReport extends AsyncStatistic[Long, Map[L
 }
 
 object TimedAverageStat {
-  def apply(intervalConfig: IntervalConfig)(implicit clock: () => Long): AsyncStatistic[Long, Map[Long, Double]] = intervalConfig match{
+  def apply(intervalConfig: IntervalConfig)(implicit clock: Clock): AsyncStatistic[Long, Map[Long, Double]] = intervalConfig match{
     case e: interval => new TimedNumbersSample(e) with TimedAverageStatReport{
       val intervalLengthInSeconds        = config.granularity.unit.toSeconds(config.granularity.length)
     }
 
     case eternity    => new EternityTimedNumbersSample with TimedAverageStatReport{
-      private val startTime = clock()
+      private val startTime = clock.now().getMillis
 
-      def intervalLengthInSeconds = (clock() - startTime) / 1000
+      def intervalLengthInSeconds = (clock.now().getMillis - startTime) / 1000
     }
   }
 }

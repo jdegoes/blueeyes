@@ -1,61 +1,63 @@
 package blueeyes.core.service
 
-import org.specs2.mutable.Specification
 import blueeyes.BlueEyesServiceBuilder
+import blueeyes.concurrent.test._
+import blueeyes.concurrent.Future
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
-import net.lag.configgy.Configgy
-import blueeyes.concurrent.Future
 import blueeyes.core.http._
 
-class HttpServerSpec extends Specification with BijectionsChunkString{
+import net.lag.configgy.Configgy
+import org.specs2.mutable.Specification
+import org.specs2.specification.{Outside, Scope}
 
-  private val server = new TestServer()
-
-  Configgy.configureFromString("")
-  server.start
+class HttpServerSpec extends Specification with BijectionsChunkString with FutureMatchers {
+  object server extends Outside[TestServer] with Scope {
+    def outside = {
+      Configgy.configureFromString("")
+      new TestServer() ->- { _.start }
+    }
+  }
 
   "HttpServer.start" should {
-    "executes start up function" in{
-      server.startupCalled must be_==(true)
+    "executes start up function" in server { 
+      _.startupCalled must be_==(true)
     }
-    "set status to Starting" in{
-      server.status must be (RunningStatus.Started)
+    "set status to Starting" in server { 
+      _.status must be (RunningStatus.Started)
     }
   }
   
   "HttpServer.apply" should {
-
-    "delegate to service request handler" in {
-      val response = server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar"))
-      response.toOption.get.value.map(response => response.copy(content=Some(ChunkToString(response.content.get)))) must beSome(HttpResponse[String](content=Some("blahblah"), headers = Map("Content-Type" -> "text/plain")))
+    "delegate to service request handler" in server { s =>
+      s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).toOption.get.value must beLike {
+        case Some(HttpResponse(HttpStatus(status, _), headers, Some(content), _)) =>
+          (status must_== OK) and
+          (ChunkToString(content) must_== "blahblah") and
+          (headers.get("Content-Type") must beSome("text/plain"))
+      }
     }
     
-    "produce NotFount response when service is not defined for request" in {
-      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).toOption.get.value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
+    "produce NotFound response when service is not defined for request" in server { s =>
+      s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).toOption.get.value must beSome(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
     }
 
-    "gracefully handle error-producing service handler" in {
-      server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
+    "gracefully handle error-producing service handler" in server { s =>
+      s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
-    "gracefully handle dead-future-producing service handler" in {
-      val service1 = server.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead"))
+    "gracefully handle dead-future-producing service handler" in server { s =>
+      val service1 = s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead"))
       service1.toOption.get.value.get.status.code must be(HttpStatusCodes.InternalServerError)
     }
   }
 
   "HttpServer stop" should {
-    "execute shut down function" in {
-      server.stop
-
-      server.shutdownCalled must be_==(true)
-    }
-    
-    "set status to Stopped" in {
-      server.stop
-
-      server.status must be (RunningStatus.Stopped)
+    "execute shut down function" in server { s =>
+      s.stop
+      (s.shutdownCalled must beTrue) and
+      (s.status must be (RunningStatus.Stopped))
     }
   }  
 }

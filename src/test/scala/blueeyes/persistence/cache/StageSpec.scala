@@ -1,5 +1,4 @@
-package blueeyes
-package persistence.cache
+package blueeyes.persistence.cache
 
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
@@ -11,11 +10,11 @@ import blueeyes.concurrent.Future._
 import scala.util.Random
 import scalaz._
 
-import akka.actor.Actor._
-import akka.actor.Actor
-import akka.routing.Routing._
-import akka.dispatch.Dispatchers
-import akka.util.Duration
+import _root_.akka.actor.Actor._
+import _root_.akka.actor.Actor
+import _root_.akka.routing.Routing._
+import _root_.akka.dispatch.Dispatchers
+import _root_.akka.util.Duration
 
 import java.util.concurrent.TimeUnit
 
@@ -29,91 +28,90 @@ class StageSpec extends Specification{
     "evict when entry is expired" in {
       @volatile var evicted = false
 
-      val stage = newStage(None, Some(20),
-        (key: String, value: String) => {
-          evicted = evicted || (key == "foo" && value == "bar")
-        }
-      )
+      val stage = newStage(None, Some(20), (key: String, value: String) => evicted = evicted || (key == "foo" && value == "bar"))
 
       stage.put("foo", "bar")
       stage.put("bar", "baz")
 
-      evicted must eventually (be_==(true))
+      (evicted must eventually (beTrue))
 
-      val stop = stage.stop
-      stop.isDone must eventually (be_==(true))
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
     "evict when stage is over capacity" in{
       @volatile var evicted = false
 
-      val stage = newStage(None, None, {(key: String, value: String) => evicted = key == "foo2" && value == "bar2"}, 1)
+      val stage = newStage(None, None, (key: String, value: String) => evicted = key == "foo2" && value == "bar2", 1)
       stage.put("foo2", "bar2")
       stage.put("bar2", "baz2")
 
-      evicted must eventually (be_==(true))
+      (evicted must eventually (beTrue))
 
-      val stop = stage.stop
-      stop.isDone must eventually (be_==(true))
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
     "evict when stage is flushed" in{
       @volatile var evicted = false
 
-      val stage = newStage(Some(1), None, {(key: String, value: String) => evicted = key == "foo3" && value == "bar3"})
+      val stage = newStage(Some(1), None, (key: String, value: String) => evicted = key == "foo3" && value == "bar3")
       stage.put("foo3", "bar3")
       stage.flushAll
 
-      evicted must eventually (be_==(true))
+      (evicted must eventually (beTrue))
 
-      val stop = stage.stop
-      stop.isDone must eventually (be_==(true))
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
     "evict automatically" in{
       @volatile var evicted = false
 
-      val stage = newStage(Some(10), None, {(key: String, value: String) => evicted = key == "foo4" && value == "bar4"})
+      val stage = newStage(Some(10), None, (key: String, value: String) => evicted = key == "foo4" && value == "bar4")
       stage.put("foo4", "bar4")
 
-      evicted must eventually (be_==(true))
+      (evicted must eventually (beTrue))
 
-      stage.flushAll
-
-      val stop = stage.stop
-      stop.isDone must eventually (be_==(true))
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
     "evict automatically more then one time" in{
       @volatile var evictCount = 0
 
-      val stage = newStage(Some(10), None, {(key: String, value: String) => if (key == "foo" && value == "bar") evictCount += 1 })
+      val stage = newStage(Some(10), None, (key: String, value: String) => if (key == "foo" && value == "bar") evictCount += 1 )
 
       stage.put("foo", "bar")
 
-      evictCount must eventually (beEqualTo(1))
+      (evictCount must eventually (beEqualTo(1)))
 
       stage.put("foo", "bar")
 
-      evictCount must eventually (beEqualTo(2))
+      (evictCount must eventually (beEqualTo(2)))
 
-      val stop = stage.stop
-      stop.isDone must eventually (be_==(true))
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
-    "evict all messages when multiple threads send messages" in{
+    // this test runs for a really long time
+    "evict all messages when multiple threads send messages" in {
+      implicit val timeout = Actor.Timeout(100000)
       val messagesCount = 100
       val threadsCount  = 20
 
       @volatile var collected = 0
-      val stage     = newStage(Some(10), None, {(key: String, value: String) => collected = collected + (value.length / key.length)})
+      val stage     = newStage(Some(10), None, (key: String, value: String) => collected = collected + (value.length / key.length))
       val actors    = List.range(0, threadsCount) map {i =>
-        val actor = Actor.actorOf(new MessageActor("1", "1", messagesCount, stage))
-        actor.start()
-        actor
+        Actor.actorOf(new MessageActor("1", "1", messagesCount, stage)).start()
       }
 
-      val futures   = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
+      val futures   = Future(actors.map(actor => fromAkka[Unit]((actor ? "Send").mapTo[Unit]).toBlueEyes): _*)
       futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll
@@ -121,15 +119,17 @@ class StageSpec extends Specification{
 
       collected mustEqual(messagesCount * threadsCount)
 
-      val stop = stage.stop
-      val result = stop.isDone must eventually (be_==(true))
-
-      actors.foreach(_.stop())
-
-      result
+      actors.foreach(_ ! _root_.akka.actor.PoisonPill)
+      
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
 
-    "evict all messages when multiple threads send messages with different keys" in{
+    // this test runs for a really long time
+    "evict all messages when multiple threads send messages with different keys" in {
+      implicit val timeout = Actor.Timeout(100000)
+
       val messagesCount           = 50
       val threadsPerMessagesType  = 10
       val threadsCount            = 20
@@ -145,38 +145,27 @@ class StageSpec extends Specification{
         collected.put(key, count + (value.length / key.length))
       })
       val actors    = messages map {msgs =>
-        val actor = Actor.actorOf(new MessageActor(msgs(0), msgs(0), messagesCount, stage))
-        actor.start()
-        actor
+        Actor.actorOf(new MessageActor(msgs(0), msgs(0), messagesCount, stage)).start()
       }
 
-      val futures = Future(actors.map(actor => fromAkka[Unit](actor !!! ("Send", 100000)).toBlueEyes): _*)
-      futures.value must eventually(200, 300.milliseconds) (beSome)
+      val futures = Future(actors.map(actor => fromAkka[Unit]((actor ? "Send").mapTo[Unit]).toBlueEyes): _*)
+      (futures.value must eventually(200, 300.milliseconds) (beSome))
 
       val flushFuture = stage.flushAll
-      flushFuture.value must eventually (beSome)
+      (flushFuture.value must eventually (beSome))
 
       collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
 
-      val stop = stage.stop
-      val result = stop.isDone must eventually (be_==(true))
-
-      actors.foreach(_.stop())
-
-      result
+      actors.foreach(_ ! _root_.akka.actor.PoisonPill)
+      
+      // because the eventually matcher reevaluates the LHS, use two lines so that stop only is called once
+      val stopFuture = stage.stop
+      stopFuture.isCompleted must eventually (beTrue)
     }
   }
 
-  private def newStage[T](
-    timeToIdle: Option[Long] = None,
-    timeToLive: Option[Long] = None,
-    evict:      (String, String) => Unit,
-    capacity:   Int = 10) = {
-
-    Stage[String, String](
-      ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, 
-      (s1: String, s2: String) => { evict(s1, s2) }
-    )
+  private def newStage[T](timeToIdle: Option[Long], timeToLive: Option[Long], evict: (String, String) => Unit, capacity: Int = 10) = {
+    Stage[String, String](ExpirationPolicy(timeToIdle, timeToLive, MILLISECONDS), capacity, evict)
   }
 
   val testDispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")

@@ -22,7 +22,7 @@ import blueeyes.concurrent.{ReadWriteLock, Future}
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class NettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with NettyConverters{
+private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
@@ -94,7 +94,7 @@ private[engines] class NettyRequestHandler(requestHandler: AsyncCustomHttpServic
 
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
+private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
 
   private val log   = Logger.get
   private var done  = false

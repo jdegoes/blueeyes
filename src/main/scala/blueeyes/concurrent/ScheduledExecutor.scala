@@ -1,17 +1,15 @@
 package blueeyes.concurrent
 
 import blueeyes.util.metrics.Duration
+import blueeyes.util.metrics.Duration._
 import java.util.concurrent.{ScheduledExecutorService, Executors, TimeUnit}
 
 trait ScheduledExecutor{
-
-  type ScheduledFunction[A, B] = A => Future[B]
-
   def scheduledExecutor: ScheduledExecutorService
 
   def once[B](f: Function0[Future[B]], duration: Duration): Future[B] = once(toScheduledFunction(f), (), duration)
 
-  def once[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration): Future[B] = {
+  def once[A, B](f: A => Future[B], message: => A, duration: Duration): Future[B] = {
     val future = new Future[B]()
 
     val executorFuture = scheduledExecutor.schedule(new Runnable{
@@ -32,12 +30,12 @@ trait ScheduledExecutor{
 
   def forever[B](f: Function0[Future[B]], duration: Duration): Future[Unit] = forever(toScheduledFunction(f), (), duration)
 
-  def forever[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration): Future[Unit] =
+  def forever[A, B](f: A => Future[B], message: => A, duration: Duration): Future[Unit] =
     unfold[A, B, Unit](f, message, duration)(())((z: Unit, b: B) => ((), Some(message)))
 
   def repeat[B, Z](f: Function0[Future[B]], duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeat(toScheduledFunction(f), (), duration, times)(seed)(fold)
 
-  def repeat[A, B, Z](f: ScheduledFunction[A, B], message: => A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z): Future[Z] = {
+  def repeat[A, B, Z](f: A => Future[B], message: => A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z): Future[Z] = {
     class Folder{
       private var count = 0
 
@@ -54,7 +52,7 @@ trait ScheduledExecutor{
 
   def repeatWhile[B, Z](f: Function0[Future[B]], duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeatWhile(toScheduledFunction(f), (), duration, pred)(seed)(fold)
 
-  def repeatWhile[A, B, Z](f: ScheduledFunction[A, B], message: => A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z): Future[Z] = {
+  def repeatWhile[A, B, Z](f: A => Future[B], message: => A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z): Future[Z] = {
     if (pred(seed)){
       unfold(f, message, duration)(seed){(z: Z, b: B) =>
         val newZ = fold(z, b)
@@ -64,52 +62,67 @@ trait ScheduledExecutor{
     else Future.sync[Z](seed)
   }
 
-  def unfold[A, B, Z](f: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = {
+  def unfoldWithDelay[A, B, Z](f: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = {
+    @volatile var canceled = false
+    once(f, firstMessage, duration).flatMap { b =>
+      generator(seed, b) match {
+        case (state, Some(a)) if !canceled => unfold(f, a, duration)(state)(generator)
+        case (state, _)                    => Future.sync(state)
+      }
+    } ifCanceled { _ =>
+      canceled = true
+    }
+  }
 
-    val future      = new Future[Z]()
-    val start       = System.currentTimeMillis
+  def unfoldWithMinimumDuration[A, B, Z](f: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = {
+    @volatile var canceled = false
 
-    def delayed(message: A) = once(f, message, duration)
-    def now(message: A)     = f(message)
+    def schedule(message: A, state: Z, delay: Duration): Future[Z] = {
+      val start = System.currentTimeMillis
+      once(f, message, delay) flatMap { b =>
+        generator(state, b) match {
+          case (state, Some(a)) if !canceled => 
+            val nextDelay = duration.ms.length - (System.currentTimeMillis - start)
+            schedule(a, state, (nextDelay max 0).milliseconds)
 
-    def schedule(scheduleActor: A => Future[B], message: A, scheduleSeed: Z, nextSchedule: Long){
-      val nextScheduleTime   = System.currentTimeMillis + duration.unit.convert(duration.time.toLong * nextSchedule, TimeUnit.MILLISECONDS)
-
-      val actorFuture    = scheduleActor(message)
-      future.ifCanceled(error => actorFuture.cancel(error))
-      actorFuture.ifCanceled(error => future.cancel(error))
-
-      actorFuture.deliverTo {b =>
-        val (newZ, newA) = generator(scheduleSeed, b)
-
-        newA match{
-          case None    if !future.isCanceled    => future.deliver(newZ)
-          case Some(x) if !future.isCanceled => {
-            val (currentActor, delay) = if (System.currentTimeMillis < nextScheduleTime) (delayed _, 2)
-            else (now _, 1)
-
-            schedule(currentActor, x, newZ, nextSchedule + delay)
-          }
-          case _ =>
+          case (state, _) => Future.sync(state)
         }
       }
     }
-    schedule(delayed _, firstMessage, seed, 2)
-
-    future
+      
+    schedule(firstMessage, seed, 0.milliseconds).ifCanceled(_ => canceled = true)
   }
 
-  def !@[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration) = once(f, message, duration)
+  def unfold[A, B, Z](f: A => Future[B], firstMessage: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = {
+    val start = System.currentTimeMillis
+    @volatile var canceled = false
 
-  def !@~[A, B](f: ScheduledFunction[A, B], message: => A, duration: Duration) = forever(f, message, duration)
+    def schedule(n: Long, a: => A, state: Z): Future[Z] = {
+      val execTime = start + (n * duration.ms.length)
+      val delay = (execTime - System.currentTimeMillis).max(0)
 
-  def !@ [A, B, Z](f: ScheduledFunction[A, B], msg: A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeatWhile(f, msg , duration, pred)(seed)(fold)
+      once(f, a, duration).flatMap { b =>
+        generator(state, b) match {
+          case (state, Some(a)) if !canceled => schedule(n + 1, a, state)
+          case (state, _)                    => Future.sync(state)
+        }
+      } 
+    }
 
-  def !@ [A, B, Z](f: ScheduledFunction[A, B], msg: A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeat(f, msg , duration, times)(seed)(fold)
+    schedule(0, firstMessage, seed).ifCanceled(_ => canceled = true)
+  }
 
-  def !@ [A, B, Z](f: ScheduledFunction[A, B], msg: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = unfold(f, msg , duration)(seed)(generator)
+  def !@[A, B](f: A => Future[B], message: => A, duration: Duration) = once(f, message, duration)
 
-  private def toScheduledFunction[B](f: Function0[Future[B]]) = { v: Unit => f()}
+  def !@~[A, B](f: A => Future[B], message: => A, duration: Duration) = forever(f, message, duration)
+
+  def !@ [A, B, Z](f: A => Future[B], msg: A, duration: Duration, pred: (Z) => Boolean)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeatWhile(f, msg , duration, pred)(seed)(fold)
+
+  def !@ [A, B, Z](f: A => Future[B], msg: A, duration: Duration, times: Int)(seed: Z)(fold: (Z, B) => Z): Future[Z] = repeat(f, msg , duration, times)(seed)(fold)
+
+  def !@ [A, B, Z](f: A => Future[B], msg: => A, duration: Duration)(seed: Z)(generator: (Z, B) => (Z, Option[A])): Future[Z] = unfold(f, msg , duration)(seed)(generator)
+
+  private def toScheduledFunction[A, B](f: Function0[Future[B]]): A => Future[B] = (_: A) => f()
 }
 
 trait ScheduledExecutorSingleThreaded extends ScheduledExecutor{

@@ -224,12 +224,12 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     pass
   }
 
-  private def query[T <: MongoQuery](query: T): (Option[T#QueryResult], T#QueryResult) = (
+  private def query[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]): (Option[T#QueryResult], T#QueryResult) = (
     if (testLive) Some(oneQuery(query, realDatabase)) else None, 
     oneQuery(query, mockDatabase)
   )
 
-  private def oneQuery[T <: MongoQuery](query: T, database: Database) = {
+  private def oneQuery[T <: MongoQuery](query: T, database: Database)(implicit m: Manifest[T#QueryResult]) = {
     val future = database(query)
 
     future.isDelivered must eventually (be_==(true))

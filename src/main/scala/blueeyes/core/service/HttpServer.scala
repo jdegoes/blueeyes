@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-
+import blueeyes.bkka.Stoppable
 import blueeyes.concurrent.Future
 import blueeyes.concurrent.Future._
 import blueeyes.core.data.ByteChunk
@@ -44,6 +44,12 @@ trait HttpReflectiveServiceList[T] { self =>
 trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
+
+  /**
+   * The default timeout to be used when stopping dependent services is 60 seconds. Override this method
+   * to provide a different timeout.
+   */
+  implicit def stopTimeout = akka.actor.Actor.Timeout(60000)
 
   /** The root configuration. This is simply Configgy's root configuration 
    * object, so this should not be used until Configgy has been configured.
@@ -116,8 +122,9 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       
       descriptor.startup().deliverTo { _ =>
         log.info("Successfully started service " + descriptor.service.toString)
-      }.ifCanceled { why =>
-        log.error("Failed to start service " + descriptor.service.toString + ": " + why)
+      } ifCanceled { 
+        case Some(throwable) => log.fatal("Failed to start service " + descriptor.service.toString, throwable)
+        case None => log.fatal("Failed to start service " + descriptor.service.toString + " (unable to determine cause of failure)")
       }
     }
     
@@ -173,7 +180,9 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     val shutdownFutures = descriptors.map { descriptor =>
       log.info("Shutting down service " + descriptor.service.toString)
       
-      descriptor.shutdown().deliverTo { _ =>
+      descriptor.shutdown().flatMap { stoppables => 
+        stoppables.map(Stoppable.stop).getOrElse(akka.dispatch.Future(())).toBlueEyes 
+      }.deliverTo { _ =>
         log.info("Successfully shut down service " + descriptor.service.toString)
       }.ifCanceled { why =>
         log.info("Failed to shut down service " + descriptor.service.toString + ": " + why)
@@ -285,6 +294,6 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
 
     lazy val request: Future[AsyncHttpService[ByteChunk]] = state.map(state => descriptor.request(state))
     
-    def shutdown(): Future[Unit] = state.flatMap(state => descriptor.shutdown(state))
+    def shutdown(): Future[Option[Stoppable]] = state.flatMap(state => descriptor.shutdown(state))
   }
 }

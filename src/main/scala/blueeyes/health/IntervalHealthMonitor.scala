@@ -23,7 +23,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   private val _exportedStats: ConcurrentMap[JPath, ExportedStatistic[_]]                         = new ConcurrentHashMap[JPath, ExportedStatistic[_]]
   private implicit val mergeMonoid = MergeMonoid
 
-  def request(path: JPath) { timedSampleStat(path) += 1 }
+  def call(path: JPath) { timedSampleStat(path) += 1 }
 
   def increment(path: JPath)(c: Long) { counterStat(path) += c }
 
@@ -35,7 +35,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
 
   def export[T](path: JPath, value: => T)(implicit converter: T => JValue) {createIfAbsent(path, _exportedStats, () => new ExportedStatistic[T](value))}
 
-  def error[T <: Throwable](path: JPath)(t: T){
+  def error(path: JPath)(t: Throwable) {
     errorStat(JPath(path.nodes ::: List(JPathField("errorDistribution"), JPathField(t.getClass.getName)))) += 1
   }
 
@@ -99,7 +99,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
 
   private val sampleSize = 1000
 
-  private implicit def clock() = System.currentTimeMillis()
+  private implicit def clock = blueeyes.util.Clock.System
   private def timedSampleStat(path: JPath):  AsyncStatistic[Long, Map[Long, Double]] = createIfAbsent[JPath, AsyncStatistic[Long, Map[Long, Double]]](path, _timedSampleStats, newTimedSample(path) _)
   private def newTimedSample(path: JPath)(): AsyncStatistic[Long, Map[Long, Double]] = TimedAverageStat(intervalConfig)
 

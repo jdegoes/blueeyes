@@ -1,6 +1,7 @@
 package blueeyes.util.logging
 
 import blueeyes.concurrent.Future
+import blueeyes.health.HealthMonitor
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 import blueeyes.util.RichThrowableImplicits
 
@@ -35,9 +36,11 @@ object RequestLogger{
   }
 }
 
-class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => String, writeDelaySeconds: Int){
+class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => String, writeDelaySeconds: Int, healthMonitor: HealthMonitor = HealthMonitor.Noop){
   private val fileHandler = new FileHandler(baseFileName, policy, fileHeader)
-  private val logStage    = Stage[String, StringBuilder](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000, write)
+  private val logStage    = Stage[String, StringBuilder](ExpirationPolicy(None, Some(writeDelaySeconds), SECONDS), 2000) {
+    (_: String, record: StringBuilder) => fileHandler.publish(record)
+  }
 
   implicit val LogLineSemigroup = new Semigroup[StringBuilder] {
     def append(l1: StringBuilder, l2: => StringBuilder): StringBuilder = l1.append(l2)
@@ -52,7 +55,6 @@ class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => Stri
 
   def fileName: Option[String] = fileHandler.fileName
 
-  private def write(key: String, record: StringBuilder) {fileHandler.publish(record)}
 }
 
 class FileHandler(baseFileName: String, policy: Policy, fileHeader: () => String) extends RichThrowableImplicits with NameFormat with Roll{

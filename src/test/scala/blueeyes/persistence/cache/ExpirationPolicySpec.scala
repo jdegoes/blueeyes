@@ -6,10 +6,10 @@ import java.util.concurrent.TimeUnit.{NANOSECONDS, MILLISECONDS}
 import blueeyes.util.ClockMock
 
 class ExpirationPolicySpec extends Specification {
-  val TimeToIdlePolicy = ExpirationPolicy(timeToIdle = Some(1), timeToLive = None, unit = NANOSECONDS)
-  val TimeToLivePolicy = ExpirationPolicy(timeToLive = Some(1), timeToIdle = None, unit = NANOSECONDS)
-  val TimeToAllPolicy  = ExpirationPolicy(timeToLive = Some(1), timeToIdle = Some(1), unit = NANOSECONDS)
-  val TimeToNonePolicy = ExpirationPolicy(timeToLive = None, timeToIdle = None, unit = NANOSECONDS)  
+  val TimeToIdlePolicy = ExpirationPolicy(timeToIdle = Some(1), timeToLive = None, timeUnit = NANOSECONDS)
+  val TimeToLivePolicy = ExpirationPolicy(timeToLive = Some(1), timeToIdle = None, timeUnit = NANOSECONDS)
+  val TimeToAllPolicy  = ExpirationPolicy(timeToLive = Some(1), timeToIdle = Some(1), timeUnit = NANOSECONDS)
+  val TimeToNonePolicy = ExpirationPolicy(timeToLive = None, timeToIdle = None, timeUnit = NANOSECONDS)  
 
   "eternal" should {
     "be true when timeToIdleNanos and timeToLiveNanos are not defined" in {

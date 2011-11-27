@@ -55,7 +55,7 @@ class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits
   }
 
   class MongoDatabaseImpl(var queries: List[(MongoFilter, MongoUpdate)]) extends MockDatabase(new MockMongo()) {
-    override def apply[T <: MongoQuery](query: T) = {
+    override def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]) = {
       val update = query.asInstanceOf[MongoUpdateQuery]
       queries = queries filterNot (_ == (update.filter.get, update.value))
 

@@ -29,5 +29,5 @@ trait AsyncStatistic[T, V] extends Statistic[T, V]{
 
   def toJValue: Future[JValue]
 
-  def shutdown()
+  def shutdown: akka.dispatch.Future[Unit]
 }
