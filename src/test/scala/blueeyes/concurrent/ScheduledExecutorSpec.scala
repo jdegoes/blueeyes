@@ -5,7 +5,7 @@ import blueeyes.util.metrics.Duration
 import org.specs2.time.TimeConversions._
 import java.util.concurrent.TimeUnit
 
-class ScheduledExecutorSpec extends Specification{
+class ScheduledExecutorSpec extends Specification {
   "ScheduledExecutor.once" should {
     "execute function" in{
       val f = ScheduledExecutor.once((a: Int) => Future.sync[Int](a), 1, Duration(10, TimeUnit.MILLISECONDS))
@@ -15,15 +15,16 @@ class ScheduledExecutorSpec extends Specification{
   }
   "ScheduledExecutor.forever" should {
     "execute function while it is not cancelled" in{
+      //val lock = new Object
       @volatile var exectionTime        = 0l
       @volatile var cancelled           = false
-      @volatile var executedIfCancelled = false
+      @volatile var executedAfterCancellation = 0
       @volatile var executionCount      = 0
 
       val f = (a: Int) => {
         exectionTime   = System.currentTimeMillis
         executionCount = executionCount + 1
-        if (cancelled) executedIfCancelled = true
+        if (cancelled) executedAfterCancellation += 1
 
         Future.sync[Int](a)
       }
@@ -33,10 +34,11 @@ class ScheduledExecutorSpec extends Specification{
 
       future.cancel
       cancelled = true
+      val endTime = System.currentTimeMillis
 
-      (executedIfCancelled must eventually(beTrue)) and
+      (executedAfterCancellation must not (beGreaterThan(1).eventually)) and 
       (executionCount must beGreaterThan(10)) and
-      (exectionTime   must beCloseTo(System.currentTimeMillis, 500))
+      (exectionTime   must beCloseTo(endTime, 500))
     }
   }
   "ScheduledExecutor.repeat" should {
