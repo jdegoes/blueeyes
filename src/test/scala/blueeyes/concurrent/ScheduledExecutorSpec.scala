@@ -34,10 +34,9 @@ class ScheduledExecutorSpec extends Specification{
       future.cancel
       cancelled = true
 
-      executedIfCancelled must eventually(beFalse)
-
-      executionCount must beGreaterThan(10)
-      exectionTime   must beCloseTo(System.currentTimeMillis, 500)
+      (executedIfCancelled must eventually(beTrue)) and
+      (executionCount must beGreaterThan(10)) and
+      (exectionTime   must beCloseTo(System.currentTimeMillis, 500))
     }
   }
   "ScheduledExecutor.repeat" should {
