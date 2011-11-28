@@ -12,14 +12,14 @@ import collection.mutable.ArrayBuilder.ofByte
 import org.specs2.mock._
 import org.specs2.specification.BeforeExample
 
-class NettyChunkedRequestHandlerSpec extends Specification with Mockito with NettyConverters with BeforeExample{
+class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with HttpNettyConverters with BeforeExample{
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]
   private val context       = mock[ChannelHandlerContext]
   private val event         = mock[MessageEvent]
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
-  private val handler       = new NettyChunkedRequestHandler(2)
+  private val handler       = new HttpNettyChunkedRequestHandler(2)
   private val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html")
 
   private val chunkEvent    = mock[MessageEvent]

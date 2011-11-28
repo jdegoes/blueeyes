@@ -8,15 +8,12 @@ import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.util.CharsetUtil
 import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
-import NettyChunkedRequestHandler._
+import HttpNettyChunkedRequestHandler._
 import blueeyes.concurrent.Future
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
 import blueeyes.core.http.HttpRequest
-import net.lag.logging.Logger
 
-class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with NettyConverters{
-
-  private val log = Logger.get
+private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Future[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
@@ -86,7 +83,7 @@ class NettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHa
   }
 }
 
-object NettyChunkedRequestHandler{
+object HttpNettyChunkedRequestHandler{
   val CONTINUE: ChannelBuffer    = ChannelBuffers.copiedBuffer("HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII)
   val BAD_REQUEST: ChannelBuffer = ChannelBuffers.copiedBuffer("HTTP/1.1 400 BadRequest\r\n\r\n", CharsetUtil.US_ASCII)
 }

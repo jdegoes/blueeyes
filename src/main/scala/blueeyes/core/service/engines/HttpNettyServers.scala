@@ -1,53 +1,39 @@
 package blueeyes.core.service.engines
 
-import blueeyes.core.service.HttpServer
 import org.jboss.netty.channel.group.ChannelGroup
-import java.util.concurrent.Executors
-import org.jboss.netty.bootstrap.ServerBootstrap
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
-import org.jboss.netty.channel.{ChannelStateEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler, ChannelPipelineFactory}
+import blueeyes.core.service._
+import blueeyes.core.data._
+import org.jboss.netty.channel.{Channels, ChannelPipeline, ChannelPipelineFactory}
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder
+import org.jboss.netty.handler.stream.ChunkedWriteHandler
+import net.lag.logging.Logger
 
-trait AbstractHttpServerProvider extends NettyServerProvider{
-  def startEngine(channelGroup: ChannelGroup) = {
-    val executor  = Executors.newCachedThreadPool()
-    val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
-    bootstrap.setParentHandler(new SetBacklogHandler(server.config.getInt("backlog", 10000)))
-    bootstrap.setPipelineFactory(pipelineFactory(channelGroup))
-    val channel = bootstrap.bind(InetInterfaceLookup.socketAddres(server.config, enginePort))
-
-    (bootstrap, channel)
-  }
-
-  def pipelineFactory(channelGroup: ChannelGroup): ChannelPipelineFactory
-
-  def server: HttpServer
-
-  def log = server.log
-}
-
-private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler{
-  override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
-    e.getChannel.getConfig.setOption("backlog", backlog)
-    super.channelOpen(ctx, e)
-  }
-}
-
-class HttpNettyServerProvider(val server: HttpServer) extends AbstractHttpServerProvider{
+private[engines] class HttpNettyServerProvider(server: HttpServer) extends AbstractNettyServerProvider{
   def pipelineFactory(channelGroup: ChannelGroup) = new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, server, channelGroup)
 
   def engineType = "http"
 
   def enginePort = server.port
+
+  def config = server.config
+
+  def log = server.log
 }
 
-class HttpsNettyServerProvider(val server: HttpServer) extends AbstractHttpServerProvider{
-  def pipelineFactory(channelGroup: ChannelGroup) = new HttpsPipelineFactory("https", server.host, server.sslPort, server.chunkSize, server, channelGroup, server.config)
+private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,
+                                           requestHandler: AsyncCustomHttpService[ByteChunk], channelGroup: ChannelGroup) extends ChannelPipelineFactory {
+  def getPipeline: ChannelPipeline = {
+    val pipeline = Channels.pipeline()
 
-  def engineType = "https"
+    pipeline.addLast("decoder",         new FullURIHttpRequestDecoder(protocol, host, port, chunkSize))
+    pipeline.addLast("encoder",         new HttpResponseEncoder())
+    pipeline.addLast("chunkedWriter",   new ChunkedWriteHandler())
+    pipeline.addLast("aggregator",      new HttpNettyChunkedRequestHandler(chunkSize))
+    pipeline.addLast("channelsTracker", new ChannelsTrackerHandler(channelGroup))
+    pipeline.addLast("handler",         new HttpNettyRequestHandler(requestHandler, Logger.get))
 
-  def enginePort = server.sslPort
+    pipeline
+  }
 }
 
 class HttpNettyServer(server: HttpServer) extends NettyServer(new HttpNettyServerProvider(server))
-
-class HttpsNettyServer(server: HttpServer) extends NettyServer(new HttpsNettyServerProvider(server))

@@ -6,7 +6,7 @@ import scalaz.Scalaz._
 trait ActorTypeclasses {
   import ActorHelpers._
 
-  implicit def ActorToMAB[M[_], A, B](actor: Actor[A, B]) = mab[Actor, A, B](actor)
+  implicit def ActorToMAB[A, B](actor: Actor[A, B]) = mab[Actor, A, B](actor)
 
   implicit def ActorPure[A] = new Pure[({type λ[α]=Actor[A, α]})#λ] {
     def pure[B](b: => B): Actor[A, B] = {
