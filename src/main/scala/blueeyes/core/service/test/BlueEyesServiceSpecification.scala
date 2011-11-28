@@ -28,7 +28,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     stopServer
   }
 
-  override def map(fs: =>Fragments) = specBefore ^ Step({beforeSpec}) ^ fs ^ Step({afterSpec}) ^ specAfter
+  override def map(fs: =>Fragments) = specBefore ^ Step(beforeSpec _) ^ fs ^ Step(afterSpec _) ^ specAfter
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
