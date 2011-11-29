@@ -82,7 +82,16 @@ object HttpHeaderField {
     `X-Powered-By`,
     `Access-Control-Allow-Origin`,
     `Access-Control-Request-Method`,
-    `Access-Control-Request-Headers`
+    `Access-Control-Request-Headers`,
+    `Sec-WebSocket-Key`,
+    `Sec-WebSocket-Key1`,
+    `Sec-WebSocket-Key2`,
+    `Sec-WebSocket-Location`,
+    `Sec-WebSocket-Origin`,
+    `Sec-WebSocket-Version`,
+    `Sec-WebSocket-Accept`,
+    `Sec-WebSocket-Protocol`,
+    `Sec-WebSocket-Extensions`
   )
 
   val ByName: Map[String, HttpHeaderField[_]] = All.map(v => (v.name.toLowerCase -> v)).toMap
@@ -680,6 +689,69 @@ object HttpHeaders {
   implicit case object `Access-Control-Request-Headers` extends HttpHeaderField[`Access-Control-Request-Headers`] {
     override def parse(s: String) = Some(apply(HttpHeaderField.parseAll(s, "accessControl"): _*))
     def unapply(t: (String, String)) = parse(t).map(_.fields)
+  }
+  case class `Sec-WebSocket-Key1`(key: String) extends HttpHeaderRequest {
+    def value = key
+  }
+  implicit case object `Sec-WebSocket-Key1` extends HttpHeaderField[`Sec-WebSocket-Key1`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.key)
+  }
+  case class `Sec-WebSocket-Key`(key: String) extends HttpHeaderRequest {
+    def value = key
+  }
+  implicit case object `Sec-WebSocket-Key` extends HttpHeaderField[`Sec-WebSocket-Key`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.key)
+  }
+  case class `Sec-WebSocket-Key2`(key: String) extends HttpHeaderRequest {
+    def value = key
+  }
+  implicit case object `Sec-WebSocket-Key2` extends HttpHeaderField[`Sec-WebSocket-Key2`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.key)
+  }
+  case class `Sec-WebSocket-Location`(domain: URI) extends HttpHeaderRequest {
+    def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
+  }
+  implicit case object `Sec-WebSocket-Location` extends HttpHeaderField[`Sec-WebSocket-Location`] {
+    override def parse(s: String) = URI.opt(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.domain)
+  }
+  case class `Sec-WebSocket-Origin`(domain: URI) extends HttpHeaderRequest {
+    def value = List(domain.host, domain.port.map(":" + _)).map(_.getOrElse("")).mkString("")
+  }
+  implicit case object `Sec-WebSocket-Origin` extends HttpHeaderField[`Sec-WebSocket-Origin`] {
+    override def parse(s: String) = URI.opt(s).map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.domain)
+  }
+  case class `Sec-WebSocket-Version`(version: String) extends HttpHeaderRequest {
+    def value = version
+  }
+  implicit case object `Sec-WebSocket-Version` extends HttpHeaderField[`Sec-WebSocket-Version`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.version)
+  }
+  case class `Sec-WebSocket-Accept`(accept: String) extends HttpHeaderRequest {
+    def value = accept
+  }
+  implicit case object `Sec-WebSocket-Accept` extends HttpHeaderField[`Sec-WebSocket-Accept`] {
+    override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.accept)
+  }
+  case class `Sec-WebSocket-Protocol`(protocols: List[WebSocketProtocol]) extends HttpHeaderRequest {
+    def value = protocols.mkString(", ")
+  }
+  implicit case object `Sec-WebSocket-Protocol` extends HttpHeaderField[`Sec-WebSocket-Protocol`] {
+    override def parse(s: String) = Some(apply(WebSocketProtocol.parseProtocol(s)))
+    def unapply(t: (String, String)) = parse(t).map(_.protocols)
+  }
+  case class `Sec-WebSocket-Extensions`(extensions: List[WebSocketExtension]) extends HttpHeaderRequest {
+    def value = extensions.mkString(", ")
+  }
+  implicit case object `Sec-WebSocket-Extensions` extends HttpHeaderField[`Sec-WebSocket-Extensions`] {
+    override def parse(s: String) = Some(apply(WebSocketExtension.parseExtensions(s)))
+    def unapply(t: (String, String)) = parse(t).map(_.extensions)
   }
 
   case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse 

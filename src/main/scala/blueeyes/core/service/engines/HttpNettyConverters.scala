@@ -1,16 +1,16 @@
 package blueeyes.core.service.engines
 
-import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
 import java.io.ByteArrayOutputStream
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
-import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.concurrent.Future
+import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 
 trait HttpNettyConverters{
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -38,6 +38,8 @@ trait HttpNettyConverters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
+  implicit def toNettyMethod(method: HttpMethod): NettyHttpMethod = NettyHttpMethod.valueOf(method.value)
+
   implicit def toNettyResponse(response: HttpResponse[ByteChunk], chunked: Boolean): NettyHttpResponse = {
     val nettyResponse = new DefaultHttpResponse(response.version, response.status)
 
@@ -46,6 +48,14 @@ trait HttpNettyConverters{
     nettyResponse.setHeader(header, value)
 
     nettyResponse
+  }
+
+  implicit def toNettyRequest(request: HttpRequest[ByteChunk]): NettyHttpRequest = {
+    val nettyRequest = new DefaultHttpRequest(request.version, request.method, request.uri.toString)
+    request.headers.raw.foreach(header => nettyRequest.setHeader(header._1, header._2))
+    request.content.foreach(content => nettyRequest.setContent(ChannelBuffers.wrappedBuffer(content.data)))
+
+    nettyRequest
   }
 
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {

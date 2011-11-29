@@ -15,6 +15,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
+import org.jboss.netty.handler.codec.http.websocketx.{TextWebSocketFrame, WebSocketServerHandshaker, WebSocketServerHandshakerFactory}
 import blueeyes.concurrent.{ReadWriteLock, Future}
 
 /** This handler is not thread safe, it's assumed a new one will be created
@@ -22,7 +23,8 @@ import blueeyes.concurrent.{ReadWriteLock, Future}
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
+private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters with WebSocketUtils{
+  private var handshaker: Option[WebSocketServerHandshaker] = None
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
@@ -44,15 +46,36 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }
     }
-    requestHandler.service(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]]).foreach{ responseFuture =>
-      pendingResponses += responseFuture
+    event.getMessage match{
+      case r: HttpRequest[ByteChunk] =>
+        requestHandler.service(r).foreach{ responseFuture =>
+          pendingResponses += responseFuture
 
-      responseFuture.deliverTo { response =>
-        pendingResponses -= responseFuture
+          responseFuture.deliverTo { response =>
+            pendingResponses -= responseFuture
 
-        writeResponse(event, response)
-      }
+            if (isWebSocketRequest(r)) startHandshake(r, response, ctx)
+            else writeResponse(event, response)
+          }
+        }
+      case _ => writeResponse(event, HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.BadRequest)))
     }
+  }
+
+  private def startHandshake(request: HttpRequest[ByteChunk], response: HttpResponse[ByteChunk], ctx: ChannelHandlerContext){
+    var wsFactory = new WebSocketServerHandshakerFactory(getWebSocketLocation(request), null, false)
+    handshaker = Option(wsFactory.newHandshaker(ctx, toNettyRequest(request)))
+    handshaker match {
+      case Some(e) =>
+        e.executeOpeningHandshake(ctx, toNettyRequest(request))
+        ctx.getChannel.getPipeline.remove("chunkedWriter")
+        e.getChannel.write(message)
+      case _ => wsFactory.sendUnsupportedWebSocketVersionResponse(ctx)
+    }
+  }
+
+  private def getWebSocketLocation(request: HttpRequest[ByteChunk]): String = {
+    "ws://" + request.headers.get(HttpHeaders.Host.name).getOrElse("")
   }
 
   private def isKeepAlive(message: HttpRequest[ByteChunk] ): Boolean = {
