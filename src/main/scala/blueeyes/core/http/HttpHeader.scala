@@ -141,7 +141,7 @@ sealed trait HttpHeaderRequest extends HttpHeader
 sealed trait HttpHeaderResponse extends HttpHeader
 
 case class HttpHeaders private (val raw: Map[String, String]) {
-  def + (kv: (String, String)): HttpHeaders = new HttpHeaders(raw + HttpHeader(kv).tuple)
+  def + (kv: (String, String)): HttpHeaders = new HttpHeaders(raw + kv)
   def + (header: HttpHeader): HttpHeaders = new HttpHeaders(raw + header.tuple)
   def ++ (that: HttpHeaders) = new HttpHeaders(raw ++ that.raw)
 
