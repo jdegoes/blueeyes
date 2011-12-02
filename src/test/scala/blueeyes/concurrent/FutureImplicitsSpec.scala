@@ -31,6 +31,18 @@ class FutureImplicitsSpec extends Specification with BeforeAfterExample{
       val future = result.toBlueEyes
       future.isCanceled must eventually (be_==(true))
     }
+
+    "convert BlueEyes futures to Akka futures" in {
+      val blueeyes = Future.async { Thread.sleep(500); "hello" }
+      val akkaFuture = blueeyes.toAkka(akka.actor.Actor.Timeout(1000))
+      akkaFuture.get must_== "hello"
+    }
+
+    "convert BlueEyes futures to Akka futures that respect cancellation" in {
+      val blueeyes = Future.async[String] { sys.error("Boo!") }
+      val akkaFuture = blueeyes.toAkka(akka.actor.Actor.Timeout(1000))
+      akkaFuture.recover( { case ex => "hello" } ).get must_== "hello"
+    }
   }
 
   protected def before = {

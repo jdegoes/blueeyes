@@ -1,6 +1,7 @@
 package blueeyes.concurrent
 
 import akka.dispatch.{Future => AkkaFuture, MessageDispatcher, Dispatchers}
+import akka.dispatch.DefaultCompletableFuture
 import akka.util.Duration
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
@@ -479,6 +480,18 @@ trait FutureImplicits {
       }
 
       future
+    }
+  }
+
+  implicit def fromBlueEyes[T](future: Future[T]) = new BlueEyesFutureConversion(future)
+  class BlueEyesFutureConversion[T](blueeyesFuture: Future[T]) { 
+    def toAkka(implicit timeout: akka.actor.Actor.Timeout): AkkaFuture[T] = {
+      val akkaFuture = new DefaultCompletableFuture[T](timeout.duration.toMillis)
+      blueeyesFuture.deliverTo(akkaFuture.completeWithResult).ifCanceled {
+        case Some(error) => akkaFuture.completeWithException(error)
+        case None => akkaFuture.completeWithException(new RuntimeException("No reason given for cancellation of BlueEyes future."))
+      }
+      akkaFuture
     }
   }
 

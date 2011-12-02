@@ -13,6 +13,13 @@ import blueeyes.concurrent.Future._
  */
 trait Mongo {
   def database(databaseName: String): Database
+  def close(): akka.dispatch.Future[Unit]
+}
+
+object Mongo {
+  implicit def stop: Stop[Mongo] = new Stop[Mongo] {
+    def stop(mongo: Mongo) = mongo.close()
+  }
 }
 
 case class MongoQueryTask(query: MongoQuery, collection: DatabaseCollection, isVerified: Boolean)
