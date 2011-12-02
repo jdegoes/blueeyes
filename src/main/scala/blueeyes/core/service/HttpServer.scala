@@ -188,7 +188,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       log.info("Shutting down service " + descriptor.service.toString)
       
       descriptor.shutdown.flatMap { stoppables => 
-        stoppables.map(Stoppable.stop(_)(stopTimeout)).getOrElse(akka.dispatch.Future(())).toBlueEyes 
+        stoppables.map(Stoppable.stop(_)(stopTimeout)).getOrElse(akka.dispatch.Future(())).onTimeout(_ => log.error("Timeout of " + stopTimeout + " expired waiting for shutdown.")).toBlueEyes 
       }.deliverTo { _ =>
         log.info("Successfully shut down service " + descriptor.service.toString)
       }.ifCanceled { why =>
