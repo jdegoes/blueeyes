@@ -48,7 +48,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
       case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
     }
 
-    if (config.getBool("slaveOk", true)) { mongo.slaveOk() }
+    if (config.getBool("slaveOk", true)) { mongo.setReadPreference(ReadPreference.SECONDARY) }
 
     mongo
   }
