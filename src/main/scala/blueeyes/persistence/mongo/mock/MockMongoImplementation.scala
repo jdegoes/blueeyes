@@ -22,6 +22,8 @@ class MockMongo() extends Mongo {
       databases.putIfAbsent(databaseName, mongoDatabase).getOrElse(mongoDatabase)
     })
   }
+
+  def close() = akka.dispatch.Future(Unit)
 }
 
 private[mongo] class MockDatabase(val mongo: Mongo) extends Database {

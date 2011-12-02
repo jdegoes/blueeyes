@@ -23,8 +23,10 @@ import IntervalLength._
 import scalaz.Scalaz._
 import scalaz.{Failure, Success, Validation}
 import akka.actor.Actor
+import akka.actor.ActorKilledException
 import akka.actor.ActorRef
 import akka.actor.Actor._
+import akka.actor.PoisonPill
 import blueeyes.core.service._
 
 trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
@@ -135,7 +137,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def requestLogging[T, S](f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = {
+  def requestLogging[T, S](f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk], timeout: akka.actor.Actor.Timeout): ServiceDescriptorFactory[T, S] = {
     import RollPolicies._
     (context: ServiceContext) => {
       val underlying = f(context)
@@ -177,13 +179,20 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
         val log          = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
         val actor        = actorOf(new HttpRequestLoggerActor[T](fieldsDirective, includePaths, excludePaths, log, formatter)).start()
 
+        implicit def logStop = new Stop[RequestLogger] {
+          def stop(log: RequestLogger) = log.close.toAkka(akka.actor.Actor.Timeout(Long.MaxValue))
+        }
+
+        implicit def actorStop = new Stop[ActorRef] {
+          def stop(actor: ActorRef) = {
+            (actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () } 
+          }
+        }
+
         underlying.copy(request = (state: S) => new HttpRequestLoggerService(actor, underlying.request(state)),
-                        shutdown = (state: S) => {
-                          underlying.shutdown(state).flatMap{_ =>
-                          actor.stop()
-                            log.close.map(_ => None)
-                          }
-                        })
+                        shutdown = (state: S) => 
+                          underlying.shutdown(state).map(_.map(s => Stoppable(actor, Stoppable(log, Stoppable(s) :: Nil) :: Nil))
+                                                    .orElse(Some(Stoppable(actor, Stoppable(log) :: Nil)))))
       }
       else underlying
     }

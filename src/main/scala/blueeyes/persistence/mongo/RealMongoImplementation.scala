@@ -54,6 +54,9 @@ class RealMongo(config: ConfigMap) extends Mongo {
   }
 
   def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
+
+  def close() = akka.dispatch.Future(mongo.close, Long.MaxValue)
+
 }
 
 object RealMongoActor {

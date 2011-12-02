@@ -25,19 +25,7 @@ sealed trait Stoppable {
 
 object Stoppable {
   def apply[A](a: A, deps: List[Stoppable] = Nil)(implicit stopa: Stop[A], timeout: Actor.Timeout): Stoppable = new Stoppable {
-    protected def stop = {
-      Future(println("About to stop " + a)) flatMap { _ =>
-        stopa.stop(a).onResult {
-          case v => println("Stopped " + a + " with result " + v)
-        } recover { case ex => 
-          println("Stop failed: ")
-          ex.printStackTrace
-        } onTimeout { future =>
-          println("Stop timed out for " + a + " after timeout of " + (future.timeoutInNanos / 1000 / 1000) + " ms")
-        }
-      }
-    }
-
+    protected def stop = stopa.stop(a) 
     def dependents = deps
   }
 
