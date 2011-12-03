@@ -124,11 +124,11 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
         descriptor.startup().deliverTo { _ =>
           log.info("Successfully started service " + descriptor.service.toString)
         } ifCanceled { 
-          case Some(throwable) => log.fatal("Failed to start service " + descriptor.service.toString, throwable)
+          case Some(throwable) => log.fatal(throwable, "Failed to start service " + descriptor.service.toString)
           case None => log.fatal("Failed to start service " + descriptor.service.toString + " (unable to determine cause of failure)")
         }
       } catch {
-        case throwable => log.fatal("Failed to start service " + descriptor.service.toString, throwable)
+        case throwable => log.fatal(throwable, "Failed to start service " + descriptor.service.toString)
       }
     }
     
