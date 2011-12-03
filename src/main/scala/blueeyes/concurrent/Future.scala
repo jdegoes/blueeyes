@@ -326,7 +326,7 @@ sealed class Future[T] { self =>
     fut
   }
 
-  def flatten[S](implicit witness: T => Future[S]): Future[S] = flatMap(witness)
+  def flatten[S](implicit witness: T <:< Future[S]): Future[S] = flatMap(witness)
 
   /** Returns a new future that will be delivered only if the result of this
    * future is accepted by the specified filter (otherwise, the new future

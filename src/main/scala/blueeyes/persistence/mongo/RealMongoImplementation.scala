@@ -35,12 +35,10 @@ class RealMongo(config: ConfigMap) extends Mongo {
     options.connectionsPerHost = 1000
     options.threadsAllowedToBlockForConnectionMultiplier = 1000
 
-    val servers = config.getList("servers").map(server =>{
-      server match{
-        case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
-        case _ => new ServerAddress(server, ServerAddress.defaultPort())
-      }
-    }).toList
+    val servers = config.getList("servers").toList map {
+      case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
+      case server                           => new ServerAddress(server, ServerAddress.defaultPort())
+    }
 
     val mongo = servers match {
       case x :: Nil => new com.mongodb.Mongo(x, options)
@@ -55,8 +53,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
 
   def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
 
-  def close() = akka.dispatch.Future(mongo.close, Long.MaxValue)
-
+  lazy val close = akka.dispatch.Future(mongo.close, disconnectTimeout.duration.toMillis)
 }
 
 object RealMongoActor {
@@ -86,7 +83,6 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
   lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
                         .flatMap(_ => (mongoActor ? PoisonPill) recover { case ex: ActorKilledException => () })
                         .mapTo[Unit]
-                        
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes

@@ -23,7 +23,7 @@ class MockMongo() extends Mongo {
     })
   }
 
-  def close() = akka.dispatch.Future(Unit)
+  lazy val close: akka.dispatch.Future[Unit] = akka.dispatch.Future(Unit)
 }
 
 private[mongo] class MockDatabase(val mongo: Mongo) extends Database {

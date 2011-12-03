@@ -20,6 +20,7 @@ import net.lag.configgy.ConfigMap
  */
 trait ConfigurableMongo extends MongoImplicits{
   private lazy val mockMongo = new MockMongo()
+
   def mongo(mongoConfig: ConfigMap): Mongo =  {
     val isMock = sys.props.getOrElse(ConfigurableMongo.MongoSwitch, "false").toBoolean
     val mongo  = if (isMock) mockMongo else new RealMongo(mongoConfig)
@@ -27,13 +28,11 @@ trait ConfigurableMongo extends MongoImplicits{
     drop(mongo, mongoConfig.configMap("dropBeforeStart"))
 
     mongo
-    }
+  }
 
-  private def drop(mongo: Mongo, dropConfig: ConfigMap){
-    dropConfig.keys.foreach{ database =>
-      dropConfig.getList(database).foreach{collection =>
-        mongo.database(database)(remove.from(collection))
-      }
+  private def drop(mongo: Mongo, dropConfig: ConfigMap) {
+    for (database <- dropConfig.keys; collection <- dropConfig.getList(database)) {
+      mongo.database(database)(remove.from(collection))
     }
   }
 }
