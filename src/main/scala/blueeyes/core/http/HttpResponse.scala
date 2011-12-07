@@ -9,11 +9,7 @@ sealed case class HttpResponse[+T](
   headers: HttpHeaders = HttpHeaders.Empty, 
   content: Option[T] = None, 
   version: HttpVersion = `HTTP/1.1`
-) extends Logging {
-  if (status.code != HttpStatusCodes.OK) {
-    logger.trace("Response constructed with non-OK " + status + " at: \n" + Thread.currentThread.getStackTrace.mkString("\t", "\t\n", "\n"))
-  }
-}
+)
 
 object HttpResponse {
   def empty[T] = HttpResponse[T](content = None)
