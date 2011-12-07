@@ -125,9 +125,7 @@ trait HttpStatusCodeImplicits extends Logging {
     case HttpStatusCodes.PaymentRequired.value                => HttpStatusCodes.PaymentRequired
     case HttpStatusCodes.Forbidden.value                      => HttpStatusCodes.Forbidden
     case HttpStatusCodes.NotFound.value                       => HttpStatusCodes.NotFound
-    case HttpStatusCodes.MethodNotAllowed.value               => 
-      logger.trace("Method not allowed from " + Thread.currentThread.getStackTrace.mkString("\t", "\t\n", "\n"))
-      HttpStatusCodes.MethodNotAllowed
+    case HttpStatusCodes.MethodNotAllowed.value               => HttpStatusCodes.MethodNotAllowed
     case HttpStatusCodes.NotAcceptable.value                  => HttpStatusCodes.NotAcceptable
     case HttpStatusCodes.ProxyAuthenticationRequired.value    => HttpStatusCodes.ProxyAuthenticationRequired
     case HttpStatusCodes.RequestTimeout.value                 => HttpStatusCodes.RequestTimeout
