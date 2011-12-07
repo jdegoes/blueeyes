@@ -10,9 +10,8 @@ sealed case class HttpResponse[+T](
   content: Option[T] = None, 
   version: HttpVersion = `HTTP/1.1`
 ) extends Logging {
-  import HttpResponse._
   if (status.code != HttpStatusCodes.OK) {
-    logger.trace("Response constructed with  non-OK repsonse code at: \n" + Thread.currentThread.getStackTrace.mkString("\n"))
+    logger.trace("Response constructed with non-OK " + status + " at: \n" + Thread.currentThread.getStackTrace.mkString("\n"))
   }
 }
 
