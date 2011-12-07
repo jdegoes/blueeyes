@@ -1,5 +1,7 @@
 package blueeyes.core.http
 
+import com.weiglewilczek.slf4s.Logging
+
 sealed trait HttpStatusCode {
   def name = productPrefix.toLowerCase
       
@@ -94,7 +96,7 @@ object HttpStatusCodes {
   case object UserAccessDenied          extends ServerError(530, "User access is denied to the specified resource.")
 }
 
-trait HttpStatusCodeImplicits {
+trait HttpStatusCodeImplicits extends Logging {
   implicit def int2HttpStatusCode(statusCode: Int): HttpStatusCode = statusCode match {
     case HttpStatusCodes.OK.value                             => HttpStatusCodes.OK
     case HttpStatusCodes.Continue.value                       => HttpStatusCodes.Continue
@@ -123,7 +125,9 @@ trait HttpStatusCodeImplicits {
     case HttpStatusCodes.PaymentRequired.value                => HttpStatusCodes.PaymentRequired
     case HttpStatusCodes.Forbidden.value                      => HttpStatusCodes.Forbidden
     case HttpStatusCodes.NotFound.value                       => HttpStatusCodes.NotFound
-    case HttpStatusCodes.MethodNotAllowed.value               => HttpStatusCodes.MethodNotAllowed
+    case HttpStatusCodes.MethodNotAllowed.value               => 
+      logger.trace("Method not allowed from " + Thread.currentThread.getStackTrace.mkString("\t", "\t\n", "\n"))
+      HttpStatusCodes.MethodNotAllowed
     case HttpStatusCodes.NotAcceptable.value                  => HttpStatusCodes.NotAcceptable
     case HttpStatusCodes.ProxyAuthenticationRequired.value    => HttpStatusCodes.ProxyAuthenticationRequired
     case HttpStatusCodes.RequestTimeout.value                 => HttpStatusCodes.RequestTimeout
