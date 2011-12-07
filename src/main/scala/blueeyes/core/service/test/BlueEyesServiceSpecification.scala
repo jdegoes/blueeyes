@@ -23,6 +23,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     setMockCongiguration
     startServer
   }
+
   private val specAfter = Step {
     resetMockCongiguration
     stopServer
@@ -100,7 +101,12 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
         why.foreach(f(_))
       }      
 
-      timeout.map(latch.await(_, TimeUnit.MILLISECONDS)).getOrElse(latch.await())
+      timeout match {
+        case Some(timeout) => 
+          if (!latch.await(timeout, TimeUnit.MILLISECONDS)) sys.error("Timed out waiting " + timeout + " ms for BlueEyes service startup.")
+          
+        case None => latch.await()
+      }
     }
     
     future.value

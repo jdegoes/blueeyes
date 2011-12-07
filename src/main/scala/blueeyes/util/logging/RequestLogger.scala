@@ -12,7 +12,7 @@ import java.util.{GregorianCalendar, Calendar, Date}
 
 import scalaz.Semigroup
 
-object RollPolicies{
+object RollPolicies {
   sealed abstract class Policy
   case object Never extends Policy
   case object Hourly extends Policy

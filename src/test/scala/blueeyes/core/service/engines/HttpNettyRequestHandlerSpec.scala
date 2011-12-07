@@ -8,7 +8,7 @@ import blueeyes.concurrent.Future
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkString}
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logging
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import org.mockito.Mockito.{times, when}
@@ -18,7 +18,7 @@ import org.specs2.mock._
 import org.mockito.{Matchers, ArgumentMatcher}
 import scalaz.{Success, Validation}
 
-class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString{
+class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString with Logging {
   private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
@@ -30,7 +30,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
 
   override def is = args(sequential = true) ^ super.is
   "write OK response service when path is match" in {
-    val nettyHandler  = new HttpNettyRequestHandler(handler, Logger.get)
+    val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
 
     val event        = mock[MessageEvent]
     val future       = new Future[HttpResponse[ByteChunk]]().deliver(response)
@@ -51,7 +51,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
   }
 
   "cancel Future when connection closed" in {
-    val nettyHandler  = new HttpNettyRequestHandler(handler, Logger.get)
+    val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]
     val future       = new Future[HttpResponse[ByteChunk]]()

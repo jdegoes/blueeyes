@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
 import blueeyes.bkka._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
@@ -29,7 +29,7 @@ import akka.actor.Actor._
 import akka.actor.PoisonPill
 import blueeyes.core.service._
 
-trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
+trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits {
 //  private[this] object TransformerCombinators
 //  import TransformerCombinators.{path$}
 
@@ -121,7 +121,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    */
   def logging[T, S](f: Logger => ServiceDescriptorFactory[T, S]): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-      val logger = LoggingHelper.initializeLogging(context.config, context.toString)
+      val logger = Logger(context.toString)
 
       f(logger)(context)
     }

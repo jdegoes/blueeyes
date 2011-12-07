@@ -1,7 +1,7 @@
 package blueeyes.core.service.engines
 
 import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
 import java.util.concurrent.Executors
 import org.jboss.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
@@ -27,7 +27,7 @@ class NettyServer(provider: NettyServerProvider){
     }
     catch {
       case e: Throwable => {
-        provider.log.error(e, "Error while servers start: %s", e.getMessage)
+        provider.log.error("Error on server startup", e)
         stop
         throw e
       }

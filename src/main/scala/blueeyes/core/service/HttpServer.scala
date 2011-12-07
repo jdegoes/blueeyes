@@ -7,7 +7,6 @@ import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
 import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
-import blueeyes.util.logging.LoggingHelper
 import blueeyes.util.CommandLineArguments
 
 import java.lang.reflect.{Method}
@@ -15,7 +14,7 @@ import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
 
 import net.lag.configgy.{Config, ConfigMap, Configgy}
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
 import scalaz.Scalaz._
 import scalaz.{Failure, Success}
 
@@ -64,7 +63,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
       case e => {
-        log.error(th, "Error handling request")
+        log.error("Error handling request", e)
         HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
       }
     }
@@ -124,11 +123,11 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
         descriptor.startup().deliverTo { _ =>
           log.info("Successfully started service " + descriptor.service.toString)
         } ifCanceled { 
-          case Some(throwable) => log.fatal(throwable, "Failed to start service " + descriptor.service.toString)
-          case None => log.fatal("Failed to start service " + descriptor.service.toString + " (unable to determine cause of failure)")
+          case Some(throwable) => log.error("Failed to start service " + descriptor.service.toString, throwable)
+          case None => log.error("Failed to start service " + descriptor.service.toString + " (unable to determine cause of failure)")
         }
       } catch {
-        case throwable => log.fatal(throwable, "Failed to start service " + descriptor.service.toString)
+        case throwable => log.error("Failed to start service " + descriptor.service.toString, throwable)
       }
     }
     
@@ -161,7 +160,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       _status = RunningStatus.Errored
 
       why match {
-        case Some(error) => log.error(error, "Unable to start server: " + error.getMessage)
+        case Some(error) => log.error("Unable to start server.", error)
         case None => log.error("Unable to start server (no reason given)")
       }
     }
@@ -204,7 +203,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       _status = RunningStatus.Errored
       
       why match {
-        case Some(error) => log.error(error, "Unable to stop server: " + error.getMessage)
+        case Some(error) => log.error("Unable to stop server.", error)
         case None => log.error("Unable to stop server (no reason given)")
       }
     }
@@ -218,7 +217,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
    */
-  lazy val log: Logger = LoggingHelper.initializeLogging(config, "blueeyes.server")
+  lazy val log: Logger = Logger("blueeyes.server")
 
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.

@@ -2,13 +2,19 @@ package blueeyes.core.http
 
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
+import com.weiglewilczek.slf4s.Logging
 
 sealed case class HttpResponse[+T](
   status: HttpStatus = HttpStatus(OK), 
   headers: HttpHeaders = HttpHeaders.Empty, 
   content: Option[T] = None, 
   version: HttpVersion = `HTTP/1.1`
-)
+) extends Logging {
+  import HttpResponse._
+  if (status.code != HttpStatusCodes.OK) {
+    logger.trace("Response constructed with  non-OK repsonse code at: \n" + Thread.currentThread.getStackTrace.mkString("\n"))
+  }
+}
 
 object HttpResponse {
   def empty[T] = HttpResponse[T](content = None)

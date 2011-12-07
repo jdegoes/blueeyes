@@ -1,14 +1,11 @@
 package blueeyes.core.service.engines.security
 
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logging
 import blueeyes.concurrent.Future
 import java.lang.ProcessBuilder
 import java.io.{InputStream, ByteArrayOutputStream}
 
-object JavaKeyTool{
-
-  private val log = Logger.get
-
+object JavaKeyTool extends Logging {
   def apply(keystore: String, keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
     val command = Array("keytool",
                         "-keystore",  keystore,
@@ -22,16 +19,16 @@ object JavaKeyTool{
 
     val processBuilder = new ProcessBuilder(command: _*)
 
-    log.info("Creating keypair by command: " + command.mkString(" "))
+    logger.info("Creating keypair by command: " + command.mkString(" "))
 
     val process = processBuilder.start()
 
-    val stdout = pump(process.getInputStream).deliverTo(log.info(_))
-    val stderr = pump(process.getErrorStream).deliverTo(log.error(_))
+    val stdout = pump(process.getInputStream).deliverTo(logger.info(_))
+    val stderr = pump(process.getErrorStream).deliverTo(logger.error(_))
 
     val exitCode = process.waitFor()
 
-    log.info("JavaKeyTool finished with exit code: " + exitCode)
+    logger.info("JavaKeyTool finished with exit code: " + exitCode)
 
     (exitCode, stdout, stderr)
   }

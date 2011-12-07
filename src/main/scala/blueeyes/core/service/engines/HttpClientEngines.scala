@@ -9,15 +9,13 @@ import blueeyes.core.http.HttpFailure
 import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logging
 import org.xlightweb.client.{HttpClient => XLHttpClient}
 import scala.collection.JavaConversions._
 import blueeyes.concurrent.Future
 import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
-class HttpClientXLightWeb extends HttpClientByteChunk {
-  private val logger = Logger.get
-
+class HttpClientXLightWeb extends HttpClientByteChunk with Logging {
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
   private var _httpClient: Option[XLHttpClient] = None
@@ -97,7 +95,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
       case e: IHttpRequestHeader =>
         val bodyDataSink = clientInstance.send(e, handler)
         request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
-      case _ => sys.error("wrong request type")
+      case r => sys.error("Unrecognized request type: " + r)
     }
   }
 
@@ -113,7 +111,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
     }
     catch {
       case e: Throwable =>
-        logger.error(e, "Failed to send content")
+        logger.error("Failed to send content", e)
         bodyDataSink.close
     }
   }
@@ -124,7 +122,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
       if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
     } catch {
       case e: Throwable => {
-        logger.error(e, "Failed to transcode response body")
+        logger.error("Failed to transcode response body", e)
         None
       }
     }

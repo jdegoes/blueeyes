@@ -6,7 +6,8 @@ import blueeyes.core.http._
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
 
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
+import com.weiglewilczek.slf4s.Logging
 
 import org.jboss.netty.buffer.{ChannelBuffers}
 import org.jboss.netty.channel._
@@ -79,7 +80,7 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    log.warning(e.getCause, "An exception was raised by an I/O thread or a ChannelHandler")
+    log.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
     
     killPending(Some(e.getCause))
     // e.getChannel.close    
@@ -94,9 +95,7 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
 
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
-
-  private val log   = Logger.get
+private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with Logging{
   private var done  = false
 
   private val lock = new ReadWriteLock{}
@@ -137,7 +136,7 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
 
   private def setNextChunkFuture(future: Future[ByteChunk]){
     future.trap{errors: List[Throwable] =>
-      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput."))
+      errors.foreach(error => logger.warn("An exception was raised by NettyChunkedInput.", error))
       errors match{
         case x :: xs => throw x
         case _ =>

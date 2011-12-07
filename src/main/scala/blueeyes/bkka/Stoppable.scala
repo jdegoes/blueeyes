@@ -3,6 +3,7 @@ package blueeyes.bkka
 import akka.actor.Actor
 import akka.dispatch.Future
 import scala.collection.immutable.Queue
+import com.weiglewilczek.slf4s.Logging
 
 /**
  * A base trait for typeclass instances that describe how to stop a given type of service.
@@ -23,17 +24,17 @@ sealed trait Stoppable {
   def dependents: List[Stoppable]
 }
 
-object Stoppable {
+object Stoppable extends Logging {
   def apply[A](a: A, deps: List[Stoppable] = Nil)(implicit stopa: Stop[A], timeout: Actor.Timeout): Stoppable = new Stoppable {
     protected def stop = {
-      Future(println("About to stop " + a)) flatMap { _ =>
+      Future(logger.info("About to stop " + a)) flatMap { _ =>
         stopa.stop(a).onResult {
-          case v => println("Stopped " + a + " with result " + v)
+          case v => logger.info("Stopped " + a + " with result " + v)
         } recover { case ex => 
-          println("Stop failed: ")
+          logger.info("Stop failed: ")
           ex.printStackTrace
         } onTimeout { future =>
-          println("Stop timed out for " + a + " after timeout of " + (future.timeoutInNanos / 1000 / 1000) + " ms")
+          logger.info("Stop timed out for " + a + " after timeout of " + (future.timeoutInNanos / 1000 / 1000) + " ms")
         }
       }
     }
