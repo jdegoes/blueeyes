@@ -83,7 +83,6 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
 
   lazy val disconnect = (mongoActor.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () })
                         .flatMap(_ => AkkaFuture.sequence(actors.map(_.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis))
-                        .mapTo[Unit]
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
