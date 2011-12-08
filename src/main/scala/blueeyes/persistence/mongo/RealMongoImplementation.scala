@@ -17,6 +17,7 @@ import akka.actor.Actor._
 import akka.actor.Actor
 import akka.actor.ActorKilledException
 import akka.actor.PoisonPill
+import akka.dispatch.{Future => AkkaFuture}
 import akka.routing.Routing._
 import akka.routing.CyclicIterator
 import akka.dispatch.Dispatchers
@@ -24,6 +25,7 @@ import akka.util.Duration
 
 import java.util.concurrent.TimeUnit
 import scalaz.Scalaz._
+import com.weiglewilczek.slf4s.Logging
 
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
@@ -56,22 +58,24 @@ class RealMongo(config: ConfigMap) extends Mongo {
   lazy val close = akka.dispatch.Future(mongo.close, disconnectTimeout.duration.toMillis)
 }
 
-object RealMongoActor {
-  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+object RealDatabase {
+  private val mongoActorDispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
+                                     .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+                                     .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
 
-class RealMongoActor extends Actor {
-  self.dispatcher = RealMongoActor.dispatcher
-  def receive = {
-    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-    case _ => sys.error("wrong message.")
+private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout, poolSize: Int = 10) extends Database with Logging {
+  import RealDatabase._
+
+  private class RealMongoActor extends Actor {
+    self.dispatcher = mongoActorDispatcher
+    def receive = {
+      case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
+      case other =>
+        logger.error("Mongo actor received unexpected message: " + other)
+        sys.error("Mongo actor received unexpected message: " + other)
+    }
   }
-}
-
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout) extends Database {
-  private val poolSize = 10
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
   private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
@@ -80,8 +84,8 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(_.?(PoisonPill, disconnectTimeout.duration.toMillis) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
-                        .flatMap(_ => mongoActor.?(PoisonPill, disconnectTimeout.duration.toMillis) recover { case ex: ActorKilledException => () })
+  lazy val disconnect = (mongoActor.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () })
+                        .flatMap(_ => AkkaFuture.sequence(actors.map(_.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis))
                         .mapTo[Unit]
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =

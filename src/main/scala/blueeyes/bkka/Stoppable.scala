@@ -31,10 +31,9 @@ object Stoppable extends Logging {
         stopa.stop(a).onResult {
           case v => logger.info("Stopped " + a + " with result " + v)
         } recover { case ex => 
-          logger.info("Stop failed: ")
-          ex.printStackTrace
+          logger.error("Stop failed", ex)
         } onTimeout { future =>
-          logger.info("Stop timed out for " + a + " after timeout of " + (future.timeoutInNanos / 1000 / 1000) + " ms")
+          logger.error("Stop timed out for " + a + " after timeout of " + (future.timeoutInNanos / 1000 / 1000) + " ms")
         }
       }
     }
