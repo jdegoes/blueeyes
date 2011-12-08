@@ -13,6 +13,8 @@ import scalaz.Semigroup
 import akka.actor.{Actor, ActorRef, Scheduler, PoisonPill, ActorKilledException}
 import akka.actor.Actor._
 
+import com.weiglewilczek.slf4s.Logging
+
 abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
   private sealed trait StageIn
   private case class PutAll(pairs: Iterable[(K, V)], semigroup: Semigroup[V]) extends StageIn
@@ -61,7 +63,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
     override def foreach[U](f: ((K, ExpirableValue[V])) => U): Unit = impl.foreach(f)
   }
 
-  private class StageActor extends Actor {
+  private class StageActor extends Actor with Logging {
     import scala.math._
     import java.util.concurrent.TimeUnit
 
@@ -95,7 +97,9 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
         val cacheSize = cache.size
         monitor.sample("cache_size")(cacheSize)
         monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
+        logger.trace("FlushAll start (%d entries)".format(cacheSize))
         cache --= cache.keys
+        logger.trace("FlushAll complete")
         self.reply(cacheSize)
     }
 
