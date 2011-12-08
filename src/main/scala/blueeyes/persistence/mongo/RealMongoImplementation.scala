@@ -28,7 +28,7 @@ import scalaz.Scalaz._
 class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
-  val disconnectTimeout = akka.actor.Actor.Timeout(config.getLong("shutdownTimeout", 30000L))
+  val disconnectTimeout = akka.actor.Actor.Timeout(config.getLong("shutdownTimeout", Long.MaxValue))
 
   private lazy val mongo = {
     val options = new MongoOptions()

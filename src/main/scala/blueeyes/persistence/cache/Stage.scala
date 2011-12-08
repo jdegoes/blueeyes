@@ -27,6 +27,9 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def maximumCapacity: Int
 
+  // override this timeout to choose a different timeout for shutdown.
+  implicit def stopTimeout: Timeout = Timeout(Long.MaxValue)
+
   private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
     private val impl = new javolution.util.FastMap[K, ExpirableValue[V]]
 
@@ -125,7 +128,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
     }
   }
 
-  private val actor: ActorRef = Actor.actorOf(new StageActor()).start()
+  private val actor: ActorRef = Actor.actorOf(new StageActor).start()
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 
