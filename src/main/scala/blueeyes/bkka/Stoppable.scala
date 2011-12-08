@@ -2,6 +2,7 @@ package blueeyes.bkka
 
 import akka.actor.Actor
 import akka.dispatch.Future
+import akka.util.Duration
 import scala.collection.immutable.Queue
 import com.weiglewilczek.slf4s.Logging
 
@@ -52,13 +53,18 @@ object Stoppable extends Logging {
    * in stopping will stop the stopping process, leaving the system in a potentially 
    * indeterminate state.
    */
-  implicit def stoppableStop(implicit timeout: Actor.Timeout): Stop[Stoppable] = new Stop[Stoppable] {
+  implicit def stoppableStop(implicit timeout: akka.actor.Actor.Timeout): Stop[Stoppable] = new Stop[Stoppable] {
     def stop(stoppable: Stoppable) = {
       def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
         if (q.isEmpty) Future(Nil)
         else {
           val (xs, remainder) = q.dequeue
-          Future.sequence(xs.map(_.stop), timeout.duration.toMillis).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+          if (xs.isEmpty) _stop(remainder)
+          else {
+            val stopFutures = xs.map(_.stop)
+            Future.sequence(stopFutures, (stopFutures.map(_.timeoutInNanos).max / 1000 / 1000) min timeout.duration.toMillis)
+                  .flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+          }
         }
       }
       
@@ -66,7 +72,7 @@ object Stoppable extends Logging {
     }
   }
 
-  def stop(stoppable: Stoppable)(implicit timeout: Actor.Timeout) = stoppableStop(timeout).stop(stoppable)
+  def stop(stoppable: Stoppable)(implicit timeout: akka.actor.Actor.Timeout) = stoppableStop(timeout).stop(stoppable)
 }
 
 
