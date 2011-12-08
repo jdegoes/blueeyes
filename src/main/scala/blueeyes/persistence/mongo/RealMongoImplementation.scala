@@ -58,24 +58,21 @@ class RealMongo(config: ConfigMap) extends Mongo {
   lazy val close = akka.dispatch.Future(mongo.close, disconnectTimeout.duration.toMillis)
 }
 
-object RealDatabase {
-  private val mongoActorDispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
-                                     .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                     .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+object RealMongoActor {
+  private val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
+                           .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+                           .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+}
+
+class RealMongoActor extends Actor {
+  self.dispatcher = RealMongoActor.dispatcher
+  def receive = {
+    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
+  }
 }
 
 private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
-
-  private class RealMongoActor extends Actor {
-    self.dispatcher = mongoActorDispatcher
-    def receive = {
-      case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-      case other =>
-        logger.error("Mongo actor received unexpected message: " + other)
-        sys.error("Mongo actor received unexpected message: " + other)
-    }
-  }
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
   private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
