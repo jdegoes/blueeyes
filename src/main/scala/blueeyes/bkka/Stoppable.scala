@@ -27,7 +27,7 @@ sealed trait Stoppable {
 object Stoppable extends Logging {
   def apply[A](a: A, deps: List[Stoppable] = Nil)(implicit stopa: Stop[A], timeout: Actor.Timeout): Stoppable = new Stoppable {
     protected def stop = {
-      Future(logger.info("About to stop " + a)) flatMap { _ =>
+      Future(logger.info("About to stop " + a), timeout.duration.toMillis) flatMap { _ =>
         stopa.stop(a).onResult {
           case v => logger.info("Stopped " + a + " with result " + v)
         } recover { case ex => 
@@ -55,7 +55,7 @@ object Stoppable extends Logging {
   implicit def stoppableStop(implicit timeout: Actor.Timeout): Stop[Stoppable] = new Stop[Stoppable] {
     def stop(stoppable: Stoppable) = {
       def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
-        if (q.isEmpty) Future(Nil)
+        if (q.isEmpty) Future(Nil, timeout.duration.toMillis)
         else {
           val (xs, remainder) = q.dequeue
           Future.sequence(xs.map(_.stop), timeout.duration.toMillis).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
