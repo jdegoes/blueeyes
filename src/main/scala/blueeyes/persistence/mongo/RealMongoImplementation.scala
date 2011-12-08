@@ -80,8 +80,8 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
-                        .flatMap(_ => (mongoActor ? PoisonPill) recover { case ex: ActorKilledException => () })
+  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(_.?(PoisonPill, disconnectTimeout.duration.toMillis) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
+                        .flatMap(_ => mongoActor.?(PoisonPill, disconnectTimeout.duration.toMillis) recover { case ex: ActorKilledException => () })
                         .mapTo[Unit]
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
