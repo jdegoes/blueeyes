@@ -179,8 +179,10 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
     val origURI = new URI(request.uri.toString)
     val newQueryParams = QueryParser.unparseQuery(request.parameters ++ QueryParser.parseQuery(Option(origURI.getRawQuery).getOrElse("")), false)
     // URI expects nulls for undefined params, hence the conditional for the uri param
-    val uri = new URI(origURI.getScheme, origURI.getAuthority, origURI.getPath,
-                      if(newQueryParams.length == 0) null else newQueryParams,
+    val uri = new URI(origURI.getScheme, 
+                      origURI.getAuthority, 
+                      origURI.getPath.replace("@", "%40"),
+                      if(newQueryParams.length == 0) null else newQueryParams.replace("@", "%40"),
                       origURI.getFragment).toString
 
     val newHeaders  = requestContentLength(request).foldLeft(request.headers){(headers, contentLength) => headers + contentLength}
