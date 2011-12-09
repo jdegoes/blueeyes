@@ -234,6 +234,13 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
       f.value.get.content.get.contains("plckForumId=Cat:Wedding BoardsForum:238") must beTrue
     }
 
+    "Support GET requests with @ in query params" in {
+      val f= httpClient.get[String](uri + "?param1=foo@example.com")
+      f.value must eventually(retries, new Duration(duration))(beSomething)
+      f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=foo%40example.com"))
+      f.value.get.status.code must be(HttpStatusCodes.OK)
+    }
+
     "Support GET requests with encoded @ in query params" in {
       val f= httpClient.get[String](uri + "?param1=foo%40example.com")
       f.value must eventually(retries, new Duration(duration))(beSomething)
@@ -244,7 +251,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
     "Support GET request with @ in request params" in {
       val f= httpClient.parameters('param1 -> "foo@example.com").get[String](uri)
       f.value must eventually(retries, new Duration(duration))(beSomething)
-      f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=foo@example.com"))
+      f.value.get.content.get.trim must eventually(equalIgnoreSpace("param1=foo%40example.com"))
       f.value.get.status.code must be(HttpStatusCodes.OK)      
     }
   }  
