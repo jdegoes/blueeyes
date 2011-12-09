@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
 import scalaz.{Validation, Success, Failure, Semigroup, Monad, Functor, Apply, Pointed, Applicative}
 import scalaz.Scalaz._
+import com.weiglewilczek.slf4s.Logging
 
 /** A future based on time-stealing rather than threading. Unlike Scala's future,
  * this future has three possible states: undecided (not done), canceled (aborted
@@ -471,12 +472,16 @@ trait FutureImplicits {
   class AkkaFutureConversion[T](akkaFuture: AkkaFuture[T]) { 
     def toBlueEyes: Future[T] = {
       val future = new Future[T]()
-      akkaFuture.onComplete { value: AkkaFuture[T] =>
+      akkaFuture onComplete { value: AkkaFuture[T] =>
         value.value match {
           case Some(Right(value)) => future.deliver(value)
           case Some(Left(error)) => future.cancel(error)
           case None => future.cancel(new RuntimeException("Akka Future has Neither result nor error."))
         }
+      } onTimeout { value: AkkaFuture[T] =>
+        future.cancel(new RuntimeException("Akka future timed out after " + (value.timeoutInNanos / 1000 / 1000)))
+      } onException {
+        case ex => future.cancel(ex)
       }
 
       future
@@ -501,7 +506,7 @@ trait FutureImplicits {
   }
 }
 
-object Future extends FutureImplicits {
+object Future extends FutureImplicits with Logging {
   /** Creates a "dead" future that is canceled and will never be delivered.
    */
   def dead[T]: Future[T] = new Future[T] ->- (_.cancel)
@@ -523,6 +528,11 @@ object Future extends FutureImplicits {
 
       futures.zipWithIndex.foreach {
         case (future, index) => future.ifCanceled { e =>
+          e match {
+            case Some(throwable) => logger.error("Future canceled in \"sequence\" operation.", throwable)
+            case None => logger.error("Future canceled in \"sequence\" operation with no cause.")
+          }
+
           result.cancel(e)
         }
 

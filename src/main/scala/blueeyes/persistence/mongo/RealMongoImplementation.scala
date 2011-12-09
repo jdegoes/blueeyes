@@ -34,8 +34,8 @@ class RealMongo(config: ConfigMap) extends Mongo {
 
   private lazy val mongo = {
     val options = new MongoOptions()
-    options.connectionsPerHost = 1000
-    options.threadsAllowedToBlockForConnectionMultiplier = 1000
+    options.connectionsPerHost = 256
+    options.threadsAllowedToBlockForConnectionMultiplier = 16
 
     val servers = config.getList("servers").toList map {
       case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
@@ -83,7 +83,7 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
                         .flatMap(_ => AkkaFuture.sequence(actors.map(_.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis))
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
-    (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
+    mongoActor.?(MongoQueryTask(query, query.collection, isVerified))(timeout = disconnectTimeout).mapTo[T#QueryResult].toBlueEyes
 
   override def toString = "Mongo Database: " + database.getName
 }

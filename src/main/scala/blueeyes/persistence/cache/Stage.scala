@@ -89,7 +89,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
             else keysToRemove
         }
 
-        monitor.sample("flush_size")(keysToRemove.size)
+        //monitor.sample("flush_size")(keysToRemove.size)
         cache --= keysToRemove
 
         flushScheduled = false
@@ -98,8 +98,8 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
       case FlushAll =>
         val cacheSize = cache.size
-        monitor.sample("cache_size")(cacheSize)
-        monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
+        //monitor.sample("cache_size")(cacheSize)
+        //monitor.sample("actor_queue_size")( actor.dispatcher.mailboxSize(actor))
         logger.trace("FlushAll start (%d entries)".format(cacheSize))
         cache --= cache.keys
         logger.trace("FlushAll complete")
@@ -118,9 +118,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
         cache.put(key, cache.get(key).map(current => current.withValue(semigroup.append(current.value, value))).getOrElse(ExpirableValue(value)))
       }
 
-      monitor.sample("put_size") {
-        putSize
-      }
+      //monitor.sample("put_size")(putSize)
     }
 
     private def removeEldestEntries {
