@@ -13,8 +13,7 @@ import blueeyes.json.MergeMonoid
 import scalaz._
 import Scalaz._
 
-class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMonitor with FunctionsMonitor{
-
+class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMonitor with FunctionsMonitor {
   private val _countsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]
   private val _timersStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]       = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]
   private val _errorsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]
@@ -40,7 +39,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   }
 
   def toJValue: Future[JValue] = {
-    val statistics  = List[Map[JPath, Statistic[_, _]]](timerStats, sampleStats, countStats, exportedStats, timedSampleStats, errorStats)
+    val statistics  = List[Map[JPath, Statistic[_]]](timerStats, sampleStats, countStats, exportedStats, timedSampleStats, errorStats)
     val map = statistics.map(composeStatistics(_))
     Future[JValue]((map ::: List(errorsCountJValue)): _*).map(_.asMA.sum)
   }
@@ -58,8 +57,8 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   def errorStats = _errorsStats.toMap
 
   def shutdown(implicit timeout: akka.actor.Actor.Timeout) = {
-    val statistics  = List[Map[JPath, AsyncStatistic[_, _]]](timerStats, countStats, timedSampleStats, errorStats).flatMap(_.values.toList)
-    akka.dispatch.Future.sequence(statistics.map(_.shutdown), timeout.duration.toMillis).map(_ => ())
+    val statistics = timerStats.values ++ countStats.values ++ timedSampleStats.values ++ errorStats.values
+    akka.dispatch.Future.sequence[Any, Iterable](statistics.map(_.shutdown), timeout.duration.toMillis)
   }
 
   private def errorsCountJValue = {
@@ -77,12 +76,12 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
     errorsCount.map(count => errorsCountPath.map(jvalueToJObject(_, count)).getOrElse(JObject(Nil)))
   }
 
-  private def composeStatistics[T](stat: Map[JPath, Statistic[_, _]]) =
+  private def composeStatistics(stat: Map[JPath, Statistic[_]])  =
     Future[JValue](stat.toList.map(kv => toJValue(kv._2).map(jvalueToJObject(kv._1, _))): _*).map{_.asMA.sum}
 
-  private def toJValue(statistic: Statistic[_, _]): Future[JValue] = statistic match {
-    case e: AsyncStatistic[_, _] => e.toJValue
-    case e: SyncStatistic[_, _]  => Future.sync(e.toJValue)
+  private def toJValue[T](statistic: Statistic[T]): Future[JValue] = statistic match {
+    case e: AsyncStatistic[T, _] => e.toJValue
+    case e: SyncStatistic[T, _]  => Future.sync(e.toJValue)
   }
 
   private def jvalueToJObject(path: JPath, value: JValue): JValue = {

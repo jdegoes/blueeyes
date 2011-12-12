@@ -14,14 +14,14 @@ class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures 
     }
   }
 
-  private def fill(timedSample: Statistic[Long, Map[Long, Double]]){
+  private def fill(timedSample: Statistic[Long]){
     set(timedSample, 1001)
     set(timedSample, 1001)
     set(timedSample, 1002)
     set(timedSample, 1002)
   }
 
-  private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
+  private def set(timedSample: Statistic[Long], now: Long) = {
     clock.setNow(now)
     timedSample += 1
   }

@@ -25,7 +25,7 @@ class TimedAverageStatSpec extends Specification with TimedStatFixtures {
     }
   }
 
-  private def fill(timedSample: Statistic[Long, Map[Long, Double]]){
+  private def fill(timedSample: Statistic[Long]){
     set(timedSample, 103000)
     set(timedSample, 104000)
     set(timedSample, 104020)
@@ -41,7 +41,7 @@ class TimedAverageStatSpec extends Specification with TimedStatFixtures {
     set(timedSample, 118000)
   }
 
-  private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
+  private def set(timedSample: Statistic[Long], now: Long) = {
     clock.setNow(now)
     timedSample += 1
 

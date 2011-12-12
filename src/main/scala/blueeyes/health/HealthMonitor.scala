@@ -52,7 +52,7 @@ trait HealthMonitor { self =>
 
   def toJValue: Future[JValue]
 
-  def shutdown(implicit timeout: akka.actor.Actor.Timeout): akka.dispatch.Future[Unit]
+  def shutdown(implicit timeout: akka.actor.Actor.Timeout): akka.dispatch.Future[Any]
 }
 
 object HealthMonitor {
@@ -78,6 +78,6 @@ object HealthMonitor {
 
     override def withPrefix(prefix: JPath) = this
     def toJValue: Future[JValue] = Future.sync(JNothing)
-    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future(())
+    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future((), timeout.duration.toMillis)
   }
 }

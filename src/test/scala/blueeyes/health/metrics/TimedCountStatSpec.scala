@@ -24,7 +24,7 @@ class TimedCountStatSpec extends Specification with TimedStatFixtures {
     }
   }
 
-  private def fill(timedSample: Statistic[Long, Map[Long, Double]]){
+  private def fill(timedSample: Statistic[Long]){
     set(timedSample, 100000)
     set(timedSample, 101000)
     set(timedSample, 102000)
@@ -45,7 +45,7 @@ class TimedCountStatSpec extends Specification with TimedStatFixtures {
     set(timedSample, 118000)
   }
 
-  private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
+  private def set(timedSample: Statistic[Long], now: Long) = {
     clock.setNow(now)
     timedSample += 1
   }
