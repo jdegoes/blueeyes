@@ -6,7 +6,8 @@ import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
 import blueeyes.json.JsonAST._
 import java.util.concurrent.CountDownLatch
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Await
 import Serialization._
 import blueeyes.core.service.HttpClient
 import blueeyes.json.JsonParser.{parse => j}
@@ -20,30 +21,18 @@ object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{
 
   val httpClient = new HttpClientXLightWeb
 
-  def main(args: Array[String]){
-
-    ->?(create(contact))
-
-    ->?(list) foreach println
-
-    ->?(search(j("""{ "name" : "%s" }""".format(contact.name)))) foreach println
-
-    ->?(contact(contact.name)) foreach println
-
-    ->?(remove(contact.name))
-
-    ->?(list) foreach println
-  }
-
-  private def ->?[T](future: Future[T]) = {
-
-    val counDown  = new CountDownLatch(1)
-
-    future.deliverTo(response =>{
-      counDown.countDown
-    })
-    counDown.await
-    future.value.get
+  def main(args: Array[String]) = for {
+    _               <- create(contact)
+    listResults     <- list
+    searchResults   <- search(j("""{ "name" : "%s" }""".format(contact.name)))
+    contactResults  <- contact(contact.name)
+    _               <- remove(contact.name)
+    list2Results    <- list
+  } {
+    listResults     foreach println
+    searchResults   foreach println
+    contactResults  foreach println
+    list2Results    foreach println
   }
 }
 

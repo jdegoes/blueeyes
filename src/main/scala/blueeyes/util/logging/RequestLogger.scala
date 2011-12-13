@@ -1,6 +1,8 @@
 package blueeyes.util.logging
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.util.Timeout
+
 import blueeyes.health.HealthMonitor
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 import blueeyes.util.RichThrowableImplicits
@@ -48,7 +50,7 @@ class RequestLogger(baseFileName: String, policy: Policy, fileHeader: () => Stri
 
   def apply(logEntry: String) { logStage += ("log", new StringBuilder(logEntry).append("\n")) }
 
-  def close: Future[Unit] = logStage.flushAll.map(_ => fileHandler.close())
+  def close(timeout: Timeout): Future[Unit] = logStage.flushAll(timeout).map(_ => fileHandler.close())
 
   def fileName: Option[String] = fileHandler.fileName
 }

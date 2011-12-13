@@ -3,7 +3,7 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 trait ActorMPimps {
   import ActorMHelpers._

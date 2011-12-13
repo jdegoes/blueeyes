@@ -1,15 +1,18 @@
 package blueeyes.health.metrics
 
-import java.util.concurrent.atomic.AtomicLong
-import blueeyes.concurrent.Future
-import blueeyes.util.Clock
 import akka.actor.Actor
+import akka.dispatch.Future
+import akka.util.Timeout
 
+import java.util.concurrent.atomic.AtomicLong
+
+import blueeyes.util.Clock
+import blueeyes.json.JsonAST._
 import histogram.ValueStrategy._
 
 abstract class TimedNumbersSample(config: interval)(implicit clock: Clock) extends TimedSample[Double](config)
 
-abstract class EternityTimedNumbersSample(implicit clock: Clock) extends AsyncStatistic[Long, Map[Long, Double]] {
+class EternityTimedNumbersSample(implicit clock: Clock) extends SyncStatistic[Long, Map[Long, Double]] {
   private val startTime = clock.now().getMillis
   private val _count    = new AtomicLong(0)
 
@@ -18,11 +21,11 @@ abstract class EternityTimedNumbersSample(implicit clock: Clock) extends AsyncSt
     this
   }
 
-  def count = Future.sync(_count.get)
+  def count = _count.get
 
-  def details = Future.sync(Map[Long, Double](startTime -> _count.get))
-
-  def shutdown = akka.dispatch.Future(())
+  def details = Map[Long, Double](startTime -> _count.get)
 
   def config = eternity
+
+  def toJValue = JInt(count)
 }

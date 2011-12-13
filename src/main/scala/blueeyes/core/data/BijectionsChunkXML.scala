@@ -2,7 +2,9 @@ package blueeyes.core.data
 
 import scala.xml.NodeSeq
 import scala.xml.XML
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.Timeout
 
 trait BijectionsChunkXML {
   import java.io.{ByteArrayInputStream}
@@ -22,13 +24,13 @@ object BijectionsChunkXML extends BijectionsChunkXML
 
 trait BijectionsChunkFutureXML{
   import BijectionsChunkXML._
-  implicit val FutureXMLToChunk = new Bijection[Future[NodeSeq], ByteChunk]{
-    def apply(t: Future[NodeSeq]) = t.map(XMLToChunk(_)).value.getOrElse(new MemoryChunk(Array[Byte]()))
+  implicit def futureXMLToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[NodeSeq], ByteChunk]{
+    def apply(t: Future[NodeSeq]) = Await.result(t.map(XMLToChunk(_)), timeout.duration)
 
     def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToXML(_))
   }
 
-  implicit val ChunkToFutureXML  = FutureXMLToChunk.inverse
+  implicit def chunkToFutureXML(implicit timeout: Timeout = Timeout.zero) = futureXMLToChunk(timeout).inverse
 }
 
 object BijectionsChunkFutureXML extends BijectionsChunkFutureXML

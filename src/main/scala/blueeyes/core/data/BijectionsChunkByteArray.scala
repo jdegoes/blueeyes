@@ -1,6 +1,8 @@
 package blueeyes.core.data
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.Timeout
 
 trait BijectionsChunkByteArray {
   implicit val ArrayByteToChunk = new Bijection[Array[Byte], ByteChunk] {
@@ -19,13 +21,13 @@ object BijectionsChunkByteArray extends BijectionsChunkByteArray
 
 trait BijectionsChunkFutureByteArray{
   import BijectionsChunkByteArray._
-  implicit val FutureByteArrayToChunk = new Bijection[Future[Array[Byte]], ByteChunk]{
-    def apply(t: Future[Array[Byte]]) = t.map(ArrayByteToChunk(_)).value.getOrElse(Array[Byte]())
+  implicit def futureByteArrayToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[Array[Byte]], ByteChunk]{
+    def apply(t: Future[Array[Byte]]) = Await.result(t.map(ArrayByteToChunk(_)), timeout.duration)
 
     def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToArrayByte(_))
   }
 
-  implicit val ChunkToFutureByteArray  = FutureByteArrayToChunk.inverse
+  implicit def chunkToFutureByteArray(implicit timeout: Timeout = Timeout.zero) = futureByteArrayToChunk(timeout).inverse
 }
 
 object BijectionsChunkFutureByteArray extends BijectionsChunkFutureJson

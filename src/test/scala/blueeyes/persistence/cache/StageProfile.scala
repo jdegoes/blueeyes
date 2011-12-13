@@ -4,19 +4,22 @@ import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 import scala.util.Random
 import scalaz.Semigroup
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Future._
 import org.specs2.time.TimeConversions._
 import akka.actor.Actor
+import akka.actor.Props
+import akka.util.Timeout
+import blueeyes.bkka.AkkaDefaults
 
-object StageProfile{
+object StageProfile extends AkkaDefaults {
   private val random    = new Random()
   implicit val StringSemigroup = new Semigroup[String] {
     def append(s1: String, s2: => String) = s1 + s2
   }
 
   def main(args: Array[String]){
-    implicit val timeout = Actor.Timeout(100000)
+    implicit val timeout = Timeout(100000)
     println("START")
     Thread.sleep(10000)
     println("REAL START")
@@ -34,31 +37,13 @@ object StageProfile{
       }
       collected.put(key, count + (value.length / key.length))
     })
-    val actors    = messages map {msgs =>
-      val actor = Actor.actorOf(new MessageActor(msgs(0), msgs(0), messagesCount, stage))
-      actor.start()
-      actor
+
+    val actors = messages map {msgs =>
+      defaultActorSystem.actorOf(Props(new MessageActor(msgs(0), msgs(0), messagesCount, stage)))
     }
 
-    val futures = Future((actors map {actor => actor.?("Send").mapTo[Unit].toBlueEyes}): _*)
-    awaitFuture(futures)
-
-//    val flushFuture = stage.flushAll
-//    awaitFuture(flushFuture)
-
-    println("STOPPED")
-    Thread.sleep(30000)
-    println("REAL STOPPED")
-
-    actors.foreach(_.stop())
-  }
-
-  private def awaitFuture(future: Future[_]) = {
-    val countDownLatch = new CountDownLatch(1)
-    future deliverTo { v =>
-      countDownLatch.countDown
-    }
-    countDownLatch.await
+    akka.dispatch.Await.result(Future.sequence(actors.map(actor => actor.?("Send", timeout))), akka.util.Duration.Inf)
+    actors.foreach(_ ! akka.actor.PoisonPill)
   }
 
   private def newStage[T](
@@ -80,7 +65,7 @@ object StageProfile{
           Thread.sleep(random.nextInt(100))
           stage.put(key, message)
         }
-        self.reply(())
+        sender ! ()
       case _ =>
     }
   }

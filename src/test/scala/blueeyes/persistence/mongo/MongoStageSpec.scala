@@ -9,16 +9,21 @@ import org.scalacheck.Prop._
 import blueeyes.persistence.cache.ExpirationPolicy
 import scalaz.Semigroup
 import scala.util.Random
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+
+import blueeyes.bkka.AkkaDefaults
+import blueeyes.concurrent.test.FutureMatchers
+import akka.actor.{Actor, Props}
+import akka.dispatch.Future
+import akka.util.Timeout
+
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
-import akka.actor.{Actor}
 import scalaz._
 import Scalaz._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
-class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo{
+class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo with FutureMatchers with AkkaDefaults {
+  implicit val queryTimeout = Timeout(10000)
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {
     def append(v1: MongoUpdate, v2: => MongoUpdate) = v1 |+| v2
@@ -43,41 +48,41 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
 
   "MongoStage" should{
     "store all updates" in {
-      check{updates: List[(MongoFilter, MongoUpdate)] =>
+      check { updates: List[(MongoFilter, MongoUpdate)] =>
         val mockMongo        = new MockMongo()
         val mockDatabase     = mockMongo.database( "mydb" )
         val collection       = "mycollection"
 
-        val mongStage   = MongoStage(mockDatabase, MongoStageSettings(ExpirationPolicy(Some(100), Some(100), MILLISECONDS), 500))
+        val mongoStage   = MongoStage(mockDatabase, MongoStageSettings(ExpirationPolicy(Some(100), Some(100), MILLISECONDS), 500, Timeout(1000)))
         val actorsCount = 10
         val sendCount   = 20
-        val actors      = Array.fill(actorsCount){
-          val actor = Actor.actorOf(new MessageActor(mongStage, updates.map(v => (v._1 & collection, v._2)), sendCount))
-          actor.start()
-          actor
+        val actors      = List.fill(actorsCount) {
+          defaultActorSystem.actorOf(Props(new MessageActor(mongoStage, updates.map(v => (v._1 & collection, v._2)), sendCount)))
         }
 
         val start = System.currentTimeMillis
-        val futures = Future(actors.map(actor => fromAkka[Unit](actor.?("Send").mapTo[Unit]).toBlueEyes): _*)
+        val futures = Future.sequence[Unit, List](actors.map(actor => (actor.?("Send", queryTimeout).mapTo[Unit])))
         futures.value must eventually(200, 300.milliseconds) (beSome)
 
-        val flushFuture = mongStage.flushAll
+        val flushFuture = mongoStage.flushAll(Timeout(10000))
         flushFuture.value must eventually (beSome)
 
-        val pass = updates.foldLeft(true){(result, filterAndUdate) =>
+        val pass = updates.foldLeft(true) { (result, filterAndUdate) =>
           result && {
             val update = filterAndUdate._2.asInstanceOf[UpdateFieldFunctions.IncF]
 
-            val resultFuture = mockDatabase(select().from(collection).where(filterAndUdate._1))
-            resultFuture.isDelivered must eventually (be_==(true))
-
-            val objects  = resultFuture.value.get.toList
-            val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
-            val value    = update.path.extract(objects.head)
-            value == JsonAST.JInt(setValue * sendCount * actorsCount)
+            mockDatabase(select().from(collection).where(filterAndUdate._1)).map(_.toList) must whenDelivered {
+              beLike { 
+                case x :: xs => 
+                  val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
+                  val value    = update.path.extract(x)
+                  value must_== JsonAST.JInt(setValue * sendCount * actorsCount)
+              }
+            }
           }
         }
-        actors.foreach(_.stop())
+
+        //actors.foreach(_ ! akka.actor.PoisonPill)
         pass
       }
     }
@@ -93,7 +98,7 @@ class MessageActor(stage: MongoStage, updates: List[(MongoFilterCollection, Mong
           stage.put(update._1, update._2)
         }
       }
-      self.reply(())
-    case _ =>
+
+      sender ! ()
   }
 }

@@ -4,7 +4,12 @@ import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.channel._
-import blueeyes.concurrent.Future
+
+import blueeyes.bkka.AkkaDefaults
+import akka.dispatch._
+import akka.util.Duration
+
+import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkString}
@@ -18,7 +23,7 @@ import org.specs2.mock._
 import org.mockito.{Matchers, ArgumentMatcher}
 import scalaz.{Success, Validation}
 
-class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString with Logging {
+class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString with Logging with AkkaDefaults with FutureMatchers {
   private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
@@ -33,7 +38,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
     val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
 
     val event        = mock[MessageEvent]
-    val future       = new Future[HttpResponse[ByteChunk]]().deliver(response)
+    val future       = Promise.successful(response)
     val nettyMessage = toNettyResponse(response, true)
     val nettyContent = new NettyChunkedInput(new MemoryChunk(Array[Byte]()), channel)
 
@@ -54,17 +59,17 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
     val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]
-    val future       = new Future[HttpResponse[ByteChunk]]()
+    val promise      = Promise[HttpResponse[ByteChunk]]()
 
     when(event.getMessage()).thenReturn(request, request)
     when(handler.service).thenReturn(service)
-    when(service.apply(request)).thenReturn(Success(future))
+    when(service.apply(request)).thenReturn(Success(promise))
 
     nettyHandler.messageReceived(context, event)
 
     nettyHandler.channelDisconnected(context, stateEvent)
 
-    future.isCanceled must be_==(true)
+    Await.result(promise.failed, 10 seconds) must haveSuperclass[Throwable]
   }
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {

@@ -1,6 +1,7 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.http._
+import blueeyes.core.http.test._
 import blueeyes.core.data._
 import blueeyes.core.service.HttpRequestHandlerCombinators
 import blueeyes.core.http.HttpHeaders._
@@ -9,15 +10,19 @@ import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future.FutureFunctor
+
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.dispatch.Await
+import blueeyes.bkka.AkkaDefaults
 
 import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import org.specs2.specification.{Step, Fragments}
 
-class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators {
+class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators 
+with AkkaDefaults with HttpRequestMatchers {
   val duration = 250.milliseconds
   val retries = 30
 
@@ -28,7 +33,7 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
     sslPort = %d
   }"""
 
-  private var port = 8585
+  private var port = 8586
   private var server: Option[NettyEngine] = None
   private var uri = ""
 
@@ -61,177 +66,183 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
 
   "HttpClientXLightWeb" should {
     "Support GET to invalid server should return http error" in {
-      val f = httpClient.get[String]("http://127.0.0.1:666/foo")
-      f.error must eventually(retries, duration)(beNone)
+      val result = httpClient.get[String]("http://127.0.0.1:666/foo").failed 
+      result must whenDelivered {
+        haveClass[HttpException]
+      }
     }
 
     "Support GET to invalid URI/404 should cancel Future" in {
-      val f = httpClient.get(uri + "bogus")
-      f.isCanceled must eventually(retries, duration)(beTrue)
-      f.error must beLike {case Some(HttpException(NotFound, _)) => ok}
+      httpClient.get(uri + "/bogus").failed must whenDelivered {
+        beLike { case HttpException(NotFound, _) => ok }
+      }
     }
 
     "Support GET requests with status OK" in {
-      val f = httpClient.get(uri)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.status.code must eventually(be(HttpStatusCodes.OK))
+      httpClient.parameters('param1 -> "a").get(uri) must succeedWithContent {
+	(_ : String) => ok
+      }
     }
 
     "Support GET requests with status Not Found" in {
-      val f = httpClient.get("/bogus")
-      f.value must eventually(retries, duration)(beNone)
+      httpClient.get(uri + "/bogus").failed must whenDelivered {
+        beLike { case HttpException(NotFound, _) => ok }
+      }
     }
 
     "Support GET requests with query params" in {
-      val f = httpClient.get(uri + "?param1=a&param2=b")
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/("param1=a&param2=b"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.get(uri + "?param1=a&param2=b") must succeedWithContent {
+        be_==/("param1=a&param2=b")
+      }
     }
 
     "Support GET requests with request params" in {
-      val f = httpClient.parameters('param1 -> "a", 'param2 -> "b").get(uri)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/("param1=a&param2=b"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").get(uri) must succeedWithContent {
+        be_==/("param1=a&param2=b")
+      }
     }
 
     "Support POST requests with query params" in {
-      val f = httpClient.post(uri + "?param1=a&param2=b")("")
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/("param1=a&param2=b"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.post(uri + "?param1=a&param2=b")("") must succeedWithContent {
+        be_==/("param1=a&param2=b")
+      }
     }
 
     "Support POST requests with request params" in {
-      val f = httpClient.parameters('param1 -> "a", 'param2 -> "b").post(uri)("")
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/("param1=a&param2=b"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").post(uri)("") must succeedWithContent {
+        be_==/("param1=a&param2=b")
+      }
     }
 
     "Support POST requests with body" in {
-      val content = "Hello, world"
-      val f = httpClient.post(uri)(content)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/(content))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = "Hello, world"
+      httpClient.post(uri)(expected) must succeedWithContent (be_==(expected))
     }
 
     "Support POST requests with body and request params" in {
-      val content = "Hello, world"
-      val f = httpClient.parameters('param1 -> "a", 'param2 -> "b").post(uri)(content)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must be_==/("param1=a&param2=b" + content)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = "Hello, world"
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").post(uri)(expected) must succeedWithContent {
+        be_==/("param1=a&param2=b" + expected)
+      }
     }
 
     "Support PUT requests with body" in {
-      val content = "Hello, world"
-      val f = httpClient.header(`Content-Length`(100)).put(uri)(content)
-      f.deliverTo((res: HttpResponse[String]) => {})
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must be_==/(content)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = "Hello, world"
+      httpClient.header(`Content-Length`(100)).put(uri)(expected) must succeedWithContent {
+        be_==/(expected)
+      }
     }
 
     "Support GET requests with header" in {
-      val f = httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get(uri + "?headers=true")
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must contain("Fooblahblah: washere") and contain("param2: 1")
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get(uri + "?headers=true") must succeedWithContent {
+        contain("Fooblahblah: washere") and contain("param2: 1")
+      }
     }
 
     "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
-      val content = "<html></html>"
-      val f = httpClient.headers(`Content-Type`(text/html) :: `Content-Length`(100) :: Nil).post(uri)(content)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must_==(content)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = "<html></html>"
+      httpClient.headers(`Content-Type`(text/html) :: `Content-Length`(100) :: Nil).post(uri)(expected) must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, Some(content), _) => 
+            (status.code must_== HttpStatusCodes.OK) and
+            (content.trim must_== expected)
+        }
+      }
     }
 
     "Support POST requests with large payload" in {
-      val content = Array.fill(2048*1000)(0).toList.mkString("")
-      val f = httpClient.post(uri)(content)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must_==(content)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = Array.fill(2048*1000)(0).toList.mkString("")
+      httpClient.post(uri)(expected) must succeedWithContent {
+        be_==(expected)
+      }
     }
     "Support POST requests with large payload with several chunks" in {
-      val content = Array.fill[Byte](2048*100)('0')
-      val chunk   = new ByteMemoryChunk(content, () => Some(Future.sync(new ByteMemoryChunk(content))))
-      val f = httpClient.post[ByteChunk](uri)(chunk)
-      f.value must eventually(retries * 3, duration)(beSome)
-      (new String(f.value.get.content.get.data).length) must_==(new String(content ++ content).length)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = Array.fill[Byte](2048*100)('0')
+      val chunk   = new ByteMemoryChunk(expected, () => Some(Future(new ByteMemoryChunk(expected))))
+      httpClient.post[ByteChunk](uri)(chunk) must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, Some(content), _) => 
+            (status.code must_== HttpStatusCodes.OK) and
+            (new String(content.data).length must_== new String(expected ++ expected).length)
+        }
+      }
     }
 
    "Support HEAD requests" in {
-      val f = httpClient.head(uri)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.head(uri) must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, _, _) => 
+            (status.code must_== HttpStatusCodes.OK)
+        }
+      }
     }
 
    "Support response headers" in {
-      val f = httpClient.get(uri)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
-      f.value.get.headers.raw must haveKey("kludgy")
+      httpClient.get(uri) must whenDelivered {
+        beLike {
+          case HttpResponse(status, headers, _, _) => 
+            (status.code must_== HttpStatusCodes.OK) and
+            (headers.raw must haveKey("kludgy"))
+        }
+      }
     }
 
     "Support GET requests of 1000 requests" in {
       val total = 1000
       val duration = 1000.milliseconds
-      val futures = (0 until total).map { i =>
+      val futures = List.fill(total) {
         httpClient.get(uri + "?test=true")
       }
-      val responses = futures.foldLeft(0) {
-	(acc, f) => {
-          f.value must eventually(retries, duration)(beSome)
-          f.value.get.status.code must be(HttpStatusCodes.OK)
-          acc + 1
-	}
-      }
 
-      responses must_==(total)
+      Future.sequence(futures) must whenDelivered {
+        beLike {
+          case responses => 
+          (responses.size must_== total) and 
+          forall(responses) {
+            response => response.status.code must_== HttpStatusCodes.OK
+          }
+        }
+      }
     }
 
     "Support GET requests with query params" in {
-      val f = httpClient.get[String](uri + "?param1=a&param2=b")
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.get.trim must eventually(be_==/("param1=a&param2=b"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      httpClient.get[String](uri + "?param1=a&param2=b") must succeedWithContent {
+        be_==/("param1=a&param2=b")
+      }
     }
 
     "Support POST requests with body with Array[Byte]" in {
       import BijectionsChunkByteArray._
       import BijectionsByteArray._
-      val content = "Hello, world"
-      val f = httpClient.post(uri)(StringToByteArray(content))
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.content.map(ByteArrayToString(_)).get.trim must eventually(be_==/(content))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val expected = "Hello, world"
+      httpClient.post(uri)(StringToByteArray(expected)) must succeedWithContent {
+        (content: Array[Byte]) => ByteArrayToString(content) must_== expected
+      }
     }
+
     "Support POST requests with body several chunks and transcoding" in {
       import BijectionsChunkByteArray._
       import BijectionsByteArray._
       implicit val bijection = chunksToChunksArrayByte[String]
 
-      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future.sync[Chunk[String]](new MemoryChunk[String]("bar"))))
+      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future[Chunk[String]](new MemoryChunk[String]("bar"))))
 
-      val f = httpClient.post(uri)(chunks)(bijection)
-      f.value must eventually(retries, duration)(beSome)
-      val content = readContent(f.value.get.content.get).map(_.mkString(""))
-      content.value must eventually(retries, duration)(beSome("foobar"))
-      f.value.get.status.code must be(HttpStatusCodes.OK)
+      val response = Await.result(httpClient.post(uri)(chunks)(bijection), duration)
+      response.status.code must be(HttpStatusCodes.OK)
+      readContent(response.content.get).map(_.mkString("")) must whenDelivered {
+        be_==("foobar")
+      }
     }
 
     "Support POST requests with encoded URL should be preserved" in {
       val content = "Hello, world"
-      val f = httpClient.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content)
-      f.value must eventually(retries, duration)(beSome)
-      f.value.get.status.code must be(HttpStatusCodes.OK)
-      f.value.get.content.get.contains("plckForumId=Cat:Wedding BoardsForum:238") must beTrue
+      httpClient.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content) must whenDelivered {
+        beLike { 
+          case HttpResponse(status, _, Some(content), _) => 
+            (status.code must_== HttpStatusCodes.OK) and
+            (content must contain("plckForumId=Cat:Wedding BoardsForum:238")) 
+          }
+      }
     }
   }
 }
@@ -241,23 +252,23 @@ import blueeyes.core.service._
 
 object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
 
-trait ContentReader{
+trait ContentReader extends AkkaDefaults {
   def readContent[T](chunk: Chunk[T]): Future[List[T]] = {
-    val result = new Future[List[T]]()
-    readContent[T](chunk, List[T](), result)
-    result
+    val promise = Promise[List[T]]()
+    readContent[T](chunk, List[T](), promise)
+    promise
   }
-  def readContent[T](chunk: Chunk[T], chunks: List[T], result: Future[List[T]]) {
+  def readContent[T](chunk: Chunk[T], chunks: List[T], promise: Promise[List[T]]) {
     val newChunks = chunks ::: List(chunk.data)
 
     chunk.next match{
-      case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, newChunks, result))
-      case None => result.deliver(newChunks)
+      case Some(x) => x.foreach(nextChunk => readContent(nextChunk, newChunks, promise))
+      case None => promise.success(newChunks)
     }
   }
 }
 
-trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with ContentReader{
+trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with ContentReader with AkkaDefaults {
   import blueeyes.core.http.MimeTypes._
 
   private implicit val ordering = new Ordering[Symbol] {
@@ -269,34 +280,36 @@ trait EchoService extends BlueEyesServiceBuilder with BijectionsChunkString with
   private def response(content: Option[String] = None) =
     HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = content, headers = Map("kludgy" -> "header test"))
 
-  private def handler(request: HttpRequest[ByteChunk]) = {
+  private def handler(request: HttpRequest[ByteChunk]): Future[HttpResponse[String]] = {
     val params = request.parameters.toList.sorted.foldLeft(List[String]()) { (l: List[String], p: Tuple2[Symbol, String]) =>
       l ++ List("%s=%s".format(p._1.name, p._2))
     }.mkString("&")
+
     val headers = request.parameters.get('headers).map { o =>
       request.headers.raw.toList.sorted.foldLeft(List[String]()) { (l, h) =>
     	l ++ List("%s: %s".format(h._1, h._2))
       }.mkString("&")
     }.getOrElse("")
-    val content: Future[String] = request.content.map{v =>
-      readStringContent(v)
-    }.getOrElse(Future.sync[String](""))
-    val result = new Future[HttpResponse[String]]()
-    content.deliverTo{v => result.deliver(response(content = Some(params + v + headers)))}
-    content.ifCanceled(th => result.cancel(th))
-    result
+
+    val content: Future[String] = request.content.map(readStringContent).getOrElse(Promise.successful(""))
+
+    val promise = Promise[HttpResponse[String]]()
+    content foreach   { v => promise.success(response(content = Some(params + v + headers))) }
+    content onFailure { case th => promise.failure(th) }
+    promise
   }
 
   private def readStringContent(chunk: ByteChunk) = {
     val result = readContent(chunk)
     result.map(_.map(v => new String(v, "UTF-8")).mkString(""))
   }
-  private def readContent(chunk: ByteChunk, buffer: ofByte, result: Future[String]) {
+
+  private def readContent(chunk: ByteChunk, buffer: ofByte, promise: Promise[String]) {
     buffer ++= chunk.data
 
     chunk.next match{
-      case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, buffer, result))
-      case None => result.deliver(new String(buffer.result, "UTF-8"))
+      case Some(x) => x.foreach(nextChunk => readContent(nextChunk, buffer, promise))
+      case None => promise.success(new String(buffer.result, "UTF-8"))
     }
   }
 

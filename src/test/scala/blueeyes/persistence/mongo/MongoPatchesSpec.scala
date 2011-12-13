@@ -10,13 +10,15 @@ import MongoFilterOperators._
 import blueeyes.json.JsonAST._
 import blueeyes.json._
 import MongoFilterImplicits._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import scalaz._
 import Scalaz._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import akka.util.Timeout
 
-class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
+class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with blueeyes.bkka.AkkaDefaults {
+  implicit val queryTimeout = Timeout(10 * 60 * 1000)
 
   def getPatch = for{
     filter <- getMongoFieldFilter
@@ -55,11 +57,11 @@ class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits
   }
 
   class MongoDatabaseImpl(var queries: List[(MongoFilter, MongoUpdate)]) extends MockDatabase(new MockMongo()) {
-    override def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]) = {
+    override def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult], timeout: akka.util.Timeout) = {
       val update = query.asInstanceOf[MongoUpdateQuery]
       queries = queries filterNot (_ == (update.filter.get, update.value))
 
-      Future.dead[T#QueryResult]
+      akka.dispatch.Promise.failed[T#QueryResult](new RuntimeException("Should not be seen."))
     }
   }
 }

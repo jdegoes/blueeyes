@@ -3,14 +3,17 @@ package blueeyes.persistence.mongo
 import blueeyes.health.HealthMonitor
 import blueeyes.json.JsonAST._
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
+import akka.util.Timeout
 
-case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacity: Int)
+case class MongoStageSettings(expirationPolicy: ExpirationPolicy, maximumCapacity: Int, flushTimeout: Timeout)
 
 /** A stage for updates to Mongo.
  */
 class MongoStage (val database: Database, mongoStageSettings: MongoStageSettings, monitor: HealthMonitor = HealthMonitor.Noop) 
 extends Stage[MongoFilterCollection, MongoUpdate](monitor) {
-  def flush(filter: MongoFilterCollection, update: MongoUpdate) = {
+  implicit val flushTimeout = mongoStageSettings.flushTimeout
+
+  def flush(filter: MongoFilterCollection, update: MongoUpdate): Unit = {
     database.unverified {
       upsert(filter.collection).set(update).where(filter.filter)
     }

@@ -2,34 +2,50 @@ package blueeyes.core.service
 
 import org.specs2.mutable.Specification
 import blueeyes.core.http._
+import blueeyes.core.http.test._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Promise
 
-class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers{
+class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers with HttpRequestMatchers {
   
   "HttpResponseHelpers respond: creates Future with the specified parameters" in {
-    val status  = HttpStatus(InternalServerError)
+    val statusCode  = InternalServerError
     val headers = Map("foo" -> "bar")
-    val content = Some("zoo")
-    respond(status, headers, content).value.get mustEqual(HttpResponse[String](status, headers, content))
+    val content = "zoo"
+
+    respond(HttpStatus(statusCode), headers, Some(content)) must whenDelivered {
+      beLike {
+        case HttpResponse(HttpStatus(code, _), HttpHeaders(h), c, _) => 
+          (code must_== statusCode) and (h must_== headers) and (c must beSome(content))
+      }
+    }
   }
+
   "HttpResponseHelpers respondLater: creates Future when response is OK" in {
     val headers = Map("foo" -> "bar")
-    val content = Future.sync("zoo")
-    respondLater[String](content, headers).value.get mustEqual(HttpResponse[String](HttpStatus(OK), headers, Some("zoo")))
+    val content = "zoo"
+
+    respondLater[String](Future(content), headers) must whenDelivered {
+      beLike { 
+        case HttpResponse(HttpStatus(code, _), HttpHeaders(h), c, _) => 
+          (code must_== OK) and (h must_== headers) and (c must beSome(content))
+      }
+    }
   }
+
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled with error)" in {
     val error   = new NullPointerException()
-    val content = Future.dead[String](error)
-    respondLater[String](content).value.get mustEqual(HttpResponse[String](HttpStatus(InternalServerError, "The response was unexpectedly canceled")))
+    val promise = Promise.failed[String](error)
+    respondLater[String](promise) must respondWithCode(InternalServerError)
   }
+
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled without error)" in {
     val error   = new NullPointerException()
-    val content = new Future[String]
-    content.cancel(None)
+    val promise = Promise[String]
+    promise.failure(new RuntimeException())
 
-    val status = respondLater[String](content).value.get.status
-    status.code mustEqual(InternalServerError)
+    respondLater[String](promise) must respondWithCode(InternalServerError)
   }
 }

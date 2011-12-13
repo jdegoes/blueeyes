@@ -1,10 +1,13 @@
 package blueeyes.core.service
 
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.dispatch.Future._
+
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.bkka.Stoppable
 import blueeyes.core.http._
 import scala.reflect.Manifest
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
 
 /**
 val emailService = {
@@ -22,7 +25,7 @@ val emailService = {
   }
 }
 */
-trait ServiceBuilder[T] {
+trait ServiceBuilder[T] extends AkkaDefaults {
   protected def startup[S](startup: => Future[S]): StartupDescriptor[T, S] = {
     val thunk = () => startup
     
@@ -35,12 +38,12 @@ trait ServiceBuilder[T] {
   
   trait ShutdownConverter[S,T] {
     def convert(f : S => Future[T]) : S => Future[Option[Stoppable]]
-    def convert(f : => Future[T]) : S => Future[Option[Stoppable]]
+    def convert(f : => Future[T])   : S => Future[Option[Stoppable]]
   }
 
   implicit def unitConverter[S] = new ShutdownConverter[S,Unit] {
-    def convert(f : S => Future[Unit]) = { (s : S) => f(s).flatMap(_ => Future.sync(None)) }
-    def convert(f : => Future[Unit]) = { _ => f.flatMap(_ => Future.sync(None)) }
+    def convert(f : S => Future[Unit]) = { (s : S) => f(s).flatMap(_ => Promise.successful(None)) }
+    def convert(f : => Future[Unit]) = { _ => f.flatMap(_ => Promise.successful(None)) }
   }
 
   implicit def optStopConverter[S] = new ShutdownConverter[S,Option[Stoppable]] {
@@ -55,7 +58,7 @@ trait ServiceBuilder[T] {
     ShutdownDescriptor[Unit](c.convert(shutdown))
   
   protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[T, Unit]): ServiceDescriptor[T, Unit] =
-    ServiceDescriptor[T, Unit](() => ().future, rd.request, _ => Future.sync(None))
+    ServiceDescriptor[T, Unit](() => Promise.successful(()), rd.request, _ => Promise.successful(None))
 
   def service(name: String, version: String, desc: Option[String] = None)(descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]): Service[T] = new ServiceImpl[T](name, version, desc, descriptorFactory)
 

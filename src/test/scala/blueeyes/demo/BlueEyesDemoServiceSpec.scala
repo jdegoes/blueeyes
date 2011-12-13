@@ -1,7 +1,7 @@
 package blueeyes.demo
 
 import blueeyes.core.service.test.BlueEyesServiceSpecification
-import blueeyes.core.http.{HttpStatus, MimeTypes}
+import blueeyes.core.http.{HttpStatus, MimeTypes, HttpResponse}
 import blueeyes.json.JsonAST.{JValue, JObject, JField, JString, JArray}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
@@ -10,7 +10,7 @@ import blueeyes.demo.Serialization._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.data.BijectionsChunkJson
 
-class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson{
+class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyesDemoService with BijectionsChunkJson with blueeyes.concurrent.test.FutureMatchers {
   private val contact = Contact("Sherlock", Some("sherlock@email.com"), Some("UK"), Some("London"), Some("Baker Street, 221B"))
 
   override def configuration = """
@@ -48,31 +48,33 @@ class BlueEyesDemoServiceSpec extends BlueEyesServiceSpecification with BlueEyes
     }
 
     "return contact list" in {
-      val f = service.get("/contacts")
-      f.value must eventually(beSome)
-
-      val response = f.value.get
-
-      response.status  mustEqual(HttpStatus(OK))
-      response.content must beSome(JArray(List(contact \\ "name")))
+      service.get("/contacts") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status  mustEqual(HttpStatus(OK))) and
+            (content must beSome(JArray(List(contact \\ "name"))))
+        }
+      }
     }
+
     "return contact" in {
-      val f = service.get("/contacts/Sherlock")
-      f.value must eventually(beSome)
-
-      val response = f.value.get
-
-      response.status  mustEqual(HttpStatus(OK))
-      response.content must beSome(contact.serialize)
+      service.get("/contacts/Sherlock") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status  mustEqual(HttpStatus(OK))) and
+            (content must beSome(contact.serialize))
+        }
+      }
     }
+
     "search contact" in {
-      val f = service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter)
-      f.value must eventually(beSome)
-
-      val response = f.value.get
-
-      response.status  mustEqual(HttpStatus(OK))
-      response.content must beSome(JArray(List(contact \\ "name")))
+      service.contentType[JValue](application/MimeTypes.json).post("/contacts/search")(filter) must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status  mustEqual(HttpStatus(OK))) and 
+            (content must beSome(JArray(List(contact \\ "name"))))
+        }
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ package blueeyes
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.core.service._
-import concurrent.{FutureImplicits}
+import blueeyes.bkka.AkkaDefaults
 
 /** Convenience trait for building services with many common mixins.
  * <pre>
@@ -57,7 +57,7 @@ import concurrent.{FutureImplicits}
  * </pre>
  */
 trait BlueEyesServiceBuilderBase[T] extends ServiceBuilder[T] with 
-  FutureImplicits with 
+  AkkaDefaults with 
   HttpHeaderImplicits with 
   HttpStatusImplicits with
   HttpStatusCodeImplicits with 

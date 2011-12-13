@@ -3,11 +3,11 @@ package blueeyes.core.service
 import org.specs2.mutable.Specification
 import blueeyes.core.http._
 import blueeyes.core.data.BijectionsByteArray
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-class HttpClientSpec extends Specification with BijectionsByteArray{
+class HttpClientSpec extends Specification with BijectionsByteArray with blueeyes.bkka.AkkaDefaults {
 
   override def is = args(sequential = true) ^ super.is
 
@@ -18,7 +18,7 @@ class HttpClientSpec extends Specification with BijectionsByteArray{
 
     def apply(r: HttpRequest[String]) = {
       request = Some(r)
-      Future.sync[HttpResponse[String]](HttpResponse[String]())
+      Future[HttpResponse[String]](HttpResponse[String]())
     }
 
     def isDefinedAt(x: HttpRequest[String]) = true

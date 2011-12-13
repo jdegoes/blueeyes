@@ -4,9 +4,9 @@ import org.specs2.mutable.Specification
 import blueeyes.util.printer.HtmlPrinter
 import net.lag.configgy.Config
 import blueeyes.core.http.{HttpResponse, HttpRequest}
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
-class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators{
+class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombinators with blueeyes.bkka.AkkaDefaults {
   import Metadata._
 
   "ServiceDocumente" should{
@@ -103,13 +103,13 @@ class ServiceDocumenterSpec extends Specification with HttpRequestHandlerCombina
           path("/bar") {
             describe("Personal john details"){
               path("/john") {
-                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
+                get{ (request: HttpRequest[Int]) => Future(HttpResponse[Int](content = Some(1))) }
               }
             }
           }~
           describe("Personal kate details"){
             path("/kate") {
-              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
+              get{ (request: HttpRequest[Int]) => Future(HttpResponse[Int](content = Some(0))) }
             }
           }
         }

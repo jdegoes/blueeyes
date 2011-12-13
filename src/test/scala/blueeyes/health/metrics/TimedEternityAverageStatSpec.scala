@@ -3,14 +3,14 @@ package blueeyes.health.metrics
 import blueeyes.json.JsonAST._
 import org.specs2.mutable.Specification
 
-class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures {
+class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
   "TimedEternityAverageStat" should{
     "creates JValue" in{
       val timedSample = TimedAverageStat(eternity)
       fill(timedSample)
 
       val histogramValue = JArray(List(JDouble(4)))
-      timedSample.toJValue.value must eventually (beSome(JObject(JField("perSecond", JObject(JField(eternity.toString, histogramValue) :: Nil)) :: Nil)))
+      timedSample.toJValue must whenDelivered (be_==(JObject(JField("perSecond", JObject(JField(eternity.toString, histogramValue) :: Nil)) :: Nil)))
     }
   }
 

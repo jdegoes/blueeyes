@@ -3,7 +3,12 @@ package blueeyes.core.service.engines
 import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
 import org.specs2.mutable.Specification
-import blueeyes.concurrent.Future
+
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.dispatch.Await
+import akka.util._
+
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import java.util.concurrent.CountDownLatch
@@ -18,7 +23,7 @@ import java.io.File
 import org.specs2.specification.{Step, Fragments}
 import org.specs2.time.TimeConversions._
 
-class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString{
+class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with blueeyes.concurrent.test.FutureMatchers {
 
   private val configPattern = """server{
   port = %d
@@ -42,13 +47,13 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
       val startFuture = sampleServer.start
 
-      startFuture.deliverTo { _ =>
+      startFuture.onSuccess { case _ =>
         error = None
         doneSignal.countDown()
       }
-      startFuture.ifCanceled{v =>
+      startFuture.onFailure { case v =>
         println("Error trying to start server on ports " + port + ", " + (port + 1))
-        error = v
+        error = Some(v)
         port  = port + 2
         doneSignal.countDown()
       }
@@ -65,110 +70,123 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
   "HttpServer" should {
     "return empty response"in{
-      val response = client.post("/empty/response")("")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content must beNone
+      client.post("/empty/response")("") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content must beNone)
+        }
+      }
     }
+
     "write file"in{
       Context.dataFile.delete
 
-      val response = client.post("/file/write")("foo")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-
-      Context.dataFile.exists must be_==(true)
-      Context.dataFile.length mustEqual("foo".length)
+      client.post("/file/write")("foo") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (Context.dataFile.exists must be_==(true)) and
+            (Context.dataFile.length mustEqual("foo".length))
+        }
+      }
     }
+
     "read file"in{
       Context.dataFile.delete
 
-      val postResponse = client.post("/file/write")("foo")
-      postResponse.value must eventually(retries, duration)(beSome)
-
-      val response = client.get("/file/read")
-
-      (response.value must eventually(retries, duration)(beSome)) and 
-      (response.value.get.status.code must be (OK)) and
-      (response.value.get.content must beSome("foo")) 
+      akka.dispatch.Await.result(client.post("/file/write")("foo"), new DurationLong(duration.inMillis).millis)
+      client.get("/file/read") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content must beSome("foo")) 
+        }
+      }
     }
-    "return html by correct URI" in{
-      val response =  client.get("/bar/foo/adCode.html")
 
-      (response.value must eventually(retries, duration)(beSome)) and
-      (response.value.get.status.code must be (OK)) and
-      (response.value.get.content must beSome(Context.context))
+    "return html by correct URI" in{
+      client.get("/bar/foo/adCode.html") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content must beSome(Context.context))
+        }
+      }
     }
 
     "return NotFound when accessing a nonexistent URI" in{
-      val response = client.post("/foo/foo/adCode.html")("foo")
-
-      (response.isCanceled must eventually(retries, duration)(beTrue)) and
-      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (NotFound) })
+      val response = Await.result(client.post("/foo/foo/adCode.html")("foo").failed, duration)
+      response must beLike { case HttpException(failure, _) => failure must_== NotFound }
     }
     "return InternalServerError when handling request crashes" in{
-      val response = client.get("/error")
-
-      (response.isCanceled must eventually(retries, duration)(beTrue)) and
-      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (InternalServerError) })
+      val response = Await.result(client.get("/error").failed, duration)
+      response must beLike { case HttpException(failure, _) => failure must_== InternalServerError }
     }
-    "return Http error when handling request throws HttpException" in{
-      val response = client.get("/http/error")
-
-      (response.isCanceled must eventually(retries, duration)(beTrue)) and 
-      (response.error must beLike { case Some(HttpException(failure, _)) => failure must_== (BadRequest) })
+    "return Http error when handling request throws HttpException" in {
+      val response = Await.result(client.get("/http/error").failed, duration)
+      response must beLike { case HttpException(failure, _) => failure must_== BadRequest }
     }
 
     "return html by correct URI with parameters" in{
-      val response = client.parameters('bar -> "zar").get("/foo")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content must beSome(Context.context)
+      client.parameters('bar -> "zar").get("/foo") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and 
+            (content must beSome(Context.context))
+        }
+      }
     }
     "return huge content"in{
-      val response = client.get[ByteChunk]("/huge")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+      client.get[ByteChunk]("/huge") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+        }
+      }
     }
     "return huge delayed content"in{
-      val response = client.get[ByteChunk]("/huge/delayed")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+      val content = client.get[ByteChunk]("/huge/delayed") 
+      content must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+        }
+      }
     }
     "return html by correct URI by https" in{
-      val response = sslClient.get("/bar/foo/adCode.html")
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.content.get mustEqual(Context.context)
+      sslClient.get("/bar/foo/adCode.html") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            content.get mustEqual(Context.context)
+        }
+      }
     }
-    "return huge content by htpps"in{
-      val response = sslClient.get[ByteChunk]("/huge")
-
-      response.value must eventually(retries, duration)(beSome)
-      response.value.get.status.code must be (OK)
-      response.value.get.content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))
+    "return huge content by https"in{
+      sslClient.get[ByteChunk]("/huge") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, content, _) =>
+            (status.code must be (OK)) and
+            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))) 
+        }
+      }
     }
   }
 
   private def readContent(chunk: ByteChunk): String = {
-    val result = new Future[String]()
-    readContent(chunk, new ofByte(), result)
-
-    result.value must eventually(retries, duration) (beSome)
-    result.value.get
+    val promise = Promise[String]()
+    readContent(chunk, new ofByte(), promise)
+    akka.dispatch.Await.result(promise, new akka.util.DurationLong(duration.inMillis).millis)
   }
-  private def readContent(chunk: ByteChunk, buffer: ofByte, result: Future[String]) {
+
+  private def readContent(chunk: ByteChunk, buffer: ofByte, promise: Promise[String]) {
     buffer ++= chunk.data
 
     chunk.next match{
-      case Some(x) => x.deliverTo(nextChunk => readContent(nextChunk, buffer, result))
-      case None => result.deliver(new String(buffer.result, "UTF-8"))
+      case Some(x) => x.onSuccess { case nextChunk => readContent(nextChunk, buffer, promise) }
+      case None => promise.success(new String(buffer.result, "UTF-8"))
     }
   }
   private def client    = new LocalHttpsClient(server.get.config).protocol("http").host("localhost").port(port)
@@ -197,12 +215,12 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       produce(text/html) {
         path("/bar/'adId/adCode.html") {
           get { request: HttpRequest[ByteChunk] =>
-            Future.sync[HttpResponse[String]](response)
+            Future[HttpResponse[String]](response)
           }
         } ~
         path("/foo") {
           get { request: HttpRequest[ByteChunk] =>
-            Future.sync[HttpResponse[String]](response)
+            Future[HttpResponse[String]](response)
           }
         } ~
         path("/error") {
@@ -218,47 +236,47 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future.sync(new ByteMemoryChunk(Context.hugeContext.tail.head))))
+          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future(new ByteMemoryChunk(Context.hugeContext.tail.head))))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.sync[HttpResponse[ByteChunk]](response)
+          Future[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/empty/response"){
         post { request: HttpRequest[ByteChunk] =>
-          Future.sync[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
+          Future[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
         }
       } ~
       path("/file/write"){
         post { request: HttpRequest[ByteChunk] =>
-          val future = new Future[HttpResponse[ByteChunk]]()
+          val promise = Promise[HttpResponse[ByteChunk]]()
           request.content.foreach{value =>
             val f = FileSink(Context.dataFile, value)
-            f.deliverTo(v => future.deliver(HttpResponse[ByteChunk]()))
+            f.onSuccess { case v => promise.success(HttpResponse[ByteChunk]()) } 
           }
-          future
+          promise
         }
       } ~
       path("/file/read"){
         get { request: HttpRequest[ByteChunk] =>
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(Context.dataFile))
-          Future.sync[HttpResponse[ByteChunk]](response)
+          Future[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/huge/delayed"){
         get { request: HttpRequest[ByteChunk] =>
 
-          val nextChunkFuture = new Future[ByteChunk]()
+          val promise = Promise[ByteChunk]()
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            nextChunkFuture.deliver(new ByteMemoryChunk(Context.hugeContext.tail.head))
+            promise.success(new ByteMemoryChunk(Context.hugeContext.tail.head))
           }
 
-          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(nextChunkFuture))
+          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(promise))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future.sync[HttpResponse[ByteChunk]](response)
+          Future[HttpResponse[ByteChunk]](response)
         }
       }
     }

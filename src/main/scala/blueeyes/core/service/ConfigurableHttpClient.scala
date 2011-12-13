@@ -1,19 +1,19 @@
 package blueeyes.core.service
 
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import blueeyes.bkka.AkkaDefaults
+import akka.dispatch.Future
+
 import blueeyes.core.data.ByteChunk
+import blueeyes.core.http._
 import blueeyes.core.service._
 import engines.HttpClientXLightWeb
-import scalaz.{Failure, Success}
-import blueeyes.core.http._
 
+import scalaz.{Failure, Success}
 import scalaz.Scalaz._
 
-trait ConfigurableHttpClient{
-
+trait ConfigurableHttpClient extends AkkaDefaults {
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
-  private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)).future
+  private lazy val NotFound            = Future(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
 
   lazy implicit val httpClient: HttpClientByteChunk = {
     val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "false").toBoolean
@@ -25,16 +25,8 @@ trait ConfigurableHttpClient{
   private def mockClient(h: AsyncHttpService[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
-      case Success(rawFuture) =>
-        rawFuture.orElse { why => why match {
-          case Some(throwable) =>
-            convertErrorToResponse(throwable)
-
-          case None =>
-            InternalServerError
-        }
-      }
-      case Failure(DispatchError(throwable)) => convertErrorToResponse(throwable).future
+      case Success(rawFuture) => rawFuture recover { case throwable => convertErrorToResponse(throwable) }
+      case Failure(DispatchError(throwable)) => Future(convertErrorToResponse(throwable))
       case failure => NotFound
     }
   }
@@ -45,7 +37,7 @@ trait ConfigurableHttpClient{
   }
 
   protected def mockServer: AsyncHttpService[ByteChunk] = new AsyncCustomHttpService[ByteChunk]{
-    def service = (request: HttpRequest[ByteChunk]) => success(Future.sync(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
+    def service = (request: HttpRequest[ByteChunk]) => success(Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
     val metadata = None
   }
 }

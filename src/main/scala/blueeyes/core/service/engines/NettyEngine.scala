@@ -1,7 +1,7 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.service._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 trait NettyEngine extends AbstractNettyEngine{ self =>
   protected def nettyServers = {

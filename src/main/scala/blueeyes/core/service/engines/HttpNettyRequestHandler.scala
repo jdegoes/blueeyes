@@ -1,7 +1,11 @@
 package blueeyes.core.service.engines
 
 
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Promise
+
+import blueeyes.concurrent.ReadWriteLock
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.http._
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
 import blueeyes.core.service._
@@ -9,21 +13,20 @@ import blueeyes.core.service._
 import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
 
-import org.jboss.netty.buffer.{ChannelBuffers}
+import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
+import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
-import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
-import blueeyes.concurrent.{ReadWriteLock, Future}
 
 /** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters{
+private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters {
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
@@ -45,10 +48,11 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
         if (!keepAlive) future.addListener(ChannelFutureListener.CLOSE)
       }
     }
+
     requestHandler.service(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]]).foreach{ responseFuture =>
       pendingResponses += responseFuture
 
-      responseFuture.deliverTo { response =>
+      responseFuture foreach { response =>
         pendingResponses -= responseFuture
 
         writeResponse(event, response)
@@ -70,78 +74,92 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
   override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelClosed(ctx, e)
 
-    killPending(None)
+    killPending(new RuntimeException("Channel closed."))
   }
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelDisconnected(ctx, e)
     
-    killPending(None)
+    killPending(new RuntimeException("Channel disconnected."))
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
     log.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
     
-    killPending(Some(e.getCause))
+    killPending(e.getCause)
     // e.getChannel.close    
   }
   
-  private def killPending(why: Option[Throwable]) {
+  private def killPending(why: Throwable) {
     // Kill all pending responses to this channel:
-    pendingResponses.foreach(_.cancel(why))
+    pendingResponses.foreach(_.asInstanceOf[Promise[HttpResponse[ByteChunk]]].failure(why))
     pendingResponses.clear()
   }
 }
 
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with Logging{
+private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with Logging with AkkaDefaults {
   private var done  = false
 
   private val lock = new ReadWriteLock{}
   private var nextChunkFuture: Future[ByteChunk] = _
 
-  setNextChunkFuture(Future.sync(chunk))
+  setNextChunkFuture(Future(chunk))
 
-  def close() {nextChunkFuture.cancel()}
+  def close() {
+    nextChunkFuture.asInstanceOf[Promise[ByteChunk]].failure(new RuntimeException("Connection closed."))
+  }
 
   def isEndOfInput = !hasNextChunk()
 
-  def nextChunk = {
-    nextChunkFuture.value.map{chunk =>
+  def nextChunk = nextChunkFuture.value match { 
+    case Some(Right(chunk)) => 
       val data = chunk.data
       if (!data.isEmpty) new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data)) else new DefaultHttpChunkTrailer()
-    }.orElse{
-      nextChunkFuture.deliverTo{nextChunk =>
-        channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
+
+    case Some(Left(ex)) => 
+      logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
+      null
+
+    case None =>
+      for (_ <- nextChunkFuture) {
+        try {
+          channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
+        } catch {
+          case ex => logger.error("An error was encountered resuming data transfer: " + ex.getMessage, ex)
+        }
       }
-      None
-    }.orNull
+
+      null
   }
 
   def hasNextChunk = {
-    nextChunkFuture.value.map{chunk =>
-      chunk.next match{
-        case Some(future)     => setNextChunkFuture(future)
-          true
-        case None if (!done)  => {
-          setNextChunkFuture(Future.sync[ByteChunk](new MemoryChunk(Array[Byte]())))
-          done = true
-          true
+    nextChunkFuture.value match {
+      case Some(Right(chunk)) => 
+        chunk.next match {
+          case Some(future)     => 
+            setNextChunkFuture(future)
+            true
+
+          case None if (!done)  => {
+            setNextChunkFuture(Future[ByteChunk](new MemoryChunk(Array[Byte]())))
+            done = true
+            true
+          }
+
+          case _ => false
         }
-        case _ => false
-      }
-    }.getOrElse(true)
+
+      case Some(Left(ex)) => 
+        logger.error("An error occurred retrieving the next chunk of data: " + ex.getMessage, ex)
+        false
+      
+      case _ => true
+    }
   }
 
   private def setNextChunkFuture(future: Future[ByteChunk]){
-    future.trap{errors: List[Throwable] =>
-      errors.foreach(error => logger.warn("An exception was raised by NettyChunkedInput.", error))
-      errors match{
-        case x :: xs => throw x
-        case _ =>
-      }
-    }
     lock.writeLock{
       nextChunkFuture = future
     }

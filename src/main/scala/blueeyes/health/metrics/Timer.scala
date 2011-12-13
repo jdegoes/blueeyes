@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import java.lang.Double.{doubleToLongBits, longBitsToDouble}
 import scala.math.sqrt
 import blueeyes.util.metrics.Duration
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import Duration._
 import blueeyes.json.JsonAST._
 import blueeyes.util.ClockSystem
@@ -38,9 +38,9 @@ class Timer extends SyncStatistic[Duration, Tuple5[Long, Duration, Duration, Dur
 
   def time[T](f: Future[T]): Future[T] = {
     val startTime = realtimeClock.nanoTime
-    f.deliverTo(v => {
-      this += (realtimeClock.nanoTime - startTime).nanoseconds
-    })
+    f onSuccess {
+      case v => this += (realtimeClock.nanoTime - startTime).nanoseconds
+    }
   }
 
   /**

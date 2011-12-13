@@ -6,15 +6,17 @@ import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
 import blueeyes.json.JsonAST._
 import blueeyes.core.http.MimeTypes._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
 import java.io.File
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
 import org.specs2.specification.{Step, Fragments}
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson{
+import akka.dispatch.Future
+import akka.util.Timeout
+import blueeyes.core.http.test._
+
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson with HttpRequestMatchers {
   override def configuration = """
     services {
       foo {
@@ -45,7 +47,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
-      Future.sync(HttpResponse[ByteChunk](content = Some(r.uri.path match {
+      Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
         case Some("/foo/v1/proxy")  => BijectionsChunkString.StringToChunk("it works!")
 
         case _ => BijectionsChunkString.StringToChunk("it does not work!")
@@ -62,37 +64,27 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   "service" should {
     "support health monitor service" in {
-      val f = service.get("/foo")
-      f.value must eventually(beSome)
-      f.value.get.content must beNone
-      f.value.get.status  mustEqual(HttpStatus(OK))
+      service.get("/foo") must whenDelivered {
+        beLike {
+          case HttpResponse(status, _, None, _) => status must_== HttpStatus(OK)
+        }
+      }
     }
 
     "support health monitor statistics" in {
-      val f = service.get[JValue]("/blueeyes/services/email/v1/health")
-      f.value must eventually(beSome)
-
-      val response = f.value.get
-      response.status  mustEqual(HttpStatus(OK))
-
-      val content  = response.content.get
-      content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(JArray(JInt(1) :: Nil))
-      content \ "requests" \ "GET" \ "timing" mustNotEqual(JNothing)
-      content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity"       mustNotEqual(JNothing)
-
-      content \ "service" \ "name"    mustEqual(JString("email"))
-      content \ "service" \ "version" mustEqual(JString("1.2.3"))
-      content \ "uptimeSeconds"       mustNotEqual(JNothing)
+      service.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
+        (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(JArray(JInt(1) :: Nil))) and
+        (content \ "requests" \ "GET" \ "timing" mustNotEqual(JNothing)) and
+        (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JNothing)) and
+        (content \ "service" \ "name"    mustEqual(JString("email"))) and
+        (content \ "service" \ "version" mustEqual(JString("1.2.3"))) and
+        (content \ "uptimeSeconds"       mustNotEqual(JNothing)) 
+      }
     }
 
     "add service locator" in {
       import BijectionsChunkString._
-      val f = service.get[String]("/proxy")
-      f.value must eventually(beSome)
-
-      val response = f.value.get
-      response.status  mustEqual(HttpStatus(OK))
-      response.content must beSome("it works!")
+      service.get[String]("/proxy") must succeedWithContent((_: String) must_== "it works!")
     }
 
     "RequestLogging: Creates logRequest" in{
@@ -102,18 +94,17 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 }
 
 trait HeatlhMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with BijectionsChunkJson{
-  implicit val shutdownTimeout = akka.actor.Actor.Timeout(10000)
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {
-    requestLogging{
+    requestLogging(Timeout(60000)) {
       logging { log =>
-        healthMonitor(eternity) { monitor =>
+        healthMonitor(Timeout(60000), List(eternity)) { monitor =>
           serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {
                 path("/foo") {
-                  get  { request: HttpRequest[ByteChunk] => HttpResponse[ByteChunk]().future }
+                  get  { request: HttpRequest[ByteChunk] => Future(HttpResponse[ByteChunk]()) }
                 } ~
                 path("/proxy") {
                   get { request: HttpRequest[ByteChunk] =>
@@ -125,7 +116,7 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with ServiceDescriptor
                 remainingPath{
                   get{
                     request: HttpRequest[ByteChunk] => { path: String =>
-                      HttpResponse[ByteChunk]().future
+                      Future(HttpResponse[ByteChunk]())
                     }
                   }
                 }

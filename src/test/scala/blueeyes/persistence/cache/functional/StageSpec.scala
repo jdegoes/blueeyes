@@ -9,8 +9,8 @@ import scala.util.Random
 import scala.collection.immutable.ListMap
 import scalaz._
 import scalaz.Scalaz._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Future._
 
 import scala.collection.mutable.ArrayBuilder.ofRef
 

@@ -1,17 +1,18 @@
 package blueeyes.persistence.cache
 
 import blueeyes.bkka.Stop
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import blueeyes.bkka.ActorRefStop
+import akka.actor.{Actor, ActorRef, Props, Scheduler, PoisonPill, ActorKilledException, ActorSystem}
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.util.Timeout
+import akka.util.Duration
+
 import blueeyes.health.HealthMonitor
 import blueeyes.util.ClockSystem._
-import blueeyes.util.metrics.Duration
 
 import scala.collection.JavaConversions._
 import scalaz.Semigroup
-
-import akka.actor.{Actor, ActorRef, Scheduler, PoisonPill, ActorKilledException}
-import akka.actor.Actor._
 
 import com.weiglewilczek.slf4s.Logging
 
@@ -27,8 +28,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def maximumCapacity: Int
 
-  // override this timeout to choose a different timeout for shutdown.
-  implicit def stopTimeout: Timeout = Timeout(Long.MaxValue)
+  private val actorSystem = ActorSystem.create() //TODO: specialize
 
   private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
     private val impl = new javolution.util.FastMap[K, ExpirableValue[V]]
@@ -103,11 +103,14 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
         logger.trace("FlushAll start (%d entries)".format(cacheSize))
         cache --= cache.keys
         logger.trace("FlushAll complete")
-        self.reply(cacheSize)
+        sender ! cacheSize
     }
 
     private def scheduleFlush: Unit = if (!flushScheduled) {
-      Scheduler.scheduleOnce(actor, FlushAllBySchedule, duration.time.toLong, duration.unit)
+      actorSystem.scheduler.scheduleOnce(duration) {
+        actor ! FlushAllBySchedule
+      }
+
       flushScheduled = true
     }
 
@@ -126,7 +129,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
     }
   }
 
-  private val actor: ActorRef = Actor.actorOf(new StageActor).start()
+  private val actor: ActorRef = actorSystem.actorOf(Props(new StageActor))
 
   def += (k: K, v: V)(implicit sg: Semigroup[V]) = put(k, v)
 
@@ -136,9 +139,16 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs, sg)
 
-  def flushAll: Future[Int] = (actor ? FlushAll).mapTo[Int].toBlueEyes
+  def flushAll(timeout: Timeout): Future[Int] = (actor ? (FlushAll, timeout)).mapTo[Int]
 
-  lazy val stop = (actor ? FlushAll).flatMap(_ => actor ? PoisonPill).mapTo[Unit] recover { case ex: ActorKilledException => () }
+  /** TODO: use an iteratee such that the state of the stage is not exposed. */
+  private var stopFuture: Future[Unit] = _
+  def stop(timeout: Timeout) = synchronized {
+    if (stopFuture == null) {
+      stopFuture = flushAll(timeout).flatMap(_ => ActorRefStop(actorSystem, timeout).stop(actor))
+    }
+    stopFuture
+  }
 }
 
 object Stage {
@@ -152,7 +162,7 @@ object Stage {
     def flush(k: K, v: V): Unit = evict(k, v)
   }
 
-  implicit def stop[K, V]: Stop[Stage[K, V]] = new Stop[Stage[K, V]] {
-    def stop(s: Stage[K, V]) = s.stop
+  implicit def stop[K, V](implicit timeout: Timeout): Stop[Stage[K, V]] = new Stop[Stage[K, V]] {
+    def stop(s: Stage[K, V]) = s.stop(timeout)
   }
 }

@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 trait Chunk[T]{
   def data: T

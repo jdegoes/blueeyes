@@ -1,7 +1,9 @@
 package blueeyes
 package persistence.mongo
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.MessageDispatcher
+import akka.util.Timeout
 import blueeyes.json.JsonAST._
 import scalaz._
 import Scalaz._
@@ -29,13 +31,12 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Commits all patches to the database and returns a future that completes
    * if and only if all of the patches succeed.
     */
-  def commit(database: Database, collection: MongoCollection): Future[Unit] = {
+  def commit(database: Database, collection: MongoCollection)(implicit messageDispatcher: MessageDispatcher, queryTimeout: Timeout): Future[Unit] = {
     val futures = patches.toList.map { 
-      case (filter, update) =>
-        database(upsert(collection).set(update).where(filter)).toUnit
+      case (filter, update) => database(upsert(collection).set(update).where(filter))
     }
 
-    Future(futures: _*).toUnit
+    Future.sequence(futures).map(_ => ())
   }
 }
 

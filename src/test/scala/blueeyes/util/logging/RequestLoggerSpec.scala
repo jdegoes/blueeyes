@@ -7,6 +7,7 @@ import java.io.File
 import scala.io.Source
 import blueeyes.core.service.HttpRequestLoggerW3CFormatter
 import org.specs2.specification.AfterExample
+import akka.util.Timeout
 
 class RequestLoggerSpec extends Specification with AfterExample{
   private val directives = FieldsDirective(List(DateIdentifier, TimeIdentifier))
@@ -39,7 +40,7 @@ class RequestLoggerSpec extends Specification with AfterExample{
       w3Logger("foo")
       w3Logger("bar")
 
-      val future = w3Logger.close
+      val future = w3Logger.close(Timeout(5000))
       future.value must eventually (beSome)
 
       val content = getContents(new File(w3Logger.fileName.get))
@@ -63,7 +64,7 @@ class RequestLoggerSpec extends Specification with AfterExample{
   }
 
   def cleanUp(){
-    val future = w3Logger.close
+    val future = w3Logger.close(Timeout(5000))
     future.value must eventually (beSome)
 
     new File(w3Logger.fileName.get).delete

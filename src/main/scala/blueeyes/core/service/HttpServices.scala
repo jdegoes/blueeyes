@@ -1,10 +1,12 @@
 package blueeyes.core.service
 
+import blueeyes.bkka.AkkaDefaults
+import akka.dispatch.Future
+import akka.dispatch.Promise
+
 import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
 import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
@@ -155,17 +157,17 @@ case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService
   lazy val metadata = Some(RequestHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
-object AcceptService {
+object AcceptService extends blueeyes.bkka.AkkaDefaults {
   def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit b: Bijection[U, Future[T]]) = {
     r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(b)).success).getOrElse(inapplicable.fail)
   }
 
   def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
     request.content.map{content =>
-      val result = new Future[HttpResponse[S]]
-      content  ifCanceled{error => result.deliver(HttpResponse[S](status = HttpStatus(BadRequest, error.flatMap(value => Option(value.getMessage)).getOrElse(""))))}
-      response ifCanceled(result.cancel(_))
-      response deliverTo(result.deliver(_))
+      val result = Promise[HttpResponse[S]]()
+      content  onFailure { case error => result.success(HttpResponse[S](status = HttpStatus(BadRequest, error.getMessage))) }
+      response onFailure { case error => result.failure(error) }
+      response onSuccess { case value => result.success(value) }
       result
     }.getOrElse(response)
   }
@@ -302,7 +304,7 @@ extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 =
   def metadata = None
 }
 
-object JsonpService {
+object JsonpService extends AkkaDefaults {
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit toJson: T => Future[JValue]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
     import blueeyes.json.JsonParser.parse
     import blueeyes.json.xschema.DefaultSerialization._
@@ -315,7 +317,7 @@ object JsonpService {
             val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
             val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(parse _).map(Future.sync(_))
+            val content = r.parameters.get('content).map(parse _).map(Future(_))
             val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
             success(r.copy(method = method, content = content, headers = r.headers ++ headers))
@@ -369,9 +371,9 @@ object JsonpService {
 
 
 case class ForwardingService[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U], delegate: HttpService[T, HttpResponse[T]]) 
-extends DelegatingService[T, HttpResponse[T], T, HttpResponse[T]]{
+extends DelegatingService[T, HttpResponse[T], T, HttpResponse[T]] with AkkaDefaults {
   def service = { r: HttpRequest[T] =>
-    Future.async(f(r).foreach(httpClient))
+    Future(f(r).foreach(httpClient))
     delegate.service(r)
   }
 

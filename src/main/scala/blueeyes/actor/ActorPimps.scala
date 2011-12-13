@@ -3,7 +3,8 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.MessageDispatcher
 
 trait ActorPimps {
   import ActorHelpers._
@@ -158,9 +159,9 @@ trait ActorPimps {
 
     /** Converts a synchronous actor into an aynchronous actor.
      */
-    def async: ActorAsync[A, B] = ActorMHelpers.receive[Future, A, B] { a: A =>
-      Future.async(value ! a) map {
-        case (b, next) =>
+    def async(implicit dispatcher: MessageDispatcher): ActorAsync[A, B] = ActorMHelpers.receive[Future, A, B] { a: A =>
+      Future(value ! a) map {
+        case (b, next) => 
           (b, next.async)
       }
     }
