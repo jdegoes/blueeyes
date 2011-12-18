@@ -28,6 +28,8 @@ libraryDependencies ++= Seq(
 )
 
 resolvers ++= Seq(
+  "ReportGrid repo" at            "http://devci01.reportgrid.com:8081/content/repositories/releases",
+  "ReportGrid snapshot repo" at   "http://devci01.reportgrid.com:8081/content/repositories/snapshots",
   "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",
   "Scala-Tools Snapshots" at      "http://scala-tools.org/repo-snapshots/",
   "Akka Repository" at            "http://akka.io/repository/",
@@ -41,9 +43,9 @@ resolvers ++= Seq(
 parallelExecution in Test := false
 
 publishTo <<= (version) { version: String =>
-  val nexus = "http://nexus.scala-tools.org/content/repositories/"
+  val nexus = "http://nexus.reportgrid.com/content/repositories/"
   if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"snapshots/") 
   else                                   Some("releases"  at nexus+"releases/")
 }
 
-credentials := Credentials(Path.userHome / ".ivy2" / ".credentials") :: Nil
+credentials := Credentials(Path.userHome / ".ivy2" / ".rgcredentials") :: Nil
