@@ -1,7 +1,7 @@
 package blueeyes.actor
 
 import scalaz._
-import scalaz.Scalaz._
+import scalaz.syntax.functor._
 
 import akka.dispatch.Future
 
@@ -9,7 +9,7 @@ trait ActorMPimps {
   import ActorMHelpers._
   import ActorMTypeclasses._
 
-  implicit def ActorMPimpToMAB[M[_], A, B](pimp: ActorMPimp[M, A, B]) = ActorMToMAB(pimp.value)
+  //implicit def ActorMPimpToMAB[M[_], A, B](pimp: ActorMPimp[M, A, B]) = ActorMToMAB(pimp.value)
 
   implicit def ToActorMPimp[M[_]: Monad, A, B](actor: ActorM[M, A, B]) = ActorMPimp(actor)
 
@@ -20,7 +20,9 @@ trait ActorMPimps {
 
   implicit def ActorMStateToActorMStatePimp[M[_]: Monad, A, B](value: ActorMState[M, A, B]): ActorMStatePimp[M, A, B] = ActorMStatePimp(value)
 
-  sealed case class ActorMPimp[M[_], A, B](value: ActorM[M, A, B])(implicit monad: Monad[M]) extends NewType[ActorM[M, A, B]] {
+  sealed case class ActorMPimp[M[_], A, B](value: ActorM[M, A, B])(implicit monad: Monad[M]) {
+    implicit val valueAp = ActorMApplicative(monad)
+
     def premap[AA](f: AA => A): ActorM[M, AA, B] = receive[M, AA, B] { aa: AA =>
       (value ! f(aa)) map {
         case (b, next) =>
@@ -30,7 +32,7 @@ trait ActorMPimps {
 
     def -<- [AA](f: AA => A): ActorM[M, AA, B] = premap(f)
 
-    def postmap[BB](f: B => BB): ActorM[M, A, BB] = value.map(f)
+    def postmap[BB](f: B => BB): ActorM[M, A, BB] = ToFunctorV[({type λ[α] = ActorM[M, A, α]})#λ, B](value).map(f)
 
     def ->- [BB](f: B => BB): ActorM[M, A, BB] = value.map(f)
 
@@ -129,7 +131,7 @@ trait ActorMPimps {
     def variant[AA <: A, BB >: B]: ActorM[M, AA, BB] = value.asInstanceOf[ActorM[M, AA, BB]]
   }
 
-  case class HigherKindedPimpM[M[_], T[_], A, B](value: ActorM[M, A, T[B]])(implicit monad: Monad[M]) extends NewType[ActorM[M, A, T[B]]] {
+  case class HigherKindedPimpM[M[_], T[_], A, B](value: ActorM[M, A, T[B]])(implicit monad: Monad[M]) {
     def filter(f: T[B] => Boolean)(implicit empty: Empty[T]): ActorM[M, A, T[B]] = receive { a: A =>
       (value ! a) map {
         case (tb, next) =>
@@ -138,7 +140,7 @@ trait ActorMPimps {
     }
   }
 
-  case class TupledOutputPimpM[M[_], A, B1, B2](value: ActorM[M, A, (B1, B2)])(implicit monad: Monad[M]) extends NewType[ActorM[M, A, (B1, B2)]] {
+  case class TupledOutputPimpM[M[_], A, B1, B2](value: ActorM[M, A, (B1, B2)])(implicit monad: Monad[M]) {
     def >- [B](f: (B1, B2) => B): ActorM[M, A, B] = receive { a: A =>
       (value ! a) map {
         case ((b1, b2), next) =>
@@ -149,8 +151,7 @@ trait ActorMPimps {
     }
   }
 
-  case class ValidatedPimpM[M[_], A, E, B](value: ActorM[M, A, Validation[E, B]])(implicit monad: Monad[M]) 
-      extends NewType[ActorM[M, A, Validation[E, B]]] {
+  case class ValidatedPimpM[M[_], A, E, B](value: ActorM[M, A, Validation[E, B]])(implicit monad: Monad[M]) {
     def | [AA >: A, BB <: B, EE <: E](that: ActorM[M, AA, Validation[EE, BB]]): ActorM[M, A, Validation[E, B]] = {
       receive { a: A =>
         (value ! a) flatMap {
@@ -164,8 +165,7 @@ trait ActorMPimps {
     }
   }
 
-  case class HigherOrderPimpM[M[_], A, B, C, D](value: ActorM[M, (A, ActorM[M, C, D]), (B, ActorM[M, C, D])])(implicit monad: Monad[M])
-      extends NewType[ActorM[M, (A, ActorM[M, C, D]), (B, ActorM[M, C, D])]] {
+  case class HigherOrderPimpM[M[_], A, B, C, D](value: ActorM[M, (A, ActorM[M, C, D]), (B, ActorM[M, C, D])])(implicit monad: Monad[M]) {
     def <~ (that: ActorM[M, C, D]): ActorM[M, A, B] = {
       receive { a: A =>
         (value ! ((a, that))) map {
@@ -176,7 +176,7 @@ trait ActorMPimps {
     }
   }
 
-  case class ActorMStatePimp[M[_], A, B](value: ActorMState[M, A, B])(implicit monad: Monad[M]) extends NewType[ActorMState[M, A, B]] {
+  case class ActorMStatePimp[M[_], A, B](value: ActorMState[M, A, B])(implicit monad: Monad[M]) {
     def premap[AA](f: AA => A): ActorMState[M, AA, B] = value map { tuple =>
       tuple.mapElements[B, ActorM[M, AA, B]](identity, _.premap[AA](f))
     }

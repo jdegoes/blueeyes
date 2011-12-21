@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
-  "org.scalaz"                  %% "scalaz-core"        % "6.0.2",
+  "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT",
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
   "org.specs2"                  %% "specs2"             % "1.8-SNAPSHOT"   % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",

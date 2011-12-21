@@ -2,8 +2,8 @@ package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 
-import scalaz.{Validation, Success, Failure, NonEmptyList}
-import scalaz.Scalaz._
+import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli}
+import NonEmptyList._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.
  */
@@ -22,7 +22,7 @@ trait Extractor[A] extends Function[JValue, A] { self =>
     override def extract(jvalue: JValue): B = f(self.extract(jvalue))
   }
 
-  def kleisli = ☆ [({type M[X] = Validation[Error, X]})#M, JValue, A](validated _)
+  def kleisli = Kleisli[({type λ[α] = Validation[Error, α]})#λ, JValue, A](validated _)
   
   def apply(jvalue: JValue): A = extract(jvalue)
 }
@@ -44,7 +44,7 @@ object Extractor {
         case (Errors(l1), Errors(l2)) => Errors(l1.list <::: l2)
         case (Errors(l), x) => Errors(nel(x, l.list))
         case (x, Errors(l)) => Errors(x <:: l)
-        case (x, y) => Errors(nel(x, y))
+        case (x, y) => Errors(nels(x, y))
       }
     }
   }

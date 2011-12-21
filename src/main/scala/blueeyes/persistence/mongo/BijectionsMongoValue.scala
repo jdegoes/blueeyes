@@ -7,7 +7,8 @@ import com.mongodb.{BasicDBObject, DBObject}
 import org.bson.types.ObjectId
 
 import scala.collection.JavaConverters._
-import scalaz.{Success, NonEmptyList}
+import scalaz.{Success, NonEmptyList, ValidationNEL}
+import scalaz.Validation._
 import scalaz.Scalaz._
 
 class MongoObjectBijection extends MongoBijection[MongoValue, MongoField, MongoObject]{

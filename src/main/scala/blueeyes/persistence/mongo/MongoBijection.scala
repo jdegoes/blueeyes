@@ -7,6 +7,7 @@ import org.bson.types.ObjectId
 
 import scala.collection.JavaConverters._
 import scalaz.Validation
+import scalaz.ValidationNEL
 import scalaz.Scalaz._
 
 
@@ -21,7 +22,7 @@ trait MongoBijection[V, F, O <: V] extends PartialBijection[DBObject, O] {
   def extractRegex  (value: java.util.regex.Pattern): ValidationNEL[String, V]
   def extractBinary (value: Array[Byte]): ValidationNEL[String, V]
   def extractId     (value: ObjectId): ValidationNEL[String, V]
-  def extractOther  (value: Any) = failure("No extractor configured for value of type " + value.getClass.getName).liftFailNel
+  def extractOther  (value: Any) = ("No extractor configured for value of type " + value.getClass.getName).fail.toValidationNel
   def buildNull: ValidationNEL[String, V]
 
   def buildArray  (values: Seq[V]): V
@@ -33,7 +34,7 @@ trait MongoBijection[V, F, O <: V] extends PartialBijection[DBObject, O] {
       dbObject.keySet.asScala.map(key => fromDBValue(dbObject.get(key)).map(buildField(key, _)))(collection.breakOut)
     }
 
-    fields.sequence[({type N[B] = ValidationNEL[String, B]})#N, F].map(buildObject)
+    fields.toList.sequence[({type N[B] = ValidationNEL[String, B]})#N, F].map(buildObject)
   }
 
   private def fromDBValue(value: Any): ValidationNEL[String, V] = value match {
@@ -47,7 +48,7 @@ trait MongoBijection[V, F, O <: V] extends PartialBijection[DBObject, O] {
     case x: java.util.Date          => extractDate(x)
     case x: Array[Byte]             => extractBinary(x)
     case x: ObjectId    => extractId(x)
-    case x: java.util.ArrayList[_]  => x.asScala.map(fromDBValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, V].map(buildArray)
+    case x: java.util.ArrayList[_]  => x.asScala.map(fromDBValue).toList.sequence[({type N[B] = ValidationNEL[String, B]})#N, V].map(buildArray)
     case x: DBObject                => apply(x)
     case null                       => buildNull
     case other                      => extractOther(other)

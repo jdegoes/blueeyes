@@ -6,10 +6,8 @@ import scalaz.Scalaz._
 trait ActorTypeclasses {
   import ActorHelpers._
 
-  implicit def ActorToMAB[A, B](actor: Actor[A, B]) = mab[Actor, A, B](actor)
-
-  implicit def ActorPure[A] = new Pure[({type λ[α]=Actor[A, α]})#λ] {
-    def pure[B](b: => B): Actor[A, B] = {
+  trait ActorPointed[A] extends Pointed[({type λ[α]=Actor[A, α]})#λ] {
+    def point[B](b: => B): Actor[A, B] = {
       lazy val lazySelf: Actor[A, B] = receive { a: A =>
         (b, lazySelf)
       }
@@ -18,7 +16,10 @@ trait ActorTypeclasses {
     }
   }
 
-  implicit def ActorApply[A] = new Apply[({type λ[α]=Actor[A, α]})#λ] {
+
+  implicit def actorPointed[A] = new ActorPointed[A] { }
+
+  trait ActorApply[A] extends Apply[({type λ[α]=Actor[A, α]})#λ] {
     def apply[B, C](actor1: Actor[A, B => C], actor2: Actor[A, B]): Actor[A, C] = receive { a: A =>
       (actor1 ! a) match {
         case (bToC, next1) =>
@@ -31,6 +32,8 @@ trait ActorTypeclasses {
       }
     }
   }
+
+  implicit def actorApply[A] = new ActorApply[A] { }
 
   implicit val ActorCategory = new Category[Actor] {
     def id[A] = {
@@ -72,22 +75,27 @@ trait ActorTypeclasses {
     }
   }
 
-  implicit def ActorApplicative[A]: Applicative[({type λ[α]=Actor[A, α]})#λ] = Applicative.applicative[({type λ[α] = Actor[A, α]})#λ](ActorPure, ActorApply)
+  implicit def ActorApplicative[A]: Applicative[({type λ[α]=Actor[A, α]})#λ] = 
+    new Applicative[({type λ[α]=Actor[A, α]})#λ] with ActorPointed[A] with ActorApply[A] { }
 
-  implicit def ActorStatePure[A] = new Pure[({type λ[α]=ActorState[A, α]})#λ] {
-    def pure[B](b: => B): ActorState[A, B] = (b, ActorPure.pure(b))
+  trait ActorStatePointed[A] extends Pointed[({type λ[α]=ActorState[A, α]})#λ] {
+    def point[B](b: => B): ActorState[A, B] = (b, actorPointed.point(b))
   }
 
-  implicit def ActorStateApply[A] = new Apply[({type λ[α]=ActorState[A, α]})#λ] {
+  implicit def actorStatePointed[A] = new ActorStatePointed[A] { } 
+
+  trait ActorStateApply[A] extends Apply[({type λ[α]=ActorState[A, α]})#λ] {
     def apply[B, C](state1: ActorState[A, B => C], state2: ActorState[A, B]): ActorState[A, C] = {
       val (bToC, next1) = state1
       val (b,    next2) = state2
 
-      (bToC(b), ActorApply.apply(next1, next2))
+      (bToC(b), actorApply.apply(next1, next2))
     }
   }
 
+  implicit def actorStateApply[A] = new ActorStateApply[A] { }
+
   implicit def ActorStateApplicative[A]: Applicative[({type λ[α]=ActorState[A, α]})#λ] = 
-    Applicative.applicative[({type λ[α] = ActorState[A, α]})#λ](ActorStatePure, ActorStateApply)
+    new Applicative[({type λ[α] = ActorState[A, α]})#λ] with ActorStatePointed[A] with ActorStateApply[A] { }
 }
 object ActorTypeclasses extends ActorTypeclasses

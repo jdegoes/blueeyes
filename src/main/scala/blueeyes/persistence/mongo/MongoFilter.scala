@@ -126,13 +126,13 @@ sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter 
   private def notEqsQuery(queries: Seq[MongoFilter]) = {
     implicit val mergeMonoid = MergeMonoid
     val objects = queries.map(_.filter)
-    (JObject(Nil) +: objects).asMA.sum.asInstanceOf[JObject]
+    (JObject(Nil) +: objects).toList.suml.asInstanceOf[JObject]
   }
 
   private def eqsQuery(queries: Seq[MongoFilter]) = {
     implicit val concatMonoid = ConcatMonoid
     val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue])
-    (JObject(Nil) +: fields).asMA.sum.asInstanceOf[JObject]
+    (JObject(Nil) +: fields).toList.suml.asInstanceOf[JObject]
   }
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))

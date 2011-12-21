@@ -9,7 +9,7 @@ import blueeyes.core.service._
 import engines.HttpClientXLightWeb
 
 import scalaz.{Failure, Success}
-import scalaz.Scalaz._
+import scalaz.Validation._
 
 trait ConfigurableHttpClient extends AkkaDefaults {
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))

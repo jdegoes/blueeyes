@@ -111,7 +111,7 @@ case object MongoUpdateNothing extends MongoUpdate{
 
 sealed case class MongoUpdateFields(list: Seq[MongoUpdateField]) extends MongoUpdate{
   private lazy val normalized = Set(list: _*)
-  def toJValue: JObject = list.distinct.map(_.toJValue).asMA.sum
+  def toJValue: JObject = list.distinct.map(_.toJValue).toList.suml
 
   override def equals(that: Any): Boolean = that match {
     case that: MongoUpdateFields if (this.normalized.size == that.normalized.size) => normalized == that.normalized

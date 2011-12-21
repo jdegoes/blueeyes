@@ -18,7 +18,7 @@ package object util {
     override def compare(d1: ReadableDuration, d2: ReadableDuration) = d1.compareTo(d2)
   }
 
-  implicit val InstantOrder = Order.LongOrder.contramap((i: Instant) => i.getMillis)
+  implicit val InstantOrder = scalaz.std.anyVal.longInstance.contramap((i: Instant) => i.getMillis)
 }
 
 

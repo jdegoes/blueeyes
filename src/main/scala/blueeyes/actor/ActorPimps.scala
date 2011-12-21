@@ -2,13 +2,17 @@ package blueeyes.actor
 
 import scalaz._
 import scalaz.Scalaz._
+import scalaz.std.tuple._
+import scalaz.syntax.biFunctor._
 
 import akka.dispatch.Future
 import akka.dispatch.MessageDispatcher
 
+
 trait ActorPimps {
   import ActorHelpers._
   import ActorTypeclasses._
+  implicit val bt: BiTraverse[ActorState] = implicitly[BiTraverse[({type λ[α, β] = (α, Actor[α, β])})#λ]]
 
   implicit def ActorPimpToMAB[A, B](pimp: ActorPimp[A, B]) = ActorToMAB(pimp.value)
 
@@ -21,11 +25,11 @@ trait ActorPimps {
 
   implicit def ActorStateToActorStatePimp[A, B](value: ActorState[A, B]): ActorStatePimp[A, B] = ActorStatePimp(value)
 
-  sealed case class ActorPimp[A, B](value: Actor[A, B]) extends NewType[Actor[A, B]] {
+  sealed case class ActorPimp[A, B](value: Actor[A, B]) {
     /** Maps the input values sent to the actor.
      */
     def premap[AA](f: AA => A): Actor[AA, B] = receive[AA, B] { aa: AA =>
-      (value ! f(aa)).mapElements[B, Actor[AA, B]](identity, _.premap[AA](f))
+      (value ! f(aa)).bimap[B, Actor[AA, B]](identity, _.premap[AA](f))
     }
 
     /** 
@@ -61,8 +65,8 @@ trait ActorPimps {
      */
     def ^ [C, D] (that: Actor[C, D]): Actor[Either[A, C], Either[B, D]] = {
       receive { 
-        case Left(a)  => (value ! a).mapElements(Left.apply  _, _ ^ that)
-        case Right(c) => (that  ! c).mapElements(Right.apply _, value ^ _)
+        case Left(a)  => (value ! a).bimap(Left.apply  _, _ ^ that)
+        case Right(c) => (that  ! c).bimap(Right.apply _, value ^ _)
       }
     }
 
@@ -171,7 +175,7 @@ trait ActorPimps {
     def variant[AA <: A, BB >: B]: Actor[AA, BB] = premap[AA](aa => (aa: A)).postmap[BB](b => (b: BB))
   }
 
-  case class HigherKindedPimp[T[_], A, B](value: Actor[A, T[B]]) extends NewType[Actor[A, T[B]]] {
+  case class HigherKindedPimp[T[_], A, B](value: Actor[A, T[B]]) {
     def filter(f: T[B] => Boolean)(implicit empty: Empty[T]): Actor[A, T[B]] = receive { a: A =>
       val (tb, next) = value ! a
 
@@ -179,7 +183,7 @@ trait ActorPimps {
     }
   }
 
-  case class TupledOutputPimp[A, B1, B2](value: Actor[A, (B1, B2)]) extends NewType[Actor[A, (B1, B2)]] {
+  case class TupledOutputPimp[A, B1, B2](value: Actor[A, (B1, B2)]) {
     def >- [B](f: (B1, B2) => B): Actor[A, B] = receive { a: A =>
       val ((b1, b2), next) = value ! a
        
@@ -189,26 +193,26 @@ trait ActorPimps {
     }
   }
 
-  case class ValidatedPimp[A, E, B](value: Actor[A, Validation[E, B]]) extends NewType[Actor[A, Validation[E, B]]] {
+  case class ValidatedPimp[A, E, B](value: Actor[A, Validation[E, B]]) {
     def | [AA >: A, BB <: B, EE <: E](that: Actor[AA, Validation[EE, BB]]): Actor[A, Validation[E, B]] = {
       receive { a: A =>
         try {
           val result = value ! a
 
-          result.mapElements(identity, _ | that.variant[A, Validation[E, B]]) match {
-            case (Failure(_), next) => (that ! a).variant[A, Validation[E, B]].mapElements(identity, next | _)
+          result.bimap(identity, _ | that.variant[A, Validation[E, B]]) match {
+            case (Failure(_), next) => (that ! a).variant[A, Validation[E, B]].bimap(identity, next | _)
 
             case x => x
           }
         }
         catch {
-          case e: MatchError => (that ! a).variant[A, Validation[E, B]].mapElements(identity, this | _)
+          case e: MatchError => (that ! a).variant[A, Validation[E, B]].bimap(identity, this | _)
         }
       }
     }
   }
 
-  case class HigherOrderPimp[A, B, C, D](value: Actor[(A, Actor[C, D]), (B, Actor[C, D])]) extends NewType[Actor[(A, Actor[C, D]), (B, Actor[C, D])]] {
+  case class HigherOrderPimp[A, B, C, D](value: Actor[(A, Actor[C, D]), (B, Actor[C, D])]) {
     /** Joins a higher order actor with its dependency to produce a lower 
      * order actor.
      */
@@ -221,12 +225,12 @@ trait ActorPimps {
     }
   }
 
-  case class ActorStatePimp[A, B](value: ActorState[A, B]) extends NewType[ActorState[A, B]] {
-    def premap[AA](f: AA => A): (B, Actor[AA, B]) = value.mapElements[B, Actor[AA, B]](identity, _.premap[AA](f))
+  case class ActorStatePimp[A, B](value: ActorState[A, B]) {
+    def premap[AA](f: AA => A): (B, Actor[AA, B]) = value.bimap[B, Actor[AA, B]](identity, _.premap[AA](f))
     
-    def postmap[BB](f: B => BB): (BB, Actor[A, BB]) = value.mapElements[BB, Actor[A, BB]](f, _.postmap[BB](f))
+    def postmap[BB](f: B => BB): (BB, Actor[A, BB]) = value.bimap[BB, Actor[A, BB]](f, _.postmap[BB](f))
 
-    def variant[AA <: A, BB >: B]: (BB, Actor[AA, BB]) = value.mapElements((b: B) => (b : BB), _.variant[AA, BB])
+    def variant[AA <: A, BB >: B]: (BB, Actor[AA, BB]) = value.bimap((b: B) => (b : BB), _.variant[AA, BB])
   }
 }
 object ActorPimps extends ActorPimps

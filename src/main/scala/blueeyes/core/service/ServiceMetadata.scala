@@ -8,6 +8,7 @@ import blueeyes.core.http.HttpHeaders.{`Content-Type`}
 
 import scalaz.Scalaz._
 import scalaz.{Validation, Failure, Semigroup}
+import scalaz.syntax.semigroup._
 
 sealed trait NotServed {
   def or[A](result: => Validation[NotServed, A]): Validation[NotServed, A]
@@ -188,8 +189,8 @@ object Metadata {
           case (l, OrMetadata(ms @ _*)) => l ++ ms
           case (l, m) => l :+ m
         }: _*))
-      case s: DelegatingService[_, _, _, _] => metadata(m ⊹ nePath(s.metadata), s.delegate)
-      case s => m ⊹ nePath(s.metadata)
+      case s: DelegatingService[_, _, _, _] => metadata(m |+| nePath(s.metadata), s.delegate)
+      case s => m |+| nePath(s.metadata)
     }
 
     def nePath(m: Option[Metadata]) = m.flatMap{

@@ -48,7 +48,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   def toJValue: Future[JValue] = {
     val statistics  = List[Map[JPath, Statistic[_]]](timerStats, sampleStats, countStats, exportedStats, timedSampleStats, errorStats)
     val map = statistics.map(composeStatistics(_))
-    Future.sequence((map ::: List(errorsCountJValue))).map(_.asMA.sum)
+    Future.sequence((map ::: List(errorsCountJValue))).map(_.suml)
   }
 
   def countStats    = _countsStats.toMap
@@ -84,7 +84,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   }
 
   private def composeStatistics(stat: Map[JPath, Statistic[_]])  =
-    Future.sequence(stat.toList.map(kv => toJValue(kv._2).map(jvalueToJObject(kv._1, _)))).map{_.asMA.sum}
+    Future.sequence(stat.toList.map(kv => toJValue(kv._2).map(jvalueToJObject(kv._1, _)))).map(_.suml)
 
   private def toJValue[T](statistic: Statistic[T]): Future[JValue] = statistic match {
     case e: AsyncStatistic[T, _] => e.toJValue

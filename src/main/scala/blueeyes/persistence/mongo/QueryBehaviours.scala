@@ -39,7 +39,7 @@ private[mongo] object QueryBehaviours{
       val answer    = query(collection)
       val lastError = collection.getLastError
 
-      lastError.map(why => Failure(new MongoException(why))).getOrElse(Success(answer))
+      lastError.map(why => Failure(new MongoException(why): Throwable)).getOrElse(Success(answer))
     } finally {
       collection.requestDone()
     }

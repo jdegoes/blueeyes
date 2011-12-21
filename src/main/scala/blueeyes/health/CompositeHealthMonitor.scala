@@ -28,7 +28,7 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
 
   def error(path: JPath)(t: Throwable) {healthMonitors.foreach(_.error(path)(t))}
 
-  def toJValue = Future.sequence[JValue, List](healthMonitors.map(_.toJValue))map(_.asMA.sum)
+  def toJValue = Future.sequence[JValue, List](healthMonitors.map(_.toJValue))map(_.suml)
 
   def shutdown(timeout: Timeout): Future[Any] = Future.sequence[Any, List](healthMonitors.map(_.shutdown(timeout)))
 }

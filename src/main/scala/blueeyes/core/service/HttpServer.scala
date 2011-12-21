@@ -18,8 +18,9 @@ import java.net.InetAddress
 
 import net.lag.configgy.{Config, ConfigMap, Configgy}
 import com.weiglewilczek.slf4s.Logger
-import scalaz.Scalaz._
 import scalaz.{Failure, Success}
+import scalaz.Validation._
+import scalaz.syntax.validation._
 
 /** A trait that grabs services reflectively from the fields of the class it is
  * mixed into.
@@ -76,7 +77,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
 
     // Convert the raw future into one that cannot die:
     rawValidation match {
-      case Success(rawFuture) => success(rawFuture recover { case error => convertErrorToResponse(error) })
+      case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(error) }))
       case Failure(DispatchError(throwable)) => success(Future(convertErrorToResponse(throwable)))
       case failure => success(Promise.successful(NotFound))
     }

@@ -2,6 +2,7 @@ package blueeyes.actor
 
 import scalaz._
 import scalaz.Scalaz._
+import scalaz.Validation._
 
 trait ActorHelpers {
   def identityActor[A] = moore(identity[A])

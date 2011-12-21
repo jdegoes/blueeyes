@@ -204,7 +204,7 @@ private[mock] object FilterToUpdateConvert{
       case $eq  => x.lhs set x.rhs
       case _    => MongoUpdateNothing
     }
-    case x : MongoAndFilter           => x.queries.distinct.map(FilterToUpdateConvert(_)).asMA.sum
+    case x : MongoAndFilter           => x.queries.distinct.map(FilterToUpdateConvert(_)).toList.suml
   }
 }
 

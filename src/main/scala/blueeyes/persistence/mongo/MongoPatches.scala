@@ -17,7 +17,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
   /** Combines the two collections of patches into a single collection.
    */
   def ++ (that: MongoPatches): MongoPatches = {
-    MongoPatches(this.patches <+> that.patches)
+    MongoPatches(this.patches |+| that.patches)
   }
 
   /** Adds a single patch to this collection of patches.

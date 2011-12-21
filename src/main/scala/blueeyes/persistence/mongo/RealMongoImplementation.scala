@@ -26,6 +26,7 @@ import akka.util.Timeout
 
 import java.util.concurrent.TimeUnit
 import scalaz.Scalaz._
+import scalaz._
 import com.weiglewilczek.slf4s.Logging
 
 object RealMongo {

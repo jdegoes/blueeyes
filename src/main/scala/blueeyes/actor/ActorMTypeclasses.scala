@@ -6,12 +6,12 @@ import scalaz.Scalaz._
 trait ActorMTypeclasses {
   import ActorMHelpers._
 
-  implicit def ActorMToMAB[M[_], A, B](actor: ActorM[M, A, B]) = mab[({type λ[a, b]=ActorM[M, a, b]})#λ, A, B](actor)
+  //implicit def ActorMToMAB[M[_], A, B](actor: ActorM[M, A, B]) = mab[({type λ[a, b]=ActorM[M, a, b]})#λ, A, B](actor)
 
-  implicit def ActorMPure[M[_], A](implicit monad: Monad[M]) = new Pure[({type λ[α]=ActorM[M, A, α]})#λ] {
-    def pure[B](b: => B): ActorM[M, A, B] = {
+  implicit def ActorMPointed[M[_], A](implicit monad: Monad[M]) = new Pointed[({type λ[α]=ActorM[M, A, α]})#λ] {
+    def point[B](b: => B): ActorM[M, A, B] = {
       lazy val lazySelf: ActorM[M, A, B] = receive { a: A =>
-        monad.pure((b, lazySelf))
+        monad.point((b, lazySelf))
       }
 
       lazySelf
@@ -34,7 +34,7 @@ trait ActorMTypeclasses {
 
   implicit def ActorMCategory[M[_]](implicit monad: Monad[M]) = new Category[({type λ[a, b]=ActorM[M, a, b]})#λ] {
     def id[A] = {
-      lazy val self: ActorM[M, A, A] = receive[M, A, A] { a: A => monad.pure((a, self)) }
+      lazy val self: ActorM[M, A, A] = receive[M, A, A] { a: A => monad.point((a, self)) }
 
       self
     }
@@ -73,26 +73,25 @@ trait ActorMTypeclasses {
   }
 
   implicit def ActorMApplicative[M[_]: Monad, A]: Applicative[({type λ[α]=ActorM[M, A, α]})#λ] = 
-    Applicative.applicative[({type λ[α] = ActorM[M, A, α]})#λ](ActorMPure, ActorMApply)
+    Applicative.applicative[({type λ[α] = ActorM[M, A, α]})#λ](ActorMPointed, ActorMApply)
 
-  implicit def ActorMStatePure[M[_]: Monad, A] = new Pure[({type λ[α]=ActorMState[M, A, α]})#λ] {
-    def pure[B](b: => B): ActorMState[M, A, B] = implicitly[Monad[M]].pure((b, ActorMPure.pure(b)))
+  implicit def ActorMStatePointed[M[_], A](implicit monad: Monad[M]) = new Pointed[({type λ[α]=ActorMState[M, A, α]})#λ] {
+    def point[B](b: => B): ActorMState[M, A, B] = monad.point((b, ActorMPointed(monad).point(b)))
   }
 
-
-  implicit def ActorMStateApply[M[_]: Monad, A] = new Apply[({type λ[α]=ActorMState[M, A, α]})#λ] {
+  implicit def ActorMStateApply[M[_], A](implicit monad: Monad[M]) = new Apply[({type λ[α]=ActorMState[M, A, α]})#λ] {
     def apply[B, C](state1: ActorMState[M, A, B => C], state2: ActorMState[M, A, B]): ActorMState[M, A, C] = {
       state1 flatMap {
         case (bToC, next1) =>
           state2 map {
             case (b, next2) =>
-              (bToC(b), ActorMApply.apply(next1, next2))
+              (bToC(b), ActorMApply(monad).apply(next1, next2))
           }
       }
     }
   }
 
   implicit def ActorMStateApplicative[M[_]: Monad, A]: Applicative[({type λ[α]=ActorMState[M, A, α]})#λ] = 
-    Applicative.applicative[({type λ[α] = ActorMState[M, A, α]})#λ](ActorMStatePure, ActorMStateApply)
+    Applicative.applicative[({type λ[α] = ActorMState[M, A, α]})#λ](ActorMStatePointed, ActorMStateApply)
 }
 object ActorMTypeclasses extends ActorMTypeclasses

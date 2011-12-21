@@ -609,7 +609,7 @@ object JsonAST {
     
     def values = Map() ++ fields.map(_.values : (String, Any))
     def partition(f: JField => Boolean): (JObject, JObject) = {
-      fields.partition(f).mapElements(JObject(_), JObject(_))
+      fields.partition(f).bimap(JObject(_), JObject(_))
     }
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))

@@ -79,7 +79,7 @@ object DelegatingService {
 }
 
 case class HttpHandlerService[A, B](h: HttpServiceHandler[A, B]) extends CustomHttpService[A, B] {
-  val service = (r: HttpRequest[A]) => success(h(r))
+  val service = (r: HttpRequest[A]) => h(r).success
 
   val metadata = None
 }
@@ -320,19 +320,19 @@ object JsonpService extends AkkaDefaults {
             val content = r.parameters.get('content).map(parse _).map(Future(_))
             val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
-            success(r.copy(method = method, content = content, headers = r.headers ++ headers))
+            r.copy(method = method, content = content, headers = r.headers ++ headers).success
           } catch {
-            case e => failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, Option(e.getMessage).getOrElse(""))))
+            case e => DispatchError(HttpException(HttpStatusCodes.BadRequest, Option(e.getMessage).getOrElse(""))).fail
           }
         } else {
-          failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")))
+          DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")).fail
         }
 
       case Some(callback) =>
-        failure(DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")))
+        DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")).fail
 
       case None =>
-        success(r.copy(content = r.content.map(toJson)))
+        r.copy(content = r.content.map(toJson)).success
     }
   }
 

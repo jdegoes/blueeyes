@@ -3,7 +3,7 @@ package blueeyes.core.data
 import blueeyes.json.JsonAST.JValue
 import scala.xml.NodeSeq
 
-import scalaz.{ Validation, Failure }
+import scalaz.{ Validation, Failure, ValidationNEL }
 import scalaz.Scalaz._
 
 sealed trait Unapply[A, B] {
