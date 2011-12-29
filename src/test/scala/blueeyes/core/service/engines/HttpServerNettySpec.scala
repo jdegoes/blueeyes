@@ -37,7 +37,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   val duration: org.specs2.time.Duration = 350.milliseconds
   val retries = 50
 
-  override implicit val defaultFutureTimeouts = FutureTimeouts(50, specsDuration2Akka(duration))
+  implicit val testTimeouts = FutureTimeouts(50, duration)
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
