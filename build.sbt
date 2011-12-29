@@ -43,8 +43,8 @@ parallelExecution in Test := false
 
 publishTo <<= (version) { version: String =>
   val nexus = "http://nexus.reportgrid.com/content/repositories/"
-  if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"snapshots/") 
-  else                                   Some("releases"  at nexus+"releases/")
+  if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
+  else                                   Some("releases"  at nexus+"public-releases/")
 }
 
 credentials := Credentials(Path.userHome / ".ivy2" / ".rgcredentials") :: Nil
