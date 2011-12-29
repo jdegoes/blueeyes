@@ -12,15 +12,18 @@ import blueeyes.util.RichThrowableImplicits._
 
 import org.specs2.matcher._
 
-package org.specs2 {
-  trait AkkaConversions {
-    implicit def specsDuration2Akka(duration: org.specs2.time.Duration) = new DurationLong(duration.inMillis).millis
+package blueeyes.concurrent.test {
+
+trait AkkaConversions {
+  implicit def specsDuration2Akka(duration: org.specs2.time.Duration): akka.util.Duration = new DurationLong(duration.inMillis).millis
+  implicit def specsDuration2Rich(duration: org.specs2.time.Duration) = new RichSpecsDuration(duration)
+
+  class RichSpecsDuration(duration: org.specs2.time.Duration) {
+    def toAkka = specsDuration2Akka(duration)
   }
 }
 
-package blueeyes.concurrent.test {
-
-trait FutureMatchers extends org.specs2.AkkaConversions { 
+trait FutureMatchers extends AkkaConversions { 
   case class FutureTimeouts(retries: Int, duration: Duration)
 
   private sealed trait Outcome[A]

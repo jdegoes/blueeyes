@@ -9,29 +9,35 @@ import akka.dispatch.Promise
 import akka.dispatch.Await
 import akka.util._
 
-import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
-import java.util.concurrent.CountDownLatch
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
-import javax.net.ssl.TrustManagerFactory
-import net.lag.configgy.{ConfigMap, Configgy}
+
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import javax.net.ssl.TrustManagerFactory
+
+import net.lag.configgy.{ConfigMap, Configgy}
+
+import blueeyes.concurrent.test.FutureMatchers
 import org.specs2.specification.{Step, Fragments}
 import org.specs2.time.TimeConversions._
 
-class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with blueeyes.concurrent.test.FutureMatchers {
+class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with FutureMatchers {
 
   private val configPattern = """server{
   port = %d
   sslPort = %d
 }"""
 
-  val duration = 350.milliseconds
+  val duration: org.specs2.time.Duration = 350.milliseconds
   val retries = 50
+
+  override implicit val defaultFutureTimeouts = FutureTimeouts(50, specsDuration2Akka(duration))
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
@@ -95,7 +101,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
     "read file"in{
       Context.dataFile.delete
 
-      akka.dispatch.Await.result(client.post("/file/write")("foo"), new DurationLong(duration.inMillis).millis)
+      akka.dispatch.Await.result(client.post("/file/write")("foo"), duration)
       client.get("/file/read") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
@@ -178,7 +184,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   private def readContent(chunk: ByteChunk): String = {
     val promise = Promise[String]()
     readContent(chunk, new ofByte(), promise)
-    akka.dispatch.Await.result(promise, new akka.util.DurationLong(duration.inMillis).millis)
+    akka.dispatch.Await.result(promise, duration)
   }
 
   private def readContent(chunk: ByteChunk, buffer: ofByte, promise: Promise[String]) {
