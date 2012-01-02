@@ -3,11 +3,18 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
-trait ActorHelpers {
+trait ActorFunctions {
   def identityActor[A] = moore(identity[A])
   
   def receive[A, B](fn: A => ActorState[A, B]): Actor[A, B] = new Actor[A, B] {
     final def receive(a: A): ActorState[A, B] = fn(a)
+  }
+
+  def receiveOnly[A, B](fn: PartialFunction[A, ActorState[A, B]])(implicit zero: Zero[B]): Actor[A, B] = new Actor[A, B] {
+    final def receive(a: A): ActorState[A, B] = {
+      if (fn.isDefinedAt(a)) fn(a)
+      else (zero.zero, receiveOnly(fn))
+    }
   }
 
   def receiveSome[A, B, E >: MatchError](fn: PartialFunction[A, ActorState[A, Validation[E, B]]]): Actor[A, Validation[E, B]] = {
@@ -51,4 +58,4 @@ trait ActorHelpers {
     lazySelf
   }
 }
-object ActorHelpers extends ActorHelpers
+object ActorFunctions extends ActorFunctions

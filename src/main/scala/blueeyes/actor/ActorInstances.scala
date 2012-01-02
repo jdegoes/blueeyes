@@ -3,8 +3,8 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
-trait ActorTypeclasses {
-  import ActorHelpers._
+trait ActorInstances {
+  import ActorFunctions._
 
   implicit def ActorToMAB[A, B](actor: Actor[A, B]) = mab[Actor, A, B](actor)
 
@@ -90,4 +90,4 @@ trait ActorTypeclasses {
   implicit def ActorStateApplicative[A]: Applicative[({type λ[α]=ActorState[A, α]})#λ] = 
     Applicative.applicative[({type λ[α] = ActorState[A, α]})#λ](ActorStatePure, ActorStateApply)
 }
-object ActorTypeclasses extends ActorTypeclasses
+object ActorInstances extends ActorInstances

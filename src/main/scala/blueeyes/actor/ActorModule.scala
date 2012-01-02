@@ -1,4 +1,4 @@
 package blueeyes.actor
 
-trait ActorModule extends ActorHelpers with ActorTypeclasses with ActorPimps
+trait ActorModule extends ActorFunctions with ActorInstances with ActorPimps
 object ActorModule extends ActorModule

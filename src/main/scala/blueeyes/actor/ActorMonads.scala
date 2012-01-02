@@ -11,7 +11,7 @@ import scalaz.Scalaz._
 trait ActorMonadParallel {
   implicit def ActorMonadParallel[A] = new Monad[({type λ[α]=Actor[A, α]})#λ] {
     def bind[B, C](self: Actor[A, B], f: B => Actor[A, C]): Actor[A, C] =  {
-      ActorHelpers.receive { a: A =>
+      ActorFunctions.receive { a: A =>
         val (b, next1) = self ! a
 
         val that = f(b)
@@ -23,7 +23,7 @@ trait ActorMonadParallel {
     }
 
     def pure[B](b: => B): Actor[A, B] = {
-      lazy val lazySelf: Actor[A, B] = ActorHelpers.receive { a: A =>
+      lazy val lazySelf: Actor[A, B] = ActorFunctions.receive { a: A =>
         (b, lazySelf)
       }
 

@@ -3,16 +3,16 @@ package blueeyes.actor
 import scalaz._
 import Scalaz._
 
-trait ActorM[M[_], A, B] extends (A => M[(B, ActorM[M, A, B])]) with Serializable { self =>
-  final def apply(a: A): ActorMState[M, A, B] = receive(a)
+trait ActorT[M[_], A, B] extends (A => M[(B, ActorT[M, A, B])]) with Serializable { self =>
+  final def apply(a: A): ActorTState[M, A, B] = receive(a)
 
-  final def ! (a: A): ActorMState[M, A, B] = receive(a)
+  final def ! (a: A): ActorTState[M, A, B] = receive(a)
 
   /** Send multiple values and collect all the results.
    */
-  final def !! (head: A, tail: A*)(implicit monad: Monad[M]): M[(Seq[B], ActorM[M, A, B])] = !! (head +: tail)
+  final def !! (head: A, tail: A*)(implicit monad: Monad[M]): M[(Seq[B], ActorT[M, A, B])] = !! (head +: tail)
 
-  final def !! (as: Seq[A])(implicit monad: Monad[M]): M[(Seq[B], ActorM[M, A, B])] = {
+  final def !! (as: Seq[A])(implicit monad: Monad[M]): M[(Seq[B], ActorT[M, A, B])] = {
     if (as.length == 0) monad.pure((Vector.empty[B], self))
     else {
       val head = as.head
@@ -30,9 +30,9 @@ trait ActorM[M[_], A, B] extends (A => M[(B, ActorM[M, A, B])]) with Serializabl
 
   /** Send multiple values and combine the results with a monoid.
    */
-  final def !+! (head: A, tail: A*)(implicit monad: Monad[M], monoid: Monoid[B]): ActorMState[M, A, B] = !+! (head +: tail)
+  final def !+! (head: A, tail: A*)(implicit monad: Monad[M], monoid: Monoid[B]): ActorTState[M, A, B] = !+! (head +: tail)
 
-  final def !+! (as: Seq[A])(implicit monad: Monad[M], monoid: Monoid[B]): ActorMState[M, A, B] = {
+  final def !+! (as: Seq[A])(implicit monad: Monad[M], monoid: Monoid[B]): ActorTState[M, A, B] = {
     if (as.length == 0) monad.pure((monoid.zero, self))
     else {
       val head = as.head
@@ -48,7 +48,7 @@ trait ActorM[M[_], A, B] extends (A => M[(B, ActorM[M, A, B])]) with Serializabl
     }
   }
 
-  protected def receive(a: A): ActorMState[M, A, B]
+  protected def receive(a: A): ActorTState[M, A, B]
 }
 
-object ActorM extends ActorMModule
+object ActorT extends ActorTModule

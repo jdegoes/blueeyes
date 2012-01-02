@@ -6,8 +6,8 @@ import scalaz.Scalaz._
 import blueeyes.concurrent.Future
 
 trait ActorPimps {
-  import ActorHelpers._
-  import ActorTypeclasses._
+  import ActorFunctions._
+  import ActorInstances._
 
   implicit def ActorPimpToMAB[A, B](pimp: ActorPimp[A, B]) = ActorToMAB(pimp.value)
 
@@ -149,7 +149,7 @@ trait ActorPimps {
 
     /** Lifts the output values into a monad.
      */
-    def lift[M[_]](implicit monad: Monad[M]): ActorM[M, A, B] = ActorMHelpers.receive[M, A, B] { a: A =>
+    def lift[M[_]](implicit monad: Monad[M]): ActorT[M, A, B] = ActorTFunctions.receive[M, A, B] { a: A =>
       monad.pure(value ! a) map {
         case (b, next) =>
           (b, next.lift[M])
@@ -158,7 +158,7 @@ trait ActorPimps {
 
     /** Converts a synchronous actor into an aynchronous actor.
      */
-    def async: ActorAsync[A, B] = ActorMHelpers.receive[Future, A, B] { a: A =>
+    def async: ActorAsync[A, B] = ActorTFunctions.receive[Future, A, B] { a: A =>
       Future.async(value ! a) map {
         case (b, next) =>
           (b, next.async)

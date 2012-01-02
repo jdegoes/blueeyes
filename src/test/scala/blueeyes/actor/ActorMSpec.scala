@@ -12,14 +12,14 @@ import scalaz._
 import scalaz.Scalaz._
 
 class ActorMSpec extends Specification with ScalaCheck {
-  import ActorMModule._
+  import ActorTModule._
 
-  val double: ActorM[Option, Int, Int] = moore((v: Int) => v * 2)
+  val double: ActorT[Option, Int, Int] = moore((v: Int) => v * 2)
 
-  val halve: ActorM[Option, Int, Int] = moore((v: Int) => v / 2)
+  val halve: ActorT[Option, Int, Int] = moore((v: Int) => v / 2)
 
-  val doubleEveryOther: ActorM[Option, Int, Int] = {
-    def d0(double: Boolean): ActorM[Option, Int, Int] = receive { a: Int =>
+  val doubleEveryOther: ActorT[Option, Int, Int] = {
+    def d0(double: Boolean): ActorT[Option, Int, Int] = receive { a: Int =>
       Some((if (double) a * 2 else a, d0(!double)))
     }
     
