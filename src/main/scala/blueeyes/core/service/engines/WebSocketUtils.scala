@@ -1,11 +1,10 @@
 package blueeyes.core.service.engines
 
 import blueeyes.core.data._
-import blueeyes.core.http.{HttpHeaders, HttpRequest}
+import blueeyes.core.http.HttpHeaders
 
 trait WebSocketUtils {
-  def isWebSocketRequest(request: HttpRequest[ByteChunk]) = {
-    val headers = request.headers
+  def isWebSocketRequest(headers: HttpHeaders) = {
     headers.get(HttpHeaders.`Sec-WebSocket-Version`.name).map{_ =>
       headers.get(HttpHeaders.`Sec-WebSocket-Key`.name).map(_ => true).getOrElse{
         (headers.get(HttpHeaders.Connection.name), headers.get(HttpHeaders.Upgrade.name)) match {

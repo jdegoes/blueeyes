@@ -12,7 +12,7 @@ import blueeyes.concurrent.Future
 import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 
-trait HttpNettyConverters{
+trait HttpNettyConverters extends  WebSocketUtils{
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
     case "HTTP/1.0" => `HTTP/1.0`
     case "HTTP/1.1" => `HTTP/1.1`
@@ -61,7 +61,12 @@ trait HttpNettyConverters{
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {
     val parameters          = getParameters(request.getUri)
     val headers             = buildHeaders(request.getHeaders)
-    val content             = fromNettyContent(request.getContent, () => None)
+    val content             = if (isWebSocketRequest(headers))
+      fromNettyContent(request.getContent, () => None)
+    else {
+      val future = Some(new Future[ByteChunk]())
+      Some(new MemoryChunk(Array[Byte](), () => future))
+    }
 
     val xforwarded  = headers.header(`X-Forwarded-For`).flatMap(_.ips.toList.headOption.map(_.ip))
     val remoteIp    = xforwarded.orElse(headers.header(`X-Cluster-Client-Ip`).flatMap(_.ips.toList.headOption.map(_.ip)))

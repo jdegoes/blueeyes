@@ -24,7 +24,7 @@ import blueeyes.concurrent.{ReadWriteLock, Future}
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
 private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpService[ByteChunk], log: Logger) extends SimpleChannelUpstreamHandler with HttpNettyConverters with WebSocketUtils{
-  private var handshaker: Option[WebSocketServerHandshaker] = None
+
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
@@ -47,14 +47,14 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
       }
     }
     event.getMessage match{
-      case r: HttpRequest[ByteChunk] =>
-        requestHandler.service(r).foreach{ responseFuture =>
+      case request: HttpRequest[ByteChunk] =>
+        requestHandler.service(request).foreach{ responseFuture =>
           pendingResponses += responseFuture
 
           responseFuture.deliverTo { response =>
             pendingResponses -= responseFuture
 
-            if (isWebSocketRequest(r)) startHandshake(r, response, ctx)
+            if (isWebSocketRequest(request.headers) && response.status.code == HttpStatusCodes.OK) startHandshake(request, response, ctx)
             else writeResponse(event, response)
           }
         }
@@ -64,12 +64,12 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
 
   private def startHandshake(request: HttpRequest[ByteChunk], response: HttpResponse[ByteChunk], ctx: ChannelHandlerContext){
     var wsFactory = new WebSocketServerHandshakerFactory(getWebSocketLocation(request), null, false)
-    handshaker = Option(wsFactory.newHandshaker(ctx, toNettyRequest(request)))
+    val handshaker = Option(wsFactory.newHandshaker(ctx, toNettyRequest(request)))
     handshaker match {
-      case Some(e) =>
-        e.executeOpeningHandshake(ctx, toNettyRequest(request))
+      case Some(h) =>
+        h.executeOpeningHandshake(ctx, toNettyRequest(request))
         ctx.getChannel.getPipeline.remove("chunkedWriter")
-        e.getChannel.write(message)
+        ctx.getChannel.getPipeline.replace("handler", "wshandler", new HttpNettyWebSocketRequestHandler(response, h))
       case _ => wsFactory.sendUnsupportedWebSocketVersionResponse(ctx)
     }
   }
@@ -113,71 +113,14 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
     pendingResponses.foreach(_.cancel(why))
     pendingResponses.clear()
   }
-}
 
-import org.jboss.netty.handler.stream.ChunkedInput
-import org.jboss.netty.handler.stream.ChunkedWriteHandler
-private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput{
-
-  private val log   = Logger.get
-  private var done  = false
-
-  private val lock = new ReadWriteLock{}
-  private var nextChunkFuture: Future[ByteChunk] = _
-
-  setNextChunkFuture(Future.sync(chunk))
-
-  def close() {nextChunkFuture.cancel()}
-
-  def isEndOfInput = !hasNextChunk
-
-  def nextChunk = {
-    nextChunkFuture.value.map{chunk =>
-      val data = chunk.data
-      if (!data.isEmpty) new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data)) else new DefaultHttpChunkTrailer()
-    }.orElse{
-      nextChunkFuture.deliverTo{nextChunk =>
-        channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
+  class ChunkedContent(content: Option[ByteChunk]){
+    val (chunk, isChunked) = content map { value =>
+      val nextChunk = value.next
+      nextChunk match {
+        case Some(next) => (Some(new MemoryChunk(value.data, () => {nextChunk})), true)
+        case None       => (content, false)
       }
-      None
-    }.orNull
+    } getOrElse ((None, false))
   }
-
-  def hasNextChunk = {
-    nextChunkFuture.value.map{chunk =>
-      chunk.next match{
-        case Some(future)     => setNextChunkFuture(future)
-          true
-        case None if (!done)  => {
-          setNextChunkFuture(Future.sync[ByteChunk](new MemoryChunk(Array[Byte]())))
-          done = true
-          true
-        }
-        case _ => false
-      }
-    }.getOrElse(true)
-  }
-
-  private def setNextChunkFuture(future: Future[ByteChunk]){
-    future.trap{errors: List[Throwable] =>
-      errors.foreach(error => log.warning(error, "An exception was raised by NettyChunkedInput."))
-      errors match{
-        case x :: xs => throw x
-        case _ =>
-      }
-    }
-    lock.writeLock{
-      nextChunkFuture = future
-    }
-  }
-}
-
-private[engines] class ChunkedContent(content: Option[ByteChunk]){
-  val (chunk, isChunked) = content map { value =>
-    val nextChunk = value.next
-    nextChunk match {
-      case Some(next) => (Some(new MemoryChunk(value.data, () => {nextChunk})), true)
-      case None       => (content, false)
-    }
-  } getOrElse ((None, false))
 }
