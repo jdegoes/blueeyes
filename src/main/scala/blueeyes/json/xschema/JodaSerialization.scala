@@ -14,8 +14,6 @@ trait JodaSerializationImplicits {
     def decompose(dateTime: Instant): JValue = JInt(dateTime.getMillis)
   }
 
-  implicit val DateTimeExtractor = ZonedTimeExtractor(DateTimeZone.UTC)
-
   def ZonedTimeExtractor(zone: DateTimeZone): Extractor[DateTime] = new Extractor[DateTime] {
     override def extract(jvalue: JValue): DateTime = jvalue match {
       case JInt(instant)  => new DateTime(instant.longValue, zone)

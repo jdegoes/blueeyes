@@ -1,14 +1,12 @@
 package blueeyes.core.service.engines.security
 
-import net.lag.logging.Logger
-import blueeyes.concurrent.Future
+import blueeyes.bkka.AkkaDefaults
+import com.weiglewilczek.slf4s.Logging
+import akka.dispatch.Future
 import java.lang.ProcessBuilder
 import java.io.{InputStream, ByteArrayOutputStream}
 
-object JavaKeyTool{
-
-  private val log = Logger.get
-
+object JavaKeyTool extends Logging with AkkaDefaults {
   def apply(keystore: String, keyalg: String, alias: String, dname: String, validity: Int, password: String) = {
     val command = Array("keytool",
                         "-keystore",  keystore,
@@ -22,21 +20,21 @@ object JavaKeyTool{
 
     val processBuilder = new ProcessBuilder(command: _*)
 
-    log.info("Creating keypair by command: " + command.mkString(" "))
+    logger.info("Creating keypair by command: " + command.mkString(" "))
 
     val process = processBuilder.start()
 
-    val stdout = pump(process.getInputStream).deliverTo(log.info(_))
-    val stderr = pump(process.getErrorStream).deliverTo(log.error(_))
+    val stdout = pump(process.getInputStream).foreach(logger.info(_))
+    val stderr = pump(process.getErrorStream).foreach(logger.error(_))
 
     val exitCode = process.waitFor()
 
-    log.info("JavaKeyTool finished with exit code: " + exitCode)
+    logger.info("JavaKeyTool finished with exit code: " + exitCode)
 
     (exitCode, stdout, stderr)
   }
 
-  private def pump(is: InputStream): Future[String] = Future.async {
+  private def pump(is: InputStream): Future[String] = Future {
     val out = new ByteArrayOutputStream()
 
     var looping = true

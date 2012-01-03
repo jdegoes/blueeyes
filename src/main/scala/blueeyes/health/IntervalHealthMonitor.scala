@@ -1,20 +1,26 @@
 package blueeyes.health
 
-import blueeyes.concurrent.Future
 import metrics._
-import scala.collection.JavaConversions._
-import java.util.concurrent.ConcurrentHashMap
-import collection.mutable.ConcurrentMap
-import ConcurrentMaps._
+
+import akka.dispatch.Future
+import akka.util.Timeout
+
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.{JPathIndex, JPathNode, JPathField, JPath}
 import blueeyes.json.JsonAST._
 import blueeyes.json.MergeMonoid
 
+import java.util.concurrent.ConcurrentHashMap
+
+import akka.util.Timeout
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ConcurrentMap
+import ConcurrentMaps._
+
 import scalaz._
 import Scalaz._
 
-class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMonitor with FunctionsMonitor{
-
+class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMonitor with FunctionsMonitor {
   private val _countsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]
   private val _timersStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]       = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]
   private val _errorsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]
@@ -40,9 +46,9 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
   }
 
   def toJValue: Future[JValue] = {
-    val statistics  = List[Map[JPath, Statistic[_, _]]](timerStats, sampleStats, countStats, exportedStats, timedSampleStats, errorStats)
+    val statistics  = List[Map[JPath, Statistic[_]]](timerStats, sampleStats, countStats, exportedStats, timedSampleStats, errorStats)
     val map = statistics.map(composeStatistics(_))
-    Future[JValue]((map ::: List(errorsCountJValue)): _*).map(_.asMA.sum)
+    Future.sequence((map ::: List(errorsCountJValue))).map(_.asMA.sum)
   }
 
   def countStats    = _countsStats.toMap
@@ -57,14 +63,14 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
 
   def errorStats = _errorsStats.toMap
 
-  def shutdown(implicit timeout: akka.actor.Actor.Timeout) = {
-    val statistics  = List[Map[JPath, AsyncStatistic[_, _]]](timerStats, countStats, timedSampleStats, errorStats).flatMap(_.values.toList)
-    akka.dispatch.Future.sequence(statistics.map(_.shutdown), timeout.duration.toMillis).map(_ => ())
+  def shutdown(timeout: Timeout): Future[Any] = {
+    val statistics = timerStats.values ++ countStats.values ++ timedSampleStats.values ++ errorStats.values
+    Future.sequence[Any, Iterable](statistics.map(_.shutdown(timeout)))
   }
 
   private def errorsCountJValue = {
     val errorsCountPath   = _errorsStats.headOption.map(v => JPath(v._1.nodes.take(v._1.nodes.length - 2) ::: List(JPathField("count"), JPathField(intervalConfig.toString))))
-    val errors: Future[List[List[Long]]] = Future(errorStats.values.toList.map{ statistic => statistic.details.map{ histogram => histogram.values.toList.map(_.toLong) } }: _*)
+    val errors: Future[List[List[Long]]] = Future.sequence(errorStats.values.toList.map{ statistic => statistic.details.map{ histogram => histogram.values.toList.map(_.toLong) } })
     val errorsCount = errors.map{errors =>
       val initial = intervalConfig match{
         case e: interval => List.fill(e.samples)(0l)
@@ -77,12 +83,12 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
     errorsCount.map(count => errorsCountPath.map(jvalueToJObject(_, count)).getOrElse(JObject(Nil)))
   }
 
-  private def composeStatistics[T](stat: Map[JPath, Statistic[_, _]]) =
-    Future[JValue](stat.toList.map(kv => toJValue(kv._2).map(jvalueToJObject(kv._1, _))): _*).map{_.asMA.sum}
+  private def composeStatistics(stat: Map[JPath, Statistic[_]])  =
+    Future.sequence(stat.toList.map(kv => toJValue(kv._2).map(jvalueToJObject(kv._1, _)))).map{_.asMA.sum}
 
-  private def toJValue(statistic: Statistic[_, _]): Future[JValue] = statistic match {
-    case e: AsyncStatistic[_, _] => e.toJValue
-    case e: SyncStatistic[_, _]  => Future.sync(e.toJValue)
+  private def toJValue[T](statistic: Statistic[T]): Future[JValue] = statistic match {
+    case e: AsyncStatistic[T, _] => e.toJValue
+    case e: SyncStatistic[T, _]  => Future(e.toJValue)
   }
 
   private def jvalueToJObject(path: JPath, value: JValue): JValue = {

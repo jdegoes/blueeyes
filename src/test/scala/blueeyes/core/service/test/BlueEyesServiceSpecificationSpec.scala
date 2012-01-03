@@ -2,7 +2,9 @@ package blueeyes.core.service.test
 
 import org.specs2.mutable.Specification
 import blueeyes.core.service._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import blueeyes.core.http.HttpResponse
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
@@ -14,39 +16,32 @@ import blueeyes.concurrent.test.FutureMatchers
 
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers{
+  implicit val futureTimeouts = FutureTimeouts(6, 1 second)
+
   "Service Specification" should {
     "support get by valid URL" in {
-      val f = service.get[String]("/bar/id/bar.html")
-      f.value must eventually {
-        beSome(serviceResponse)
-      }
+      service.get[String]("/bar/id/bar.html") must whenDelivered { be_==(serviceResponse) }
     }
 
     "support asynch get by valid URL" in {
-      val f = service.get[String]("/asynch/future")
-      f.value must eventually(15, 1000.milliseconds) {
-        beSome(serviceResponse)
-      }
+      val result = service.get[String]("/asynch/future") 
+      result must whenDelivered { be_==(serviceResponse) }
     }
 
     "support eventually asynch get by valid URL" in {
-      service.get[String]("/asynch/eventually") must eventually {
-        whenDelivered {
-          be_==(serviceResponse)
-        }
-      }
+      service.get[String]("/asynch/eventually") must whenDelivered { be_==(serviceResponse) }
     }
   }
 }
 
-trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
+trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString {
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {
       produce(text/html) {
         path("/bar/'foo/bar.html") {
           get { request: HttpRequest[ByteChunk] =>
-            serviceResponse.future
+            Future(serviceResponse)
           }
         }~
         path("/asynch/future") {
@@ -59,10 +54,10 @@ trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
         path("/asynch/eventually") {
           get { request: HttpRequest[ByteChunk] =>
             if (eventuallyCondition) {
-              serviceResponse.future
+              Future(serviceResponse)
             } else {
               eventuallyCondition = true
-              HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)).future
+              Promise.successful(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)))
             }
           }
         }
@@ -71,15 +66,15 @@ trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString{
   }
 
   private def async[T](f: => T): Future[T] = {
-    val result = new Future[T]
+    val promise = akka.dispatch.Promise[T]()
 
     import scala.actors.Actor.actor
     actor {
-      Thread.sleep(10000)
-      result.deliver(f)
+      Thread.sleep(5000)
+      promise.success(f)
     }
 
-    result
+    promise
   }
 } 
 

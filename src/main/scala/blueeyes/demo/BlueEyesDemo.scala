@@ -1,10 +1,12 @@
 package blueeyes.demo
 
 import net.lag.configgy.ConfigMap
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.util.Timeout
+
 import blueeyes.BlueEyesServer
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
 import blueeyes.core.http.{HttpHeaders}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
@@ -23,19 +25,19 @@ object BlueEyesDemo extends BlueEyesServer with BlueEyesDemoService with ServerH
   override def main(args: Array[String]) = super.main(Array("--configFile", "/etc/default/blueeyes.conf"))
 }
 
-trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo{
-  implicit val shutdownTimeout = akka.actor.Actor.Timeout(10000)
+trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombinators with ConfigurableMongo {
+  implicit def queryTimeout = Timeout(30000)
 
   import BijectionsChunkJson._
   import BijectionsChunkString._
   import BijectionsChunkFutureJson._
   val contactListService = service("contactlist", "1.0.0") {
-    requestLogging{
+    requestLogging(Timeout(60000)) {
     help{
-    healthMonitor { monitor => context =>
+    healthMonitor(Timeout(60000)) { monitor => context =>
       startup {
         val mongoConfig = context.config.configMap("mongo")
-        BlueEyesDemoConfig(mongoConfig, mongo(mongoConfig)).future
+        Promise.successful(BlueEyesDemoConfig(mongoConfig, mongo(mongoConfig)))
       } ->
       request { demoConfig: BlueEyesDemoConfig =>
         import demoConfig._
@@ -60,7 +62,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 request.content map {
                   _.flatMap(v => database(insert(v --> classOf[JObject]).into(collection)) map (_ => HttpResponse[JValue]()))
                 } getOrElse {
-                  Future.sync(HttpResponse[JValue](status = HttpStatus(BadRequest)))
+                  Future(HttpResponse[JValue](status = HttpStatus(BadRequest)))
                 }
               }
             }
@@ -106,7 +108,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
                 produce(image / jpeg){
                   get { request: HttpRequest[ByteChunk] =>
                     val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(new File("~/Downloads/victoria-parkside-resort.jpg")), headers = HttpHeaders.Empty + ("Content-Encoding", "gzip"))
-                    Future.sync[HttpResponse[ByteChunk]](response)
+                    Future[HttpResponse[ByteChunk]](response)
                   }
                 }
               }
@@ -117,7 +119,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
           path("/ping") {
             produce(text/plain) {
               get { request: HttpRequest[ByteChunk] =>
-                Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
+                Future(HttpResponse[JValue](content = Some(JBool(true))))
               }
             }
           }
@@ -125,13 +127,13 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         describe("Jsonp service."){
           path("/Jsonp") {
             jsonp[ByteChunk] { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](content = Some(JBool(true))))
+              Future(HttpResponse[JValue](content = Some(JBool(true))))
             }
           }
         }
       }->
-      shutdown { demoConfig: BlueEyesDemoConfig =>
-        ().future
+      shutdown { 
+        _ => Future(())
       }
     }}}}
 
@@ -142,7 +144,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
         }
       }
     } getOrElse {
-      Future.sync[List[JString]](Nil)
+      Future[List[JString]](Nil)
     }
   }
 

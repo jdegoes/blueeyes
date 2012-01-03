@@ -1,5 +1,7 @@
 package blueeyes.core.http
 
+import com.weiglewilczek.slf4s.Logging
+
 sealed trait HttpStatusCode {
   def name = productPrefix.toLowerCase
       
@@ -94,7 +96,7 @@ object HttpStatusCodes {
   case object UserAccessDenied          extends ServerError(530, "User access is denied to the specified resource.")
 }
 
-trait HttpStatusCodeImplicits {
+trait HttpStatusCodeImplicits extends Logging {
   implicit def int2HttpStatusCode(statusCode: Int): HttpStatusCode = statusCode match {
     case HttpStatusCodes.OK.value                             => HttpStatusCodes.OK
     case HttpStatusCodes.Continue.value                       => HttpStatusCodes.Continue

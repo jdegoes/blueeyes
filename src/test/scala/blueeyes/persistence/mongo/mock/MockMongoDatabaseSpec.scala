@@ -1,11 +1,14 @@
 package blueeyes.persistence.mongo.mock
 
 import org.specs2.mutable.Specification
+import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.persistence.mongo.{MongoPrimitiveString, MongoImplicits}
 import blueeyes.json.Printer
 import blueeyes.json.JsonAST._
+import akka.util.Timeout
 
-class MockMongoDatabaseSpec extends Specification with MongoImplicits{
+class MockMongoDatabaseSpec extends Specification with MongoImplicits with FutureMatchers {
+  implicit val queryTimeout = Timeout(10000)
 
   "create collection" in{
     val mongo     = new MockMongo()
@@ -58,7 +61,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits{
 
     val future2 = database(select().from("bar"))
 
-    future2.value.map(_.iterator.toList) must eventually(beSome(JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil))
+    future2.map(_.iterator.toList) must whenDelivered(be_==(JObject(JField("foo", JArray(List(JString("1")))) :: Nil) :: Nil))
   }
 //  "adToSet really adds to set for existsing object" in{
 //    val future1 = database[JNothing.type](insert(JObject(JField("foo", JArray(List(JString("1")))) :: Nil)).into("bar"))

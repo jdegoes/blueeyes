@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
 import java.util.concurrent.TimeUnit
 
-class TimedCountStatSpec extends Specification with TimedStatFixtures {
+class TimedCountStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
   "TimedCountStat" should{
     "creates JValue" in{
       val config      = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
@@ -12,19 +12,11 @@ class TimedCountStatSpec extends Specification with TimedStatFixtures {
       fill(timedSample)
 
       val jValue = timedSample.toJValue
-      jValue.value must eventually (beSome(JObject(JField(config.toString, (JArray(List(JInt(4), JInt(3), JInt(0))))) :: Nil)))
-    }
-
-    "creates TimedSample if the configuration is interval" in{
-      TimedCountStat(interval(IntervalLength(3, TimeUnit.SECONDS), 7)) must beAnInstanceOf[TimedSample[_]] 
-    }
-
-    "creates EternityTimedSample if the configuration is eternity" in{
-      TimedCountStat(eternity) must beAnInstanceOf[EternityTimedNumbersSample] 
+      jValue must whenDelivered (be_==(JObject(JField(config.toString, (JArray(List(JInt(4), JInt(3), JInt(0))))) :: Nil)))
     }
   }
 
-  private def fill(timedSample: Statistic[Long, Map[Long, Double]]){
+  private def fill(timedSample: Statistic[Long]){
     set(timedSample, 100000)
     set(timedSample, 101000)
     set(timedSample, 102000)
@@ -45,7 +37,7 @@ class TimedCountStatSpec extends Specification with TimedStatFixtures {
     set(timedSample, 118000)
   }
 
-  private def set(timedSample: Statistic[Long, Map[Long, Double]], now: Long) = {
+  private def set(timedSample: Statistic[Long], now: Long) = {
     clock.setNow(now)
     timedSample += 1
   }

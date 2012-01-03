@@ -1,6 +1,6 @@
 package blueeyes.core
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import blueeyes.core.http._
 
 package object service {

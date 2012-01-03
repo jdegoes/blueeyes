@@ -1,10 +1,12 @@
 package blueeyes.health
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.util.Timeout
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST.{JValue, JNothing}
 
-trait HealthMonitor { self => 
+trait HealthMonitor extends AkkaDefaults { self => 
   def call(path: JPath)
 
   def increment(path: JPath)(c: Long)
@@ -47,18 +49,18 @@ trait HealthMonitor { self =>
     def trap[T](path: JPath)(f: => T): T = self.trap(prefix \ path)(f)
 
     def toJValue: Future[JValue] = self.toJValue
-    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = self.shutdown
+    def shutdown(timeout: Timeout) = self.shutdown(timeout)
   }
 
   def toJValue: Future[JValue]
 
-  def shutdown(implicit timeout: akka.actor.Actor.Timeout): akka.dispatch.Future[Unit]
+  def shutdown(timeout: Timeout): Future[Any]
 }
 
 object HealthMonitor {
   import blueeyes.bkka.Stop
-  implicit def stop(implicit timeout: akka.actor.Actor.Timeout): Stop[HealthMonitor] = new Stop[HealthMonitor] {
-    def stop(m: HealthMonitor) = m.shutdown
+  def stop[T <: HealthMonitor](timeout: Timeout): Stop[T] = new Stop[T] {
+    def stop(m: T) = m.shutdown(timeout)
   }
 
   object Noop extends HealthMonitor {
@@ -77,7 +79,7 @@ object HealthMonitor {
     def trap[T](path: JPath)(f: => T): T = f
 
     override def withPrefix(prefix: JPath) = this
-    def toJValue: Future[JValue] = Future.sync(JNothing)
-    def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future(())
+    def toJValue: Future[JValue] = Future(JNothing)
+    def shutdown(timeout: Timeout) = Future(())
   }
 }

@@ -5,14 +5,21 @@ import blueeyes.bkka.Stop
 import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 import blueeyes.json.{Printer, JsonAST}
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.util.Timeout
 
 /** The Mongo creates a MongoDatabase by  database name.
  * <p>
  */
 trait Mongo {
   def database(databaseName: String): Database
+  def close: akka.dispatch.Future[Unit]
+}
+
+object Mongo {
+  implicit def stop: Stop[Mongo] = new Stop[Mongo] {
+    def stop(mongo: Mongo) = mongo.close
+  }
 }
 
 case class MongoQueryTask(query: MongoQuery, collection: DatabaseCollection, isVerified: Boolean)
@@ -41,9 +48,9 @@ case class MongoQueryTask(query: MongoQuery, collection: DatabaseCollection, isV
 abstract class Database {
   def mongo: Mongo
 
-  def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  = applyQuery(query, true)
+  def apply[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  = applyQuery(query, true)
 
-  def unverified[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  = applyQuery(query, false)
+  def unverified[T <: MongoQuery](query: T)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  = applyQuery(query, false)
 
   def collections: Set[MongoCollectionHolder]
 
@@ -69,14 +76,14 @@ abstract class Database {
     }
   }
 
-  def disconnect: akka.dispatch.Future[Unit]
+  def disconnect: akka.dispatch.Future[Any]
 
   implicit protected def databaseCollection(mongoCollection: MongoCollection) = mongoCollection match{
     case MongoCollectionReference(name)         => collection(name)
     case MongoCollectionHolder(realCollection, name, database)  => realCollection
   }
 
-  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]
 
   protected def collection(collectionName: String): DatabaseCollection
 }

@@ -1,19 +1,21 @@
 package blueeyes.core.data
 
 import org.specs2.mutable.Specification
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.util.metrics.DataSize
+import blueeyes.concurrent.test.FutureMatchers
 import DataSize._
 
-class AggregatedByteChunkSpec extends Specification{
+class AggregatedByteChunkSpec extends Specification with AkkaDefaults with FutureMatchers {
   "AggregatedByteChunk" should {
     "aggregate full content when size is not specified" in{
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))
-      AggregatedByteChunk(chunk, None).value.map(v => new String(v.data)) must eventually  (beSome("1234"))
+      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))
+      AggregatedByteChunk(chunk, None).map(v => new String(v.data)) must whenDelivered (be_==("1234"))
     }
     "aggregate content up to the specified size" in{
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))
-      AggregatedByteChunk(chunk, Some(2.bytes)).value.map(v => new String(v.data)) must eventually  (beSome("12"))
+      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))
+      AggregatedByteChunk(chunk, Some(2.bytes)).map(v => new String(v.data)) must whenDelivered (be_==("12"))
     }
   }
 }

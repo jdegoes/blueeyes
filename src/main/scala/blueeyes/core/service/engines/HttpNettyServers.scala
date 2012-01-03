@@ -6,7 +6,7 @@ import blueeyes.core.data._
 import org.jboss.netty.channel.{Channels, ChannelPipeline, ChannelPipelineFactory}
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logging
 
 private[engines] class HttpNettyServerProvider(server: HttpServer) extends AbstractNettyServerProvider{
   def pipelineFactory(channelGroup: ChannelGroup) = new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, server, channelGroup)
@@ -21,7 +21,7 @@ private[engines] class HttpNettyServerProvider(server: HttpServer) extends Abstr
 }
 
 private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,
-                                           requestHandler: AsyncCustomHttpService[ByteChunk], channelGroup: ChannelGroup) extends ChannelPipelineFactory {
+                                           requestHandler: AsyncCustomHttpService[ByteChunk], channelGroup: ChannelGroup) extends ChannelPipelineFactory with Logging {
   def getPipeline: ChannelPipeline = {
     val pipeline = Channels.pipeline()
 
@@ -30,7 +30,7 @@ private[engines] class HttpPipelineFactory(protocol: String, host: String, port:
     pipeline.addLast("chunkedWriter",   new ChunkedWriteHandler())
     pipeline.addLast("aggregator",      new HttpNettyChunkedRequestHandler(chunkSize))
     pipeline.addLast("channelsTracker", new ChannelsTrackerHandler(channelGroup))
-    pipeline.addLast("handler",         new HttpNettyRequestHandler(requestHandler, Logger.get))
+    pipeline.addLast("handler",         new HttpNettyRequestHandler(requestHandler, logger))
 
     pipeline
   }

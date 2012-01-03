@@ -2,6 +2,7 @@ package blueeyes.core.http
 
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
+import com.weiglewilczek.slf4s.Logging
 
 sealed case class HttpResponse[+T](
   status: HttpStatus = HttpStatus(OK), 

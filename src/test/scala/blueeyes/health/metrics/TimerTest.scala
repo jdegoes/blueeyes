@@ -1,12 +1,13 @@
 package blueeyes.health.metrics
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Promise
 import blueeyes.util.metrics.Duration
 import Duration._
 import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit
 
-class TimerTest extends Specification {
+class TimerTest extends Specification with blueeyes.bkka.AkkaDefaults {
   val precision = 5.0 // milliseconds
 
   "timing an event" should {
@@ -23,12 +24,12 @@ class TimerTest extends Specification {
 
     "records the duration of the event specified by future" in {
       val timer  = new Timer
-      val future = new Future[Unit]()
+      val promise = Promise[Unit]()
 
-      timer.time(future)
+      timer.time(promise)
 
       Thread.sleep(10)
-      future.deliver(())
+      promise.success(())
 
       timer.mean.ms.time must_!=(0.0)
     }

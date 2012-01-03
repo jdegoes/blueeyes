@@ -3,12 +3,16 @@ package blueeyes.health
 import metrics.{IntervalLength, eternity, interval}
 import org.specs2.mutable.Specification
 import blueeyes.json.JPathImplicits._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JsonParser, Printer, JPath}
 import java.util.concurrent.TimeUnit
 
-class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits{
+class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits with blueeyes.bkka.AkkaDefaults 
+with FutureMatchers {
+  implicit val healthMonitorTimeout = akka.util.Timeout(10000)
 
   private val monitor = new IntervalHealthMonitor(eternity)
 
@@ -17,7 +21,7 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     monitor.increment("foo")(3)
 
     monitor.countStats.size must_== (1)
-    monitor.countStats.get(JPath("foo")).get.count.value must eventually (beSome(5))
+    monitor.countStats.get(JPath("foo")).get.count must whenDelivered (be_==(5))
   }
 
   "records the duration of the event" in {
@@ -29,15 +33,15 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     monitor.errorStats.size must_== (1)
   }
   "moniors future time" in {
-    monitor.monitor("foo")(Future.async({ Thread.sleep(10) }))
+    monitor.monitor("foo")(Future({ Thread.sleep(10) }))
 
     monitor.timerStats.size must eventually(be_==(1))
   }
   "moniors future error" in {
-    val future = new Future[Unit]()
-    monitor.monitor("foo")(future)
+    val promise = Promise[Unit]()
+    monitor.monitor("foo")(promise)
     
-    future.cancel(new NullPointerException())
+    promise.failure(new NullPointerException())
 
     monitor.errorStats.size must_== (1)
   }
@@ -51,8 +55,7 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
   "traps error" in {
     try {
       monitor.trap("foo") {throw new NullPointerException()}
-    }
-    catch {
+    } catch {
       case t: Throwable =>
     }
 
@@ -67,8 +70,9 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
 
     val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
-    jValue.value must eventually(beSome(monitorJson))
+    jValue must whenDelivered (be_==(monitorJson))
   }
+
   "composes into JValue" in{
 
     def export: Int = 2
@@ -81,6 +85,6 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
 
     val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JInt(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JInt(2)))))))
 
-    monitor.toJValue.value must eventually(beSome(monitorJson))
+    monitor.toJValue must whenDelivered (be_==(monitorJson))
   }
 }

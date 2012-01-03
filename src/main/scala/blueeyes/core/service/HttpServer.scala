@@ -1,13 +1,15 @@
 package blueeyes.core.service
 
 import blueeyes.bkka.Stoppable
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.util.Timeout
+
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
 import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
-import blueeyes.util.logging.LoggingHelper
 import blueeyes.util.CommandLineArguments
 
 import java.lang.reflect.{Method}
@@ -15,7 +17,7 @@ import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
 
 import net.lag.configgy.{Config, ConfigMap, Configgy}
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
 import scalaz.Scalaz._
 import scalaz.{Failure, Success}
 
@@ -41,15 +43,9 @@ trait HttpReflectiveServiceList[T] { self =>
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
  */
-trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
+trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { self =>
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
-
-  /**
-   * The default timeout to be used when stopping dependent services is 60 seconds. Override this value
-   * to provide a different timeout.
-   */
-  val stopTimeout = akka.actor.Actor.Timeout(60000)
 
   /** The root configuration. This is simply Configgy's root configuration 
    * object, so this should not be used until Configgy has been configured.
@@ -64,7 +60,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
       case e => {
-        log.error(th, "Error handling request")
+        log.error("Error handling request", e)
         HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
       }
     }
@@ -73,62 +69,40 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     val rawValidation = try {
        _handler.service(r)
     } catch {
-      case why: Throwable =>
-        // An error during invocation of the request handler, convert to
-        // proper response:
-        success(Future.sync(convertErrorToResponse(why)))
+      // An error during invocation of the request handler, convert to
+      // proper response:
+      case error: Throwable => success(Promise.successful(convertErrorToResponse(error)))
     }
 
     // Convert the raw future into one that cannot die:
-    val validation = rawValidation match{
-      case Success(rawFuture) => success{
-        rawFuture.orElse { why => why match {
-          case Some(throwable) =>
-            convertErrorToResponse(throwable)
-
-          case None =>
-            // Future was canceled for no cause.
-            InternalServerError
-        }
-      }}
-      case Failure(DispatchError(throwable)) => success(convertErrorToResponse(throwable).future)
-      case failure => success(NotFound.future)
+    rawValidation match {
+      case Success(rawFuture) => success(rawFuture recover { case error => convertErrorToResponse(error) })
+      case Failure(DispatchError(throwable)) => success(Future(convertErrorToResponse(throwable)))
+      case failure => success(Promise.successful(NotFound))
     }
-
-    validation.map{_.orElse { why =>
-      why match {
-        case Some(throwable) =>
-          convertErrorToResponse(throwable)
-
-        case None =>
-          // Future was canceled for no cause.
-          InternalServerError
-      }
-    }}
   }
 
   val metadata = None
   
   /** Starts the server.
    */
-  def start: Future[Unit] = {
+  def start: Future[Any] = {
     log.info("Starting server")
     
     _status = RunningStatus.Starting
     
     // Start all the services:
-    descriptors.foreach { descriptor =>
+    for (descriptor <- descriptors) {
       log.info("Starting service " + descriptor.service.toString)
       
       try {
-        descriptor.startup().deliverTo { _ =>
-          log.info("Successfully started service " + descriptor.service.toString)
-        } ifCanceled { 
-          case Some(throwable) => log.fatal("Failed to start service " + descriptor.service.toString, throwable)
-          case None => log.fatal("Failed to start service " + descriptor.service.toString + " (unable to determine cause of failure)")
+        descriptor.startup onSuccess { 
+          case _ => log.info("Successfully started service " + descriptor.service.toString)
+        } onFailure { 
+          case error => log.error("Failed to start service " + descriptor.service.toString, error)
         }
       } catch {
-        case throwable => log.fatal("Failed to start service " + descriptor.service.toString, throwable)
+        case throwable => log.error("Failed to start service " + descriptor.service.toString, throwable)
       }
     }
     
@@ -136,40 +110,30 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     val handlerFutures = descriptors.map(_.request)
     
     handlerFutures.foreach { future =>
-      future.deliverTo { handler =>
-
+      for (handler <- future) {
         handlerLock.writeLock.lock()
-        
         try {
           _handler = _handler ~ handler
-        }
-        finally {
+        } finally {
           handlerLock.writeLock.unlock()
         }
       }
     }
     
-    // Combine all futures into a master one that will be delivered when and if
-    // all futures are delivered:
-    val unitFutures: List[Future[Unit]] = handlerFutures.map(_.toUnit)
-    
-    Future(unitFutures: _*).toUnit.deliverTo { _ =>
-      log.info("Server started")
-      
-      _status = RunningStatus.Started
-    }.ifCanceled { why =>
-      _status = RunningStatus.Errored
-
-      why match {
-        case Some(error) => log.error(error, "Unable to start server: " + error.getMessage)
-        case None => log.error("Unable to start server (no reason given)")
-      }
+    Future.sequence(handlerFutures) onSuccess { 
+      case _ =>
+        log.info("Server started")
+        _status = RunningStatus.Started
+    } onFailure { 
+      case ex =>
+        _status = RunningStatus.Errored
+        log.error("Unable to start server.", ex)
     }
   }
   
   /** Stops the server.
    */
-  def stop: Future[Unit] = {
+  def stop: Future[Any] = {
     log.info("Stopping server")
     
     _status = RunningStatus.Stopping
@@ -184,29 +148,26 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
       handlerLock.writeLock.unlock()
     }
     
-    val shutdownFutures = descriptors.map { descriptor =>
+    val shutdownFutures: List[Future[Any]] = descriptors.map { descriptor =>
       log.info("Shutting down service " + descriptor.service.toString)
       
       descriptor.shutdown.flatMap { stoppables => 
-        stoppables.map(Stoppable.stop(_)(stopTimeout)).getOrElse(akka.dispatch.Future(())).toBlueEyes 
-      }.deliverTo { _ =>
-        log.info("Successfully shut down service " + descriptor.service.toString)
-      }.ifCanceled { why =>
-        log.info("Failed to shut down service " + descriptor.service.toString + ": " + why)
+        stoppables.map(Stoppable.stop(_)).getOrElse(Future(()))
+      } onSuccess { 
+        case _ => log.info("Successfully shut down service " + descriptor.service.toString)
+      } onFailure { 
+        case error => log.error("Failed to shut down service " + descriptor.service.toString, error)
       }
     }
     
-    Future(shutdownFutures: _*).toUnit.deliverTo { _ => 
-      log.info("Server stopped")
-      
-      _status = RunningStatus.Stopped
-    } ifCanceled { why =>
-      _status = RunningStatus.Errored
-      
-      why match {
-        case Some(error) => log.error(error, "Unable to stop server: " + error.getMessage)
-        case None => log.error("Unable to stop server (no reason given)")
-      }
+    Future.sequence(shutdownFutures) onSuccess { 
+      case _ => 
+        log.info("Server stopped")
+        _status = RunningStatus.Stopped
+    } onFailure { 
+      case error =>
+        _status = RunningStatus.Errored
+        log.error("Unable to stop server.", error)
     }
   }
   
@@ -218,7 +179,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
    */
-  lazy val log: Logger = LoggingHelper.initializeLogging(config, "blueeyes.server")
+  lazy val log: Logger = Logger("blueeyes.server")
 
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
@@ -261,14 +222,14 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
     else {    
       Configgy.configure(arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")))
       
-      start.deliverTo { _ =>
+      start.onSuccess { case _ =>
         Runtime.getRuntime.addShutdownHook { new Thread {
           override def start() {
             val doneSignal = new CountDownLatch(1)
             
-            self.stop.deliverTo { _ => 
+            self.stop.onSuccess { case _ => 
               doneSignal.countDown()
-            }.ifCanceled { e =>
+            }.onFailure { case e =>
               doneSignal.countDown()
             }
             
@@ -294,16 +255,10 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   }
 
   private case class BoundStateDescriptor[ByteChunk, S](context: ServiceContext, service: Service[ByteChunk]) {
-    val descriptor: ServiceDescriptor[ByteChunk, S] = service.descriptorFactory(context).asInstanceOf[ServiceDescriptor[ByteChunk, S]]
-    
-    val state: Future[S] = new Future[S]
-    
-    def startup(): Future[S] = descriptor.startup().deliverTo { result =>
-      state.deliver(result)
-    }
+    private val descriptor: ServiceDescriptor[ByteChunk, S] = service.descriptorFactory(context).asInstanceOf[ServiceDescriptor[ByteChunk, S]]
 
-    lazy val request: Future[AsyncHttpService[ByteChunk]] = state.map(state => descriptor.request(state))
-    
-    def shutdown: Future[Option[Stoppable]] = state.flatMap(state => descriptor.shutdown(state))
+    lazy val startup: Future[S] = descriptor.startup()
+    lazy val request: Future[AsyncHttpService[ByteChunk]] = startup.map(descriptor.request)
+    lazy val shutdown: Future[Option[Stoppable]] = startup.flatMap(descriptor.shutdown)
   }
 }

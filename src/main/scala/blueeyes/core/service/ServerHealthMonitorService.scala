@@ -1,7 +1,8 @@
 package blueeyes.core.service
 
 import blueeyes.json.JsonAST._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.util.Timeout
 import blueeyes.core.data._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.HttpRequest
@@ -26,7 +27,6 @@ trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealt
 }
 
 trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPathImplicits{
-
   private val monitor = new IntervalHealthMonitor(eternity)
   exportMemory
   exportRuntime
@@ -85,7 +85,7 @@ trait ServerHealthMonitor extends blueeyes.json.Implicits with blueeyes.json.JPa
   }
 
   def toJValue(context: ServiceContext) = {
-    val server     = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
+    val server = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
     monitor.toJValue map {server.merge(_)}
   }
 }

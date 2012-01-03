@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import net.lag.configgy.ConfigMap
+import akka.util.Timeout
 
 /** ConfigurableMongo creates mongo database type based on JVM parameter "mongo.mock".
  * If the value is true then Mock Mongo is created otherwise Real Mongo is created.
@@ -20,20 +21,20 @@ import net.lag.configgy.ConfigMap
  */
 trait ConfigurableMongo extends MongoImplicits{
   private lazy val mockMongo = new MockMongo()
+
   def mongo(mongoConfig: ConfigMap): Mongo =  {
     val isMock = sys.props.getOrElse(ConfigurableMongo.MongoSwitch, "false").toBoolean
-    val mongo  = if (isMock) mockMongo else new RealMongo(mongoConfig)
+    val mongo  = if (isMock) mockMongo else RealMongo(mongoConfig)
 
     drop(mongo, mongoConfig.configMap("dropBeforeStart"))
 
     mongo
-    }
+  }
 
-  private def drop(mongo: Mongo, dropConfig: ConfigMap){
-    dropConfig.keys.foreach{ database =>
-      dropConfig.getList(database).foreach{collection =>
-        mongo.database(database)(remove.from(collection))
-      }
+  private def drop(mongo: Mongo, dropConfig: ConfigMap) {
+    implicit val dropTimeout = Timeout(dropConfig.getLong("timeout").getOrElse(600000L))
+    for (database <- dropConfig.keys.filterNot(_ == "timeout"); collection <- dropConfig.getList(database)) {
+      mongo.database(database)(remove.from(collection))
     }
   }
 }

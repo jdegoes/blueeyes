@@ -2,19 +2,27 @@ package blueeyes.bkka
 
 import org.specs2.mutable.Specification 
 import akka.actor.Actor
+import akka.actor.ActorSystem
+import akka.actor.Props
 import akka.actor.Scheduler
 import akka.actor.PoisonPill
 import akka.actor.ActorKilledException
+import akka.dispatch.Await
+import akka.dispatch.Promise
+import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 
-class StoppableSpec extends Specification {
-  implicit val timeout = Actor.Timeout(1000)
+class StoppableSpec extends Specification with AkkaDefaults {
+  val actorSystem = ActorSystem.create()
+  implicit val timeout = Timeout(1000)
   val random = new scala.util.Random
 
   case class TestStopTarget(position: String) {
-    val stopActor = Actor.actorOf(new Actor { def receive = { case () => Thread.sleep(random.nextInt(100)); self.reply(position) } }).start()
+    val stopActor = actorSystem.actorOf(Props(new Actor { def receive = { case () => Thread.sleep(random.nextInt(100)); sender ! position } }))
 
-    lazy val stop = (stopActor ? ()).flatMap(_ => (stopActor ? PoisonPill) recover { case ex: ActorKilledException => () }).map(_ => position)
+    lazy val stop = {
+      (stopActor ? ()).flatMap(_ => ActorRefStop(actorSystem, timeout).stop(stopActor)).map(_ => position)
+    }
   }
 
   implicit object TestStop extends Stop[TestStopTarget] {
@@ -36,7 +44,7 @@ class StoppableSpec extends Specification {
         Stoppable(a2, Stoppable(b2a) :: Nil) :: Nil
       )
 
-      Stoppable.stop(stoppable).get must_== List("r", "a1", "a2", "b1a", "b1b", "b2a")
+      Await.result(Stoppable.stop(stoppable), timeout.duration) must_== List("r", "a1", "a2", "b1a", "b1b", "b2a")
     }
   }
 }

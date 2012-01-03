@@ -6,18 +6,21 @@ import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
 import blueeyes.core.service.HttpClientByteChunk
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
+
+import akka.dispatch.Promise
+import akka.dispatch.Future
+import blueeyes.bkka.AkkaDefaults
+
 import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
-import net.lag.logging.Logger
-import org.xlightweb.client.{HttpClient => XLHttpClient}
 import scala.collection.JavaConversions._
-import blueeyes.concurrent.Future
+import com.weiglewilczek.slf4s.Logging
+
+import org.xlightweb.client.{HttpClient => XLHttpClient}
 import org.xlightweb.{BodyDataSink, HttpRequestHeader, IHttpRequest, IHttpRequestHeader, IHeader, IHttpResponse, IHttpResponseHandler, DeleteRequest, GetRequest, HeadRequest, OptionsRequest, PostRequest, PutRequest, NonBlockingBodyDataSource, IBodyDataHandler, HttpRequest => XLHttpRequest}
 
-class HttpClientXLightWeb extends HttpClientByteChunk {
-  private val logger = Logger.get
-
+class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefaults {
   protected def createSSLContext: SSLContext = SSLContext.getDefault()
 
   private var _httpClient: Option[XLHttpClient] = None
@@ -41,7 +44,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
   }
 
   def apply(request: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
-    val result = new Future[HttpResponse[ByteChunk]]()
+    val result = Promise[HttpResponse[ByteChunk]]()
     executeRequest(request, createXLRequest(request), result)
     result
   }
@@ -55,7 +58,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
     })
   }
 
-  private def executeRequest(request: HttpRequest[ByteChunk], xlrequest: IHeader, resultFuture: Future[HttpResponse[ByteChunk]]) = {
+  private def executeRequest(request: HttpRequest[ByteChunk], xlrequest: IHeader, promise: Promise[HttpResponse[ByteChunk]]) = {
     val clientInstance = httpClientInstance(request.uri.scheme)
     clientInstance.setAutoHandleCookies(false)
     val handler = new IHttpResponseHandler() {
@@ -65,8 +68,8 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
           val reason: String = Option(response.getReason).getOrElse("Unknown error")
 
           statusCode match {
-            case failureCode: HttpFailure => resultFuture.cancel(HttpException(failureCode, reason))
-            case _ => resultFuture.cancel(HttpException(HttpStatusCodes.BadRequest, reason))
+            case failureCode: HttpFailure => promise.failure(HttpException(failureCode, reason))
+            case _ => promise.failure(HttpException(HttpStatusCodes.BadRequest, reason))
           }
         } else {
 
@@ -76,8 +79,8 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
 
           val isChunked = headers.find((keyValue) => keyValue._1.equalsIgnoreCase("Transfer-Encoding") && keyValue._2.equalsIgnoreCase("chunked")).map(v => true).getOrElse(false)
 
-          if (isChunked) readChunked(response, headers, resultFuture)
-          else readNotChunked(response, headers, resultFuture)
+          if (isChunked) readChunked(response, headers, promise)
+          else readNotChunked(response, headers, promise)
         }
       }
 
@@ -88,7 +91,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
           case _ => HttpStatusCodes.InternalServerError
         }
 
-        resultFuture.cancel(HttpException(httpStatus, e))
+        promise.failure(HttpException(httpStatus, e))
       }
     }
 
@@ -97,7 +100,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
       case e: IHttpRequestHeader =>
         val bodyDataSink = clientInstance.send(e, handler)
         request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
-      case _ => sys.error("wrong request type")
+      case r => sys.error("Unrecognized request type: " + r)
     }
   }
 
@@ -106,64 +109,62 @@ class HttpClientXLightWeb extends HttpClientByteChunk {
       bodyDataSink.write(chunk.data, 0, chunk.data.length)
 
       chunk.next match {
-        case Some(x) => x.deliverTo(nextChunk => sendData(nextChunk, bodyDataSink))
-        case None =>
-          bodyDataSink.close
+        case Some(x) => x.foreach(nextChunk => sendData(nextChunk, bodyDataSink))
+        case None    => bodyDataSink.close
       }
-    }
-    catch {
+    } catch {
       case e: Throwable =>
-        logger.error(e, "Failed to send content")
+        logger.error("Failed to send content", e)
         bodyDataSink.close
     }
   }
 
-  private def readNotChunked(response: IHttpResponse, headers: Map[String, String], resultFuture: Future[HttpResponse[ByteChunk]]){
+  private def readNotChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
     val data = try {
       val bytes = response.getBody.readBytes
       if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
     } catch {
       case e: Throwable => {
-        logger.error(e, "Failed to transcode response body")
+        logger.error("Failed to transcode response body", e)
         None
       }
     }
-    resultFuture.deliver(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
+
+    promise.success(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
   }
 
-  private def readChunked(response: IHttpResponse, headers: Map[String, String], resultFuture: Future[HttpResponse[ByteChunk]]){
+  private def readChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
     val dataSource = response.getNonBlockingBody()
     dataSource.setDataHandler(new IBodyDataHandler{
-      var delivery: Either[HttpResponse[ByteChunk], Future[ByteChunk]] = Left(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = None, headers = headers))
+      var delivery: Either[HttpResponse[ByteChunk], Promise[ByteChunk]] = 
+        Left(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = None, headers = headers))
 
       def onData(source: NonBlockingBodyDataSource) = {
         try {
           val available = source.available()
           if (available > 0) {
             val data        = org.xsocket.DataConverter.toBytes(source.readByteBufferByLength(available))
-            val nextFuture  = new Future[ByteChunk]()
-            val content     = new ByteMemoryChunk(data, () => Some(nextFuture))
+            val nextPromise  = Promise[ByteChunk]()
+            val content     = new ByteMemoryChunk(data, () => Some(nextPromise))
             delivery match {
               case Left(x) =>
-                delivery        = Right(nextFuture)
-                resultFuture.deliver(x.copy(content = Some(content)))
+                delivery        = Right(nextPromise)
+                promise.success(x.copy(content = Some(content)))
               case Right(x) =>
-                delivery        = Right(nextFuture)
-                x.deliver(content)
+                delivery        = Right(nextPromise)
+                x.success(content)
             }
-          }
-          else if (available == -1){
+          } else if (available == -1){
             delivery match {
-              case Left(x) => resultFuture.deliver(x)
-              case Right(x) => x.deliver(new ByteMemoryChunk(Array[Byte]()))
+              case Left(x)  => promise.success(x)
+              case Right(x) => x.success(new ByteMemoryChunk(Array[Byte]()))
             }
           }
-        }
-        catch {
+        } catch {
           case e: Throwable =>
             delivery match {
-              case Left(x) => resultFuture.cancel(e)
-              case Right(x) => x.cancel(e)
+              case Left(x)  => promise.failure(e)
+              case Right(x) => x.failure(e)
             }
         }
         true

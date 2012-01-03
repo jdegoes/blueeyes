@@ -5,29 +5,24 @@ import org.specs2.mutable.Specification
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpMethods._
+import blueeyes.core.http.test.HttpRequestMatchers
 import blueeyes.json.JsonAST._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
-class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators{
+class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators with HttpRequestMatchers with blueeyes.bkka.AkkaDefaults {
   type Handler[T, S] = HttpRequest[Future[T]] => Future[HttpResponse[S]]
   
   "refineContentType should return bad request type cannot be refined to specified subtype" in {
-    jObjectCaller { 
-      refineContentType { jIntHandler }
-    }.value.get.status.code mustEqual(BadRequest)
+    jObjectCaller { refineContentType { jIntHandler } } must respondWithCode(BadRequest)
   }
   
   "refineContentType should refine content type when possible" in {
-    jIntCaller { 
-      refineContentType { jIntHandler }
-    }.value.get.content.get mustEqual(JInt(123))
+    jIntCaller { refineContentType { jIntHandler } } must succeedWithContent(be_==(JInt(123)))
   }
   
+  def jObjectCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future(JObject(Nil)))))
   
+  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future(JInt(123)))))
   
-  def jObjectCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future.sync(JObject(Nil)))))
-  
-  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future.sync(JInt(123)))))
-  
-  def jIntHandler(r: HttpRequest[Future[JInt]]): Future[HttpResponse[JValue]] = Future.sync(HttpResponse(content = Some(JInt(123): JValue)))
+  def jIntHandler(r: HttpRequest[Future[JInt]]): Future[HttpResponse[JValue]] = Future(HttpResponse(content = Some(JInt(123): JValue)))
 }

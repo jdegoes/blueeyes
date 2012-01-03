@@ -1,5 +1,11 @@
 package blueeyes.core.service.engines
 
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.dispatch.Await
+import blueeyes.bkka.AkkaDefaults
+import blueeyes.concurrent.test.FutureMatchers
+
 import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpChunk, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion}
 import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
@@ -7,12 +13,11 @@ import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.http.HttpRequest
 import org.jboss.netty.channel._
 import blueeyes.core.data.{MemoryChunk, ByteChunk}
-import blueeyes.concurrent.Future
 import collection.mutable.ArrayBuilder.ofByte
 import org.specs2.mock._
 import org.specs2.specification.BeforeExample
 
-class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with HttpNettyConverters with BeforeExample{
+class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with HttpNettyConverters with BeforeExample with AkkaDefaults with FutureMatchers {
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]
@@ -56,7 +61,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Future.sync[ByteChunk](new MemoryChunk(chunkData))
+      val nextChunk = Promise.successful[ByteChunk](new MemoryChunk(chunkData))
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData, () => Some(nextChunk))))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
@@ -97,7 +102,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val next = chunk.next
       next match{
         case None =>  buffer
-        case Some(x) => readContent(x.value.get, buffer)
+        case Some(x) => readContent(Await.result(x, 10 seconds), buffer)
       }
     }
   }

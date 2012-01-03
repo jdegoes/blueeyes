@@ -1,92 +1,104 @@
 package blueeyes.persistence.mongo
 
 import blueeyes.bkka.Stop
+import blueeyes.bkka.ActorRefStop
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JPath}
+import blueeyes.json.JPath
 import blueeyes.persistence.mongo.json.BijectionsMongoJson._
 import blueeyes.persistence.mongo.json.BijectionsMongoJson.MongoToJson._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
 import IterableViewImpl._
 
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
 
-import akka.actor.Actor._
 import akka.actor.Actor
+import akka.actor.ActorSystem
 import akka.actor.ActorKilledException
+import akka.actor.Props
 import akka.actor.PoisonPill
-import akka.routing.Routing._
-import akka.routing.CyclicIterator
-import akka.dispatch.Dispatchers
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.routing.RoundRobinRouter
 import akka.util.Duration
+import akka.util.Timeout
 
 import java.util.concurrent.TimeUnit
 import scalaz.Scalaz._
+import com.weiglewilczek.slf4s.Logging
 
-class RealMongo(config: ConfigMap) extends Mongo {
+object RealMongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
-  val disconnectTimeout = akka.actor.Actor.Timeout(config.getLong("shutdownTimeout", 30000L))
+  def apply(config: ConfigMap) = {
+    val mongo = {
+      val options = new MongoOptions()
+      options.connectionsPerHost = 256
+      options.threadsAllowedToBlockForConnectionMultiplier = 16
 
-  private lazy val mongo = {
-    val options = new MongoOptions()
-    options.connectionsPerHost = 1000
-    options.threadsAllowedToBlockForConnectionMultiplier = 1000
-
-    val servers = config.getList("servers").map(server =>{
-      server match{
+      val servers = config.getList("servers").toList map {
         case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
-        case _ => new ServerAddress(server, ServerAddress.defaultPort())
+        case server                           => new ServerAddress(server, ServerAddress.defaultPort())
       }
-    }).toList
 
-    val mongo = servers match {
-      case x :: Nil => new com.mongodb.Mongo(x, options)
-      case x :: xs  => new com.mongodb.Mongo(servers, options)
-      case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
+      val underlying = servers match {
+        case x :: Nil => new com.mongodb.Mongo(x, options)
+        case x :: xs  => new com.mongodb.Mongo(servers, options)
+        case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
+      }
+
+      if (config.getBool("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
+
+      underlying
     }
 
-    if (config.getBool("slaveOk", true)) { mongo.slaveOk() }
+    val disconnectTimeout = config.getLong("disconnect_timeout").getOrElse(300000L)
 
-    mongo
+    new RealMongo(mongo, disconnectTimeout)
   }
+}
 
+class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
   def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
+  lazy val close = Future(mongo.close)
 }
 
-object RealMongoActor {
-  val dispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_mongo")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-}
+object RealDatabase {
+  //val actorSystem = ActorSystem.create("blueeyes_mongo") //TODO: separate mongo actor system creation out.
+  private val actorSystem = ActorSystem()
 
-class RealMongoActor extends Actor {
-  self.dispatcher = RealMongoActor.dispatcher
-  def receive = {
-    case task: MongoQueryTask => self.reply(task.query(task.collection, task.isVerified))
-    case _ => sys.error("wrong message.")
+  private class RealMongoActor extends Actor {
+    def receive = {
+      case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
+    }
   }
 }
 
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout) extends Database {
-  private val poolSize = 10
+private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
+  import RealDatabase._
 
-  private lazy val actors     = List.fill(poolSize)(Actor.actorOf[RealMongoActor].start)
-  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
+  private implicit val dispatcher = actorSystem.dispatcherFactory.newDispatcher("blueeyes_mongo-" + database.getName)
+                                    .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+                                    .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+
+  private lazy val actors = List.fill(poolSize) {
+    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher(dispatcher))
+  }
+
+  private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter()), "blueeyes_mongo_router-" + database.getName)
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = akka.dispatch.Future.sequence(actors.map(a => (a ? PoisonPill) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis)
-                        .flatMap(_ => (mongoActor ? PoisonPill) recover { case ex: ActorKilledException => () })
-                        .mapTo[Unit]
-                        
+  lazy val disconnect = for {
+    _ <- ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
+    v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
+  } yield v
 
-  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
-    (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult].toBlueEyes
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  =
+    (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult]
 
   override def toString = "Mongo Database: " + database.getName
 }
@@ -219,12 +231,13 @@ private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database:
 }
 
 import scala.collection.Iterator
-object IterableViewImpl{
+object IterableViewImpl {
   implicit def iteratorToIterator[A](iterator: Iterator[A]): Iterator[A] = iterator
   implicit def seqToIterator[A](seq: Seq[A]): Iterator[A] = seq.iterator
 }
+
 class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A]) extends scala.collection.IterableView[A, Coll]{
-  def iterator: Iterator[A] = delegate
+  def iterator: Iterator[A] = f(delegate)
 
   protected def underlying = delegate
 }

@@ -11,8 +11,9 @@ import blueeyes.core.http.HttpStatusCodes.OK
 import blueeyes.core.http._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpHeaders._
+import blueeyes.core.http.test.HttpRequestMatchers
 import blueeyes.json.JsonAST._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.util.metrics.DataSize
 import DataSize._
@@ -21,7 +22,9 @@ import java.net.URLEncoder.{ encode => encodeUrl }
 import blueeyes.core.data.{ ByteMemoryChunk, ByteChunk, Bijection, GZIPByteChunk }
 import scalaz.Success
 
-class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits with FutureMatchers{
+class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits 
+with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
+
   import BijectionsChunkFutureJson._
   import BijectionsChunkString._
 
@@ -31,7 +34,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         path("/foo/bar") {
           path("/baz") {
             get { (request: HttpRequest[Int]) =>
-              Future.sync(HttpResponse[Int]())
+              Future(HttpResponse[Int]())
             }
           }
         }
@@ -47,7 +50,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp[ByteChunk] {
           path("/") {
             get { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](content = Some(JString("foo"))))
+              Future(HttpResponse[JValue](content = Some(JString("foo"))))
             }
           }
         }
@@ -64,7 +67,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             post { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](content = request.content.flatMap(_.value)))
+              request.content match {
+                case Some(future) => future.map(c => HttpResponse[JValue](content = Some(c)))
+                case None => Future(HttpResponse[JValue](content = None))
+              }
             }
           }
         }
@@ -87,7 +93,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
+              Future(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
             }
           }
         }
@@ -110,7 +116,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue]())
+              Future(HttpResponse[JValue]())
             }
           }
         }
@@ -131,7 +137,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp {
           path("/") {
             get { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
+              Future(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
             }
           }
         }
@@ -154,7 +160,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         jsonp[ByteChunk] {
           path("/") {
             get { request: HttpRequest[Future[JValue]] =>
-              Future.sync(HttpResponse[JValue](status = HttpStatus(400, "Funky request."), content = Some(JString("bang"))))
+              Future(HttpResponse[JValue](status = HttpStatus(400, "Funky request."), content = Some(JString("bang"))))
             }
           }
         }
@@ -163,46 +169,46 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val request = HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET") 
       
       errorHandler.service(request) must beLike {
-        case Success(future) => future must whenDelivered {
-          beLike { 
-            case HttpResponse(HttpStatus(code, _), _, Some(byteChunk), _) =>
-              (code must_== OK) and 
-              (ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});""")
-          }
+        case Success(future) => future must succeedWithContent {
+          (byteChunk: ByteChunk) => ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});"""
         }
-      }     
+      }
     }
   }
 
   "cookie combinator" should {
     "propagate default cookie value" in {
       val defaultValue = "defaultValue"
-      val f = path("/foo/bar") {
+      val handler = path("/foo/bar") {
         cookie('someCookie, Some(defaultValue)) {
           get { (request: HttpRequest[String]) =>
             {
-              cookieVal: String => Future.sync(HttpResponse[String](content = Some(cookieVal)))
+              cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
             }
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/bar"))
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content.get must be(defaultValue)
+      }
+      
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==(defaultValue))
+      }
     }
   }
 
   "parameter combinator" should {
     "extract parameter" in {
-      val f = path("/foo/'bar") {
+      val handler = path("/foo/'bar") {
         parameter('bar) {
           get { (request: HttpRequest[String]) =>
             (bar: String) =>
-              Future.sync(HttpResponse[String](content = Some(bar)))
+              Future(HttpResponse[String](content = Some(bar)))
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content must beSome("blahblah")
+      }
+      
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==("blahblah"))
+      }
     }
 
     "put default parameter value into request parameters field when value not specified" in {
@@ -211,79 +217,84 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
           get { (request: HttpRequest[String]) =>
             (bar: String) => {
               request.parameters mustEqual Map('bar -> "bebe")
-              Future.sync(HttpResponse[String](content = request.parameters.get('bar)))
+              Future(HttpResponse[String](content = request.parameters.get('bar)))
             }
           }
         }
       }
 
-      val f = handler.service {
-        HttpRequest[String](HttpMethods.GET, "/foo/")
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==("bebe"))
       }
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content must beSome("bebe")
     }
 
     "extract parameter even when combined with produce" in {
-      val f = path("/foo/'bar") {
+      val handler = path("/foo/'bar") {
         produce(application / json) {
           parameter('bar) {
             get { (request: HttpRequest[String]) =>
               (bar: String) =>
-                Future.sync(HttpResponse[JValue](content = Some(JString(bar))))
+                Future(HttpResponse[JValue](content = Some(JString(bar))))
             }
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah"))
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content must beSome(JString("blahblah"))
+      }
+      
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==(JString("blahblah")))
+      }
     }
 
     "extract decoded parameter" in {
-      val f = path("/foo/'bar") {
+      val handler = path("/foo/'bar") {
         produce(application / json) {
           parameter('bar) {
             get { (request: HttpRequest[String]) =>
               bar: String =>
-                Future.sync(HttpResponse[JValue](content = Some(JString(bar))))
+                Future(HttpResponse[JValue](content = Some(JString(bar))))
             }
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah"))
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content must beSome(JString("blah blah"))
+      }
+      
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==(JString("blah blah")))
+      }
     }
   }
 
   "path combinator" should {
     "extract symbol" in {
-      val s = path('token) {
+      val handler = path('token) {
         parameter('token) {
           get {
-            service((request: HttpRequest[String]) => { (token: String) => Future.sync(HttpResponse[String](content = Some(token))) })
+            service((request: HttpRequest[String]) => { (token: String) => Future(HttpResponse[String](content = Some(token))) })
           }
         }
       }
 
-      s.service(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B"))
-        .toOption.get.value.get.content must beSome("A190257C-56F5-499F-A2C6-0FFD0BA7D95B")
+      handler.service(HttpRequest[String](method = HttpMethods.GET, uri = "A190257C-56F5-499F-A2C6-0FFD0BA7D95B")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==("A190257C-56F5-499F-A2C6-0FFD0BA7D95B"))
+      }
     }
 
     "support nested paths" in {
-      val f = path("/foo/") {
+      val handler = path("/foo/") {
         path('bar / "entries") {
           produce(application / json) {
             parameter('bar) {
               get { (request: HttpRequest[String]) =>
                 bar: String =>
-                  Future.sync(HttpResponse[JValue](content = Some(JString(bar))))
+                  Future(HttpResponse[JValue](content = Some(JString(bar))))
               }
             }
           }
         }
-      }.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries"))
-      f.toOption.get.value must eventually(beSome)
-      f.toOption.get.value.get.content must beSome(JString("blahblah"))
+      }
+      
+      handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries")) must beLike {
+        case Success(future) => future must succeedWithContent(be_==(JString("blahblah")))
+      }
     }
   }
 
@@ -293,50 +304,75 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
       val handler = compress {
         path("/foo") {
           get { (request: HttpRequest[ByteChunk]) =>
-            Future.sync(HttpResponse[ByteChunk](content = request.content))
+            Future(HttpResponse[ByteChunk](content = request.content))
           }
         }
       }
-      val response = handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress)))
-      response.toOption.get.value.get.content.map(v => new String(v.data)) must beSome(new String(GZIPByteChunk(chunk).data))
+
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress))) must beLike {
+        case Success(future) => future must succeedWithContent {
+          (v: ByteChunk) => new String(v.data) must_== new String(GZIPByteChunk(chunk).data)
+        }
+      }
     }
+
     "does not compress content if request does not contain accept appropriate encoding header" in {
       val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
-      (compress {
+      val handler =compress {
         path("/foo") {
           get { (request: HttpRequest[ByteChunk]) =>
-            Future.sync(HttpResponse[ByteChunk](content = request.content))
+            Future(HttpResponse[ByteChunk](content = request.content))
           }
         }
-      }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.compress))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome("12")
+      }
+      
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.compress))) must beLike {
+        case Success(future) => future must succeedWithContent {
+          (v: ByteChunk) => new String(v.data) must_== "12"
+        }
+      }
     }
   }
+
   "aggregate combinator" should {
     "aggregate full content when size is not specified" in {
-      (aggregate(None) {
+      val handler = aggregate(None) {
         path("/foo") {
           get { (request: HttpRequest[Future[ByteChunk]]) =>
             request.content.map {
               _.flatMap { content =>
-                Future.sync(HttpResponse[ByteChunk](content = Some(content)))
+                Future(HttpResponse[ByteChunk](content = Some(content)))
               }
-            }.getOrElse(Future.sync(HttpResponse[ByteChunk]()))
+            }.getOrElse(Future(HttpResponse[ByteChunk]()))
           }
         }
-      }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome("1234")
+      }
+      
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))) must beLike {
+        case Success(future) => future must succeedWithContent {
+          (v: ByteChunk) => new String(v.data) must_== "1234"
+        }
+      }
     }
+
     "aggregate content up to the specified size" in {
-      (aggregate(Some(2.bytes)) {
+      val handler = aggregate(Some(2.bytes)) {
         path("/foo") {
           get { (request: HttpRequest[Future[ByteChunk]]) =>
             request.content.map {
               _.flatMap { content =>
-                Future.sync(HttpResponse[ByteChunk](content = Some(content)))
+                Future(HttpResponse[ByteChunk](content = Some(content)))
               }
-            }.getOrElse(Future.sync(HttpResponse[ByteChunk]()))
+            }.getOrElse(Future(HttpResponse[ByteChunk]()))
           }
         }
-      }).service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future.sync(new ByteMemoryChunk(Array[Byte]('3', '4')))))))).toOption.get.value.get.content.map(v => new String(v.data)) must beSome("12")
+      }
+      
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))) must beLike {
+        case Success(future) => future must succeedWithContent {
+          (v: ByteChunk) => new String(v.data) must_== "12"
+        }
+      }
     }
   }
 
@@ -346,18 +382,14 @@ class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHa
         produce(application / json) {
           decodeUrl {
             get { (request: HttpRequest[String]) =>
-              Future.sync(HttpResponse[JValue](content = Some(JString(request.uri.toString))))
+              Future(HttpResponse[JValue](content = Some(JString(request.uri.toString))))
             }
           }
         }
       }
 
       svc.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah")) must beLike {
-        case Success(future) => future must whenDelivered {
-          beLike {
-            case HttpResponse(_, _, Some(content), _) => content must_== JString("/foo/blah blah")
-          }
-        }
+        case Success(future) => future must succeedWithContent(be_==(JString("/foo/blah blah")))
       }
     }
   }

@@ -5,8 +5,8 @@ import org.specs2.ScalaCheck
 
 import scala.util.Random
 
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Future._
 
 import scalaz._
 import scalaz.Scalaz._

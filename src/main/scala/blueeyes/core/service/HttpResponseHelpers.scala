@@ -4,16 +4,17 @@ import blueeyes.util.RichThrowableImplicits._
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Promise
 
-trait HttpResponseHelpers{
+trait HttpResponseHelpers extends blueeyes.bkka.AkkaDefaults {
   /** Shorthand function to create a future of an HttpResponse from the given parameters.
    * {{{
    * respond(content = Some(<html></html>))
    * }}}
    */
   def respond[T](status: HttpStatus = HttpStatus(OK), headers: Map[String, String] = Map(), content: Option[T] = None): Future[HttpResponse[T]] = {
-    Future.sync(HttpResponse[T](status, headers, content))
+    Promise.successful(HttpResponse[T](status, headers, content))
   }
   
   /** Shorthand function to create a simple response based on a future and 
@@ -30,8 +31,8 @@ trait HttpResponseHelpers{
   def respondLater[T](content: Future[T], headers: Map[String, String] = Map()): Future[HttpResponse[T]] = {
     content map { 
       c => HttpResponse[T](HttpStatus(OK), headers, Some(c))
-    } orElse { why =>
-      HttpResponse[T](status = HttpStatus(InternalServerError, "The response was unexpectedly canceled"))
+    } recover { 
+      case why => HttpResponse[T](status = HttpStatus(InternalServerError, "The response was unexpectedly canceled"))
     }
   }
 }

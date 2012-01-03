@@ -1,6 +1,8 @@
 package blueeyes.core.data
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.Timeout
 
 trait BijectionsChunkString {
   implicit val StringToChunk = new Bijection[String, ByteChunk] {
@@ -14,13 +16,13 @@ object BijectionsChunkString extends BijectionsChunkString
 
 trait BijectionsChunkFutureString{
   import BijectionsChunkString._
-  implicit val FutureStringToChunk = new Bijection[Future[String], ByteChunk]{
-    def apply(t: Future[String]) = t.map(StringToChunk(_)).value.getOrElse(new MemoryChunk(Array[Byte]()))
+  implicit def futureStringToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[String], ByteChunk]{
+    def apply(t: Future[String]) = Await.result(t.map(StringToChunk(_)), timeout.duration)
 
     def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToString(_))
   }
 
-  implicit val ChunkToFutureString  = FutureStringToChunk.inverse
+  implicit def chunkToFutureString(implicit timeout: Timeout = Timeout.zero) = futureStringToChunk(timeout).inverse
 }
 
 object BijectionsChunkFutureString extends BijectionsChunkFutureString

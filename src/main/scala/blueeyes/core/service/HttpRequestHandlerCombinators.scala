@@ -6,7 +6,7 @@ import http.HttpHeaders._
 import http.HttpStatusCodes._
 import data.{CompressedByteChunk, ByteChunk, Bijection}
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import blueeyes.json.JsonAST._
 import blueeyes.util.metrics.DataSize
 

@@ -1,28 +1,31 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.bkka.AkkaDefaults
+import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.json._
 import blueeyes.json.JsonAST._
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
+import akka.dispatch.Future
+import akka.dispatch.Future._
 
 import net.lag.configgy.Configgy
 
-import akka.actor.Actor._
 import akka.actor.Actor
-import akka.routing.Routing._
+import akka.actor.Props
 import akka.dispatch.Dispatchers
 import akka.util.Duration
+import akka.util.Timeout
 
 import java.util.concurrent.TimeUnit
 import org.scalacheck.Gen._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
-class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck{
+class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck with FutureMatchers with AkkaDefaults {
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
   if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
+  implicit val queryTimeout = Timeout(10000)
 
-  private lazy val mongo  = new RealMongo(Configgy.config.configMap("mongo"))
+  private lazy val mongo  = RealMongo(Configgy.config.configMap("mongo"))
   private lazy val database  = mongo.database( "mydb" )
 
   private val collection    = "test-collection"
@@ -34,17 +37,15 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
       val start = System.currentTimeMillis
 
       val actors = List.range(1, 50) map {index =>
-        val actor = Actor.actorOf(new MessageActor(alphaStr.sample.get, alphaStr.sample.get, index))
-        actor.start()
-        actor
+        defaultActorSystem.actorOf(Props(new MessageActor(alphaStr.sample.get, alphaStr.sample.get, index)))
       }
-      val futures = Future(actors.map(actor => fromAkka[(Future[Option[JObject]], String, String)](actor.?("send", 2000).mapTo[Tuple3[Future[Option[JObject]], String, String]]).toBlueEyes): _*)
-      futures.value must eventually (beSome)
-
-      futures.value.get.foreach{ v =>
-        val (selectFuture, name, value) = v
-        selectFuture.value must eventually (beSome)
-        selectFuture.value.get.get \ name mustEqual(JString(value))
+      val futures = Future.sequence(actors.map(actor => actor.?("send", 2000).mapTo[Tuple3[Future[Option[JObject]], String, String]]))
+      futures must whenDelivered {
+        beLike {
+          case list => forall(list) {
+            case (selectFuture, name, value) => selectFuture.map(_.get \ name) must whenDelivered(be_==(JString(value)))
+          }
+        }
       }
 
       val removeFuture = database(remove.from(collection))
@@ -56,13 +57,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
     }
   }
 
-  private val testDispatcher = Dispatchers.newExecutorBasedEventDrivenDispatcher("test")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(50)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-
   class MessageActor(name: String, value: String, index: Int) extends Actor{
-    self.dispatcher = testDispatcher
-
     def receive = {
       case "send" => {
         val filter = "bucketId" === index && "entityId"    === index && "variationId" === index
@@ -70,7 +65,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
         val insertFuture = database(upsert(collection).set(name set value).where(filter))
         val selectFuture = insertFuture.flatMap{v => database(selectOne().from(collection).where(filter))}
 
-        self.reply((selectFuture, name, value))
+        sender ! ((selectFuture, name, value))
       }
       case _ =>
     }

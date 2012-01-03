@@ -7,7 +7,8 @@ import blueeyes.json.MergeMonoid
 
 import scalaz._
 import Scalaz._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.util.Timeout
 
 class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonitor with FunctionsMonitor{
   private implicit val mergeMonoid = MergeMonoid
@@ -27,7 +28,7 @@ class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonito
 
   def error(path: JPath)(t: Throwable) {healthMonitors.foreach(_.error(path)(t))}
 
-  def toJValue = Future[JValue](healthMonitors.map(_.toJValue): _*).map(_.asMA.sum)
+  def toJValue = Future.sequence[JValue, List](healthMonitors.map(_.toJValue))map(_.asMA.sum)
 
-  def shutdown(implicit timeout: akka.actor.Actor.Timeout) = akka.dispatch.Future.sequence(healthMonitors.map(_.shutdown), timeout.duration.toMillis).map(_ => ())
+  def shutdown(timeout: Timeout): Future[Any] = Future.sequence[Any, List](healthMonitors.map(_.shutdown(timeout)))
 }

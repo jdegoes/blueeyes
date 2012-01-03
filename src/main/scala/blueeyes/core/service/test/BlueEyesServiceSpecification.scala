@@ -1,18 +1,25 @@
 package blueeyes.core.service.test
 
-import org.specs2.mutable.Specification
-import blueeyes.concurrent.Future
-import blueeyes.concurrent.Future._
-import blueeyes.util.RichThrowableImplicits._
+
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.duration._
+import akka.util.DurationLong
+
+import blueeyes.bkka.AkkaDefaults
+import blueeyes.core.data.ByteChunk
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 import blueeyes.core.service._
-import blueeyes.core.data.{ByteChunk}
+import blueeyes.persistence.mongo.ConfigurableMongo
+import blueeyes.util.RichThrowableImplicits._
+
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import net.lag.configgy.{Config, Configgy}
-import blueeyes.persistence.mongo.ConfigurableMongo
-import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
+
+import org.specs2.mutable.Specification
 import org.specs2.specification.{Fragment, Fragments, Step}
 
-class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk]{ self =>
+class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
   private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
@@ -23,6 +30,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     setMockCongiguration
     startServer
   }
+
   private val specAfter = Step {
     resetMockCongiguration
     stopServer
@@ -30,8 +38,8 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
 
   override def map(fs: =>Fragments) = specBefore ^ Step(beforeSpec _) ^ fs ^ Step(afterSpec _) ^ specAfter
 
-  def startTimeOut   = 60000
-  def stopTimeOut    = 60000
+  def startTimeOut   = 60000l
+  def stopTimeOut    = 60000l
   def configuration  = ""
 
   protected def beforeSpec: Any = ()
@@ -60,8 +68,8 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
 
   def service: HttpClient[ByteChunk] = new SpecClient()
 
-  private def startServer = waitForResponse[Unit](httpServer.start, Some(startTimeOut), why => throw why)
-  private def stopServer  = waitForResponse[Unit](httpServer.stop,  Some(stopTimeOut),  why => throw why)
+  private def startServer = Await.result(httpServer.start, new DurationLong(startTimeOut) millis)
+  private def stopServer  = Await.result(httpServer.stop,  new DurationLong(stopTimeOut) millis)
 
   lazy val rootConfig = {
     Configgy.configureFromString(configuration)
@@ -81,28 +89,12 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
 
       try {
         val response = httpServer.service(request)
-        response.toOption.getOrElse(NotFound.future)
+        response.toOption.getOrElse(Future(NotFound))
       } catch {
-        case t: Throwable => Future.sync(convertErrorToResponse(t))
+        case t: Throwable => Future(convertErrorToResponse(t))
       }
     }
 
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
-  }
-
-  private def waitForResponse[S](future: Future[S], timeout: Option[Long], f: Throwable => Unit): Option[S] = {
-    if (!future.isDelivered) {
-      val latch = new CountDownLatch(1)
-
-      future.deliverTo(v => latch.countDown)
-      future.ifCanceled{ why =>
-        latch.countDown()
-        why.foreach(f(_))
-      }      
-
-      timeout.map(latch.await(_, TimeUnit.MILLISECONDS)).getOrElse(latch.await())
-    }
-    
-    future.value
   }
 }

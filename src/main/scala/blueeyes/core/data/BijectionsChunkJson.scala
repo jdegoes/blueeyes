@@ -3,13 +3,15 @@ package blueeyes.core.data
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.Timeout
 
 trait BijectionsChunkJson{
   import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
 
-  implicit val JValueToChunk      = new Bijection[JValue, ByteChunk]{
-    def apply(t: JValue)         = {
+  implicit val JValueToChunk = new Bijection[JValue, ByteChunk] {
+    def apply(t: JValue) = {
       val stream = new ByteArrayOutputStream()
 
       compact(render(t), new OutputStreamWriter(stream))
@@ -21,20 +23,20 @@ trait BijectionsChunkJson{
   }
 
   implicit val ChunkToJValue    = JValueToChunk.inverse
-
 }
+
 object BijectionsChunkJson extends BijectionsChunkJson
 
 
 trait BijectionsChunkFutureJson{
   import BijectionsChunkJson._
-  implicit val FutureJValueToChunk = new Bijection[Future[JValue], ByteChunk]{
-    def apply(t: Future[JValue]) = t.map(JValueToChunk(_)).value.getOrElse(new MemoryChunk(Array[Byte]()))
+  implicit def futureJValueToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[JValue], ByteChunk] {
+    def apply(t: Future[JValue]) = Await.result(t.map(JValueToChunk(_)), timeout.duration)
 
     def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToJValue(_))
   }
 
-  implicit val ChunkToFutureJValue  = FutureJValueToChunk.inverse
+  implicit def chunkToFutureJValue(implicit timeout: Timeout = Timeout.zero) = futureJValueToChunk(timeout).inverse
 }
 
 object BijectionsChunkFutureJson extends BijectionsChunkFutureJson

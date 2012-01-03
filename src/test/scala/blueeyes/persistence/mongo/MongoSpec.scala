@@ -14,6 +14,7 @@ import Arbitrary.arbitrary
 import org.scalacheck.Prop._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import akka.util.Timeout
 
 class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
@@ -22,7 +23,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   private val mockMongo     = new MockMongo()
   private val mockDatabase  = mockMongo.database( "mydb" )
 
-  private lazy val realMongo     = new RealMongo(Configgy.config.configMap("mongo"))
+  private lazy val realMongo     = RealMongo(Configgy.config.configMap("mongo"))
   private lazy val realDatabase  = realMongo.database( "mydb" )
 
   private val collection    = "test-collection"
@@ -230,11 +231,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   )
 
   private def oneQuery[T <: MongoQuery](query: T, database: Database)(implicit m: Manifest[T#QueryResult]) = {
-    val future = database(query)
-
-    future.isDelivered must eventually (be_==(true))
-
-    future.value.get
+    import akka.util.DurationLong
+    implicit val queryTimeout = Timeout(2000)
+    akka.dispatch.Await.result(database(query), queryTimeout.duration)
   }
 
   private def generateQuery(values: List[(JPath, JValue)]) = {

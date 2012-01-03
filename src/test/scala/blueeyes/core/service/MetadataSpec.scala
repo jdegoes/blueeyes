@@ -6,9 +6,10 @@ import blueeyes.core.http._
 import blueeyes.util.printer._
 import blueeyes.core.http.HttpMethods._
 import RestPathPatternParsers._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import blueeyes.bkka.AkkaDefaults
 
-class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
+class MetadataSpec extends Specification with HttpRequestHandlerCombinators with AkkaDefaults {
   import Metadata._
 
   "serviceToMetadata" should{
@@ -96,13 +97,13 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators{
           path("/bar") {
             describe("Personal john details"){
               path("/john") {
-                get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(1))) }
+                get{ (request: HttpRequest[Int]) => Future(HttpResponse[Int](content = Some(1))) }
               }
             }
           }~
           describe("Personal kate details"){
             path("/kate") {
-              get{ (request: HttpRequest[Int]) => Future.sync(HttpResponse[Int](content = Some(0))) }
+              get{ (request: HttpRequest[Int]) => Future(HttpResponse[Int](content = Some(0))) }
             }
           }
         }

@@ -1,6 +1,6 @@
 package blueeyes
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 package object actor {
   type ActorState[A, B] = (B, Actor[A, B])

@@ -1,15 +1,18 @@
 package blueeyes.benchmark
 
+import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util.Duration
+
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.service.engines.HttpClientXLightWeb
-import blueeyes.concurrent.Future
-import net.lag.configgy.Configgy
-import blueeyes.health.metrics.Timer
-import java.util.concurrent.{CountDownLatch, ThreadPoolExecutor, SynchronousQueue, TimeUnit}
-import blueeyes.json.JsonAST.JValue
 import blueeyes.demo.{Contact, BlueEyesDemoFacade}
+import blueeyes.health.metrics.Timer
+import blueeyes.json.JsonAST.JValue
 
-object Benchmark extends ServerStart{ self =>
+import java.util.concurrent.{CountDownLatch, ThreadPoolExecutor, SynchronousQueue, TimeUnit}
 
+object Benchmark extends BenchmarkServer with AkkaDefaults { self =>
   val executorService = new ThreadPoolExecutor(20, 100, 10*60, TimeUnit.SECONDS, new SynchronousQueue())
 
   def main(args: Array[String]){
@@ -26,6 +29,7 @@ object Benchmark extends ServerStart{ self =>
     healthReport
     clientReport(timer)
   }
+
   private def clientReport(timer: Timer){
     println("********************************")
     println("*     Client Health report     *")
@@ -43,6 +47,7 @@ object Benchmark extends ServerStart{ self =>
 """********************************
 *     Service Health report    *
 ********************************"""
+
     val serverHealthTitle =
 """********************************
 *     Server Health report     *
@@ -55,15 +60,13 @@ object Benchmark extends ServerStart{ self =>
   private def responseReport(future: Future[Option[JValue]], title: String) = {
     val taskCounDown  = new CountDownLatch(1)
 
-    future.deliverTo(response =>{
-      println(title)
-      println(blueeyes.json.Printer.pretty(blueeyes.json.JsonDSL.render(response.get)))
-      taskCounDown.countDown
-    })
-    future.ifCanceled{v =>
-      taskCounDown.countDown
-    }
-    taskCounDown.await
+    Await.result(
+      future onSuccess { case Some(jvalue) =>
+        println(title)
+        println(blueeyes.json.Printer.pretty(blueeyes.json.JsonDSL.render(jvalue)))
+      },
+      Duration.Inf
+    ) 
   }
 
   private def benchmark[T](connectionCount: Int, f: Timer => T, duration: Int): T= f(benchmark(new ContactStream().apply().take(connectionCount).toList, duration))
@@ -77,11 +80,7 @@ object Benchmark extends ServerStart{ self =>
   }
 
   private def runBenchmarkTasks(contacts: List[Contact], timer: Timer, duration: Int){
-    val benchmarkFutures = Future[Unit](contacts.map(startBenchmarkTask(_, timer, duration).future): _*)
-
-    val countDownLatch = new CountDownLatch(1)
-    benchmarkFutures.deliverTo(v => countDownLatch.countDown)
-    countDownLatch.await
+    contacts.map(startBenchmarkTask(_, timer, duration))
   }
 
   private def startBenchmarkTask(contact: Contact, timer: Timer, duration: Int) = {
@@ -91,8 +90,7 @@ object Benchmark extends ServerStart{ self =>
   }
 }
 
-class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, val timer: Timer, durationInSecs: Int) extends HttpClientXLightWeb with Runnable {
-  val future  = new Future[Unit]()
+class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, val timer: Timer, durationInSecs: Int) extends HttpClientXLightWeb with Runnable with AkkaDefaults {
   def run = {
     val start = System.currentTimeMillis
 
@@ -100,22 +98,12 @@ class BenchmarkTask(val clientFacade: BlueEyesDemoFacade, val contact: Contact, 
       process({c: Contact => clientFacade.create(c)})
       process({c: Contact => clientFacade.remove(c.name)})
     }
-
-    future.deliver(())
   }
 
   private def process[T](f: Contact => Future[T]) = {
     val countDown = new CountDownLatch(1)
-    timer.time{
-      val future    = f(contact)
-      future.deliverTo(response =>{
-        countDown.countDown
-      })
-      future.ifCanceled{v =>
-        countDown.countDown
-        v.foreach(_.printStackTrace)
-      }
-      countDown.await
+    timer.time {
+      Await.result(f(contact) onFailure { case ex => ex.printStackTrace }, Duration.Inf)
     }
   }
 }

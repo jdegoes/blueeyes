@@ -1,6 +1,6 @@
 package blueeyes.util
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import org.joda.time.{DateTime, DateTimeZone, Period, Instant}
 
 trait Clock {

@@ -10,7 +10,7 @@ import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.{ByteChunk, MemoryChunk}
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 trait HttpNettyConverters{
   implicit def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {

@@ -3,15 +3,17 @@ package blueeyes.core.data
 import org.specs2.mutable.Specification
 import java.util.zip.GZIPInputStream
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
+import blueeyes.bkka.AkkaDefaults
+import blueeyes.concurrent.test.FutureMatchers
 
-class GZIPByteChunkSpec extends Specification{
+class GZIPByteChunkSpec extends Specification with FutureMatchers with AkkaDefaults {
   "GZICompressedByteChunk" should{
     "compress one chunk" in{
       testCompressed(new MemoryChunk("foo".getBytes, () => None), "foo")
     }
     "compress several chunks" in{
-      testCompressed(new MemoryChunk("foo".getBytes, () => Some(Future.sync(new MemoryChunk("bar".getBytes, () => None)))), "foobar")
+      testCompressed(new MemoryChunk("foo".getBytes, () => Some(Future(new MemoryChunk("bar".getBytes, () => None)))), "foobar")
     }
   }
 
@@ -19,12 +21,12 @@ class GZIPByteChunkSpec extends Specification{
     val compressed = GZIPByteChunk(chunk)
     val future     = AggregatedByteChunk(compressed, None)
 
-    future.isDelivered must eventually (be_==(true))
-
-    new String(decopress(future.value.get)) mustEqual(data)
+    future.map(v => new String(decompress(v))) must whenDelivered {
+      be_==(data)
+    }
   }
 
-  private def decopress(chunk: ByteChunk) = {
+  private def decompress(chunk: ByteChunk) = {
     val in  = new GZIPInputStream(new ByteArrayInputStream(chunk.data))
     val out = new ByteArrayOutputStream()
     val buf = new Array[Byte](1024)

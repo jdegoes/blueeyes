@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 import blueeyes.core.http._
 import blueeyes.core.data._
 import java.net.InetAddress
@@ -120,7 +120,7 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
   }
 }
 
-object HttpClient {
+object HttpClient extends blueeyes.bkka.AkkaDefaults {
   implicit def requestHandlerToHttpClient[A](h: HttpClientHandler[A]): HttpClient[A] = new HttpClient[A] {
     def isDefinedAt(r: HttpRequest[A]): Boolean = h.isDefinedAt(r)
 
@@ -128,9 +128,7 @@ object HttpClient {
   }
 
   class EchoClient[T](f: HttpRequest[T] => Option[T]) extends HttpClient[T] {
-    override def apply(r: HttpRequest[T]) = {
-      Future.async(HttpResponse[T](content = f(r)))
-    }
+    override def apply(r: HttpRequest[T]) = Future(HttpResponse[T](content = f(r)))
 
     override def isDefinedAt(x: HttpRequest[T]) = true
   }

@@ -8,8 +8,7 @@ trait ReadWriteLock{
     lock.writeLock.lock()
     try {
       f
-    }
-    finally {
+    } finally {
       lock.writeLock.unlock()
     }
   }
@@ -18,8 +17,7 @@ trait ReadWriteLock{
     lock.readLock.lock()
     try {
       f
-    }
-    finally {
+    } finally {
       lock.readLock.unlock()
     }
   }

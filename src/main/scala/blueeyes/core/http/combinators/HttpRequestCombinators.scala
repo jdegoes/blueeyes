@@ -2,7 +2,7 @@ package blueeyes.core.http.combinators
 
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.concurrent.Future
+import akka.dispatch.Future
 
 /**
  *
@@ -17,7 +17,7 @@ import blueeyes.concurrent.Future
  * </pre>
  *
  */
-trait HttpRequestCombinators {
+trait HttpRequestCombinators extends blueeyes.bkka.AkkaDefaults {
   private type Handler[T, S] = HttpRequest[Future[T]] => Future[HttpResponse[S]]
   private type Handler2[T, S, E1] = HttpRequest[Future[T]] => E1 => Future[HttpResponse[S]]
 
@@ -34,15 +34,15 @@ trait HttpRequestCombinators {
   private def refineContentType[S >: T, T](request: HttpRequest[Future[S]], f: Handler[T, S])(implicit m: Manifest[T]): Future[HttpResponse[S]] = {
     request.content match {
       case None =>
-        Future.sync(HttpResponse(HttpStatus(BadRequest, "Expected " + m.erasure.getClass.getName + " but found nothing")))
+        Future(HttpResponse(HttpStatus(BadRequest, "Expected " + m.erasure.getClass.getName + " but found nothing")))
 
       case Some(future) => future.flatMap{ value =>
         if (value.getClass == m.erasure) {
           val t: T = value.asInstanceOf[T]
 
-          f(request.copy(content = Some(Future.sync(t))))
+          f(request.copy(content = Some(Future(t))))
         }
-        else Future.sync(HttpResponse(HttpStatus(BadRequest, "Expected " + m.erasure.getClass.getName + " but found: " + value.getClass.getName)))
+        else Future(HttpResponse(HttpStatus(BadRequest, "Expected " + m.erasure.getClass.getName + " but found: " + value.getClass.getName)))
       }
     }
   }
@@ -53,7 +53,7 @@ trait HttpRequestCombinators {
         throw HttpException(BadRequest, "Expected " + m.erasure.getClass.getName + " but found nothing")
 
       case Some(future) => future.flatMap{ value =>
-        if (p(value)) f(request) else Future.sync(HttpResponse(HttpStatus(BadRequest)))
+        if (p(value)) f(request) else Future(HttpResponse(HttpStatus(BadRequest)))
       }
     }
   }

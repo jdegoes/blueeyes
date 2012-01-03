@@ -1,19 +1,21 @@
 package blueeyes.core.service
 
-import net.lag.logging.Logger
+import com.weiglewilczek.slf4s.Logger
 import blueeyes.bkka._
 import blueeyes.json.JsonAST._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 import blueeyes.parsers.W3ExtendedLog
-import blueeyes.concurrent._
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data._
 import blueeyes.core.http.{HttpRequest, HttpResponse}
 import blueeyes.core.http.MimeTypes._
+import blueeyes.core.service._
 import blueeyes.health.metrics._
 import blueeyes.health.{HealthMonitor, CompositeHealthMonitor}
 import blueeyes.util._
 import blueeyes.util.logging._
+
 import net.lag.configgy.{Config, Configgy}
 import java.util.Calendar
 import printer.HtmlPrinter
@@ -22,14 +24,21 @@ import IntervalLength._
 
 import scalaz.Scalaz._
 import scalaz.{Failure, Success, Validation}
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.Actor._
-import blueeyes.core.service._
 
-trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with FutureImplicits with blueeyes.json.Implicits{
+import akka.actor.Actor
+import akka.actor.Props
+import akka.actor.ActorRef
+import akka.actor.ActorKilledException
+import akka.actor.PoisonPill
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.util.Timeout
+
+trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with AkkaDefaults with blueeyes.json.Implicits {
 //  private[this] object TransformerCombinators
 //  import TransformerCombinators.{path$}
+
+  val defaultHealthMonitorConfig = Seq(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))
 
   /** Augments the service with health monitoring. By default, various metrics
    * relating to request type, request timing, and request fulfillment are
@@ -43,15 +52,15 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T], timeout: akka.actor.Actor.Timeout): ServiceDescriptorFactory[T, S] = healthMonitor(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))(f)
-  def healthMonitor[T, S](default: IntervalConfig*)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T], timeout: akka.actor.Actor.Timeout): ServiceDescriptorFactory[T, S] = {
+  def healthMonitor[T, S](shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-      val intervals = context.config.getConfigMap("healthMonitor").map(_.getList("intervals").map(IntervalParser.parse(_))).getOrElse(default).toList
-      val monitor   = new CompositeHealthMonitor(intervals match {
+      val intervals = context.config.getConfigMap("healthMonitor").map(_.getList("intervals").map(IntervalParser.parse(_))).getOrElse(config).toList
+      val monitor: HealthMonitor = new CompositeHealthMonitor(intervals match {
         case x :: xs => intervals
-        case Nil => default.toList
+        case Nil => config.toList
       })
 
+      implicit val stop: Stop[HealthMonitor] = HealthMonitor.stop(shutdownTimeout)
       val underlying = f(monitor)(context)
       val descriptor = underlying.copy(
         request  = (state: S) => new MonitorHttpRequestService(underlying.request(state), monitor), 
@@ -98,7 +107,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
           produce(text/html){
             HttpHandlerService{
               request: HttpRequest[T] => {
-                Future.sync(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
+                Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
               }
             }
           }
@@ -119,7 +128,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    */
   def logging[T, S](f: Logger => ServiceDescriptorFactory[T, S]): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-      val logger = LoggingHelper.initializeLogging(context.config, context.toString)
+      val logger = Logger(context.toString)
 
       f(logger)(context)
     }
@@ -135,7 +144,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def requestLogging[T, S](f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = {
+  def requestLogging[T, S](shutdownTimeout: Timeout)(f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = {
     import RollPolicies._
     (context: ServiceContext) => {
       val underlying = f(context)
@@ -175,15 +184,18 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 
         def fileHeader() = formatter.formatHeader(fieldsDirective)
         val log          = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
-        val actor        = actorOf(new HttpRequestLoggerActor[T](fieldsDirective, includePaths, excludePaths, log, formatter)).start()
+        val actor        = defaultActorSystem.actorOf(Props(new HttpRequestLoggerActor[T](fieldsDirective, includePaths, excludePaths, log, formatter)))
+
+        implicit def logStop = new Stop[RequestLogger] {
+          def stop(log: RequestLogger) = log.close(shutdownTimeout)
+        }
+
+        implicit val actorStop = ActorRefStop(defaultActorSystem, shutdownTimeout)
 
         underlying.copy(request = (state: S) => new HttpRequestLoggerService(actor, underlying.request(state)),
-                        shutdown = (state: S) => {
-                          underlying.shutdown(state).flatMap{_ =>
-                          actor.stop()
-                            log.close.map(_ => None)
-                          }
-                        })
+                        shutdown = (state: S) => 
+                          underlying.shutdown(state).map(_.map(s => Stoppable(actor, Stoppable(log, Stoppable(s) :: Nil) :: Nil))
+                                                    .orElse(Some(Stoppable(actor, Stoppable(log) :: Nil)))))
       }
       else underlying
     }
@@ -257,7 +269,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
         validation
       } catch {
         case ex: Throwable => 
-          actor ! ((request, Future.dead[HttpResponse[T]]))
+          actor ! ((request, Promise.failed[HttpResponse[T]](ex)))
           throw ex
       }
     }
@@ -298,14 +310,17 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             healthMonitor.count(countPath)
             healthMonitor.trapFuture(errorPath)(response)
 
-            response.deliverTo{v =>
-              healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
-              healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
+            response onSuccess {
+              case v => 
+                healthMonitor.trackTime(timePath)(System.nanoTime - startTime)
+                healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
             }
+
           case Failure(DispatchError(error)) =>
             healthMonitor.call(overagePath)
             healthMonitor.count(countPath)
             healthMonitor.error(errorPath)(error)
+
           case failure =>
         }
         validation
