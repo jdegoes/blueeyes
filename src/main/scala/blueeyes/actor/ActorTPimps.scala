@@ -3,8 +3,6 @@ package blueeyes.actor
 import scalaz._
 import scalaz.Scalaz._
 
-import blueeyes.concurrent.Future
-
 trait ActorTPimps {
   import ActorTFunctions._
   import ActorTInstances._
