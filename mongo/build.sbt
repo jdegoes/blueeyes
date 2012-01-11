@@ -8,6 +8,8 @@ scalaVersion := "2.9.1"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 
+fork := true
+
 libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
   "commons-codec"               % "commons-codec"       % "1.5",

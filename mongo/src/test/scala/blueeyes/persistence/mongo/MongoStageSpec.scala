@@ -48,7 +48,8 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
 
   "MongoStage" should{
     "store all updates" in {
-      check { updates: List[(MongoFilter, MongoUpdate)] =>
+      //check { updates: List[(MongoFilter, MongoUpdate)] =>
+        val updates = List(genUpdate.sample.get)
         val mockMongo        = new MockMongo()
         val mockDatabase     = mockMongo.database( "mydb" )
         val collection       = "mycollection"
@@ -67,11 +68,9 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         val flushFuture = mongoStage.flushAll(Timeout(10000))
         flushFuture.value must eventually (beSome)
 
-        val pass = updates.foldLeft(true) { (result, filterAndUdate) =>
-          result && {
-            val update = filterAndUdate._2.asInstanceOf[UpdateFieldFunctions.IncF]
-
-            mockDatabase(select().from(collection).where(filterAndUdate._1)).map(_.toList) must whenDelivered {
+        forall(updates) {
+          case (filter, update: UpdateFieldFunctions.IncF) =>
+            mockDatabase(select().from(collection).where(filter)).map(_.toList) must whenDelivered {
               beLike { 
                 case x :: xs => 
                   val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
@@ -79,12 +78,10 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
                   value must_== JsonAST.JInt(setValue * sendCount * actorsCount)
               }
             }
-          }
         }
 
-        //actors.foreach(_ ! akka.actor.PoisonPill)
-        pass
-      }
+        //pass
+      //}
     }
   }
 }
