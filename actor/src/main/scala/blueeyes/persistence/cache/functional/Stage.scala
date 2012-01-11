@@ -1,12 +1,14 @@
 package blueeyes
 package persistence.cache.functional
 
-import blueeyes.util.ClockSystem._
+//import blueeyes.util.ClockSystem._
 import blueeyes.actor._
 import blueeyes.actor.Actor._
 
 import scalaz._
 import scalaz.Scalaz._
+
+import Stage.NanoTime
 
 sealed trait StageIn[+K, +V]
 case class PutAll[K, V](values: Iterable[(K, V)], time: Long) extends StageIn[K, V]
@@ -63,6 +65,7 @@ case class Stage[K, V: Semigroup](cache: TemporalCache[K, V], baseCapacity: Int,
 }
 
 object Stage {
+  type NanoTime = Long
 
   def empty[K, V: Semigroup](baseCapacity: Int, maxCapacity: Int): Stage[K, V] = 
     Stage[K, V](TemporalCache.empty[K, V], baseCapacity, maxCapacity)
