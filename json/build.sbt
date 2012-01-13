@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "javolution"                  % "javolution"          % "5.5.1",
   "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT",
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.7"            % "provided",
+  "org.specs2"                  %% "specs2"             % "1.8-SNAPSHOT"   % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )
