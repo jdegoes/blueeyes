@@ -506,8 +506,10 @@ object JsonAST {
      */
     def flattenWithPath: List[(JPath, JValue)] = {
       def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
+        case JObject(Nil) => (path -> value) :: Nil
         case JObject(fields) => fields.flatMap(flatten0(path))
-
+        
+        case JArray(Nil) => (path -> value) :: Nil
         case JArray(elements) => elements.zipWithIndex.flatMap { tuple =>
           val (element, index) = tuple
 
@@ -623,6 +625,10 @@ object JsonAST {
   }
   object JObject {
     lazy val empty = JObject(Nil)
+   
+    def unflatten(elements: List[(JPath, JValue)]): JObject = 
+      elements.foldLeft(JObject(Nil)) { (obj, t) => obj.set(t._1, t._2) --> classOf[JObject] }
+
   }
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
@@ -635,7 +641,6 @@ object JsonAST {
   object JArray {
     lazy val empty = JArray(Nil)
   }
-
 }
 
 /** Basic implicit conversions from primitive types into JSON.

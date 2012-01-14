@@ -86,4 +86,26 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
       JPath.Identity.ancestors mustEqual Nil
     }
   }
+
+  "Ordering" should {
+    "sort according to nodes names/indexes" in {
+      val test = List(
+        JPath("[1]"),
+        JPath("[0]"),
+        JPath("a"),
+        JPath("a[9]"),
+        JPath("a[10]"),
+        JPath("b[10]"),
+        JPath("a[10].a[1]"),
+        JPath("b[10].a[1]"),
+        JPath("b[10].a.x"),
+        JPath("b[10].a[0]"),
+        JPath("b[10].a[0].a")
+      )
+
+      val expected = List(1,0,2,3,4,6,5,9,10,7,8) map test
+
+      test.sorted must_== expected
+    }
+  }
 }

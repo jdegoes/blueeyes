@@ -86,6 +86,15 @@ sealed trait JPathNode
 object JPathNode {
   implicit def s2PathNode(name: String): JPathNode = JPathField(name)
   implicit def i2PathNode(index: Int): JPathNode = JPathIndex(index)
+
+  implicit val OrderingJPathNode = new Ordering[JPathNode] {
+    def compare(n1: JPathNode, n2: JPathNode): Int = (n1, n2) match {
+      case (JPathField(s1), JPathField(s2)) => s1.compare(s2)
+      case (JPathField(_) , _             ) => 1 
+      case (JPathIndex(i1), JPathIndex(i2)) => i1.compare(i2)
+      case (JPathIndex(_) , _             ) => -1
+    }
+  }
 }
 
 sealed case class JPathField(name: String) extends JPathNode {
@@ -132,7 +141,18 @@ object JPath {
   implicit def singleNodePath(node: JPathNode) = JPath(node)
 
   implicit val OrderingJValue = new Ordering[JPath] {
-    def compare(v1: JPath, v2: JPath): Int = v1.toString.compare(v2.toString)
+    def compare(v1: JPath, v2: JPath): Int = {
+      def compare0(n1: List[JPathNode], n2: List[JPathNode]): Int = (n1, n2) match {
+        case (Nil    , Nil)     => 0
+        case (Nil    , _  )     => -1
+        case (_      , Nil)     => 1
+        case (n1::ns1, n2::ns2) =>
+          val ncomp = Ordering[JPathNode].compare(n1, n2)
+          if(ncomp != 0) ncomp else compare0(ns1, ns2)
+      }
+
+      compare0(v1.nodes, v2.nodes)
+    }
   }
 }
 

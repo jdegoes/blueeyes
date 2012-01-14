@@ -104,6 +104,28 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     check(removeProp)
   }
 
+  "flattenWithPath includes empty object values" in {
+    val test = JObject(JField("a", JObject(Nil)) :: Nil)
+
+    val expected = List((JPath(".a"), JObject(Nil)))
+
+    test.flattenWithPath must_== expected
+  }
+  
+  "flattenWithPath includes empty array values" in {
+    val test = JObject(JField("a", JArray(Nil)) :: Nil)
+
+    val expected = List((JPath(".a"), JArray(Nil)))
+
+    test.flattenWithPath must_== expected
+  }
+
+  "unflatten is the inverse of flattenWithPath" in {
+    val inverse = (obj: JObject) => JObject.unflatten( obj.flattenWithPath ) == obj
+
+    check(inverse)
+  }
+
   "Set and retrieve an arbitrary jvalue at an arbitrary path" in {
     runArbitraryPathSpec
   }
