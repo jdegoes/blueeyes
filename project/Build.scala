@@ -21,7 +21,7 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  lazy val blueeyes = Project(id = "blueeyes", base = file(".")) aggregate(core, json, mongo)
+  lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings(nexusSettings : _*) aggregate(core, json, mongo)
   
   val jsonSettings = nexusSettings ++ Seq(libraryDependencies ++= scalaz.libDeps)
   lazy val json  = scalaz.addDeps(Project(id = "json", base = file("json")).settings(jsonSettings : _*))
