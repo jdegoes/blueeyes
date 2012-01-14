@@ -120,8 +120,24 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     test.flattenWithPath must_== expected
   }
 
+  "flattenWithPath for values produces a single value with the identity path" in {
+    val test = JInt(1)
+
+    val expected = List((JPath.Identity, test))
+
+    test.flattenWithPath must_== expected
+  }
+
+  "flattenWithPath on arrays produces index values" in {
+    val test = JArray(JInt(1) :: Nil)
+
+    val expected = List((JPath("[0]"), JInt(1)))
+
+    test.flattenWithPath must_== expected
+  }
+
   "unflatten is the inverse of flattenWithPath" in {
-    val inverse = (obj: JObject) => JObject.unflatten( obj.flattenWithPath ) == obj
+    val inverse = (value: JValue) => JValue.unflatten( value.flattenWithPath ) == value 
 
     check(inverse)
   }

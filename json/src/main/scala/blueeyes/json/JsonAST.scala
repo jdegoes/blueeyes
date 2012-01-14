@@ -560,6 +560,22 @@ object JsonAST {
     }
   }
 
+  object JValue {
+    private def unflattenArray(elements: List[(JPath, JValue)]): JArray = {
+      elements.foldLeft(JArray(Nil)) { (arr, t) => arr.set(t._1, t._2) --> classOf[JArray] }
+    }
+
+    private def unflattenObject(elements: List[(JPath, JValue)]): JObject = {
+      elements.foldLeft(JObject(Nil)) { (obj, t) => obj.set(t._1, t._2) --> classOf[JObject] }
+    }
+
+    def unflatten(elements: List[(JPath, JValue)]): JValue = elements.sortBy( _._1 ) match {
+      case ((JPath.Identity, value) :: Nil) => value
+      case arr @ ((p, _) :: _) if p.path.startsWith("[") => unflattenArray(arr)
+      case obj                                           => unflattenObject(obj)
+    }    
+  }
+
   case object JNothing extends JValue {
     type Values = None.type
     type Self = JValue
@@ -625,11 +641,8 @@ object JsonAST {
   }
   object JObject {
     lazy val empty = JObject(Nil)
-   
-    def unflatten(elements: List[(JPath, JValue)]): JObject = 
-      elements.foldLeft(JObject(Nil)) { (obj, t) => obj.set(t._1, t._2) --> classOf[JObject] }
-
   }
+
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
     type Self = JArray
