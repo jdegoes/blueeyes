@@ -14,9 +14,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
-  "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT",
+  "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT" changing(),
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.8-SNAPSHOT"   % "provided",
+  "org.specs2"                  %% "specs2"             % "1.8-SNAPSHOT"   % "provided" changing(),
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )

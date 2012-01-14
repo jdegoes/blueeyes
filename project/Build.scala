@@ -5,7 +5,7 @@ import sbt.NameFilter._
 
 object BlueEyesBuild extends Build {
   val scalaz = com.samskivert.condep.Depends(
-    ("scalaz", "core", "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT")
+    ("scalaz", "core", "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT" changing())
   )
 
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
