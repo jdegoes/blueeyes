@@ -21,12 +21,12 @@ trait BijectionsByteArray {
     }
   }
   implicit val XMLToByteArray   = new Bijection[NodeSeq, Array[Byte]] {
-    def apply(s: NodeSeq)       = s.toString.getBytes
-    def unapply(t: Array[Byte]) = XML.load(new ByteArrayInputStream(t))
+    def apply(s: NodeSeq)       = s.toString.getBytes("UTF-8")
+    def unapply(t: Array[Byte]) = XML.loadString(new String(t, "UTF-8"))
   }
   implicit val ByteArrayToString    = new Bijection[Array[Byte], String] {
-    def apply(t: Array[Byte]): String   = new String(t)
-    def unapply(s: String): Array[Byte] = s.getBytes
+    def apply(t: Array[Byte]): String   = new String(t, "UTF-8")
+    def unapply(s: String): Array[Byte] = s.getBytes("UTF-8")
   }
   implicit val ByteArrayToJValue    = JValueToByteArray.inverse
   implicit val ByteArrayToXML       = XMLToByteArray.inverse
