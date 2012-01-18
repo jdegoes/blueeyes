@@ -28,16 +28,18 @@ sealed class Future[T] { self =>
 
   private val lock = new ReadWriteLock{}
 
-  private val _errorHandlers: ArrayBuffer[List[Throwable] => Unit] = new ArrayBuffer()
+  private val defaultBufferSize = 1
+
+  private val _errorHandlers: ArrayBuffer[List[Throwable] => Unit] = new ArrayBuffer(defaultBufferSize)
   private def errorHandlers: List[List[Throwable] => Unit] = lock.readLock { _errorHandlers.toList }
-  private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer()
+  private val _listeners: ArrayBuffer[T => Unit] = new ArrayBuffer(defaultBufferSize)
   private def listeners: List[T => Unit] = lock.readLock { _listeners.toList }
 
   @volatile private var _result: Option[T] = None
   @volatile private var _isSet: Boolean = false
   @volatile private var _isCanceled: Boolean = false
 
-  @volatile private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer
+  @volatile private var _canceled: ArrayBuffer[Option[Throwable] => Unit] = new ArrayBuffer(defaultBufferSize)
   private def canceled: List[Option[Throwable] => Unit] = _canceled.toList
 
   @volatile private var _error: Option[Throwable] = None
@@ -591,11 +593,16 @@ object Future extends FutureImplicits with Logging {
 }
 
 class FutureDispatch(val timeout: Long, val dispatcher: MessageDispatcher)
-object FutureDispatch {
-  implicit val DefaultFutureDispatch: FutureDispatch = new FutureDispatch (
-    Long.MaxValue, //don't time things out -- TODO: Fix this, extremely dangerous!
-    Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_async")
-      .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-      .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-  )
+
+object FutureDispatch extends Logging {
+  implicit val DefaultFutureDispatch: FutureDispatch = {
+    val timeout = akka.config.Config.config("blueeyes.bkka.timeout", 120000)
+    logger.debug("FutureDispatch timeout set to " + timeout)
+    new FutureDispatch (
+      timeout, // Ugly, but functional
+      Dispatchers.newExecutorBasedEventDrivenDispatcher("blueeyes_async")
+        .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+        .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+    )
+  }
 }

@@ -19,7 +19,7 @@ import akka.actor.ActorKilledException
 import akka.actor.PoisonPill
 import akka.dispatch.{Future => AkkaFuture}
 import akka.routing.Routing._
-import akka.routing.CyclicIterator
+import akka.routing.SmallestMailboxFirstIterator
 import akka.dispatch.Dispatchers
 import akka.util.Duration
 
@@ -31,6 +31,8 @@ class RealMongo(config: ConfigMap) extends Mongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
   val disconnectTimeout = akka.actor.Actor.Timeout(config.getLong("shutdownTimeout", Long.MaxValue))
+  val operationTimeout = akka.actor.Actor.Timeout(config.getLong("operationTimeout", 300000))
+  val insertTimeout = akka.actor.Actor.Timeout(config.getLong("insertTimeout", 30000))
 
   private lazy val mongo = {
     val options = new MongoOptions()
@@ -53,7 +55,7 @@ class RealMongo(config: ConfigMap) extends Mongo {
     mongo
   }
 
-  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
+  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout, insertTimeout, operationTimeout)
 
   lazy val close = akka.dispatch.Future(mongo.close, disconnectTimeout.duration.toMillis)
 }
@@ -64,7 +66,7 @@ object RealDatabase {
                            .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 }
 
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout, poolSize: Int = 10) extends Database with Logging {
+private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: akka.actor.Actor.Timeout, insertTimeout : akka.actor.Actor.Timeout, operationTimeout : akka.actor.Actor.Timeout, poolSize: Int = 10) extends Database with Logging {
   private class RealMongoActor extends Actor {
     self.dispatcher = RealDatabase.dispatcher
     def receive = {
@@ -73,7 +75,7 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
   }
 
   private lazy val actors     = List.fill(poolSize)(Actor.actorOf(new RealMongoActor).start)
-  private lazy val mongoActor = loadBalancerActor( new CyclicIterator( actors ) )
+  private lazy val mongoActor = loadBalancerActor( new SmallestMailboxFirstIterator( actors ) )
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
@@ -82,8 +84,10 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
   lazy val disconnect = (mongoActor.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () })
                         .flatMap(_ => AkkaFuture.sequence(actors.map(_.?(PoisonPill)(timeout = disconnectTimeout) recover { case ex: ActorKilledException => () }), disconnectTimeout.duration.toMillis))
 
-  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  =
-    mongoActor.?(MongoQueryTask(query, query.collection, isVerified))(timeout = disconnectTimeout).mapTo[T#QueryResult].toBlueEyes
+  protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult]): Future[T#QueryResult]  = query match {
+    case iq : MongoInsertQuery => mongoActor.?(MongoQueryTask(query, query.collection, isVerified))(timeout = insertTimeout).mapTo[T#QueryResult].toBlueEyes
+    case _                     => mongoActor.?(MongoQueryTask(query, query.collection, isVerified))(timeout = operationTimeout).mapTo[T#QueryResult].toBlueEyes
+  }
 
   override def toString = "Mongo Database: " + database.getName
 }
