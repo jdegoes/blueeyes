@@ -2,6 +2,8 @@ package blueeyes.json
 
 import util.matching.Regex
 
+import xschema._
+import xschema.DefaultSerialization._
 import JsonAST._
 
 sealed trait JPath { self =>
@@ -104,7 +106,18 @@ sealed case class JPathIndex(index: Int) extends JPathNode {
   override def toString = "[" + index + "]"
 }
 
-object JPath {
+trait JPathSerialization {
+  implicit val JPathDecomposer : Decomposer[JPath] = new Decomposer[JPath] {
+    def decompose(jpath: JPath) : JValue = JString(jpath.toString)
+  }
+
+  implicit val JPathExtractor : Extractor[JPath] = new Extractor[JPath] with ValidatedExtraction[JPath] {
+    override def validated(obj : JValue) : scalaz.Validation[Extractor.Error,JPath] =
+      obj.validated[String].map(JPath(_))
+  }
+}
+
+object JPath extends JPathSerialization {
   private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath 
 
   private val PathPattern  = """\.|(?=\[\d+\])""".r
