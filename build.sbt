@@ -28,8 +28,8 @@ libraryDependencies ++= Seq(
 )
 
 resolvers ++= Seq(
-  "ReportGrid repo" at            "http://devci01.reportgrid.com:8081/content/repositories/releases",
-  "ReportGrid snapshot repo" at   "http://devci01.reportgrid.com:8081/content/repositories/snapshots",
+  "ReportGrid repo" at            "http://nexus.reportgrid.com/content/repositories/releases",
+  "ReportGrid snapshot repo" at   "http://nexus.reportgrid.com/content/repositories/snapshots",
   "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",
   "Scala-Tools Snapshots" at      "http://scala-tools.org/repo-snapshots/",
   "Akka Repository" at            "http://akka.io/repository/",
