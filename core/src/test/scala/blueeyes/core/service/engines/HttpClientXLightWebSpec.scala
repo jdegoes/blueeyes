@@ -9,11 +9,11 @@ import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
 import org.specs2.mutable.Specification
-import org.specs2.time.TimeConversions._
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
+import akka.util.Duration
 import blueeyes.bkka.AkkaDefaults
 
 import collection.mutable.ArrayBuilder.ofByte
@@ -23,7 +23,7 @@ import org.specs2.specification.{Step, Fragments}
 
 class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators 
 with AkkaDefaults with HttpRequestMatchers {
-  val duration = 250.milliseconds
+  val duration = Duration(250, "millis")
   val retries = 30
 
   private val httpClient = new HttpClientXLightWeb
@@ -189,7 +189,7 @@ with AkkaDefaults with HttpRequestMatchers {
 
     "Support GET requests of 1000 requests" in {
       val total = 1000
-      val duration = 1000.milliseconds
+      val duration = Duration(1000, "millis")
       val futures = List.fill(total) {
         httpClient.get(uri + "?test=true")
       }

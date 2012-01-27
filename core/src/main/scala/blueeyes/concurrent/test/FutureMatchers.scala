@@ -1,5 +1,4 @@
 import scala.annotation.tailrec  
-import org.specs2.execute.FailureException
 import java.util.concurrent.{TimeoutException,  CountDownLatch}
 
 import akka.dispatch.Future
@@ -11,19 +10,11 @@ import akka.util.duration._
 import blueeyes.util.RichThrowableImplicits._
 
 import org.specs2.matcher._
+import org.specs2.execute.FailureException
 
 package blueeyes.concurrent.test {
 
-trait AkkaConversions {
-  implicit def specsDuration2Akka(duration: org.specs2.time.Duration): akka.util.Duration = new DurationLong(duration.inMillis).millis
-  implicit def specsDuration2Rich(duration: org.specs2.time.Duration) = new RichSpecsDuration(duration)
-
-  class RichSpecsDuration(duration: org.specs2.time.Duration) {
-    def toAkka = specsDuration2Akka(duration)
-  }
-}
-
-trait FutureMatchers extends AkkaConversions { 
+trait FutureMatchers extends { 
   case class FutureTimeouts(retries: Int, duration: Duration)
 
   private sealed trait Outcome[A]
