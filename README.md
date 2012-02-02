@@ -1,6 +1,6 @@
 # BlueEyes
 
-BlueEyes is a lightweight web 3.0 framework for the Scala programming language. The framework lets you quickly and easily create high-performing web services that embrace the machinery and language of HTTP. The framework tries to get out of your way and let you concentrate on logic instead of boilerplate.
+BlueEyes is a lightweight, asynchronous web framework for the Scala programming language. The framework lets you quickly and easily create high-performing web services that embrace the machinery and language of HTTP. The framework tries to get out of your way and let you concentrate on logic instead of boilerplate.
 
 BlueEyes has been used in production across large clusters of instances deployed in Amazon EC2, reliably handling tens of thousands of requests a second, in an environment with 24x7 uptime requirements (online display advertising).
 
