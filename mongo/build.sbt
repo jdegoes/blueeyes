@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
-  "org.mongodb"                 % "mongo-java-driver"   % "2.7.2",
+  "org.mongodb"                 % "mongo-java-driver"   % "2.7.3",
   "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
