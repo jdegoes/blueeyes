@@ -4,6 +4,7 @@ import org.specs2.mutable.Specification
 import blueeyes.core.service._
 import akka.dispatch.Future
 import akka.dispatch.Promise
+import akka.util.Duration
 import blueeyes.core.http.HttpResponse
 import blueeyes.core.http.MimeTypes._
 import blueeyes.BlueEyesServiceBuilder
@@ -16,7 +17,7 @@ import blueeyes.concurrent.test.FutureMatchers
 
 
 class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers{
-  implicit val futureTimeouts = FutureTimeouts(6, 1 second)
+  implicit val futureTimeouts = FutureTimeouts(6, Duration(1, "second"))
 
   "Service Specification" should {
     "support get by valid URL" in {

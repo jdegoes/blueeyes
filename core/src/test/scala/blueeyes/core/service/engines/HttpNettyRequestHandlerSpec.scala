@@ -69,7 +69,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
 
     nettyHandler.channelDisconnected(context, stateEvent)
 
-    Await.result(promise.failed, 10 seconds) must haveSuperclass[Throwable]
+    Await.result(promise.failed, Duration(10, "seconds")) must haveSuperclass[Throwable]
   }
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {

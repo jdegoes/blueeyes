@@ -3,6 +3,7 @@ package blueeyes.core.service.engines
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
+import akka.util.Duration
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.concurrent.test.FutureMatchers
 
@@ -102,7 +103,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val next = chunk.next
       next match{
         case None =>  buffer
-        case Some(x) => readContent(Await.result(x, 10 seconds), buffer)
+        case Some(x) => readContent(Await.result(x, Duration(10, "seconds")), buffer)
       }
     }
   }
