@@ -12,10 +12,7 @@ trait AkkaDefaults {
 object AkkaDefaults {
   val actorSystem = ActorSystem.create("blueeyes_actors")
 
-  val defaultFutureDispatch: MessageDispatcher = 
-    actorSystem.dispatcherFactory.newDispatcher("blueeyes_async")
-    .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-    .setMaxPoolSize(100).setKeepAliveTime(30 seconds).build
+  val defaultFutureDispatch: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_async")
 }
 
 // vim: set ts=4 sw=4 et:

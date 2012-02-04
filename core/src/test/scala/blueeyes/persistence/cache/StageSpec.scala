@@ -13,6 +13,7 @@ import akka.dispatch.Future
 import akka.dispatch.Future._
 import akka.actor.Actor
 import akka.actor.Props
+import akka.pattern.ask
 import akka.util.Duration
 import akka.util.Timeout
 
@@ -111,7 +112,7 @@ class StageSpec extends Specification with AkkaDefaults {
         defaultActorSystem.actorOf(Props(new MessageActor("1", "1", messagesCount, stage)))
       }
 
-      val futures   = Future.sequence(actors.map(actor => (actor ? ("Send", timeout)).mapTo[Unit]))
+      val futures   = Future.sequence(actors.map(actor => (actor ? "Send").mapTo[Unit]))
       futures.value must eventually(200, 300.milliseconds) (beSome)
 
       val flushFuture = stage.flushAll(timeout)
@@ -146,7 +147,7 @@ class StageSpec extends Specification with AkkaDefaults {
         defaultActorSystem.actorOf(Props(new MessageActor(msgs(0), msgs(0), messagesCount, stage)))
       }
 
-      val futures = Future.sequence(actors.map(actor => (actor ? ("Send", timeout)).mapTo[Unit]))
+      val futures = Future.sequence(actors.map(actor => (actor ? "Send").mapTo[Unit]))
       (futures.value must eventually(500, 300.milliseconds) (beSome))
 
       val flushFuture = stage.flushAll(timeout)

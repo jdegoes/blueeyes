@@ -3,6 +3,7 @@ package blueeyes.persistence.cache
 import blueeyes.bkka.Stop
 import blueeyes.bkka.ActorRefStop
 import akka.actor.{Actor, ActorRef, Props, Scheduler, PoisonPill, ActorKilledException, ActorSystem}
+import akka.pattern.ask
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.util.Timeout
@@ -139,7 +140,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def putAll(pairs: Iterable[(K, V)])(implicit sg: Semigroup[V]) = actor ! PutAll(pairs, sg)
 
-  def flushAll(timeout: Timeout): Future[Int] = (actor ? (FlushAll, timeout)).mapTo[Int]
+  def flushAll(implicit timeout: Timeout): Future[Int] = (actor ? FlushAll).mapTo[Int]
 
   /** TODO: use an iteratee such that the state of the stage is not exposed. */
   private var stopFuture: Future[Unit] = _

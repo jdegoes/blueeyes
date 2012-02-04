@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "joda-time"                   % "joda-time"           % "1.6.2",
   "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
   "org.jboss.netty"             % "netty"               % "3.2.6.Final",
-  "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
+  "com.typesafe.akka"           % "akka-actor"          % "2.0-M3",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",

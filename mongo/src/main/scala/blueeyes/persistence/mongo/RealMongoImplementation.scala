@@ -20,6 +20,8 @@ import akka.actor.Props
 import akka.actor.PoisonPill
 import akka.dispatch.Future
 import akka.dispatch.Promise
+import akka.dispatch.MessageDispatcher
+import akka.pattern.ask
 import akka.routing.RoundRobinRouter
 import akka.util.Duration
 import akka.util.Timeout
@@ -79,12 +81,12 @@ object RealDatabase {
 private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
-  private implicit val dispatcher = actorSystem.dispatcherFactory.newDispatcher("blueeyes_mongo-" + database.getName)
-                                    .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                    .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+  private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
+                                    //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+                                    //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 
   private lazy val actors = List.fill(poolSize) {
-    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher(dispatcher))
+    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
   }
 
   private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter()), "blueeyes_mongo_router-" + database.getName)

@@ -4,13 +4,16 @@ import java.util.concurrent.TimeUnit.{MILLISECONDS}
 import java.util.concurrent.CountDownLatch
 import scala.util.Random
 import scalaz.Semigroup
+
 import akka.dispatch.Future
 import akka.dispatch.Future._
-import org.specs2.time.TimeConversions._
 import akka.actor.Actor
 import akka.actor.Props
+import akka.pattern.ask
 import akka.util.Timeout
 import blueeyes.bkka.AkkaDefaults
+
+import org.specs2.time.TimeConversions._
 
 object StageProfile extends AkkaDefaults {
   private val random    = new Random()
@@ -42,7 +45,7 @@ object StageProfile extends AkkaDefaults {
       defaultActorSystem.actorOf(Props(new MessageActor(msgs(0), msgs(0), messagesCount, stage)))
     }
 
-    akka.dispatch.Await.result(Future.sequence(actors.map(actor => actor.?("Send", timeout))), akka.util.Duration.Inf)
+    akka.dispatch.Await.result(Future.sequence(actors.map(actor => (actor ? "Send"))), akka.util.Duration.Inf)
     actors.foreach(_ ! akka.actor.PoisonPill)
   }
 

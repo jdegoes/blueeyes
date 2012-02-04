@@ -9,6 +9,7 @@ import akka.actor.PoisonPill
 import akka.actor.ActorKilledException
 import akka.dispatch.Await
 import akka.dispatch.Promise
+import akka.pattern.ask
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 
