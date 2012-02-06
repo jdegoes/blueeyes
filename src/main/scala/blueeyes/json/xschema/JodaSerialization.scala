@@ -3,7 +3,7 @@ package xschema
 
 import JsonAST._
 import DefaultSerialization._
-import org.joda.time.{Instant, DateTime, DateTimeZone}
+import org.joda.time.{Instant, DateTime, DateTimeZone, Duration}
 
 trait JodaSerializationImplicits {
   implicit val InstantExtractor = new Extractor[Instant] {
@@ -12,6 +12,14 @@ trait JodaSerializationImplicits {
 
   implicit val InstantDecomposer = new Decomposer[Instant] {
     def decompose(dateTime: Instant): JValue = JInt(dateTime.getMillis)
+  }
+
+  implicit val DurationExtractor = new Extractor[Duration] {
+    override def extract(jvalue: JValue): Duration = new Duration(jvalue.deserialize[Long])
+  }
+
+  implicit val DurationDecomposer = new Decomposer[Duration] {
+    def decompose(duration: Duration): JValue = JInt(duration.getMillis)
   }
 
   def ZonedTimeExtractor(zone: DateTimeZone): Extractor[DateTime] = new Extractor[DateTime] {
