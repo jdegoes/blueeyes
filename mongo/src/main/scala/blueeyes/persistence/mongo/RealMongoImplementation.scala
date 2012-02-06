@@ -69,7 +69,7 @@ class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mo
 
 object RealDatabase {
   //val actorSystem = ActorSystem.create("blueeyes_mongo") //TODO: separate mongo actor system creation out.
-  private val actorSystem = ActorSystem()
+  private val actorSystem = ActorSystem("blueeyes_mongo")
 
   private class RealMongoActor extends Actor {
     def receive = {

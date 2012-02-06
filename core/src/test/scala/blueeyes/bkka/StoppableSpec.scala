@@ -14,7 +14,7 @@ import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 
 class StoppableSpec extends Specification with AkkaDefaults {
-  val actorSystem = ActorSystem.create()
+  val actorSystem = ActorSystem("stoppable_spec")
   implicit val timeout = Timeout(1000)
   val random = new scala.util.Random
 
