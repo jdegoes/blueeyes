@@ -34,7 +34,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   sslPort = %d
 }"""
 
-  val duration = Duration(350, "millis")
+  val duration: org.specs2.time.Duration = 350.milliseconds
   val retries = 50
 
   implicit val testTimeouts = FutureTimeouts(50, duration)

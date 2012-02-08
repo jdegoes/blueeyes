@@ -3,7 +3,7 @@ package blueeyes.core.service
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.concurrent.test._
 import akka.dispatch.{Await, Future}
-import akka.util.Duration
+import akka.util.Duration._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
@@ -18,7 +18,7 @@ class HttpServerSpec extends Specification with BijectionsChunkString with Futur
   object server extends Outside[TestServer] with Scope {
     def outside = {
       Configgy.configureFromString("")
-      new TestServer() ->- { s => Await.result(s.start, Duration(10, "seconds")) }
+      new TestServer() ->- { s => Await.result(s.start, 10 seconds) }
     }
   }
 
@@ -70,7 +70,7 @@ class HttpServerSpec extends Specification with BijectionsChunkString with Futur
   "HttpServer stop" should {
     "execute shut down function" in server { s =>
       val f = s.stop
-      Await.result(f, Duration(10, "seconds"))
+      Await.result(f, 10 seconds)
       (s.shutdownCalled must beTrue) and
       (s.status must be (RunningStatus.Stopped))
     }
