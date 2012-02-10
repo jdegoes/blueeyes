@@ -89,7 +89,13 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
     actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
   }
 
-  private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter()), "blueeyes_mongo_router-" + database.getName)
+  private lazy val mongoActor = {
+    println("-------======================================================================")
+    println("MAKING MONGO ACTOR")
+    println("-------======================================================================")
+
+ actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)), "blueeyes_mongo_router-" + database.getName)
+                               }
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
@@ -113,7 +119,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject]) = { 
+  def insert(objects: List[JObject]) = {
     objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map{objects: List[DBObject] =>
       collection.insert(objects)
     }
@@ -128,8 +134,8 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def ensureIndex(name: String, keysPaths: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     val indexOptions = JObject(
-      JField("name", JString(name)) :: 
-      JField("background", JBool(true)) :: 
+      JField("name", JString(name)) ::
+      JField("background", JBool(true)) ::
       JField("unique", JBool(unique)) :: options.fields
     )
 
@@ -244,5 +250,3 @@ class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A
 
   protected def underlying = delegate
 }
-
-
