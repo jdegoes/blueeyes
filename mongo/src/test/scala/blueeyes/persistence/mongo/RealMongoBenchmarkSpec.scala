@@ -40,7 +40,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
       val actors = List.range(1, 50) map {index =>
         defaultActorSystem.actorOf(Props(new MessageActor(alphaStr.sample.get, alphaStr.sample.get, index)))
       }
-      val futures = Future.sequence(actors.map(actor => (actor ? ("send")(2000)).mapTo[Tuple3[Future[Option[JObject]], String, String]]))
+      val futures = Future.sequence(actors.map(actor => (actor.?("send")(2000)).mapTo[Tuple3[Future[Option[JObject]], String, String]]))
       futures must whenDelivered {
         beLike {
           case list => forall(list) {
@@ -72,4 +72,3 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
     }
   }
 }
-
