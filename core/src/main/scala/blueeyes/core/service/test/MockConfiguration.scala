@@ -3,7 +3,7 @@ package blueeyes.core.service.test
 object MockConfiguration {
 
   /** The global switch that turns mocking on and off. Can be overridden by mockable object specific switches. See isMocked below. */
-  val GlobalSwitch = "blueeyes.mock"
+  val GlobalSwitch = "blueeyes_mock"
 
   def globalSwitch =
     sys.props.get(GlobalSwitch)
