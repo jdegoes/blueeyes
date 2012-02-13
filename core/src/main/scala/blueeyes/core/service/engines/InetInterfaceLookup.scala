@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service.engines
 
 import net.lag.configgy.ConfigMap
 import java.net.{InetAddress, InetSocketAddress}
