@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import blueeyes.core.service._
 import akka.dispatch.Future

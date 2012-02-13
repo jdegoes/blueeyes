@@ -1,5 +1,6 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
+import _root_..
 import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import com.weiglewilczek.slf4s.Logger
 import java.util.concurrent.Executors

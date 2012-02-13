@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
 
@@ -17,14 +17,14 @@ trait HttpNettyConverters{
     case "HTTP/1.0" => `HTTP/1.0`
     case "HTTP/1.1" => `HTTP/1.1`
   }
-  
+
   implicit def toNettyVersion(version: HttpVersion): NettyHttpVersion   = NettyHttpVersion.valueOf(version.value)
-  
+
   implicit def toNettyStatus(status : HttpStatus) : HttpResponseStatus = status.code match {
     case HttpStatusCodes.OK => HttpResponseStatus.OK
     case _ => new HttpResponseStatus(status.code.value, status.reason)
   }
-  
+
   implicit def fromNettyMethod(method: NettyHttpMethod): HttpMethod = method match{
     case NettyHttpMethod.GET      => HttpMethods.GET
     case NettyHttpMethod.PUT      => HttpMethods.PUT
@@ -78,7 +78,7 @@ trait HttpNettyConverters{
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
     nettyHeaders.foldLeft(HttpHeaders.Empty) {
-      case (headers, header) => 
+      case (headers, header) =>
         val key   = header.getKey
         val value = header.getValue
 

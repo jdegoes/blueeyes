@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{HttpMethod, DefaultHttpRequest, HttpVersion}

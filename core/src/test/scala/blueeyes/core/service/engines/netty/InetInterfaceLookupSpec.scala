@@ -1,5 +1,9 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
+import _root_..
+import _root_..
+import _root_..
+import _root_..
 import org.specs2.mutable.Specification
 import net.lag.configgy.Configgy
 import java.net.{InetSocketAddress, InetAddress}

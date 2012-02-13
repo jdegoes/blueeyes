@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
@@ -24,7 +24,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
     val current = delivery
 
     e.getMessage match {
-      case m: NettyHttpRequest => 
+      case m: NettyHttpRequest =>
         if (is100ContinueExpected(m)) write(ctx, succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
         if (m.isChunked) {
@@ -62,7 +62,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
         }
       }
 
-      case _ => 
+      case _ =>
         write(ctx, succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
     }
   }

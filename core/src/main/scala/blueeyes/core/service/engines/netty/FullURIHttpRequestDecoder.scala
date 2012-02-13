@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder
 import util.matching.Regex

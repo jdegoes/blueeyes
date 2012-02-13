@@ -1,5 +1,6 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
+import _root_..
 import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
 import org.specs2.mutable.Specification
@@ -41,7 +42,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
-  
+
   override def is = args(sequential = true) ^ super.is
   override def map(fs: =>Fragments) = Step {
     var error: Option[Throwable] = None
@@ -72,7 +73,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
     Context.dataFile.delete
     server.foreach(_.stop)
   }
-  
+
 
   "HttpServer" should {
     "return empty response"in{
@@ -106,7 +107,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content must beSome("foo")) 
+            (content must beSome("foo"))
         }
       }
     }
@@ -138,7 +139,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       client.parameters('bar -> "zar").get("/foo") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and 
+            (status.code must be (OK)) and
             (content must beSome(Context.context))
         }
       }
@@ -153,7 +154,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       }
     }
     "return huge delayed content"in{
-      val content = client.get[ByteChunk]("/huge/delayed") 
+      val content = client.get[ByteChunk]("/huge/delayed")
       content must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
@@ -175,7 +176,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))) 
+            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -258,7 +259,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           val promise = Promise[HttpResponse[ByteChunk]]()
           request.content.foreach{value =>
             val f = FileSink(Context.dataFile, value)
-            f.onSuccess { case v => promise.success(HttpResponse[ByteChunk]()) } 
+            f.onSuccess { case v => promise.success(HttpResponse[ByteChunk]()) }
           }
           promise
         }
