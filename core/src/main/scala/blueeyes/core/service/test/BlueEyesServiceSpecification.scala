@@ -10,7 +10,6 @@ import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 import blueeyes.core.service._
-//import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.util.RichThrowableImplicits._
 
 import java.util.concurrent.{TimeUnit, CountDownLatch}
@@ -22,17 +21,14 @@ import org.specs2.specification.{Fragment, Fragments, Step}
 class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
-  //private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
-  private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
-
   override def is = args(sequential = true) ^ super.is
   private val specBefore = Step {
-    setMockCongiguration
+    setMockConfiguration
     startServer
   }
 
   private val specAfter = Step {
-    resetMockCongiguration
+    resetMockConfiguration
     stopServer
   }
 
@@ -52,18 +48,14 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     override def rootConfig: Config = self.rootConfig
   }
 
-  def setMockCongiguration = {
-    //sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
-    sys.props.getOrElseUpdate (ConfigurableHttpClient.HttpClientSwitch, "true")
+                                                                                                private val globalSwitch = MockConfiguration.globalSwitch
+
+  def setMockConfiguration = {
+    MockConfiguration.turnOnGlobalSwitch
   }
 
-  def resetMockCongiguration = {
-    def setProp(key: String, value: Option[String]) = value match{
-      case Some(x) => sys.props.put(key, x)
-      case None => sys.props.remove(key)
-    }
-    //setProp(ConfigurableMongo.MongoSwitch, mongoSwitch)
-    setProp(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch)
+  def resetMockConfiguration = {
+    MockConfiguration.setGlobalSwitch(globalSwitch)
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()

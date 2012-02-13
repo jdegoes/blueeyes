@@ -6,6 +6,7 @@ import akka.dispatch.Future
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
 import blueeyes.core.service._
+import blueeyes.core.service.test.MockConfiguration
 import engines.HttpClientXLightWeb
 
 import scalaz.{Failure, Success}
@@ -16,7 +17,7 @@ trait ConfigurableHttpClient extends AkkaDefaults {
   private lazy val NotFound            = Future(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
 
   lazy implicit val httpClient: HttpClientByteChunk = {
-    val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "false").toBoolean
+    val isMock = MockConfiguration.isMocked(ConfigurableHttpClient.HttpClientSwitch)
     if (isMock) mockClient(mockServer) else realClient
   }
 
