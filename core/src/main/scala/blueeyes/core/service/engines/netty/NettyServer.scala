@@ -7,6 +7,7 @@ import org.jboss.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.channel._
 import net.lag.configgy.ConfigMap
+import blueeyes.core.service.engines.InetInterfaceLookup
 
 class NettyServer(provider: NettyServerProvider){
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock

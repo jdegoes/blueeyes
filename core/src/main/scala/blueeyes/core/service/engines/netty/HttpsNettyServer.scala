@@ -4,8 +4,8 @@ import org.jboss.netty.channel.group.ChannelGroup
 import blueeyes.core.service._
 import blueeyes.core.data._
 import net.lag.configgy.ConfigMap
-import security.BlueEyesKeyStoreFactory
-import security.BlueEyesKeyStoreFactory._
+import blueeyes.core.service.engines.security.BlueEyesKeyStoreFactory
+import blueeyes.core.service.engines.security.BlueEyesKeyStoreFactory._
 import org.jboss.netty.channel.ChannelPipeline
 import org.jboss.netty.handler.ssl.SslHandler
 

@@ -8,6 +8,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import net.lag.configgy.Configgy
+import netty.NettyEngine
 import org.specs2.mutable.Specification
 
 import akka.dispatch.Future

@@ -1,9 +1,9 @@
 package blueeyes
 
-import blueeyes.core.http._
 import blueeyes.core.service._
 import blueeyes.core.service.engines._
 import core.data.ByteChunk
+import netty.NettyEngine
 
 /** Convenience trait for building a server. This server uses reflection to mix
  * in any services defined as fields.

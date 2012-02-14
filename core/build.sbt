@@ -21,7 +21,10 @@ libraryDependencies ++= Seq(
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
   "org.specs2"                  %% "specs2"             % "1.7"            % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
+  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided",
+  "javax.servlet"             % "javax.servlet-api"     % "3.0.1"          % "provided",
+  "org.eclipse.jetty"           % "jetty-server"        % "8.1.0.RC5"      % "test",
+  "org.eclipse.jetty"           % "jetty-servlet"       % "8.1.0.RC5"      % "test"
 )
 
 resolvers ++= Seq(
