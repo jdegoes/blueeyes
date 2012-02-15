@@ -33,12 +33,16 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
+  def httpServerStopTimeout = stopTimeOut
   def configuration  = ""
 
   protected def beforeSpec: Any = ()
   protected def afterSpec: Any = ()
 
   private val httpServer = new HttpServer{
+    // For the purposes of tests, kill the server early since we don't care about losing data in a spec
+    override val stopTimeout = akka.actor.Actor.Timeout(httpServerStopTimeout - 5000)
+
     def services = self.services
 
     // Manual configuration based on "configuration" string:

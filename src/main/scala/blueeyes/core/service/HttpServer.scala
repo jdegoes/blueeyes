@@ -45,10 +45,10 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk]{ self =>
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
 
   /**
-   * The default timeout to be used when stopping dependent services is 60 seconds. Override this value
+   * The default timeout to be used when stopping dependent services is forever. Override this value
    * to provide a different timeout.
    */
-  val stopTimeout = akka.actor.Actor.Timeout(Long.MaxValue) // Shutdowns OK to leave at forever
+  val stopTimeout = akka.actor.Actor.Timeout(Long.MaxValue)
 
   /** The root configuration. This is simply Configgy's root configuration 
    * object, so this should not be used until Configgy has been configured.
