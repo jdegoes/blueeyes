@@ -28,12 +28,12 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     monitor.error("foo")(new NullPointerException())
     monitor.errorStats.size must_== (1)
   }
-  "moniors future time" in {
+  "monitors future time" in {
     monitor.monitor("foo")(Future.async({ Thread.sleep(10) }))
 
     monitor.timerStats.size must eventually(be_==(1))
   }
-  "moniors future error" in {
+  "monitors future error" in {
     val future = new Future[Unit]()
     monitor.monitor("foo")(future)
     
@@ -63,7 +63,7 @@ class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implici
     val config  = interval(IntervalLength(1, TimeUnit.SECONDS), 3)
     val monitor = new IntervalHealthMonitor(config)
     monitor.error("foo")(new NullPointerException())
-    Thread.sleep(1100)
+    Thread.sleep(900)
 
     val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
