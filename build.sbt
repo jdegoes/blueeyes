@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "javolution"                  % "javolution"          % "5.5.1",
   "org.scalaz"                  %% "scalaz-core"        % "6.0.2",
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.7-SNAPSHOT"   % "provided",
+  "org.specs2"                  %% "specs2"             % "1.8-SNAPSHOT"   % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )
@@ -30,12 +30,10 @@ libraryDependencies ++= Seq(
 resolvers ++= Seq(
   "ReportGrid repo" at            "http://nexus.reportgrid.com/content/repositories/releases",
   "ReportGrid snapshot repo" at   "http://nexus.reportgrid.com/content/repositories/snapshots",
-  "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",
-  "Scala-Tools Snapshots" at      "http://scala-tools.org/repo-snapshots/",
   "Akka Repository" at            "http://akka.io/repository/",
   "JBoss Releases" at             "http://repository.jboss.org/nexus/content/groups/public/",
   "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
-  "Nexus Scala Tools" at          "http://nexus.scala-tools.org/content/repositories/releases",
+  "Sonatype Snapshots" at         "http://oss.sonatype.org/content/repositories/snapshots",
   "Maven Repo 1" at               "http://repo1.maven.org/maven2/",
   "Guiceyfruit Googlecode " at    "http://guiceyfruit.googlecode.com/svn/repo/releases/"
 )
