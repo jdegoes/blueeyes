@@ -7,6 +7,7 @@ import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.ReceiveTimeout
+import akka.dispatch.Await
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.MessageDispatcher
@@ -58,13 +59,14 @@ object Stoppable extends Logging {
    * in stopping will stop the stopping process, leaving the system in a potentially 
    * indeterminate state.
    */
-  implicit def stoppableStop(implicit messageDispatcher: MessageDispatcher) = new Stop[Stoppable] {
+  implicit def stoppableStop(timeout: Timeout)(implicit messageDispatcher: MessageDispatcher): Stop[Stoppable] = new Stop[Stoppable] {
     def stop(stoppable: Stoppable) = {
       def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
         if (q.isEmpty) Future(Nil)
         else {
           val (xs, remainder) = q.dequeue
-          Future.sequence(xs.map(_.stop)).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+          Future.sequence(xs.map(s => Future(Await.result(s.stop, timeout.duration)))).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
+                 //Future.sequence(xs.map(_.stop)).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
         }
       }
       
@@ -72,7 +74,11 @@ object Stoppable extends Logging {
     }
   }
 
-  def stop(stoppable: Stoppable)(implicit messageDispatcher: MessageDispatcher) = stoppableStop.stop(stoppable)
+  implicit def stoppableStop(implicit messageDispatcher: MessageDispatcher): Stop[Stoppable]  = stoppableStop(Timeout.never)
+
+
+  def stop(stoppable: Stoppable, timeout: Timeout = Timeout.never)(implicit messageDispatcher: MessageDispatcher) = 
+    stoppableStop(timeout).stop(stoppable)
 }
 
 case class ActorRefStop(actorSystem: ActorSystem, timeout: Timeout) extends Stop[ActorRef] {

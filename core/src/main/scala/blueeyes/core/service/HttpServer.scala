@@ -48,6 +48,12 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
 
+  /**
+   * The default timeout to be used when stopping dependent services is forever. Override this value
+   * to provide a different timeout.
+   */
+  val stopTimeout = akka.util.Timeout(Long.MaxValue)
+
   /** The root configuration. This is simply Configgy's root configuration 
    * object, so this should not be used until Configgy has been configured.
    */
@@ -153,7 +159,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
       log.info("Shutting down service " + descriptor.service.toString)
       
       descriptor.shutdown.flatMap { stoppables => 
-        stoppables.map(Stoppable.stop(_)).getOrElse(Future(()))
+        stoppables.map(Stoppable.stop(_, stopTimeout)).getOrElse(Future(()))
       } onSuccess { 
         case _ => log.info("Successfully shut down service " + descriptor.service.toString)
       } onFailure { 
