@@ -14,7 +14,7 @@ import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
 
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import net.lag.configgy.{Config, Configgy}
+import net.lag.configgy.Config
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Fragment, Fragments, Step}
@@ -72,8 +72,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   private def stopServer  = Await.result(httpServer.stop,  new DurationLong(stopTimeOut) millis)
 
   lazy val rootConfig = {
-    Configgy.configureFromString(configuration)
-    Configgy.config
+    Config.fromString(configuration)
   }
 
   private class SpecClient extends HttpClient[ByteChunk]{
