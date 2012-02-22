@@ -10,15 +10,17 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
 import blueeyes.core.http._
 
-import net.lag.configgy.Configgy
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
+
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Outside, Scope}
 
 class HttpServerSpec extends Specification with BijectionsChunkString with FutureMatchers {
   object server extends Outside[TestServer] with Scope {
     def outside = {
-      Configgy.configureFromString("")
-      new TestServer() ->- { s => Await.result(s.start, 10 seconds) }
+      val config = Configuration.parse("", BlockFormat)
+      new TestServer(config) ->- { s => Await.result(s.start, 10 seconds) }
     }
   }
 
@@ -77,7 +79,9 @@ class HttpServerSpec extends Specification with BijectionsChunkString with Futur
   }  
 }
 
-class TestServer extends TestService with HttpReflectiveServiceList[ByteChunk]
+class TestServer(configOverride: Configuration) extends TestService with HttpReflectiveServiceList[ByteChunk] {
+  override def rootConfig = configOverride
+}
 
 trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString with blueeyes.bkka.AkkaDefaults {
   var startupCalled   = false

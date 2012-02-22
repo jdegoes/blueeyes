@@ -21,7 +21,8 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import javax.net.ssl.TrustManagerFactory
 
-import net.lag.configgy.{ConfigMap, Configgy}
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 
 import blueeyes.concurrent.test.FutureMatchers
 import org.specs2.specification.{Step, Fragments}
@@ -29,12 +30,12 @@ import org.specs2.time.TimeConversions._
 
 class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with FutureMatchers {
 
-  private val configPattern = """server{
+  private val configPattern = """server {
   port = %d
   sslPort = %d
 }"""
 
-  val duration: org.specs2.time.Duration = 350.milliseconds
+  val duration: org.specs2.time.Duration = 1000.milliseconds
   val retries = 50
 
   implicit val testTimeouts = FutureTimeouts(50, duration)
@@ -46,10 +47,9 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   override def map(fs: =>Fragments) = Step {
     var error: Option[Throwable] = None
     do{
-      val sampleServer = new SampleServer()
+      val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val sampleServer = new SampleServer(config)
       val doneSignal   = new CountDownLatch(1)
-
-      Configgy.configureFromString(configPattern.format(port, port + 1))
 
       val startFuture = sampleServer.start
 
@@ -199,9 +199,11 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   private def sslClient = new LocalHttpsClient(server.get.config).protocol("https").host("localhost").port(port + 1)
 }
 
-class SampleServer extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
+class SampleServer(configOverride: Configuration) extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
+  override def rootConfig = configOverride
+} 
 
-class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWeb {
+class LocalHttpsClient(config: Configuration) extends HttpClientXLightWeb {
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())

@@ -14,7 +14,9 @@ import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
 
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import net.lag.configgy.{Config, Configgy}
+
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Fragment, Fragments, Step}
@@ -53,7 +55,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     def services = self.services
 
     // Manual configuration based on "configuration" string:
-    override def rootConfig: Config = self.rootConfig
+    override def rootConfig: Configuration = self.rootConfig
   }
 
   def setMockCongiguration = {
@@ -75,10 +77,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
   private def startServer = Await.result(httpServer.start, new DurationLong(startTimeOut) millis)
   private def stopServer  = Await.result(httpServer.stop,  new DurationLong(stopTimeOut) millis)
 
-  lazy val rootConfig = {
-    Configgy.configureFromString(configuration)
-    Configgy.config
-  }
+  lazy val rootConfig = Configuration.parse(configuration, BlockFormat)
 
   private class SpecClient extends HttpClient[ByteChunk]{
     def apply(request: HttpRequest[ByteChunk]) = {

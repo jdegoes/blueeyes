@@ -7,7 +7,6 @@ import blueeyes.core.service.HttpRequestHandlerCombinators
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import net.lag.configgy.Configgy
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
 
@@ -20,6 +19,9 @@ import collection.mutable.ArrayBuilder.ofByte
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import org.specs2.specification.{Step, Fragments}
+
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 
 class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators 
 with AkkaDefaults with HttpRequestMatchers {
@@ -39,28 +41,30 @@ with AkkaDefaults with HttpRequestMatchers {
 
   override def is = args(sequential = true) ^ super.is
   override def map(fs: =>Fragments) = Step {
-    var success = false
+    var result: Option[EchoServer] = None 
     do {
-      EchoServer.echoService
-      success = try {
-        Configgy.configureFromString(configPattern.format(port, port + 1))
+      result = try {
+        val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+        
+        val echoServer = new EchoServer(config)
 
-        EchoServer.start
-        true
+        echoServer.start
+        Some(echoServer) 
       }
       catch {
         case e: Throwable => {
           e.printStackTrace()
           port = port + 2
-          false
+          None 
         }
       }
-    } while(!success)
+    } while(result.isEmpty)
 
-    server = Some(EchoServer)
+    server = result 
+
     uri = "http://localhost:%s/echo".format(port)
   } ^ fs ^ Step {
-    EchoServer.stop
+    server.foreach{ _.stop }
   }
 
 
@@ -250,7 +254,9 @@ with AkkaDefaults with HttpRequestMatchers {
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.service._
 
-object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
+class EchoServer(configOverride: Configuration) extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { 
+  override def rootConfig = configOverride
+}
 
 trait ContentReader extends AkkaDefaults {
   def readContent[T](chunk: Chunk[T]): Future[List[T]] = {

@@ -1,6 +1,7 @@
 package blueeyes.core.service.engines.security
 
-import net.lag.configgy.ConfigMap
+import org.streum.configrity.Configuration
+
 import java.security.KeyStore
 import blueeyes.core.service.engines.InetInterfaceLookup
 
@@ -13,11 +14,11 @@ object CertificateConfig{
 
 import CertificateConfig._
 object ConfigCertificateKeyEntry{
-  def apply(config: ConfigMap) = {
-    val certificateConfig   = config.configMap(SslKey).configMap(CertificateEntryKey)
+  def apply(config: Configuration) = {
+    val certificateConfig   = config.detach(SslKey).detach(CertificateEntryKey)
 
-    val privateKey  = certificateConfig.getString(PrivateKeyKey)
-    val certificate = certificateConfig.getString(CertificateKey)
+    val privateKey  = certificateConfig.get[String](PrivateKeyKey)
+    val certificate = certificateConfig.get[String](CertificateKey)
 
     val keyAndCertificate = privateKey.flatMap(keyValue => certificate.map(certificateValue => Tuple2(keyValue, certificateValue)))
     keyAndCertificate.map(v => CertificateDecoder(v._1, v._2))
@@ -30,7 +31,7 @@ object BlueEyesKeyStoreFactory{
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private var keyStore: Option[KeyStore] = None
 
-  def apply(config: ConfigMap) = {
+  def apply(config: Configuration) = {
     writeLock{
       val value = keyStore.getOrElse({
         val newKeyStore = create(config)
@@ -41,15 +42,15 @@ object BlueEyesKeyStoreFactory{
     }
   }
 
-  private def create(config: ConfigMap) = {
+  private def create(config: Configuration) = {
     val keyAndCertificate = ConfigCertificateKeyEntry(config).getOrElse(generate(config))
 
     KeyStoreFactory(keyAndCertificate._1, keyAndCertificate._2, alias, password)
   }
 
-  private def generate(config: ConfigMap) = {
-    val certificateConfig   = config.configMap(SslKey).configMap(CertificateEntryKey)
-    val cn = "CN=" + certificateConfig.getString("CN", InetInterfaceLookup.host(config))
+  private def generate(config: Configuration) = {
+    val certificateConfig   = config.detach(SslKey).detach(CertificateEntryKey)
+    val cn = "CN=" + certificateConfig[String]("CN", InetInterfaceLookup.host(config))
     CertificateGenerator("RSA", alias, cn, 36500, password)
   }
 

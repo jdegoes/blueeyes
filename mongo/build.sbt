@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
+  "org.streum"                  %% "configrity"         % "0.9.0",
   "org.mongodb"                 % "mongo-java-driver"   % "2.7.3",
   "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
   "rhino"                       % "js"                  % "1.7R2",

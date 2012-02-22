@@ -7,8 +7,6 @@ import blueeyes.json.JsonAST._
 import akka.dispatch.Future
 import akka.dispatch.Future._
 
-import net.lag.configgy.Configgy
-
 import akka.actor.Actor
 import akka.actor.Props
 import akka.dispatch.Dispatchers
@@ -21,12 +19,19 @@ import org.scalacheck.Gen._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
+
 class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck with FutureMatchers with AkkaDefaults {
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
-  if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
+  val config = if (testLive) 
+    Configuration.load("/etc/default/blueeyes.conf", BlockFormat) 
+  else
+    Configuration.parse("", BlockFormat)
+  
   implicit val queryTimeout = Timeout(10000)
 
-  private lazy val mongo  = RealMongo(Configgy.config.configMap("mongo"))
+  private lazy val mongo  = RealMongo(config.detach("mongo"))
   private lazy val database  = mongo.database( "mydb" )
 
   private val collection    = "test-collection"

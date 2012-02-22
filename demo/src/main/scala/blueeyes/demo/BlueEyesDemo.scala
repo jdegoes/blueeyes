@@ -1,6 +1,7 @@
 package blueeyes.demo
 
-import net.lag.configgy.ConfigMap
+import org.streum.configrity.Configuration
+
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.util.Timeout
@@ -157,7 +158,7 @@ trait BlueEyesDemoService extends BlueEyesServiceBuilder with HttpRequestCombina
   }}
 }
 
-case class BlueEyesDemoConfig(config: ConfigMap, mongo: Mongo){
+case class BlueEyesDemoConfig(config: Configuration, mongo: Mongo){
   val database    = mongo.database(config("database"))
   val collection  = config("collection")
 }

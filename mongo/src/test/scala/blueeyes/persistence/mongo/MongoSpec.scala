@@ -6,8 +6,6 @@ import blueeyes.json._
 import blueeyes.json.JsonAST._
 import blueeyes.json.JsonDSL._
 
-import net.lag.configgy.Configgy
-
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -16,14 +14,20 @@ import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 import akka.util.Timeout
 
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
+
 class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with MongoImplicits{
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
-  if (testLive) Configgy.configure("/etc/default/blueeyes.conf")
+  val config = if (testLive) 
+    Configuration.load("/etc/default/blueeyes.conf", BlockFormat) 
+  else
+    Configuration.parse("", BlockFormat)
 
   private val mockMongo     = new MockMongo()
   private val mockDatabase  = mockMongo.database( "mydb" )
 
-  private lazy val realMongo     = RealMongo(Configgy.config.configMap("mongo"))
+  private lazy val realMongo     = RealMongo(config.detach("mongo"))
   private lazy val realDatabase  = realMongo.database( "mydb" )
 
   private val collection    = "test-collection"
