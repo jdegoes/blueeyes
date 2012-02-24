@@ -48,14 +48,14 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     override def rootConfig: Config = self.rootConfig
   }
 
-                                                                                                private val globalSwitch = MockConfiguration.globalSwitch
+  val globalKeyState = GlobalKey.box.value
 
   def setMockConfiguration = {
-    MockConfiguration.turnOnGlobalSwitch
+    GlobalKey.value = Some(true)
   }
 
   def resetMockConfiguration = {
-    MockConfiguration.setGlobalSwitch(globalSwitch)
+    GlobalKey.value = globalKeyState
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()
