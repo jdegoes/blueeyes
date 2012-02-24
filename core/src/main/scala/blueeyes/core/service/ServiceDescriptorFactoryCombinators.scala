@@ -16,7 +16,8 @@ import blueeyes.health.{HealthMonitor, CompositeHealthMonitor}
 import blueeyes.util._
 import blueeyes.util.logging._
 
-import net.lag.configgy.{Config, Configgy}
+import org.streum.configrity.Configuration
+
 import java.util.Calendar
 import printer.HtmlPrinter
 import util.matching.Regex
@@ -54,7 +55,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    */
   def healthMonitor[T, S](shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-      val intervals = context.config.getConfigMap("healthMonitor").map(_.getList("intervals").map(IntervalParser.parse(_))).getOrElse(config).toList
+      val intervals = context.config.detach("healthMonitor").get[List[String]]("intervals").map( _.map(IntervalParser.parse(_))).getOrElse(config).toList
       val monitor: HealthMonitor = new CompositeHealthMonitor(intervals match {
         case x :: xs => intervals
         case Nil => config.toList
@@ -149,19 +150,19 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     (context: ServiceContext) => {
       val underlying = f(context)
 
-      val configMap = context.config.getConfigMap("requestLog").getOrElse(new Config())
-      val enabled   = configMap.getBool("enabled", false)
+      val logConfig = context.config.detach("requestLog")
+      val enabled   = logConfig[Boolean]("enabled", false)
 
       if (enabled){
         def fieldsDirective: FieldsDirective = {
-          val configValue = configMap.getString("fields", "time cs-method cs-uri sc-status")
+          val configValue = logConfig[String]("fields", "time cs-method cs-uri sc-status")
           W3ExtendedLog("#Fields: " + configValue) match {
             case (e: FieldsDirective) :: Nil => e
             case _ => sys.error("Log directives are not specified.")
           }
         }
 
-        val policy = configMap.getString("roll", "never").toLowerCase match {
+        val policy = logConfig[String]("roll", "never").toLowerCase match {
           case "never"      => Never
           case "hourly"     => Hourly
           case "daily"      => Daily
@@ -175,12 +176,12 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
           case x            => sys.error("Unknown logfile rolling policy: " + x)
         }
 
-        val fileName = configMap.getString("file", context.toString + "-request.log")
+        val fileName = logConfig[String]("file", context.toString + "-request.log")
 
-        val writeDelaySeconds = configMap.getInt("writeDelaySeconds", 10)
-        val includePaths      = configMap.getList("includePaths").map(new Regex(_)).toList
-        val excludePaths      = configMap.getList("excludePaths").map(new Regex(_)).toList
-        val formatter         = HttpRequestLoggerFormatter(configMap.getString("formatter", "w3c"))
+        val writeDelaySeconds = logConfig[Int]("writeDelaySeconds", 10)
+        val includePaths      = logConfig.get[List[String]]("includePaths").getOrElse(List()).map(new Regex(_)).toList
+        val excludePaths      = logConfig.get[List[String]]("excludePaths").getOrElse(List()).map(new Regex(_)).toList
+        val formatter         = HttpRequestLoggerFormatter(logConfig[String]("formatter", "w3c"))
 
         def fileHeader() = formatter.formatHeader(fieldsDirective)
         val log          = RequestLogger.get(fileName, policy, fileHeader _, writeDelaySeconds)
@@ -221,7 +222,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
         request = (state: S) => {
           val handler = underlying.request(state)
 
-          context.config.getString("rootPath") match {
+          context.config.get[String]("rootPath") match {
             case None => handler
 
             case Some(rootPath) => path(rootPath) { handler }
@@ -253,7 +254,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     (context: ServiceContext) => {
       f {
         (serviceName: String, serviceVersion: ServiceVersion) => {
-          val serviceRootUrl = Configgy.config("services." + serviceName + ".v" + serviceVersion.majorVersion.toString + ".serviceRootUrl")
+          val serviceRootUrl = context.rootConfig[String]("services." + serviceName + ".v" + serviceVersion.majorVersion.toString + ".serviceRootUrl")
 
           httpClient.path(serviceRootUrl)
         }

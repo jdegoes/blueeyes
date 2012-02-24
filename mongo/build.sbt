@@ -14,13 +14,13 @@ libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
-  "org.mongodb"                 % "mongo-java-driver"   % "2.7.2",
+  "org.streum"                  %% "configrity"         % "0.9.0",
+  "org.mongodb"                 % "mongo-java-driver"   % "2.7.3",
   "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.7"            % "test",
+  "org.specs2"                  %% "specs2"             % "1.8"            % "test",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "test",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "test"
 )

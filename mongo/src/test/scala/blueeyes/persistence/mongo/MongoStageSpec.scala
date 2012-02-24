@@ -14,6 +14,7 @@ import blueeyes.bkka.AkkaDefaults
 import blueeyes.concurrent.test.FutureMatchers
 import akka.actor.{Actor, Props}
 import akka.dispatch.Future
+import akka.pattern.ask
 import akka.util.Timeout
 
 import blueeyes.json.{JPath, JsonAST, Printer, ArbitraryJPath}
@@ -62,7 +63,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         }
 
         val start = System.currentTimeMillis
-        val futures = Future.sequence[Unit, List](actors.map(actor => (actor.?("Send", queryTimeout).mapTo[Unit])))
+        val futures = Future.sequence[Unit, List](actors.map(actor => (actor ? "Send").mapTo[Unit]))
         futures.value must eventually(200, 300.milliseconds) (beSome)
 
         val flushFuture = mongoStage.flushAll(Timeout(10000))

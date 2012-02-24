@@ -12,14 +12,14 @@ libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
   "commons-codec"               % "commons-codec"       % "1.5",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "net.lag"                     % "configgy"            % "2.0.0" intransitive(),
+  "org.streum"                  %% "configrity"         % "0.9.0",
   "org.jboss.netty"             % "netty"               % "3.2.6.Final",
-  "com.typesafe.akka"           % "akka-actor"          % "2.0-M1",
+  "com.typesafe.akka"           % "akka-actor"          % "2.0-M3",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "rhino"                       % "js"                  % "1.7R2",
   "javolution"                  % "javolution"          % "5.5.1",
   "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.7"            % "provided",
+  "org.specs2"                  %% "specs2"             % "1.8"            % "provided",
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )

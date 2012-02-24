@@ -16,7 +16,9 @@ import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
 
-import net.lag.configgy.{Config, ConfigMap, Configgy}
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
+
 import com.weiglewilczek.slf4s.Logger
 import scalaz.{Failure, Success}
 import scalaz.Validation._
@@ -48,10 +50,21 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   private lazy val NotFound            = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
 
-  /** The root configuration. This is simply Configgy's root configuration 
-   * object, so this should not be used until Configgy has been configured.
+  /**
+   * The default timeout to be used when stopping dependent services is forever. Override this value
+   * to provide a different timeout.
    */
-  def rootConfig: Config = Configgy.config
+  val stopTimeout = akka.util.Timeout(Long.MaxValue)
+
+  /** The root configuration. This is simply configritty's root config 
+   * object, so this should not be used until the config has been loaded 
+   */
+  def rootConfig: Configuration = rootConfiguration 
+
+  // I would like a better way to do this, but given the current relationship
+  // to a locally defined main that bootstraps the server I didn't see a way
+  // around the mutable var with a much more significant refactoring. NDM
+  private var rootConfiguration: Configuration = null
   
   /** The list of services that this server is supposed to run.
    */
@@ -153,7 +166,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
       log.info("Shutting down service " + descriptor.service.toString)
       
       descriptor.shutdown.flatMap { stoppables => 
-        stoppables.map(Stoppable.stop(_)).getOrElse(Future(()))
+        stoppables.map(Stoppable.stop(_, stopTimeout)).getOrElse(Future(()))
       } onSuccess { 
         case _ => log.info("Successfully shut down service " + descriptor.service.toString)
       } onFailure { 
@@ -175,7 +188,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   /** Retrieves the server configuration, which is always located in the 
    * "server" block of the root configuration object.
    */
-  lazy val config: ConfigMap = rootConfig.configMap("server")
+  lazy val config: Configuration = rootConfig.detach("server")
   
   /** Retrieves the logger for the server, which is configured directly from
    * the server's "log" configuration block.
@@ -185,25 +198,25 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
    */
-  lazy val port: Int    = config.getInt("port", 8888)
+  lazy val port: Int    = config[Int]("port", 8888)
 
   /** Retrieves the ssl port the server should be running at, which defaults to
    * 8889.
    */
-  lazy val sslPort: Int = config.getInt("sslPort", 8889)
+  lazy val sslPort: Int = config[Int]("sslPort", 8889)
 
   /** Retrieves the host the server should be running at.
    */
-  lazy val host = config.getString("address").getOrElse(InetAddress.getLocalHost().getHostName())
+  lazy val host = config.get[String]("address").getOrElse(InetAddress.getLocalHost().getHostName())
 
   /** Retrieves the chunk size.
    */
-  lazy val chunkSize = config.getInt("chunkSize", 1048576)
+  lazy val chunkSize = config[Int]("chunkSize", 1048576)
 
   /** Retrieves if the ssl should be running, which defaults to
    * true.
    */
-  lazy val sslEnable: Boolean = config.getBool("sslEnable", true)
+  lazy val sslEnable: Boolean = config[Boolean]("sslEnable", true)
 
   /** The status of the server.
    */
@@ -221,7 +234,10 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
       System.exit(-1)
     }
     else {    
-      Configgy.configure(arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")))
+      rootConfiguration = Configuration.load(
+        arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")),
+        BlockFormat
+      )
       
       start.onSuccess { case _ =>
         Runtime.getRuntime.addShutdownHook { new Thread {
@@ -248,9 +264,9 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   private var _handler: AsyncHttpService[ByteChunk] = OrService[ByteChunk, Future[HttpResponse[ByteChunk]]]()
   
   private lazy val descriptors: List[BoundStateDescriptor[ByteChunk, _]] = services.map { service =>
-    val config = rootConfig.configMap("services." + service.name + ".v" + service.version.majorVersion)
+    val config = rootConfig.detach("services." + service.name + ".v" + service.version.majorVersion)
 
-    val context = ServiceContext(config, service.name, service.version, service.desc, host, port, sslPort)
+    val context = ServiceContext(rootConfig, config, service.name, service.version, service.desc, host, port, sslPort)
 
     BoundStateDescriptor(context, service)
   }

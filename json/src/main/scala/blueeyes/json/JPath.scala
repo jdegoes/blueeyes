@@ -84,12 +84,16 @@ sealed trait JPath { self =>
   override def toString = path
 }
 
-sealed trait JPathNode
+sealed trait JPathNode {
+  def \(that: JPath) = JPath(this :: that.nodes)
+  def \(that: JPathNode) = JPath(this :: that :: Nil)
+}
+
 object JPathNode {
   implicit def s2PathNode(name: String): JPathNode = JPathField(name)
   implicit def i2PathNode(index: Int): JPathNode = JPathIndex(index)
 
-  implicit val OrderingJPathNode = new Ordering[JPathNode] {
+  implicit val JPathNodeOrdering = new Ordering[JPathNode] {
     def compare(n1: JPathNode, n2: JPathNode): Int = (n1, n2) match {
       case (JPathField(s1), JPathField(s2)) => s1.compare(s2)
       case (JPathField(_) , _             ) => 1 
@@ -102,6 +106,7 @@ object JPathNode {
 sealed case class JPathField(name: String) extends JPathNode {
   override def toString = "." + name
 }
+
 sealed case class JPathIndex(index: Int) extends JPathNode {
   override def toString = "[" + index + "]"
 }
@@ -153,7 +158,7 @@ object JPath extends JPathSerialization {
 
   implicit def singleNodePath(node: JPathNode) = JPath(node)
 
-  implicit val OrderingJValue = new Ordering[JPath] {
+  implicit val JPathOrdering = new Ordering[JPath] {
     def compare(v1: JPath, v2: JPath): Int = {
       def compare0(n1: List[JPathNode], n2: List[JPathNode]): Int = (n1, n2) match {
         case (Nil    , Nil)     => 0

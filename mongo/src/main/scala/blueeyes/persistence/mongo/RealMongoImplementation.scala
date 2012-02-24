@@ -10,7 +10,7 @@ import blueeyes.persistence.mongo.json.BijectionsMongoJson.MongoToJson._
 import IterableViewImpl._
 
 import com.mongodb._
-import net.lag.configgy.ConfigMap
+import org.streum.configrity.Configuration
 import scala.collection.JavaConversions._
 
 import akka.actor.Actor
@@ -20,6 +20,8 @@ import akka.actor.Props
 import akka.actor.PoisonPill
 import akka.dispatch.Future
 import akka.dispatch.Promise
+import akka.dispatch.MessageDispatcher
+import akka.pattern.ask
 import akka.routing.RoundRobinRouter
 import akka.util.Duration
 import akka.util.Timeout
@@ -32,13 +34,13 @@ import com.weiglewilczek.slf4s.Logging
 object RealMongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
-  def apply(config: ConfigMap) = {
+  def apply(config: Configuration) = {
     val mongo = {
       val options = new MongoOptions()
       options.connectionsPerHost = 256
       options.threadsAllowedToBlockForConnectionMultiplier = 16
 
-      val servers = config.getList("servers").toList map {
+      val servers = config[List[String]]("servers").toList map {
         case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
         case server                           => new ServerAddress(server, ServerAddress.defaultPort())
       }
@@ -49,12 +51,12 @@ object RealMongo {
         case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
       }
 
-      if (config.getBool("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
+      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
 
       underlying
     }
 
-    val disconnectTimeout = config.getLong("disconnect_timeout").getOrElse(300000L)
+    val disconnectTimeout = config.get[Long]("disconnect_timeout").getOrElse(300000L)
 
     new RealMongo(mongo, disconnectTimeout)
   }
@@ -67,7 +69,7 @@ class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mo
 
 object RealDatabase {
   //val actorSystem = ActorSystem.create("blueeyes_mongo") //TODO: separate mongo actor system creation out.
-  private val actorSystem = ActorSystem()
+  private val actorSystem = ActorSystem("blueeyes_mongo")
 
   private class RealMongoActor extends Actor {
     def receive = {
@@ -79,12 +81,12 @@ object RealDatabase {
 private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
-  private implicit val dispatcher = actorSystem.dispatcherFactory.newDispatcher("blueeyes_mongo-" + database.getName)
-                                    .withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                    .setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
+  private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
+                                    //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
+                                    //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 
   private lazy val actors = List.fill(poolSize) {
-    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher(dispatcher))
+    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
   }
 
   private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter()), "blueeyes_mongo_router-" + database.getName)
