@@ -19,7 +19,7 @@ import blueeyes.util.metrics.DataSize
 import DataSize._
 
 import java.net.URLEncoder.{ encode => encodeUrl }
-import blueeyes.core.data.{ ByteMemoryChunk, ByteChunk, Bijection, GZIPByteChunk }
+import blueeyes.core.data.{ Chunk, ByteChunk, Bijection, GZIPByteChunk }
 import scalaz.Success
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits 
@@ -300,7 +300,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
 
   "compress combinator" should {
     "compress content if request contains accept encoding header" in {
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
+      val chunk = Chunk(Array[Byte]('1', '2'))
       val handler = compress {
         path("/foo") {
           get { (request: HttpRequest[ByteChunk]) =>
@@ -317,7 +317,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
     }
 
     "does not compress content if request does not contain accept appropriate encoding header" in {
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => None)
+      val chunk = Chunk(Array[Byte]('1', '2'))
       val handler =compress {
         path("/foo") {
           get { (request: HttpRequest[ByteChunk]) =>
@@ -348,7 +348,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
         }
       }
       
-      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))) must beLike {
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => new String(v.data) must_== "1234"
         }
@@ -368,7 +368,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
         }
       }
       
-      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))))) must beLike {
+      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => new String(v.data) must_== "12"
         }

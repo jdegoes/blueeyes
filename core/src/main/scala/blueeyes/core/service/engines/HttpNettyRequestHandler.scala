@@ -7,7 +7,7 @@ import akka.dispatch.Promise
 import blueeyes.concurrent.ReadWriteLock
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, Chunk}
 import blueeyes.core.service._
 
 import com.weiglewilczek.slf4s.Logger
@@ -143,7 +143,7 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
             true
 
           case None if (!done)  => {
-            setNextChunkFuture(Future[ByteChunk](new MemoryChunk(Array[Byte]())))
+            setNextChunkFuture(Future[ByteChunk](Chunk(Array[Byte]())))
             done = true
             true
           }
@@ -170,7 +170,7 @@ private[engines] class ChunkedContent(content: Option[ByteChunk]){
   val (chunk, isChunked) = content map { value =>
     val nextChunk = value.next
     nextChunk match {
-      case Some(next) => (Some(new MemoryChunk(value.data, () => {nextChunk})), true)
+      case Some(next) => (Some(Chunk(value.data, nextChunk)), true)
       case None       => (content, false)
     }
   } getOrElse ((None, false))

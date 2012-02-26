@@ -10,10 +10,10 @@ import blueeyes.concurrent.test.FutureMatchers
 class GZIPByteChunkSpec extends Specification with FutureMatchers with AkkaDefaults {
   "GZICompressedByteChunk" should{
     "compress one chunk" in{
-      testCompressed(new MemoryChunk("foo".getBytes, () => None), "foo")
+      testCompressed(Chunk("foo".getBytes), "foo")
     }
     "compress several chunks" in{
-      testCompressed(new MemoryChunk("foo".getBytes, () => Some(Future(new MemoryChunk("bar".getBytes, () => None)))), "foobar")
+      testCompressed(Chunk("foo".getBytes, Some(Future(Chunk("bar".getBytes)))), "foobar")
     }
   }
 

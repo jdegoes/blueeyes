@@ -9,7 +9,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
 import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
-import blueeyes.core.data.{ByteChunk, MemoryChunk}
+import blueeyes.core.data.{ Chunk, ByteChunk }
 import akka.dispatch.Future
 
 trait HttpNettyConverters{
@@ -51,7 +51,7 @@ trait HttpNettyConverters{
   implicit def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {
     val parameters          = getParameters(request.getUri)
     val headers             = buildHeaders(request.getHeaders)
-    val content             = fromNettyContent(request.getContent, () => None)
+    val content             = fromNettyContent(request.getContent, None)
 
     val xforwarded  = headers.header(`X-Forwarded-For`).flatMap(_.ips.toList.headOption.map(_.ip))
     val remoteIp    = xforwarded.orElse(headers.header(`X-Cluster-Client-Ip`).flatMap(_.ips.toList.headOption.map(_.ip)))
@@ -60,7 +60,7 @@ trait HttpNettyConverters{
     HttpRequest(request.getMethod, URI(request.getUri), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion))
   }
 
-  def fromNettyContent(nettyContent: ChannelBuffer, f:() => Option[Future[ByteChunk]]): Option[ByteChunk] = if (nettyContent.readable()) Some(new MemoryChunk(extractContent(nettyContent), f)) else None
+  def fromNettyContent(nettyContent: ChannelBuffer, f: Option[Future[ByteChunk]]): Option[ByteChunk] = if (nettyContent.readable()) Some(Chunk(extractContent(nettyContent), f)) else None
 
   private def extractContent(content: ChannelBuffer) = {
     val stream = new ByteArrayOutputStream()

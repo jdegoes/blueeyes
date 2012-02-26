@@ -12,7 +12,7 @@ import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
 import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.http.HttpRequest
 import org.jboss.netty.channel._
-import blueeyes.core.data.{MemoryChunk, ByteChunk}
+import blueeyes.core.data.{Chunk, ByteChunk}
 import collection.mutable.ArrayBuilder.ofByte
 import org.specs2.mock._
 import org.specs2.specification.BeforeExample
@@ -46,7 +46,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData)))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData)))
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
     "sends request and chunk when request is chunked and there is only more ther one chunk" in {
@@ -61,8 +61,8 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Promise.successful[ByteChunk](new MemoryChunk(chunkData))
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(new MemoryChunk(chunkData, () => Some(nextChunk))))
+      val nextChunk = Promise.successful[ByteChunk](Chunk(chunkData))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData, Some(nextChunk))))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }

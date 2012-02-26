@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
+import blueeyes.core.data.{Chunk, ByteChunk}
 import blueeyes.core.service.HttpClientByteChunk
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
@@ -122,7 +122,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
   private def readNotChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
     val data = try {
       val bytes = response.getBody.readBytes
-      if (!bytes.isEmpty) Some(new ByteMemoryChunk(bytes)) else None
+      if (!bytes.isEmpty) Some(Chunk(bytes)) else None
     } catch {
       case e: Throwable => {
         logger.error("Failed to transcode response body", e)
@@ -145,7 +145,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
           if (available > 0) {
             val data        = org.xsocket.DataConverter.toBytes(source.readByteBufferByLength(available))
             val nextPromise  = Promise[ByteChunk]()
-            val content     = new ByteMemoryChunk(data, () => Some(nextPromise))
+            val content     = Chunk(data, Some(nextPromise))
             delivery match {
               case Left(x) =>
                 delivery        = Right(nextPromise)
@@ -157,7 +157,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
           } else if (available == -1){
             delivery match {
               case Left(x)  => promise.success(x)
-              case Right(x) => x.success(new ByteMemoryChunk(Array[Byte]()))
+              case Right(x) => x.success(Chunk(Array[Byte]()))
             }
           }
         } catch {

@@ -162,7 +162,7 @@ with AkkaDefaults with HttpRequestMatchers {
     }
     "Support POST requests with large payload with several chunks" in {
       val expected = Array.fill[Byte](2048*100)('0')
-      val chunk   = new ByteMemoryChunk(expected, () => Some(Future(new ByteMemoryChunk(expected))))
+      val chunk   = Chunk(expected, Some(Future(Chunk(expected))))
       httpClient.post[ByteChunk](uri)(chunk) must whenDelivered {
         beLike {
           case HttpResponse(status, _, Some(content), _) => 
@@ -229,7 +229,7 @@ with AkkaDefaults with HttpRequestMatchers {
       import BijectionsByteArray._
       implicit val bijection = chunksToChunksArrayByte[String]
 
-      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future[Chunk[String]](new MemoryChunk[String]("bar"))))
+      val chunks: Chunk[String] = Chunk("foo", Some(Future[Chunk[String]](Chunk("bar"))))
 
       val response = Await.result(httpClient.post(uri)(chunks)(bijection), duration)
       response.status.code must be(HttpStatusCodes.OK)

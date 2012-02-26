@@ -294,6 +294,25 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
   ))
 }
 
+/*
+case class JsonpChunkedService[T, U, C[_] <: Chunk[_]](delegate: HttpService[Future[JValue], Future[HttpResponse[C[U]]]])(implicit toJson: T => Future[JValue], fromResponse: C[U] => T) 
+extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[HttpResponse[C[U]]]]{
+  import JsonpService._
+  def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpChunkedResponse(_, r.parameters.get('callback))))
+
+  val metadata = Some(OrMetadata(
+    AndMetadata(
+      HttpMethodMetadata(HttpMethods.GET),
+      DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
+      ParameterMetadata('callback, None)
+    ),
+    HttpMethodMetadata(HttpMethods.POST),
+    HttpMethodMetadata(HttpMethods.PUT),
+    HttpMethodMetadata(HttpMethods.DELETE)
+  ))
+}
+*/
+
 case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
 extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
   import JsonpService._
@@ -367,6 +386,40 @@ object JsonpService extends AkkaDefaults {
       r.copy(content = r.content.map(jv => fromString(pretty(render(jv)))), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
     }
   }
+
+/*
+  def jsonpChunkedResponse[T, U](r: HttpResponse[Chunk[U]], callback: Option[String])(implicit u2s: U => String, s2t: String => T): HttpResponse[Chunk[T]] = {
+    import blueeyes.json.xschema.DefaultSerialization._
+    import blueeyes.json.Printer._
+    import Bijection._
+
+    callback map { callback =>
+      val meta = compact(render(JObject(
+        JField("headers", r.headers.raw.serialize) ::
+        JField("status",
+          JObject(
+            JField("code",    r.status.code.value.serialize) ::
+            JField("reason",  r.status.reason) ::
+            Nil
+          )
+        ) ::
+        Nil
+      )))
+
+      r.copy(
+        status = HttpStatus(OK),
+        content = r.content.map { content =>
+          fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
+        } orElse {
+          Some(fromString(callback + "(undefined," + meta + ");"))
+        }, 
+        headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
+      )
+    } getOrElse {
+      r.copy(content = r.content.map(jv => fromString(pretty(render(jv)))), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+    }
+  }
+  */
 }
 
 
