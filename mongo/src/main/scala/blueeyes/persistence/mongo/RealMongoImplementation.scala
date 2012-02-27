@@ -12,15 +12,10 @@ import IterableViewImpl._
 import com.mongodb._
 import net.lag.configgy.ConfigMap
 import scala.collection.JavaConversions._
+import scala.collection.mutable.HashMap
 
-import akka.actor.Actor
-import akka.actor.ActorSystem
-import akka.actor.ActorKilledException
-import akka.actor.Props
-import akka.actor.PoisonPill
-import akka.dispatch.Future
-import akka.dispatch.Promise
-import akka.dispatch.MessageDispatcher
+import akka.actor.{Actor, ActorRef, ActorSystem, ActorKilledException, Props, PoisonPill}
+import akka.dispatch.{Await, Future, MessageDispatcher, Promise}
 import akka.pattern.ask
 import akka.routing.RoundRobinRouter
 import akka.util.Duration
@@ -33,6 +28,10 @@ import com.weiglewilczek.slf4s.Logging
 
 object RealMongo {
   val ServerAndPortPattern = "(.+):(.+)".r
+
+  val actorSystem = ActorSystem()
+
+  lazy val factory = actorSystem.actorOf(Props(new RealMongoFactory(actorSystem)))
 
   def apply(config: ConfigMap) = {
     val mongo = {
@@ -62,36 +61,77 @@ object RealMongo {
   }
 }
 
+
 class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
-  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
+  import akka.util.duration._
+
+  implicit val timeOut: Timeout = 3.seconds
+
+  def database(databaseName: String) =
+    Await.result(
+      (RealMongo.factory ? Create(this, mongo.getDB(databaseName), disconnectTimeout)).mapTo[Database],
+      timeOut.duration
+    )
+
   lazy val close = Future(mongo.close)
 }
 
-object RealDatabase {
-  //val actorSystem = ActorSystem.create("blueeyes_mongo") //TODO: separate mongo actor system creation out.
-  private val actorSystem = ActorSystem()
 
-  private class RealMongoActor extends Actor {
+case class Create(val mongo: Mongo,
+                  val database: DB,
+                  val disconnectTimeout: Timeout,
+                  val poolSize: Int = 10)
+
+
+class RealMongoFactory(actorSystem: ActorSystem) extends Actor {
+
+  class RealMongoActor extends Actor {
     def receive = {
       case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
     }
   }
+
+  val databases: HashMap[String, RealDatabase] = new HashMap()
+
+  def receive = {
+    case Create(mongo, database, disconnectTimeout, poolSize) =>
+      val name = "blueeyes_mongo-" + database.getName
+      val routerName = "blueeyes_mongo_router" + database.getName
+
+      def makeMongo() = {
+        implicit val dispatcher = actorSystem.dispatchers.lookup(name)
+        val actors = List.fill(poolSize) {
+          context.actorOf(Props(new RealMongoActor).withDispatcher(name))
+        }
+        val mongoActor = context actorOf (
+          Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)),
+          routerName
+        )
+
+        new RealDatabase(database.getName,
+                         database,
+                         mongo,
+                         disconnectTimeout,
+                         actors,
+                         mongoActor,
+                         actorSystem)
+      }
+
+      sender ! databases.getOrElseUpdate(name, makeMongo())
+  }
 }
 
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
-  import RealDatabase._
 
-  private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
-                                    //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                    //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-
-  private lazy val actors = List.fill(poolSize) {
-    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
-  }
-
-  private lazy val mongoActor =  actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)), "blueeyes_mongo_router-" + database.getName)
-
-
+private[mongo] class RealDatabase(name: String,
+                                  database: DB,
+                                  val mongo: Mongo,
+                                  disconnectTimeout: Timeout,
+                                  actors: List[ActorRef],
+                                  mongoActor: ActorRef,
+                                  actorSystem: ActorSystem)
+                                 (implicit dispatcher: MessageDispatcher)
+    extends Database with Logging
+{
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
@@ -104,10 +144,11 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult]
 
-  override def toString = "Mongo Database: " + database.getName
+  override def toString = "Mongo Database: " + name
 }
 
-private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
+
+private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection {
   type V[B] = ValidationNEL[String, B]
 
   def requestDone() { collection.getDB.requestDone() }
@@ -228,11 +269,13 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   }
 }
 
+
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
-private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput{
+private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput {
   override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
   def drop() { output.drop() }
 }
+
 
 import scala.collection.Iterator
 object IterableViewImpl {
@@ -240,7 +283,8 @@ object IterableViewImpl {
   implicit def seqToIterator[A](seq: Seq[A]): Iterator[A] = seq.iterator
 }
 
-class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A]) extends scala.collection.IterableView[A, Coll]{
+
+class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A]) extends scala.collection.IterableView[A, Coll] {
   def iterator: Iterator[A] = f(delegate)
 
   protected def underlying = delegate
