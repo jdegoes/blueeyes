@@ -11,6 +11,8 @@ import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteCh
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 import blueeyes.json.JsonAST._
+import blueeyes.json.Printer._
+import blueeyes.json.xschema.DefaultSerialization._
 
 import java.net.URLDecoder._
 
@@ -294,9 +296,8 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
   ))
 }
 
-/*
-case class JsonpChunkedService[T, U, C[_] <: Chunk[_]](delegate: HttpService[Future[JValue], Future[HttpResponse[C[U]]]])(implicit toJson: T => Future[JValue], fromResponse: C[U] => T) 
-extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[HttpResponse[C[U]]]]{
+case class JsonpChunkedService[T, U](delegate: HttpService[Future[JValue], Future[HttpResponse[Chunk[U]]]])(implicit toJson: T => Future[JValue],  u2s: U => String, s2t: String => T)
+extends DelegatingService[T, Future[HttpResponse[Chunk[T]]], Future[JValue], Future[HttpResponse[Chunk[U]]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpChunkedResponse(_, r.parameters.get('callback))))
 
@@ -311,7 +312,6 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
     HttpMethodMetadata(HttpMethods.DELETE)
   ))
 }
-*/
 
 case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
 extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
@@ -355,24 +355,23 @@ object JsonpService extends AkkaDefaults {
     }
   }
 
+  private def jsonpMetadata[A](r: HttpResponse[A]) = compact(render(JObject(
+    JField("headers", r.headers.raw.serialize) ::
+    JField("status",
+      JObject(
+        JField("code",    r.status.code.value.serialize) ::
+        JField("reason",  r.status.reason) ::
+        Nil
+      )
+    ) ::
+    Nil
+  )))
+
   def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit fromString: String => T): HttpResponse[T] = {
-    import blueeyes.json.xschema.DefaultSerialization._
-    import blueeyes.json.Printer._
     import Bijection._
 
     callback map { callback =>
-      val meta = compact(render(JObject(
-        JField("headers", r.headers.raw.serialize) ::
-        JField("status",
-          JObject(
-            JField("code",    r.status.code.value.serialize) ::
-            JField("reason",  r.status.reason) ::
-            Nil
-          )
-        ) ::
-        Nil
-      )))
-
+      val meta = jsonpMetadata(r)
       r.copy(
         status = HttpStatus(OK),
         content = r.content.map { content =>
@@ -383,43 +382,37 @@ object JsonpService extends AkkaDefaults {
         headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )
     } getOrElse {
-      r.copy(content = r.content.map(jv => fromString(pretty(render(jv)))), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+      r.copy(
+        content = r.content.map(jv => fromString(pretty(render(jv)))), 
+        headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json)
+      )
     }
   }
 
-/*
   def jsonpChunkedResponse[T, U](r: HttpResponse[Chunk[U]], callback: Option[String])(implicit u2s: U => String, s2t: String => T): HttpResponse[Chunk[T]] = {
     import blueeyes.json.xschema.DefaultSerialization._
     import blueeyes.json.Printer._
     import Bijection._
 
     callback map { callback =>
-      val meta = compact(render(JObject(
-        JField("headers", r.headers.raw.serialize) ::
-        JField("status",
-          JObject(
-            JField("code",    r.status.code.value.serialize) ::
-            JField("reason",  r.status.reason) ::
-            Nil
-          )
-        ) ::
-        Nil
-      )))
-
+      val meta = jsonpMetadata(r)
       r.copy(
         status = HttpStatus(OK),
-        content = r.content.map { content =>
-          fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
-        } orElse {
-          Some(fromString(callback + "(undefined," + meta + ");"))
-        }, 
+        content = r.content.map { 
+                    case Chunk(data, Some(more)) => Chunk(s2t(callback + "(" + u2s(data)), Some(more.map(_ map u2s suffix ("," + meta + ");") map s2t)))
+                    case Chunk(data, None)       => Chunk(s2t(callback + "(" + u2s(data) + "," + meta + ");"))
+                  } orElse {
+                    Some(Chunk(s2t(callback + "(undefined," + meta + ");")))
+                  }, 
         headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )
     } getOrElse {
-      r.copy(content = r.content.map(jv => fromString(pretty(render(jv)))), headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json))
+      r.copy(
+        content = r.content.map(_ map (u2s andThen s2t)),
+        headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json)
+      )
     }
   }
-  */
 }
 
 
