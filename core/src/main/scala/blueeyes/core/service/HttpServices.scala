@@ -7,7 +7,7 @@ import akka.dispatch.Promise
 import blueeyes.core.data._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.data.{ByteChunk, Bijection, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk}
+import blueeyes.core.data.{Chunk, ByteChunk, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk, Bijection}
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 import blueeyes.json.JsonAST._
@@ -296,10 +296,20 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
   ))
 }
 
-case class JsonpChunkedService[T, U](delegate: HttpService[Future[JValue], Future[HttpResponse[Chunk[U]]]])(implicit toJson: T => Future[JValue],  u2s: U => String, s2t: String => T)
-extends DelegatingService[T, Future[HttpResponse[Chunk[T]]], Future[JValue], Future[HttpResponse[Chunk[U]]]]{
+case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
+extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
   import JsonpService._
-  def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpChunkedResponse(_, r.parameters.get('callback))))
+  def service = (r: HttpRequest[T]) => {
+    jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
+  }
+
+  def metadata = None
+}
+
+case class JsonpChunkedService[T, U](delegate: HttpService[Future[JValue], Future[HttpResponse[Chunk[U]]]])(implicit toJson: Chunk[T] => Future[JValue],  u2s: U => String, s2t: String => T)
+extends DelegatingService[Chunk[T], Future[HttpResponse[Chunk[T]]], Future[JValue], Future[HttpResponse[Chunk[U]]]]{
+  import JsonpService._
+  def service = (r: HttpRequest[Chunk[T]]) => jsonpConvertRequest(r).flatMap(delegate.service(_)).map(_.map(jsonpChunkedResponse(_, r.parameters.get('callback))))
 
   val metadata = Some(OrMetadata(
     AndMetadata(
@@ -311,16 +321,6 @@ extends DelegatingService[T, Future[HttpResponse[Chunk[T]]], Future[JValue], Fut
     HttpMethodMetadata(HttpMethods.PUT),
     HttpMethodMetadata(HttpMethods.DELETE)
   ))
-}
-
-case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
-extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
-  import JsonpService._
-  def service = (r: HttpRequest[T]) => {
-    jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
-  }
-
-  def metadata = None
 }
 
 object JsonpService extends AkkaDefaults {
@@ -375,10 +375,10 @@ object JsonpService extends AkkaDefaults {
       r.copy(
         status = HttpStatus(OK),
         content = r.content.map { content =>
-          fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
-        } orElse {
-          Some(fromString(callback + "(undefined," + meta + ");"))
-        }, 
+                    fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
+                  } orElse {
+                    Some(fromString(callback + "(undefined," + meta + ");"))
+                  }, 
         headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )
     } getOrElse {
