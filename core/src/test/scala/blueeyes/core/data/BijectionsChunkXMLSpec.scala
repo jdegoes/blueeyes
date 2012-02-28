@@ -6,10 +6,10 @@ import Bijection._
 class BijectionsChunkXMLSpec extends Specification with BijectionsChunkXML with BijectionsByteArray{
   "BijectionsChunkXML" should{
     "parser valid XML" in{
-      XMLToChunk.unapply(new MemoryChunk(XMLToByteArray(<f></f>))) mustEqual(<f></f>)
+      XMLToChunk.unapply(Chunk(XMLToByteArray(<f></f>))) mustEqual(<f></f>)
     }
     "throw error when XML is incomplete" in{
-      XMLToChunk.unapply(new MemoryChunk((XMLToByteArray(<f></f>).tail))) must throwA[RuntimeException]
+      XMLToChunk.unapply(Chunk((XMLToByteArray(<f></f>).tail))) must throwA[RuntimeException]
     }
   }
 }

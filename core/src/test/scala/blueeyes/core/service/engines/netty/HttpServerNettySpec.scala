@@ -1,4 +1,6 @@
-package blueeyes.core.service.engines.netty
+package blueeyes
+package core.service.engines
+package netty
 
 import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
@@ -6,20 +8,23 @@ import engines.security.BlueEyesKeyStoreFactory
 import engines.{TestEngineService, TestEngineServiceContext, HttpClientXLightWeb}
 import org.specs2.mutable.Specification
 
+import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
 import akka.util._
 
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, BijectionsByteArray, BijectionsChunkString}
+import blueeyes.core.data.{FileSink, FileSource, Chunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
+import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import javax.net.ssl.TrustManagerFactory
 
-import net.lag.configgy.{ConfigMap, Configgy}
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 
 import blueeyes.concurrent.test.FutureMatchers
 import org.specs2.specification.{Step, Fragments}
@@ -27,12 +32,12 @@ import org.specs2.time.TimeConversions._
 
 class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with FutureMatchers {
 
-  private val configPattern = """server{
+  private val configPattern = """server {
   port = %d
   sslPort = %d
 }"""
 
-  val duration = Duration(350, "millis")
+  val duration: org.specs2.time.Duration = 1000.milliseconds
   val retries = 50
 
   implicit val testTimeouts = FutureTimeouts(50, duration)
@@ -44,10 +49,9 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   override def map(fs: =>Fragments) = Step {
     var error: Option[Throwable] = None
     do{
-      val sampleServer = new NettyTestEngineService()
+      val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val sampleServer = new SampleServer(config)
       val doneSignal   = new CountDownLatch(1)
-
-      Configgy.configureFromString(configPattern.format(port, port + 1))
 
       val startFuture = sampleServer.start
 
@@ -197,9 +201,11 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   private def sslClient = new LocalHttpsClient(server.get.config).protocol("https").host("localhost").port(port + 1)
 }
 
-class NettyTestEngineService extends TestEngineService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
+class SampleServer(configOverride: Configuration) extends TestEngineService with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
+  override def rootConfig = configOverride
+} 
 
-class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWeb {
+class LocalHttpsClient(config: Configuration) extends HttpClientXLightWeb {
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
@@ -207,4 +213,97 @@ class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWeb {
 
     SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
   }
+}
+
+trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString{
+  import blueeyes.core.http.MimeTypes._
+
+  private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
+
+  val sampleService: Service[ByteChunk] = service("sample", "1.32") { context =>
+    request {
+      produce(text/html) {
+        path("/bar/'adId/adCode.html") {
+          get { request: HttpRequest[ByteChunk] =>
+            Future[HttpResponse[String]](response)
+          }
+        } ~
+        path("/foo") {
+          get { request: HttpRequest[ByteChunk] =>
+            Future[HttpResponse[String]](response)
+          }
+        } ~
+        path("/error") {
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
+            throw new RuntimeException("Unexpected error (GET /error)")
+          }
+        } ~
+        path("/http/error") {
+          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
+            throw HttpException(HttpStatusCodes.BadRequest)
+          }
+        }
+      } ~
+      path("/huge"){
+        get { request: HttpRequest[ByteChunk] =>
+          val chunk  = Chunk(Context.hugeContext.head, Some(Future(Chunk(Context.hugeContext.tail.head))))
+
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future[HttpResponse[ByteChunk]](response)
+        }
+      } ~
+      path("/empty/response"){
+        post { request: HttpRequest[ByteChunk] =>
+          Future[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
+        }
+      } ~
+      path("/file/write"){
+        post { request: HttpRequest[ByteChunk] =>
+          val promise = Promise[HttpResponse[ByteChunk]]()
+          request.content.foreach{value =>
+            val f = FileSink(Context.dataFile, value)
+            f.onSuccess { case v => promise.success(HttpResponse[ByteChunk]()) } 
+          }
+          promise
+        }
+      } ~
+      path("/file/read"){
+        get { request: HttpRequest[ByteChunk] =>
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(Context.dataFile))
+          Future[HttpResponse[ByteChunk]](response)
+        }
+      } ~
+      path("/huge/delayed"){
+        get { request: HttpRequest[ByteChunk] =>
+
+          val promise = Promise[ByteChunk]()
+          import scala.actors.Actor.actor
+          actor {
+            Thread.sleep(2000)
+            promise.success(Chunk(Context.hugeContext.tail.head))
+          }
+
+          val chunk  = Chunk(Context.hugeContext.head, Some(promise))
+
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          Future[HttpResponse[ByteChunk]](response)
+        }
+      }
+    }
+  }
+}
+
+object Context{
+  val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
+
+  val hugeContext = List[Array[Byte]]("first-".getBytes ++ Array.fill[Byte](2048*1000)('0'), "second-".getBytes ++ Array.fill[Byte](2048*1000)('0'))
+  val context = """<html>
+<head>
+</head>
+
+<body>
+    <h1>Test</h1>
+    <h1>Test</h1>
+</body>
+</html>"""
 }

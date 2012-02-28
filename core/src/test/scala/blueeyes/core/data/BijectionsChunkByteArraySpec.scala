@@ -12,7 +12,7 @@ class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArra
 
   "BijectionsChunkByteArray" should{
     "convert chunk to bytes chunks" in{
-      val chunks     = new MemoryChunk[JValue](jObject1, () => Some(Future[Chunk[JValue]](new MemoryChunk[JValue](jObject2))))
+      val chunks     = Chunk(jObject1, Some(Future[Chunk[JValue]](Chunk(jObject2))))
       val bytesChunk = bijection(chunks)
 
       ByteArrayToJValue(bytesChunk.data) mustEqual(jObject1)
@@ -23,7 +23,7 @@ class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArra
     }
 
     "convert bytes chunk to chunk" in{
-      val chunks     = new ByteMemoryChunk(JValueToByteArray(jObject1), () => Some(Future[ByteChunk](new ByteMemoryChunk(JValueToByteArray(jObject2)))))
+      val chunks     = Chunk(JValueToByteArray(jObject1), Some(Future[ByteChunk](Chunk(JValueToByteArray(jObject2)))))
       val bytesChunk = bijection.unapply(chunks)
 
       bytesChunk.data mustEqual(jObject1)
