@@ -12,7 +12,7 @@ import akka.util._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
+import blueeyes.core.data.{FileSink, FileSource, Chunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import security.BlueEyesKeyStoreFactory
@@ -21,7 +21,8 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import javax.net.ssl.TrustManagerFactory
 
-import net.lag.configgy.{ConfigMap, Configgy}
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 
 import blueeyes.concurrent.test.FutureMatchers
 import org.specs2.specification.{Step, Fragments}
@@ -29,12 +30,12 @@ import org.specs2.time.TimeConversions._
 
 class HttpServerNettySpec extends Specification with BijectionsByteArray with BijectionsChunkString with blueeyes.bkka.AkkaDefaults with FutureMatchers {
 
-  private val configPattern = """server{
+  private val configPattern = """server {
   port = %d
   sslPort = %d
 }"""
 
-  val duration = Duration(350, "millis")
+  val duration: org.specs2.time.Duration = 1000.milliseconds
   val retries = 50
 
   implicit val testTimeouts = FutureTimeouts(50, duration)
@@ -46,10 +47,9 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   override def map(fs: =>Fragments) = Step {
     var error: Option[Throwable] = None
     do{
-      val sampleServer = new SampleServer()
+      val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val sampleServer = new SampleServer(config)
       val doneSignal   = new CountDownLatch(1)
-
-      Configgy.configureFromString(configPattern.format(port, port + 1))
 
       val startFuture = sampleServer.start
 
@@ -199,9 +199,11 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   private def sslClient = new LocalHttpsClient(server.get.config).protocol("https").host("localhost").port(port + 1)
 }
 
-class SampleServer extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { }
+class SampleServer(configOverride: Configuration) extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
+  override def rootConfig = configOverride
+} 
 
-class LocalHttpsClient(config: ConfigMap) extends HttpClientXLightWeb {
+class LocalHttpsClient(config: Configuration) extends HttpClientXLightWeb {
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
@@ -242,7 +244,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(Future(new ByteMemoryChunk(Context.hugeContext.tail.head))))
+          val chunk  = Chunk(Context.hugeContext.head, Some(Future(Chunk(Context.hugeContext.tail.head))))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)
@@ -276,10 +278,10 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            promise.success(new ByteMemoryChunk(Context.hugeContext.tail.head))
+            promise.success(Chunk(Context.hugeContext.tail.head))
           }
 
-          val chunk  = new ByteMemoryChunk(Context.hugeContext.head, () => Some(promise))
+          val chunk  = Chunk(Context.hugeContext.head, Some(promise))
 
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)

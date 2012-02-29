@@ -7,13 +7,12 @@ import blueeyes.core.service.HttpRequestHandlerCombinators
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import net.lag.configgy.Configgy
 import org.specs2.mutable.Specification
+import org.specs2.time.TimeConversions._
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
-import akka.util.Duration
 import blueeyes.bkka.AkkaDefaults
 
 import collection.mutable.ArrayBuilder.ofByte
@@ -21,9 +20,12 @@ import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
 import org.specs2.specification.{Step, Fragments}
 
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
+
 class HttpClientXLightWebSpec extends Specification with BijectionsChunkString with ContentReader with HttpRequestHandlerCombinators 
 with AkkaDefaults with HttpRequestMatchers {
-  val duration = Duration(250, "millis")
+  val duration = 250.milliseconds
   val retries = 30
 
   private val httpClient = new HttpClientXLightWeb
@@ -39,28 +41,30 @@ with AkkaDefaults with HttpRequestMatchers {
 
   override def is = args(sequential = true) ^ super.is
   override def map(fs: =>Fragments) = Step {
-    var success = false
+    var result: Option[EchoServer] = None 
     do {
-      EchoServer.echoService
-      success = try {
-        Configgy.configureFromString(configPattern.format(port, port + 1))
+      result = try {
+        val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+        
+        val echoServer = new EchoServer(config)
 
-        EchoServer.start
-        true
+        echoServer.start
+        Some(echoServer) 
       }
       catch {
         case e: Throwable => {
           e.printStackTrace()
           port = port + 2
-          false
+          None 
         }
       }
-    } while(!success)
+    } while(result.isEmpty)
 
-    server = Some(EchoServer)
+    server = result 
+
     uri = "http://localhost:%s/echo".format(port)
   } ^ fs ^ Step {
-    EchoServer.stop
+    server.foreach{ _.stop }
   }
 
 
@@ -158,7 +162,7 @@ with AkkaDefaults with HttpRequestMatchers {
     }
     "Support POST requests with large payload with several chunks" in {
       val expected = Array.fill[Byte](2048*100)('0')
-      val chunk   = new ByteMemoryChunk(expected, () => Some(Future(new ByteMemoryChunk(expected))))
+      val chunk   = Chunk(expected, Some(Future(Chunk(expected))))
       httpClient.post[ByteChunk](uri)(chunk) must whenDelivered {
         beLike {
           case HttpResponse(status, _, Some(content), _) => 
@@ -189,7 +193,7 @@ with AkkaDefaults with HttpRequestMatchers {
 
     "Support GET requests of 1000 requests" in {
       val total = 1000
-      val duration = Duration(1000, "millis")
+      val duration = 1000.milliseconds
       val futures = List.fill(total) {
         httpClient.get(uri + "?test=true")
       }
@@ -225,7 +229,7 @@ with AkkaDefaults with HttpRequestMatchers {
       import BijectionsByteArray._
       implicit val bijection = chunksToChunksArrayByte[String]
 
-      val chunks: Chunk[String] = new MemoryChunk[String]("foo", () => Some(Future[Chunk[String]](new MemoryChunk[String]("bar"))))
+      val chunks: Chunk[String] = Chunk("foo", Some(Future[Chunk[String]](Chunk("bar"))))
 
       val response = Await.result(httpClient.post(uri)(chunks)(bijection), duration)
       response.status.code must be(HttpStatusCodes.OK)
@@ -250,7 +254,9 @@ with AkkaDefaults with HttpRequestMatchers {
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.service._
 
-object EchoServer extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine{ }
+class EchoServer(configOverride: Configuration) extends EchoService with HttpReflectiveServiceList[ByteChunk] with NettyEngine { 
+  override def rootConfig = configOverride
+}
 
 trait ContentReader extends AkkaDefaults {
   def readContent[T](chunk: Chunk[T]): Future[List[T]] = {

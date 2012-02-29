@@ -16,7 +16,7 @@ import akka.dispatch.Future
 import akka.util.Timeout
 import blueeyes.core.http.test._
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HeatlhMonitorService with BijectionsChunkJson with HttpRequestMatchers {
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with BijectionsChunkJson with HttpRequestMatchers {
   override def configuration = """
     services {
       foo {
@@ -32,9 +32,9 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
             file    = "%s"
             enabled = true
           }
-          healthMonitor{
-            overage{
-              interval{
+          healthMonitor {
+            overage {
+              interval {
                 length = "1 seconds"
                 count  = 12
               }
@@ -48,7 +48,8 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
       Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
-        case Some("/foo/v1/proxy")  => BijectionsChunkString.StringToChunk("it works!")
+        case Some("/foo/v1/proxy")  => 
+          BijectionsChunkString.StringToChunk("it works!")
 
         case _ => BijectionsChunkString.StringToChunk("it does not work!")
       })))
@@ -93,7 +94,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HeatlhMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with BijectionsChunkJson{
+trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with BijectionsChunkJson{
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {
@@ -109,7 +110,6 @@ trait HeatlhMonitorService extends BlueEyesServiceBuilder with ServiceDescriptor
                 path("/proxy") {
                   get { request: HttpRequest[ByteChunk] =>
                     val foo = locator("foo", "1.02.32")
-
                     foo(request)
                   }
                 } ~

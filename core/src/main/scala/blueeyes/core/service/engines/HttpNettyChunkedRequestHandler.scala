@@ -13,7 +13,7 @@ import org.jboss.netty.util.CharsetUtil
 import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
 import HttpNettyChunkedRequestHandler._
-import blueeyes.core.data.{MemoryChunk, ByteChunk}
+import blueeyes.core.data.{ Chunk, ByteChunk }
 import blueeyes.core.http.HttpRequest
 
 private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters with AkkaDefaults {
@@ -53,10 +53,10 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
               delivery = None
               None
             }
-            val chunkToSend = fromNettyContent(content, () => nextChunkFuture)
+            val chunkToSend = fromNettyContent(content, nextChunkFuture)
             nextDelivery match {
               case Left(x)  => Channels.fireMessageReceived(ctx, x.copy(content = chunkToSend), e.getRemoteAddress)
-              case Right(x) => x.success(chunkToSend.getOrElse(new MemoryChunk(Array[Byte]())))
+              case Right(x) => x.success(chunkToSend.getOrElse(Chunk(Array[Byte]())))
             }
           }
         }

@@ -23,7 +23,7 @@ class FileSource(file: File, private[FileSource] var offset: Long, length: Long,
 
         offset = offset + size
 
-        Some(Future(new MemoryChunk(chunk, apply _)))
+        Some(Future(Chunk(chunk, apply)))
       } catch {
         case th: Throwable =>
           accessFile.close()

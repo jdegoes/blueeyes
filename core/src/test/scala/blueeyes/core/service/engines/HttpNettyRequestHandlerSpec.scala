@@ -12,7 +12,7 @@ import akka.util.Duration
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
-import blueeyes.core.data.{ByteChunk, MemoryChunk, BijectionsChunkString}
+import blueeyes.core.data.{ByteChunk, Chunk, BijectionsChunkString}
 import com.weiglewilczek.slf4s.Logging
 import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
@@ -40,7 +40,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
     val event        = mock[MessageEvent]
     val future       = Promise.successful(response)
     val nettyMessage = toNettyResponse(response, true)
-    val nettyContent = new NettyChunkedInput(new MemoryChunk(Array[Byte]()), channel)
+    val nettyContent = new NettyChunkedInput(Chunk(Array[Byte]()), channel)
 
     when(event.getMessage()).thenReturn(request, request)
     when(handler.service).thenReturn(service)
@@ -69,7 +69,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
 
     nettyHandler.channelDisconnected(context, stateEvent)
 
-    Await.result(promise.failed, Duration(10, "seconds")) must haveSuperclass[Throwable]
+    Await.result(promise.failed, 10 seconds) must haveSuperclass[Throwable]
   }
 
   class RequestMatcher(matchingResponce: NettyHttpResponse) extends ArgumentMatcher[NettyHttpResponse] {

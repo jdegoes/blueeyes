@@ -63,7 +63,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         }
 
         val start = System.currentTimeMillis
-        val futures = Future.sequence[Unit, List](actors.map(actor => (actor ? "Send").mapTo[Unit])))
+        val futures = Future.sequence[Unit, List](actors.map(actor => (actor ? "Send").mapTo[Unit]))
         futures.value must eventually(200, 300.milliseconds) (beSome)
 
         val flushFuture = mongoStage.flushAll(Timeout(10000))

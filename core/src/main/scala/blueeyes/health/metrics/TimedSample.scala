@@ -17,7 +17,7 @@ import histogram.{DynamicHistogram, ValueStrategy}
 
 abstract class TimedSample[V](val config: interval)(implicit valueStrategy: ValueStrategy[V], clock: Clock, m: Manifest[V])
 extends AsyncStatistic[Long, Map[Long, V]]{
-  val actorSystem = ActorSystem.create() //TODO: Specialize
+  val actorSystem = ActorSystem("timed_sample") //TODO: Specialize
   private[TimedSample] val actor = actorSystem.actorOf(Props(new TimedSampleActor(DynamicHistogram.empty(config.granularity.length, config.samples + 1, config.granularity.unit))))
 
   def +=(elem: Long): this.type = {

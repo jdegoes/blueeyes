@@ -29,7 +29,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def maximumCapacity: Int
 
-  private val actorSystem = ActorSystem.create() //TODO: specialize
+  private val actorSystem = ActorSystem("blueeyes_stage")
 
   private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
     private val impl = new javolution.util.FastMap[K, ExpirableValue[V]]
