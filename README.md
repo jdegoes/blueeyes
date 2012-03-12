@@ -23,6 +23,10 @@ If you have bugs to report, please use the GitHub issues tracker. If you have qu
 
   * [BlueEyes Web Framework Discussion Group](http://groups.yahoo.com/group/blueeyes-web)
 
+## Book (in-progress)
+
+For more extensive documentation on BlueEyes, see the [in-progress book](http://noelwelsh.com/blueeyes/index.html)
+
 ## Maven
 
 Repositories:
@@ -328,13 +332,13 @@ A single server can run any number of services, although the recommended practic
 
 #### Server Configuration Options
 
-Server Configuration included the following options: 
+Server Configuration included the following options:
 
 - port: the port the server is started on, which defaults to 8888".
 - sslPort: the port the ssl server is started on, which defaults to 8889.
-- address:  the local addres the server will bind to, which defaults to "localhost". 
+- address:  the local addres the server will bind to, which defaults to "localhost".
 - sslEnable: sets if the ssl should be running, which defaults to true.
-- chunkSize: the chunk size in bytes of a request/response content, which defaults to 1048576. 
+- chunkSize: the chunk size in bytes of a request/response content, which defaults to 1048576.
 
 The minimal configuration looks like:
 
@@ -372,7 +376,7 @@ BlueEyes ships with many useful service descriptor factory combinators that are 
 ```scala
 val myService = service("myservice", "2.39.23") {
   logging { logger =>
-    context => 
+    context =>
       request { state =>
         path("/foo") {
           contentType(application/json) {
@@ -445,17 +449,17 @@ A service's request logger is configured through a *requestLog* block inside the
 The following values can be configured for request logging:
 
    enabled           = true | false ( default = true )
-   fields            = "W3C Extended Log format fields", "sc-content", "sc-content" 
+   fields            = "W3C Extended Log format fields", "sc-content", "sc-content"
    cs-content        = request content encoded by Base64 encoding and wrapped by double quotes
    sc-content        = response content encoded by Base64 encoding and wrapped by double quotes
    roll              = "never" | "hourly" | "daily" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" " ( default = "never")
    file              = path to log file
    includePaths      = list of paths (regualar expressions) for which requests/responses must be logged
-   excludePaths      = list of paths (regualar expressions) for which requests/responses must not be logged   
+   excludePaths      = list of paths (regualar expressions) for which requests/responses must not be logged
    writeDelaySeconds = delay between flush to file ( default = 1 )
-   
-   If neither "includePaths" nor "excludePaths" are specified then all requests/responses are logged. 
-   If both "includePaths" and "excludePaths" are specified then only "includePaths" are taken into account.  
+
+   If neither "includePaths" nor "excludePaths" are specified then all requests/responses are logged.
+   If both "includePaths" and "excludePaths" are specified then only "includePaths" are taken into account.
 
 ```scala
 services {
@@ -577,7 +581,7 @@ BlueEyes has a full-featured Scala facade to MongoDB.
 First of all, you need to create an instance to the Mongo facade. You have your choice of RealMongo or MockMongo. The latter is a memory-only Mongo facade that is designed for automated testing.
 
 Factory trait ConfigurableMongo can be used to create a Mongo facade. The factor creates either RealMongo or MockMongo deppending on "mongo.mock" JVM parameter. If the parameter is set to "true"
-then MockMongo is created otherwise RealMongo is created. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section 
+then MockMongo is created otherwise RealMongo is created. Factory "mongo" method takes a configuration as a parameter with mongo server configuration. If the configuration contains section
 dropBeforeStart then all specified collection(s) on specified database(s) are dropped before starting.
 Sample configuration is:
 
@@ -618,7 +622,7 @@ BlueEyes supports documents manipulations queries: querying, removing, updating 
   * Select all documents:
     val query    = select().from("mycollection")
 
-  * Select multiple documents and sort by a field:   
+  * Select multiple documents and sort by a field:
     val query    = select().from("mycollection").sortBy("foo.bar" <<)
 
   * Select multiple documents by criteria:
@@ -750,7 +754,11 @@ BlueEyes provides support for both pillars:
     <tr>
       <td>Mike Conigliaro</td>    <td>Container/Deployment Manager for BlueEyes Services (unreleased)</td>         <td><a href="http://twitter.com/mconigliaro">@mconigliaro</a></td>
     </tr>
-  </tbody>
+    <tr>
+      <td>Noel Welsh</td>    <td>General fixes, documentation, community buildilng</td>         <td><a href="http://twitter.com/noelwelsh">@noelwelsh</a></td>
+
+    </tr>
+</tbody>
 </table>
 
 ## License
@@ -761,6 +769,6 @@ Published under The MIT License
 
 ## Sponsors
 
-A big round of thanks to the sponsors of BlueEyes. 
+A big round of thanks to the sponsors of BlueEyes.
 
 <a href="http://www.ej-technologies.com/products/jprofiler/overview.html">JProfiler</a> - Best-in-class profiler for Java and Scala developers
