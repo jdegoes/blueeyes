@@ -7,7 +7,7 @@ import akka.dispatch.Promise
 
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, ByteMemoryChunk, ByteChunk, BijectionsChunkString}
+import blueeyes.core.data.{FileSink, FileSource, Chunk, ByteChunk, BijectionsChunkString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 
 import java.io.File
@@ -43,7 +43,7 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
         path("/huge"){
           get { request: HttpRequest[ByteChunk] =>
-            val chunk  = new ByteMemoryChunk(TestEngineServiceContext.hugeContext.head, () => Some(Future(new ByteMemoryChunk(TestEngineServiceContext.hugeContext.tail.head))))
+            val chunk  = Chunk(TestEngineServiceContext.hugeContext.head, Some(Future(Chunk(TestEngineServiceContext.hugeContext.tail.head))))
 
             val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
             Future[HttpResponse[ByteChunk]](response)
@@ -77,10 +77,10 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
             import scala.actors.Actor.actor
             actor {
               Thread.sleep(2000)
-              promise.success(new ByteMemoryChunk(TestEngineServiceContext.hugeContext.tail.head))
+              promise.success(Chunk(TestEngineServiceContext.hugeContext.tail.head))
             }
 
-            val chunk  = new ByteMemoryChunk(TestEngineServiceContext.hugeContext.head, () => Some(promise))
+            val chunk  = Chunk(TestEngineServiceContext.hugeContext.head, Some(promise))
 
             val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
             Future[HttpResponse[ByteChunk]](response)

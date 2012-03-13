@@ -6,9 +6,10 @@ import javax.servlet.http.{HttpServletResponse, HttpServletRequest, HttpServlet}
 import blueeyes.core.http.HttpResponse
 import collection.mutable.{HashSet, SynchronizedSet}
 import javax.servlet.AsyncContext
-import blueeyes.core.data.{MemoryChunk, ByteChunk}
+import blueeyes.core.data.{Chunk, ByteChunk}
 import java.io.OutputStream
-import net.lag.configgy.Configgy
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 import akka.dispatch.{Promise, Future}
 
 trait ServletEngine extends HttpServlet with HttpServerEngine with HttpServer with HttpServletConverters{
@@ -63,7 +64,10 @@ trait ServletEngine extends HttpServlet with HttpServerEngine with HttpServer wi
   }
 
   override def init() {
-    Configgy.configure(Option(getInitParameter("configFile")).getOrElse(sys.error("Expected --configFile init parameter")))
+    rootConfiguration = Configuration.load(
+      Option(getInitParameter("configFile")).getOrElse(sys.error("Expected --configFile init parameter")),
+      BlockFormat
+    )
     waitDone(start)
   }
 
@@ -81,11 +85,5 @@ trait ServletEngine extends HttpServlet with HttpServerEngine with HttpServer wi
 }
 
 private[engines] class ChunkedContent(content: Option[ByteChunk]){
-  val (chunk, isChunked) = content map { value =>
-    val nextChunk = value.next
-    nextChunk match {
-      case Some(next) => (Some(new MemoryChunk(value.data, () => {nextChunk})), true)
-      case None       => (content, false)
-    }
-  } getOrElse ((None, false))
+  val (chunk, isChunked) = (content, content.exists(!_.isEOF))
 }

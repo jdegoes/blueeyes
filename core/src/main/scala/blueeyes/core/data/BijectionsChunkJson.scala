@@ -16,7 +16,7 @@ trait BijectionsChunkJson{
 
       compact(render(t), new OutputStreamWriter(stream))
 
-      new MemoryChunk(stream.toByteArray)
+      Chunk(stream.toByteArray)
     }
 
     def unapply(s: ByteChunk) = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data), "UTF-8"))

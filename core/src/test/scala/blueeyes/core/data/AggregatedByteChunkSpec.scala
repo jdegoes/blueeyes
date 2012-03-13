@@ -10,11 +10,11 @@ import DataSize._
 class AggregatedByteChunkSpec extends Specification with AkkaDefaults with FutureMatchers {
   "AggregatedByteChunk" should {
     "aggregate full content when size is not specified" in{
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))
+      val chunk = Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))
       AggregatedByteChunk(chunk, None).map(v => new String(v.data)) must whenDelivered (be_==("1234"))
     }
     "aggregate content up to the specified size" in{
-      val chunk = new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))
+      val chunk = Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))
       AggregatedByteChunk(chunk, Some(2.bytes)).map(v => new String(v.data)) must whenDelivered (be_==("12"))
     }
   }

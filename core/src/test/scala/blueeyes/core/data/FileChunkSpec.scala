@@ -15,7 +15,9 @@ import org.specs2.specification.{AfterExample, BeforeAfterExample}
 trait Data extends AkkaDefaults {
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
   val data     = List.fill(5)(List.fill[Byte](10)('0'))
-  val chunk    = data.tail.foldLeft(new ByteMemoryChunk(data.head.toArray)){(chunk, data) => new ByteMemoryChunk(data.toArray, () => Some(Future[ByteChunk](chunk)))}
+  val chunk    = data.tail.foldLeft(Chunk(data.head.toArray)) { (chunk, data) => 
+                   Chunk(data.toArray, Some(Future[ByteChunk](chunk)))
+                 }
 }
 
 class FileSinkSpec extends Specification with Data with BeforeAfterExample with AkkaDefaults with FutureMatchers {
@@ -33,7 +35,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write failed" in{
       val error  = new RuntimeException
-      val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, () => throw error))
+      val result = FileSink(dataFile, Chunk(data.head.toArray, Some(Future(throw error))))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
@@ -42,7 +44,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write getting next chunk failed" in{
       val error  = new RuntimeException
-      val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, () => Some(Promise.failed[ByteChunk](error))))
+      val result = FileSink(dataFile, Chunk(data.head.toArray, Some(Promise.failed[ByteChunk](error))))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
@@ -55,12 +57,12 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
         import scala.actors.Actor.actor
         actor {
           Thread.sleep(2000)
-          promise.success(new ByteMemoryChunk(data.head.toArray))
+          promise.success(Chunk(data.head.toArray))
         }
         Some(promise)
       }
 
-      val result = FileSink(dataFile, new ByteMemoryChunk(data.head.toArray, next _))
+      val result = FileSink(dataFile, Chunk(data.head.toArray, next))
       val killed = new RuntimeException("killed")
       result.asInstanceOf[Promise[Unit]].failure(killed)
       

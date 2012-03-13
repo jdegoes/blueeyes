@@ -4,7 +4,7 @@ package service
 import http._
 import http.HttpHeaders._
 import http.HttpStatusCodes._
-import data.{CompressedByteChunk, ByteChunk, Bijection}
+import data.{Chunk, ByteChunk, CompressedByteChunk, Bijection}
 
 import akka.dispatch.Future
 import blueeyes.json.JsonAST._
@@ -256,6 +256,8 @@ trait HttpRequestHandlerCombinators {
   def jsonp[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T): HttpService[T, Future[HttpResponse[T]]] = JsonpService[T](delegate)
 
   def jsonp2[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T): HttpService[T, E1 => Future[HttpResponse[T]]] = Jsonp2Service[T, E1](delegate)
+
+  def jsonpc[T, U](delegate: HttpService[Future[JValue], Future[HttpResponse[Chunk[U]]]])(implicit toJson: Chunk[T] => Future[JValue], u2s: U => String, s2t: String => T): HttpService[Chunk[T], Future[HttpResponse[Chunk[T]]]] = JsonpChunkedService[T, U](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
