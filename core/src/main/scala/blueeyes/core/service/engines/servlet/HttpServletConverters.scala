@@ -2,7 +2,7 @@ package blueeyes.core.service.engines.servlet
 
 import scala.collection.JavaConversions._
 import javax.servlet.http.HttpServletRequest
-import blueeyes.core.data.{ByteChunk, MemoryChunk}
+import blueeyes.core.data.{ByteChunk, Chunk}
 import java.net.InetAddress
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
@@ -29,7 +29,7 @@ trait HttpServletConverters {
   def fromServletContent(request: HttpServletRequest): Option[ByteChunk] = {
     if (!isTransferEncodingChunked(request)){
       val content = extractContent(request.getInputStream)
-      if (!content.isEmpty) Some(new MemoryChunk(content, () => None)) else None
+      if (!content.isEmpty) Some(Chunk(content)) else None
     }
     else{
       InputStreamSource(request.getInputStream)
@@ -77,7 +77,7 @@ private[servlet] class InputStreamSource(inputStream: InputStream) extends AkkaD
     if (length > -1){
       val data = new Array[Byte](length)
       buffer.copyToArray(data, 0, length)
-      Some(Future(new MemoryChunk(data, apply _)))
+      Some(Future(Chunk(data, apply)))
     }
     else
       None

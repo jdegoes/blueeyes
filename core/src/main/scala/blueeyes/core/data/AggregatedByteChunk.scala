@@ -16,9 +16,7 @@ object AggregatedByteChunk extends AkkaDefaults {
 
   private def aggregateContent(chunk: ByteChunk, buffer: ByteArrayOutputStream, result: Promise[ByteChunk], chunkSizeInBytes: Option[DataSize]) {
     def done = result.success {
-      new MemoryChunk(buffer.toByteArray){
-        override def next = chunk.next
-      }
+      Chunk(buffer.toByteArray, chunk.next)
     }
 
     buffer.write(chunk.data)

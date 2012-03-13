@@ -1,32 +1,36 @@
 package blueeyes.core.service.engines.security
 
 import org.specs2.mutable.Specification
-import net.lag.configgy.Configgy
+import org.streum.configrity.Configuration
+import org.streum.configrity.io.BlockFormat
 import org.apache.commons.codec.binary.Base64
 
 class ConfigCertificateKeyEntrySpec extends Specification with CertificateData{
   override def is = args(sequential = true) ^ super.is
 
-  private val configuration = """server {
-  ssl{
+  private val configuration = """
+server {
+  ssl {
     certificateEntry {
       privateKey = "%s"
       certificate = "%s"
+    }
   }
-}""".format(encodedPrivateKey, encodedCertificate)
+}
+""".format(encodedPrivateKey, encodedCertificate)
 
   "CertificateKeyEntry must create key and certificate" in {
-    Configgy.configureFromString(configuration)
+    val config = Configuration.parse(configuration, BlockFormat)
     
-    val entry = ConfigCertificateKeyEntry(Configgy.config.configMap("server"))
+    val entry = ConfigCertificateKeyEntry(config.detach("server"))
 
     encode(entry.get._1.getEncoded) mustEqual (encodedPrivateKey)
     encode(entry.get._2.getEncoded) mustEqual (encodedCertificate)
   }
   "CertificateKeyEntry must not create key and certificate when configuration is missing" in {
-    Configgy.configureFromString("")
+    val config = Configuration.parse("", BlockFormat)
 
-    val entry = ConfigCertificateKeyEntry(Configgy.config.configMap("server"))
+    val entry = ConfigCertificateKeyEntry(config.detach("server"))
 
     entry must be(None)
   }

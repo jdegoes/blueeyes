@@ -10,7 +10,7 @@ import blueeyes.persistence.mongo.json.BijectionsMongoJson.MongoToJson._
 import IterableViewImpl._
 
 import com.mongodb._
-import net.lag.configgy.ConfigMap
+import org.streum.configrity.Configuration
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashMap
 
@@ -35,13 +35,13 @@ object RealMongo {
     defaultActorSystem.actorOf(Props(new RealMongoFactory(defaultActorSystem)))
 
   // You must provide both an actor system and the actor ref to a RealMongoFactory
-  def apply(config: ConfigMap, factory: ActorRef = defaultFactory) = {
+  def apply(config: Configuration, factory: ActorRef = defaultFactory) = {
     val mongo = {
       val options = new MongoOptions()
       options.connectionsPerHost = 256
       options.threadsAllowedToBlockForConnectionMultiplier = 16
 
-      val servers = config.getList("servers").toList map {
+      val servers = config[List[String]]("servers").toList map {
         case ServerAndPortPattern(host, port) => new ServerAddress(host.trim(), port.trim().toInt)
         case server                           => new ServerAddress(server, ServerAddress.defaultPort())
       }
@@ -52,12 +52,12 @@ object RealMongo {
         case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
       }
 
-      if (config.getBool("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
+      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
 
       underlying
     }
 
-    val disconnectTimeout = config.getLong("disconnect_timeout").getOrElse(300000L)
+    val disconnectTimeout = config.get[Long]("disconnect_timeout").getOrElse(300000L)
 
     new RealMongo(mongo, disconnectTimeout, factory)
   }

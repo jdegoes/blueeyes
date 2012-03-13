@@ -162,20 +162,24 @@ private[mongo] object UpdateFieldFunctions{
       case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => x1 + x2
       case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => x1 + x2
       case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => x1 + x2
+      case (MongoPrimitiveInt(x1),     MongoPrimitiveBigInt(x2)) => x1 + x2
 
-      case (MongoPrimitiveDouble(x1),  MongoPrimitiveDouble(x2)) => x1 + x2
       case (MongoPrimitiveDouble(x1),  MongoPrimitiveInt(x2))    => x1 + x2
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveDouble(x2)) => x1 + x2
       case (MongoPrimitiveDouble(x1),  MongoPrimitiveLong(x2))   => x1 + x2
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveBigInt(x2)) => x1 + x2.doubleValue
 
-      case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => x1 + x2
       case (MongoPrimitiveLong(x1),    MongoPrimitiveInt(x2))    => x1 + x2
       case (MongoPrimitiveLong(x1),    MongoPrimitiveDouble(x2)) => x1 + x2
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => x1 + x2
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveBigInt(x2)) => x1 + x2
 
-      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveBigInt(x2))   => x1 + x2
       case (MongoPrimitiveBigInt(x1),    MongoPrimitiveInt(x2))    => x1 + x2
       case (MongoPrimitiveBigInt(x1),    MongoPrimitiveDouble(x2)) => x1.doubleValue + x2
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveLong(x2))   => x1 + x2
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveBigInt(x2)) => x1 + x2
 
-      case _ => throw new MongoException("Modifier $inc allowed for numbers only")
+      case badVals => throw new MongoException("Modifier $inc allowed for numbers only: vals = " + badVals)
     }
   }
 

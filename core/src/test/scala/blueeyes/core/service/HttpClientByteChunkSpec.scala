@@ -4,14 +4,14 @@ import org.specs2.mutable.Specification
 import akka.dispatch.Future
 import blueeyes.core.http._
 import blueeyes.core.http.test.HttpRequestMatchers
-import blueeyes.core.data.{ByteMemoryChunk, ByteChunk}
+import blueeyes.core.data.{Chunk, ByteChunk}
 import blueeyes.util.metrics.DataSize
 import DataSize._
 
 class HttpClientByteChunkSpec extends Specification with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
-      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")
+      val future = client(Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))).aggregate(None).get("foo")
 
       future must succeedWithContent {
         (v: ByteChunk) => new String(v.data) must_== "1234"
@@ -19,7 +19,7 @@ class HttpClientByteChunkSpec extends Specification with blueeyes.bkka.AkkaDefau
     }
 
     "aggregate content up to the specified size" in{
-      val future = client(new ByteMemoryChunk(Array[Byte]('1', '2'), () => Some(Future(new ByteMemoryChunk(Array[Byte]('3', '4')))))).aggregate(Some(2.bytes)).get("foo")
+      val future = client(Chunk(Array[Byte]('1', '2'), Some(Future(Chunk(Array[Byte]('3', '4')))))).aggregate(Some(2.bytes)).get("foo")
 
       future must succeedWithContent {
         (v: ByteChunk) => new String(v.data) must_== "12"

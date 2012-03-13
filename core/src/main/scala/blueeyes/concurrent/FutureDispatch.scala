@@ -10,7 +10,7 @@ trait AkkaDefaults {
 }
 
 object AkkaDefaults {
-  val actorSystem = ActorSystem.create("blueeyes_actors")
+  val actorSystem = ActorSystem("blueeyes_actors")
 
   val defaultFutureDispatch: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_async")
 }

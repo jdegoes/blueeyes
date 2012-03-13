@@ -1,29 +1,41 @@
 package blueeyes.core.service.engines
 
 import org.specs2.mutable.Specification
-import net.lag.configgy.Configgy
+import org.streum.configrity.Configuration 
+import org.streum.configrity.io.BlockFormat
 import java.net.{InetSocketAddress, InetAddress}
 
 class InetInterfaceLookupSpec extends Specification{
   override def is = args(sequential = true) ^ super.is
   "creates socket address when address is not configured" in{
-    Configgy.configureFromString("")
+    val config = Configuration.parse("", BlockFormat)
 
-    InetInterfaceLookup.socketAddres(Configgy.config.configMap("server"), 8080) mustEqual(new InetSocketAddress(8080))
+    InetInterfaceLookup.socketAddres(config.detach("server"), 8080) mustEqual(new InetSocketAddress(8080))
   }
   "creates host name when address is not configured" in{
-    Configgy.configureFromString("")
+    val config = Configuration.parse("", BlockFormat)
 
-    InetInterfaceLookup.host(Configgy.config.configMap("server")) mustEqual(InetAddress.getLocalHost().getHostName())
+    InetInterfaceLookup.host(config.detach("server")) mustEqual(InetAddress.getLocalHost().getHostName())
   }
   "creates socket address when address is configured" in{
-    Configgy.configureFromString("""server{address="192.168.10.10"}""")
+    val rawConfig = """
+    server {
+      address = 192.168.10.10
+    }
+    """
 
-    InetInterfaceLookup.socketAddres(Configgy.config.configMap("server"), 8080) mustEqual(new InetSocketAddress("192.168.10.10", 8080))
+    val config = Configuration.parse(rawConfig, BlockFormat)
+
+    InetInterfaceLookup.socketAddres(config.detach("server"), 8080) mustEqual(new InetSocketAddress("192.168.10.10", 8080))
   }
   "creates host name when address is configured" in{
-    Configgy.configureFromString("""server{address="192.168.10.10"}""")
+    val rawConfig = """
+    server {
+      address = 192.168.10.10
+    }
+    """
+    val config = Configuration.parse(rawConfig, BlockFormat)
 
-    InetInterfaceLookup.host(Configgy.config.configMap("server")) mustEqual("192.168.10.10")
+    InetInterfaceLookup.host(config.detach("server")) mustEqual("192.168.10.10")
   }
 }
