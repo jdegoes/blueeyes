@@ -29,11 +29,13 @@ import com.weiglewilczek.slf4s.Logging
 object RealMongo {
   val ServerAndPortPattern = "(.+):(.+)".r
 
-  val actorSystem = ActorSystem()
+  lazy val defaultActorSystem = ActorSystem()
 
-  lazy val factory = actorSystem.actorOf(Props(new RealMongoFactory(actorSystem)))
+  lazy val defaultFactory =
+    defaultActorSystem.actorOf(Props(new RealMongoFactory(defaultActorSystem)))
 
-  def apply(config: ConfigMap) = {
+  // You must provide both an actor system and the actor ref to a RealMongoFactory
+  def apply(config: ConfigMap, factory: ActorRef = defaultFactory) = {
     val mongo = {
       val options = new MongoOptions()
       options.connectionsPerHost = 256
@@ -57,19 +59,19 @@ object RealMongo {
 
     val disconnectTimeout = config.getLong("disconnect_timeout").getOrElse(300000L)
 
-    new RealMongo(mongo, disconnectTimeout)
+    new RealMongo(mongo, disconnectTimeout, factory)
   }
 }
 
 
-class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
+class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout, factory: ActorRef) extends Mongo with AkkaDefaults {
   import akka.util.duration._
 
   implicit val timeOut: Timeout = 3.seconds
 
   def database(databaseName: String) =
     Await.result(
-      (RealMongo.factory ? Create(this, mongo.getDB(databaseName), disconnectTimeout)).mapTo[Database],
+      (factory ? Create(this, mongo.getDB(databaseName), disconnectTimeout)).mapTo[Database],
       timeOut.duration
     )
 
