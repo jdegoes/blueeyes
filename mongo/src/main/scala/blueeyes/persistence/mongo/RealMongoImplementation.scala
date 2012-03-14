@@ -73,7 +73,13 @@ object RealDatabase {
 
   private class RealMongoActor extends Actor {
     def receive = {
-      case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
+      case MongoQueryTask(query, collection, isVerified) =>
+        try {
+          sender ! query(collection, isVerified)
+        }
+        catch {
+          case e => sender ! akka.actor.Status.Failure(e)
+        }
     }
   }
 }
