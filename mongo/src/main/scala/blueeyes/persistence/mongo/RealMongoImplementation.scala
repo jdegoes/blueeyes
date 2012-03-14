@@ -81,25 +81,13 @@ object RealDatabase {
 private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
-  private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
-                                    //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                    //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-
-  private lazy val actors = List.fill(poolSize) {
-    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
-  }
-
-  private lazy val mongoActor =  actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)), "blueeyes_mongo_router-" + database.getName)
-
+  private lazy val mongoActor =  actorSystem.actorOf(Props(() => new RealMongoActor).withRouter(RoundRobinRouter(poolSize).withDispatcher("blueeyes_mongo_" + database.getName)))
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = for {
-    _ <- ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
-    v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
-  } yield v
+  lazy val disconnect = ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult]
