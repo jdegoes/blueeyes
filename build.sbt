@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
 resolvers ++= Seq(
   "ReportGrid repo" at            "http://nexus.reportgrid.com/content/repositories/releases",
   "ReportGrid snapshot repo" at   "http://nexus.reportgrid.com/content/repositories/snapshots",
-  "Akka Repository" at            "http://akka.io/repository/",
+  "Akka Repository" at            "http://repo.akka.io/releases/",
   "JBoss Releases" at             "http://repository.jboss.org/nexus/content/groups/public/",
   "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
   "Sonatype Snapshots" at         "http://oss.sonatype.org/content/repositories/snapshots",
