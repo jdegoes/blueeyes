@@ -27,6 +27,25 @@ sealed trait JPath { self =>
   def \ (that: String): JPath = JPath(self.nodes :+ JPathField(that))
   def \ (that: Int):    JPath = JPath(self.nodes :+ JPathIndex(that))
 
+  def dropPrefix(p: JPath): Option[JPath] = {
+    def remainder(nodes: List[JPathNode], toDrop: List[JPathNode]): Option[JPath] = {
+      nodes match {
+        case x :: xs =>
+          toDrop match {
+            case `x` :: ys => remainder(xs, ys)
+            case Nil => Some(JPath(nodes))
+            case _ => None
+          }
+
+        case Nil => 
+          if (toDrop.isEmpty) Some(JPath(nodes)) 
+          else None
+      }
+    }
+
+    remainder(nodes, p.nodes)
+  }
+
   def apply(index: Int): JPathNode = nodes(index)
 
   def extract(jvalue: JValue): JValue = {
