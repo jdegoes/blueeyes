@@ -87,7 +87,13 @@ class RealMongoFactory(actorSystem: ActorSystem) extends Actor {
 
   class RealMongoActor extends Actor {
     def receive = {
-      case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
+      case MongoQueryTask(query, collection, isVerified) =>
+        try {
+          sender ! query(collection, isVerified)
+        }
+        catch {
+          case e => sender ! akka.actor.Status.Failure(e)
+        }
     }
   }
 
@@ -103,10 +109,7 @@ class RealMongoFactory(actorSystem: ActorSystem) extends Actor {
         val actors = List.fill(poolSize) {
           context.actorOf(Props(new RealMongoActor).withDispatcher(name))
         }
-        val mongoActor = context actorOf (
-          Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)),
-          routerName
-        )
+        lazy val mongoActor =  actorSystem.actorOf(Props(() => new RealMongoActor).withRouter(RoundRobinRouter(poolSize).withDispatcher(name)), routerName)
 
         new RealDatabase(database.getName,
                          database,
@@ -120,7 +123,6 @@ class RealMongoFactory(actorSystem: ActorSystem) extends Actor {
       sender ! databases.getOrElseUpdate(name, makeMongo())
   }
 }
-
 
 private[mongo] class RealDatabase(name: String,
                                   database: DB,
@@ -136,10 +138,7 @@ private[mongo] class RealDatabase(name: String,
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = for {
-    _ <- ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
-    v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
-  } yield v
+  lazy val disconnect = ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult]

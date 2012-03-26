@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.streum.configrity.Configuration 
 import akka.util.Timeout
+import blueeyes.Environment
 
 /** ConfigurableMongo creates mongo database type based on JVM parameter "mongo.mock".
  * If the value is true then Mock Mongo is created otherwise Real Mongo is created.
@@ -20,15 +21,19 @@ import akka.util.Timeout
  *
  */
 trait ConfigurableMongo extends MongoImplicits{
-  private lazy val mockMongo = new MockMongo()
+  private var mongo: Option[Mongo] = None
 
   def mongo(mongoConfig: Configuration): Mongo =  {
-    val isMock = sys.props.getOrElse(ConfigurableMongo.MongoSwitch, "false").toBoolean
-    val mongo  = if (isMock) mockMongo else RealMongo(mongoConfig)
+    mongo.getOrElse{
+    val isMock = sys.props.getOrElse(Environment.MockSwitch, "false").toBoolean
+      val newMongo  = if (isMock) new MockMongo() else RealMongo(mongoConfig)
 
-    drop(mongo, mongoConfig.detach("dropBeforeStart"))
+      drop(newMongo, mongoConfig.detach("dropBeforeStart"))
 
-    mongo
+      mongo = Some(newMongo)
+
+      newMongo
+    }
   }
 
   private def drop(mongo: Mongo, dropConfig: Configuration) {
@@ -37,8 +42,4 @@ trait ConfigurableMongo extends MongoImplicits{
       mongo.database(database)(remove.from(collection))
     }
   }
-}
-
-object ConfigurableMongo{
-  val MongoSwitch = "mongo.mock"
 }

@@ -10,13 +10,14 @@ import engines.HttpClientXLightWeb
 
 import scalaz.{Failure, Success}
 import scalaz.Validation._
+import blueeyes.Environment
 
 trait ConfigurableHttpClient extends AkkaDefaults {
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
   private lazy val NotFound            = Future(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
 
   lazy implicit val httpClient: HttpClientByteChunk = {
-    val isMock = sys.props.getOrElse(ConfigurableHttpClient.HttpClientSwitch, "false").toBoolean
+    val isMock = sys.props.getOrElse(Environment.MockSwitch, "false").toBoolean
     if (isMock) mockClient(mockServer) else realClient
   }
 
@@ -40,8 +41,4 @@ trait ConfigurableHttpClient extends AkkaDefaults {
     def service = (request: HttpRequest[ByteChunk]) => success(Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
     val metadata = None
   }
-}
-
-object ConfigurableHttpClient{
- val HttpClientSwitch = "httpclient.mock"
 }

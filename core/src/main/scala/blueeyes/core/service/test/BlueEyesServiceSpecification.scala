@@ -10,6 +10,8 @@ import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 import blueeyes.core.service._
+import blueeyes.Environment
+
 //import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.util.RichThrowableImplicits._
 
@@ -24,8 +26,7 @@ import org.specs2.specification.{Fragment, Fragments, Step}
 class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
-  //private val mongoSwitch      = sys.props.get(ConfigurableMongo.MongoSwitch)
-  private val httpClientSwitch = sys.props.get(ConfigurableHttpClient.HttpClientSwitch)
+  private val mockSwitch = sys.props.get(Environment.MockSwitch)
 
   override def is = args(sequential = true) ^ super.is
   private val specBefore = Step {
@@ -38,15 +39,15 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
     stopServer
   }
 
-  override def map(fs: =>Fragments) = specBefore ^ Step(beforeSpec _) ^ fs ^ Step(afterSpec _) ^ specAfter
+  override def map(fs: =>Fragments) = specBefore ^ beforeSpec ^ fs ^ afterSpec ^ specAfter
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def httpServerStopTimeout = stopTimeOut
   def configuration  = ""
 
-  protected def beforeSpec: Any = ()
-  protected def afterSpec: Any = ()
+  protected def beforeSpec(): Step = Step{}
+  protected def afterSpec(): Step = Step{}
 
   private val httpServer = new HttpServer{
     // For the purposes of tests, kill the server early since we don't care about losing data in a spec
@@ -54,13 +55,11 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
 
     def services = self.services
 
-    // Manual configuration based on "configuration" string:
     override def rootConfig: Configuration = self.rootConfig
   }
 
   def setMockCongiguration = {
-    //sys.props.getOrElseUpdate (ConfigurableMongo.MongoSwitch, "true")
-    sys.props.getOrElseUpdate (ConfigurableHttpClient.HttpClientSwitch, "true")
+    sys.props.getOrElseUpdate (Environment.MockSwitch, "true")
   }
 
   def resetMockCongiguration = {
@@ -68,8 +67,7 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
       case Some(x) => sys.props.put(key, x)
       case None => sys.props.remove(key)
     }
-    //setProp(ConfigurableMongo.MongoSwitch, mongoSwitch)
-    setProp(ConfigurableHttpClient.HttpClientSwitch, httpClientSwitch)
+    setProp(Environment.MockSwitch, mockSwitch)
   }
 
   def service: HttpClient[ByteChunk] = new SpecClient()
