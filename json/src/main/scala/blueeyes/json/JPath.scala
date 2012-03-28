@@ -5,6 +5,9 @@ import util.matching.Regex
 import xschema._
 import xschema.DefaultSerialization._
 import JsonAST._
+import scalaz.Order
+import scalaz.Ordering
+import scalaz.Ordering._
 
 sealed trait JPath { self =>
   def nodes: List[JPathNode]
@@ -112,14 +115,16 @@ object JPathNode {
   implicit def s2PathNode(name: String): JPathNode = JPathField(name)
   implicit def i2PathNode(index: Int): JPathNode = JPathIndex(index)
 
-  implicit val JPathNodeOrdering = new Ordering[JPathNode] {
-    def compare(n1: JPathNode, n2: JPathNode): Int = (n1, n2) match {
-      case (JPathField(s1), JPathField(s2)) => s1.compare(s2)
-      case (JPathField(_) , _             ) => 1 
-      case (JPathIndex(i1), JPathIndex(i2)) => i1.compare(i2)
-      case (JPathIndex(_) , _             ) => -1
+  implicit object JPathNodeOrder extends Order[JPathNode] {
+    def order(n1: JPathNode, n2: JPathNode): Ordering = (n1, n2) match {
+      case (JPathField(s1), JPathField(s2)) => Ordering.fromInt(s1.compare(s2))
+      case (JPathField(_) , _             ) => GT
+      case (JPathIndex(i1), JPathIndex(i2)) => Ordering.fromInt(i1.compare(i2))
+      case (JPathIndex(_) , _             ) => LT
     }
   }
+
+  implicit val JPathNodeOrdering = JPathNodeOrder.toScalaOrdering
 }
 
 sealed case class JPathField(name: String) extends JPathNode {
@@ -177,20 +182,22 @@ object JPath extends JPathSerialization {
 
   implicit def singleNodePath(node: JPathNode) = JPath(node)
 
-  implicit val JPathOrdering = new Ordering[JPath] {
-    def compare(v1: JPath, v2: JPath): Int = {
-      def compare0(n1: List[JPathNode], n2: List[JPathNode]): Int = (n1, n2) match {
-        case (Nil    , Nil)     => 0
-        case (Nil    , _  )     => -1
-        case (_      , Nil)     => 1
+  implicit object JPathOrder extends Order[JPath] {
+    def order(v1: JPath, v2: JPath): Ordering = {
+      def compare0(n1: List[JPathNode], n2: List[JPathNode]): Ordering = (n1, n2) match {
+        case (Nil    , Nil)     => EQ
+        case (Nil    , _  )     => LT
+        case (_      , Nil)     => GT
         case (n1::ns1, n2::ns2) =>
-          val ncomp = Ordering[JPathNode].compare(n1, n2)
-          if(ncomp != 0) ncomp else compare0(ns1, ns2)
+          val ncomp = Order[JPathNode].order(n1, n2)
+          if(ncomp != EQ) ncomp else compare0(ns1, ns2)
       }
 
       compare0(v1.nodes, v2.nodes)
     }
   }
+
+  implicit val JPathOrdering = JPathOrder.toScalaOrdering
 }
 
 trait JPathImplicits {
