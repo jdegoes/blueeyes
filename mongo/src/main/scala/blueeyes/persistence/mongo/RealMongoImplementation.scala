@@ -85,11 +85,13 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
                                     //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
                                     //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
 
-  private lazy val actors = List.fill(poolSize) {
-    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
-  }
+//  private lazy val actors = List.fill(poolSize) {
+//    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
+//  }
 
-  private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)), "blueeyes_mongo_router-" + database.getName)
+  private lazy val mongoActor = {
+    actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(nrOfInstances = poolSize)), "blueeyes_mongo_router-" + database.getName)
+  }
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
@@ -97,8 +99,8 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
 
   lazy val disconnect = for {
     _ <- ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
-    v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
-  } yield v
+    //v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
+  } yield Nil
 
   protected def applyQuery[T <: MongoQuery](query: T, isVerified: Boolean)(implicit m: Manifest[T#QueryResult], queryTimeout: Timeout): Future[T#QueryResult]  =
     (mongoActor ? MongoQueryTask(query, query.collection, isVerified)).mapTo[T#QueryResult]
