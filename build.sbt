@@ -1,3 +1,8 @@
+import com.jsuereth.pgp.sbtplugin.PgpKeys._
+
+// Disable PGP for local builds
+skip in pgpSigner := true
+
 name := "blueeyes"
 
 version := "0.5.3-SNAPSHOT"
@@ -47,3 +52,29 @@ publishTo <<= (version) { version: String =>
 }
 
 credentials := Credentials(Path.userHome / ".ivy2" / ".rgcredentials") :: Nil
+
+publishMavenStyle := true
+
+pomIncludeRepository := { (repo: MavenRepository) => false }
+
+pomExtra :=
+  <description>A lightweight Web 3.0 framework for Scala</description>
+  <url>https://github.com/jdegoes/blueeyes</url>
+  <licenses>
+    <license>
+      <name>MIT license</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:git@github.com/jdegoes/blueeyes.git</connection>
+    <developerConnection>scm:git:git@github.com/jdegoes/blueeyes.git</developerConnection>
+    <url>https://github.com/jdegoes/blueeyes</url>
+  </scm>
+  <developers>
+    <developer>
+      <id>jdegoes</id>
+      <name>John DeGoes</name>
+    </developer>
+  </developers>
