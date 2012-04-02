@@ -1,3 +1,8 @@
+import com.jsuereth.pgp.sbtplugin.PgpKeys._
+
+// Disable PGP for local builds
+skip in pgpSigner := true
+
 name := "blueeyes-actor"
 
 version := "0.6.0-SNAPSHOT"

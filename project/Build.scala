@@ -11,6 +11,30 @@ object BlueEyesBuild extends Build {
                       "ReportGrid snapshot repo (public)" at   "http://nexus.reportgrid.com/content/repositories/public-snapshots",
                       "Sonatype Releases"                 at          "http://oss.sonatype.org/content/repositories/releases"),
     credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
+    publishMavenStyle := true,
+    pomIncludeRepository := { (repo: MavenRepository) => false },
+
+    pomExtra :=
+      <url>https://github.com/jdegoes/blueeyes</url>
+      <licenses>
+        <license>
+          <name>MIT license</name>
+          <url>http://www.opensource.org/licenses/mit-license.php</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+      <scm>
+        <connection>scm:git:git@github.com/jdegoes/blueeyes.git</connection>
+        <developerConnection>scm:git:git@github.com/jdegoes/blueeyes.git</developerConnection>
+        <url>https://github.com/jdegoes/blueeyes</url>
+      </scm>
+      <developers>
+        <developer>
+          <id>jdegoes</id>
+          <name>John DeGoes</name>
+        </developer>
+      </developers>,
+
     publishTo <<= (version) { version: String =>
       val nexus = "http://nexus.reportgrid.com/content/repositories/"
       if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
