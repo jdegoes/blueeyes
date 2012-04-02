@@ -89,7 +89,7 @@ private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTime
     actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
   }
 
-  private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter()), "blueeyes_mongo_router-" + database.getName)
+  private lazy val mongoActor = actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(routees = actors)), "blueeyes_mongo_router-" + database.getName)
 
   protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
 
