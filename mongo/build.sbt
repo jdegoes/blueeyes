@@ -18,9 +18,4 @@ libraryDependencies ++= Seq(
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "test"
 )
 
-resolvers ++= Seq(
-  "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
-  "Maven Repo 1" at               "http://repo1.maven.org/maven2/"
-)
-
 parallelExecution in Test := false

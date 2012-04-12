@@ -16,9 +16,3 @@ libraryDependencies ++= Seq(
   "org.mockito"                 % "mockito-all"         % "1.8.5"          % "test",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "test"
 )
-
-resolvers ++= Seq(
-  "Scala-Tools Releases" at       "http://scala-tools.org/repo-releases/",
-  "Scala-Tools Snapshots" at      "http://scala-tools.org/repo-snapshots/",
-  "Maven Repo 1" at               "http://repo1.maven.org/maven2/"
-)

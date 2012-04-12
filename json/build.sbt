@@ -14,9 +14,3 @@ libraryDependencies ++= Seq(
   "org.specs2"                  %% "specs2"             % "1.8"            % "test",
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "test"
 )
-
-resolvers ++= Seq(
-  "ReportGrid repo" at            "http://devci01.reportgrid.com:8081/content/repositories/releases",
-  "ReportGrid snapshot repo" at   "http://devci01.reportgrid.com:8081/content/repositories/snapshots",
-  "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases"
-)
