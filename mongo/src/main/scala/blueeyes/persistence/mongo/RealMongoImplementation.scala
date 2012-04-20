@@ -63,14 +63,11 @@ object RealMongo {
 }
 
 class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
-  def database(databaseName: String) = new RealDatabase(this, mongo.getDB(databaseName), disconnectTimeout)
+  def database(databaseName: String) = new RealDatabase(defaultActorSystem, this, mongo.getDB(databaseName), disconnectTimeout)
   lazy val close = Future(mongo.close)
 }
 
 object RealDatabase {
-  //val actorSystem = ActorSystem.create("blueeyes_mongo") //TODO: separate mongo actor system creation out.
-  private val actorSystem = ActorSystem("blueeyes_mongo")
-
   private class RealMongoActor extends Actor {
     def receive = {
       case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
@@ -78,16 +75,10 @@ object RealDatabase {
   }
 }
 
-private[mongo] class RealDatabase(val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
+private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
   private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
-                                    //.withNewThreadPoolWithLinkedBlockingQueueWithUnboundedCapacity.setCorePoolSize(8)
-                                    //.setMaxPoolSize(100).setKeepAliveTime(Duration(30, TimeUnit.SECONDS)).build
-
-//  private lazy val actors = List.fill(poolSize) {
-//    actorSystem.actorOf(Props(new RealMongoActor).withDispatcher("blueeyes_mongo-" + database.getName))
-//  }
 
   private lazy val mongoActor = {
     actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(nrOfInstances = poolSize)), "blueeyes_mongo_router-" + database.getName)
