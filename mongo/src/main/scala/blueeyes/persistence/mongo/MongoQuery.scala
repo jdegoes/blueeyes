@@ -122,6 +122,7 @@ case class MongoMapReduceQuery(map: String, reduce: String, collection: MongoCol
 }
 
 trait MapReduceOutput {
+  def status: String
   def outputCollection: MongoCollection
   def drop(): Unit
 }

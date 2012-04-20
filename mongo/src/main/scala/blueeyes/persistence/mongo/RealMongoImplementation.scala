@@ -228,6 +228,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
 import com.mongodb.{MapReduceOutput => MongoMapReduceOutput}
 private[mongo] class RealMapReduceOutput(output: MongoMapReduceOutput, database: RealDatabase) extends MapReduceOutput{
+  val status = output.toString
   override def outputCollection = MongoCollectionHolder(new RealDatabaseCollection(output.getOutputCollection, database), output.getOutputCollection.getName, database)
   def drop() { output.drop() }
 }
