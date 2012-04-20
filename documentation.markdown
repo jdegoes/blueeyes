@@ -13,3 +13,5 @@ Reference documentation is in development. For now, see the book [The Lowdown on
 ## Blog Posts
 
 ## Talks
+
+- Noel Welsh's [Scala Days talk](http://skillsmatter.com/podcast/scala/blueeyes) on BlueEyes and Bigtop
