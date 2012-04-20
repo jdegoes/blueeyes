@@ -18,12 +18,14 @@ h1, h2, h3, h4, h5 {
     font-family: sans-serif;
     font-weight: normal;
     color: #0071BC;
+    padding-top: 8px;
+    padding-bottom: 6px;
 }
 
 /*font*/
 body, p {
     font-family: sans-serif;
-    color: #B3B3B3;
+    color: #eee;
     font-size: 11pt;
     padding-top: 6px;
     padding-bottom: 6px;
@@ -45,7 +47,7 @@ td {
 
 a {
     font-family: sans-serif;
-    color: #0071BC;
+    color: #008AE6;
 }
 
 a:hover {
@@ -79,8 +81,12 @@ a:hover {
 #header-logo p {
     font-family: monospace;
     font-size: 8pt;
-    color: #808080;
+    color: #b3b3b3;
     padding-bottom: 6px;
+}
+
+#header-logo a {
+    text-decoration: none;
 }
 
 #header-menu {
@@ -122,9 +128,24 @@ a:hover {
     margin-left: auto;
 }
 
+.body-section ul {
+    margin-bottom: 10px;
+}
+
+.body-section li {
+    list-style-type: disc;
+    margin-left: 20px;
+    margin-bottom: 5px;
+}
+
 .body-column {
     float: left;
     width: 293px;
+}
+
+.body-column-2 {
+    float: left;
+    width: 646px;
 }
 
 .c-left {
@@ -150,6 +171,23 @@ a:hover {
     clear: both;
 }
 
+.hero-unit {
+    background-color: #001726;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 30px;
+}
+
+.hero-unit h1 {
+    font-size: 32px;
+    line-height: 1.1;
+}
+
+.hero-unit p {
+    font-size: 18px;
+    line-height: 27px;
+}
+
 .body-image {
     width: 100%;
     height: 108px;
@@ -172,6 +210,8 @@ a:hover {
     background-color: #001726;
     margin-bottom: 4px;
     text-decoration: none;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .body-links ul li a {

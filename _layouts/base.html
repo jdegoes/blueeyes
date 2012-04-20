@@ -4,25 +4,31 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>{{ page.title }}</title>
     <link rel="stylesheet" type="text/css" href="css/css.css">
+    <link rel="stylesheet" type="text/css" href="css/pygments.css">
   </head>
   <body>
     <div id="header">
       <div id="header-section">
         <div id="header-logo">
-          <img alt="blue eyes" src="images/logo-blueeyes.png">
-          <p>the web framework of the Future[A]</p>
+          <a href="/">
+            <img alt="blue eyes" src="images/logo-blueeyes.png">
+            <p>the web framework of the Future[A]</p>
+          </a>
         </div>
         <div id="header-menu">
           <ul>
-            <li><a href="index.html">HOME</a></li>
-            <li><a href="about.html">ABOUT</a></li>
-            <li><a href="docs.html">DOCS</a></li>
+            <li><a href="documentation.html">DOCUMENTATION</a></li>
+            <li><a href="community.html">COMMUNITY</a></li>
+            <li><a href="https://github.com/jdegoes/blueeyes">CODE</a></li>
           </ul>
         </div>
       </div>
     </div>
     <div id="page-body">
-      {{ page.content }}
+      <div class="body-section">
+        {{ content }}
+      </div>
+      <div class="clear-both"></div>
     </div>
     <div id="footer">
       <div id="body-footer">
