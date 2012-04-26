@@ -574,6 +574,79 @@ object JsonAST {
       case arr @ ((p, _) :: _) if p.path.startsWith("[") => unflattenArray(arr)
       case obj                                           => unflattenObject(obj)
     }    
+
+    case class paired(jv1: JValue, jv2: JValue) {
+      assert(jv1 != null && jv2 != null)
+      def fold[A](default: => A)(
+        obj:    List[JField] => List[JField] => A,
+        arr:    List[JValue] => List[JValue] => A,
+        str:    String => String => A,
+        double: Double => Double => A,
+        int:    BigInt => BigInt => A,
+        bool:   Boolean => Boolean => A,
+        nul:    => A, nothing: => A) = {
+        (jv1, jv2) match {
+          case (JObject(o1),  JObject(o2)) => obj(o1)(o2)
+          case (JArray(a1) ,  JArray(a2))  => arr(a1)(a2)
+          case (JString(s1),  JString(s2)) => str(s1)(s2)
+          case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
+          case (JDouble(d1),  JDouble(d2)) => double(d1)(d2)
+          case (JInt(i1),     JInt(i2)) => int(11)(i2)
+          case (JNull,        JNull) => nul
+          case (JNothing,     JNothing) => nul
+          case _ => default
+        }
+      }
+    }
+
+    def typeIndex(jv: JValue) = jv match {
+      case JObject(_)  => 7
+      case JArray(_)   => 6
+      case JString(_)  => 5
+      case JDouble(_)  => 4
+      case JInt(_)     => 2
+      case JBool(_)    => 1
+      case JNull       => 0
+      case JNothing    => -1
+    }
+
+    import scalaz.Order
+    implicit val order: Order[JValue] = new Order[JValue] {
+      import scalaz.std.anyVal._
+      import scalaz.Ordering
+      import scalaz.Ordering._
+      import scalaz.syntax.order._
+
+      private val objectOrder = (o1: List[JField]) => (o2: List[JField]) => {
+        (o1.size ?|? o2.size) |+| 
+        (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
+          case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
+        }   
+      }   
+
+      private val arrayOrder = (o1: List[JValue]) => (o2: List[JValue]) => {
+        (o1.length ?|? o2.length) |+| 
+        (o1 zip o2).foldLeft[Ordering](EQ) {
+          case (ord, (v1, v2)) => ord |+| (v1 ?|? v2) 
+        }   
+      }   
+
+      private val stringOrder = (Order[String].order _).curried
+      private val boolOrder = (Order[Boolean].order _).curried
+      private val longOrder = (Order[Long].order _).curried
+      private val doubleOrder = (Order[Double].order _).curried
+      private val intOrder = (Order[BigInt].order _).curried
+
+      def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
+        obj    = objectOrder,
+        arr    = arrayOrder,
+        str    = stringOrder,
+        double = doubleOrder,
+        int    = intOrder,
+        bool   = boolOrder,
+        nul    = EQ, nothing = EQ
+      )
+    } 
   }
 
   case object JNothing extends JValue {
