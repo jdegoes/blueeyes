@@ -207,27 +207,62 @@ object JsonAST {
 
     def get(path: JPath): JValue = path.extract(this)
 
-    def set(path: JPath, value: JValue): JValue = if (path == JPath.Identity) value else {
-      def arraySet(l: List[JValue], i: Int, v: JValue): List[JValue] = {
-        assert(i >= 0)
-        l.padTo(i + 1, JNothing).updated(i, v)
+    def insert(path: JPath, value: JValue): JValue = if ((this == JNull || this == JNothing) && path == JPath.Identity) value else {
+      def arrayInsert(l: List[JValue], i: Int, rem: JPath, v: JValue): List[JValue] = {
+        def update(l: List[JValue], j: Int): List[JValue] = l match {
+          case x :: xs => (if (j == i) x.insert(rem, v) else x) :: update(xs, j + 1)
+          case Nil => Nil
+        }
+
+        update(l.padTo(i + 1, JNothing), 0)
       }
 
       this match {
         case obj @ JObject(fields) => path.nodes match {
-          case JPathField(name) :: Nil => JObject(JField(name, value) :: fields.filterNot(_.name == name))
-
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
           
-          case x => sys.error("Objects are not indexed: attempted to set " + x + " on " + this)
+          case x => sys.error("Objects are not indexed: attempted to insert " + x + " on " + this)
         }
 
         case arr @ JArray(elements) => path.nodes match {
-          case JPathIndex(index) :: Nil => JArray(arraySet(elements, index, value))
+          case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
 
-          case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, elements.lift(index).getOrElse(JNothing).set(JPath(nodes), value)))
+          case x => sys.error("Arrays have no fields: attempted to insert " + x + " on " + this)
+        }
 
-          case x => sys.error("Arrays have no fields: attempted to set " + x + " on " + this)
+        case JNull | JNothing => path.nodes match {
+          case Nil => value
+
+          case JPathIndex(_) :: _ => JArray(Nil).set(path, value)
+
+          case JPathField(_) :: _ => JObject(Nil).set(path, value)
+        }
+
+        case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated with " + (path, value))
+      }
+    }
+
+    def set(path: JPath, value: JValue): JValue = if (path == JPath.Identity) value else {
+      def arraySet(l: List[JValue], i: Int, rem: JPath, v: JValue): List[JValue] = {
+        def update(l: List[JValue], j: Int): List[JValue] = l match {
+          case x :: xs => (if (j == i) x.set(rem, v) else x) :: update(xs, j + 1)
+          case Nil => Nil
+        }
+
+        update(l.padTo(i + 1, JNothing), 0)
+      }
+
+      this match {
+        case obj @ JObject(fields) => path.nodes match {
+          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
+          
+          case x => sys.error("Objects are not indexed: attempted to insert " + x + " on " + this)
+        }
+
+        case arr @ JArray(elements) => path.nodes match {
+          case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
+
+          case x => sys.error("Arrays have no fields: attempted to insert " + x + " on " + this)
         }
 
         case _ => path.nodes match {
@@ -557,6 +592,8 @@ object JsonAST {
       case x if p(x) => JNothing
       case x => x
     }
+
+    override def toString = JsonDSL.pretty(JsonDSL.render(this))
   }
 
   object JValue {

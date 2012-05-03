@@ -189,10 +189,26 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     } 
 
     val setProp = (jv: JValue, p: JPath, toSet: JValue) => {
-      (!badPath(jv, p)) ==> ((p == JPath.Identity && jv.set(p, toSet) == toSet) || (jv.set(p, toSet).get(p) == toSet))
+      (!badPath(jv, p)) ==> {
+        ((p == JPath.Identity) && (jv.set(p, toSet) == toSet)) ||
+        (jv.set(p, toSet).get(p) == toSet)
+      }
     }
 
-    check(setProp)
+    val insertProp = (jv: JValue, p: JPath, toSet: JValue) => {
+      (!badPath(jv, p)) ==> {
+        (jv, p.nodes) match {
+          case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) => 
+            ((p == JPath.Identity) && (jv.insert(p, toSet) == toSet)) ||
+            (jv.insert(p, toSet).get(p) == toSet)
+
+          case _ => 
+            jv.insert(p, toSet) must throwA[RuntimeException]
+        }
+      }
+    }
+
+    check(setProp) and check(insertProp)
   }
 
   private def reorderFields(json: JValue) = json mapUp {
