@@ -208,10 +208,9 @@ object JsonAST {
     def get(path: JPath): JValue = path.extract(this)
 
     def set(path: JPath, value: JValue): JValue = if (path == JPath.Identity) value else {
-      def up(l: List[JValue], i: Int, v: JValue) = l.length match {
-          case len if len <= i => l.padTo(i-1, JNull) :+ v 
-          case len if i < 0 => sys.error("Attempt to create a new element out of JArray bounds at " + i)
-          case _ => l.updated(i, v) 
+      def arraySet(l: List[JValue], i: Int, v: JValue): List[JValue] = {
+        assert(i >= 0)
+        l.padTo(i + 1, JNothing).updated(i, v)
       }
 
       this match {
@@ -220,13 +219,15 @@ object JsonAST {
 
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
           
-          case x => sys.error("Objects are not indexed: attempted to set " + x)
+          case x => sys.error("Objects are not indexed: attempted to set " + x + " on " + this)
         }
 
         case arr @ JArray(elements) => path.nodes match {
-          case JPathIndex(index) :: Nil => JArray(up(elements, index, value))
-          case JPathIndex(index) :: nodes => JArray(up(elements, index, elements.lift(index).getOrElse(JNothing).set(JPath(nodes), value)))
-          case x => sys.error("Arrays have no fields: attempted to set " + x)
+          case JPathIndex(index) :: Nil => JArray(arraySet(elements, index, value))
+
+          case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, elements.lift(index).getOrElse(JNothing).set(JPath(nodes), value)))
+
+          case x => sys.error("Arrays have no fields: attempted to set " + x + " on " + this)
         }
 
         case _ => path.nodes match {
