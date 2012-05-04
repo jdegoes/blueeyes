@@ -256,13 +256,13 @@ object JsonAST {
         case obj @ JObject(fields) => path.nodes match {
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
           
-          case x => sys.error("Objects are not indexed: attempted to insert " + x + " on " + this)
+          case x => sys.error("Objects are not indexed: attempted to set " + x + " on " + this)
         }
 
         case arr @ JArray(elements) => path.nodes match {
           case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
 
-          case x => sys.error("Arrays have no fields: attempted to insert " + x + " on " + this)
+          case x => sys.error("Arrays have no fields: attempted to set " + x + " on " + this)
         }
 
         case _ => path.nodes match {
