@@ -199,11 +199,11 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       (!badPath(jv, p)) ==> {
         (jv, p.nodes) match {
           case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) => 
-            ((p == JPath.Identity) && (jv.insert(p, toSet) == toSet)) ||
-            (jv.insert(p, toSet).get(p) == toSet)
+            ((p == JPath.Identity) && (jv.unsafeInsert(p, toSet) == toSet)) ||
+            (jv.unsafeInsert(p, toSet).get(p) == toSet)
 
           case _ => 
-            jv.insert(p, toSet) must throwA[RuntimeException]
+            jv.unsafeInsert(p, toSet) must throwA[RuntimeException]
         }
       }
     }

@@ -17,7 +17,16 @@
 package blueeyes.json
 
 import scalaz.NonEmptyList
+import scalaz.Validation
+import scalaz.Validation._
+import scalaz.ValidationNEL
+import scalaz.syntax.applicative._
+import scalaz.syntax.semigroup._
+import scalaz.syntax.order._
 import scalaz.Scalaz._
+import scalaz.std.string._
+import scalaz.std.math.bigInt._
+import scalaz.std.anyVal._
 
 object JsonAST {
   import scala.text.{Document, DocText}
@@ -34,7 +43,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] {
+  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] { self =>
     type Values
     type Self <: JValue
 
@@ -48,16 +57,16 @@ object JsonAST {
     def sort: Self = {
       import blueeyes.json.xschema.DefaultOrderings.JValueOrdering
 
-      (this match {
+      (self match {
         case JObject(fields)      => JObject(fields.map(_.sort).sorted(JValueOrdering))
         case JArray(elements)     => JArray(elements.map(_.sort).sorted(JValueOrdering))
         case JField(name, value)  => JField(name, value.sort)
 
-        case _ => this
+        case _ => self
       }).asInstanceOf[Self]
     }
 
-    def compare(that: JValue): Int = blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(this, that)
+    def compare(that: JValue): Int = blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(self, that)
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
@@ -83,7 +92,7 @@ object JsonAST {
     }
 
     def \? (nameToFind: String): Option[JValue] = {
-      (this \ nameToFind) match {
+      (self \ nameToFind) match {
         case JNothing | JNull => None
         case x => Some(x)
       }
@@ -96,7 +105,7 @@ object JsonAST {
      * (json \ "foo" --> classOf[JField]).value
      * </pre>
      */
-    def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + this.getClass))
+    def --> [A <: JValue](clazz: Class[A]): A = (self -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + self.getClass))
 
     /**
      * Returns the element as an option of a JValue of the specified class.
@@ -108,9 +117,9 @@ object JsonAST {
     def -->? [A <: JValue](clazz: Class[A]): Option[A] = {
       def extractTyped(value: JValue) = if (value.getClass == clazz) Some(value.asInstanceOf[A]) else None
 
-      this match {
+      self match {
         case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
-        case _ => extractTyped(this)
+        case _ => extractTyped(self)
       }
     }
 
@@ -140,7 +149,7 @@ object JsonAST {
         }
       }
 
-      breadthFirst0(Nil, Queue.empty.enqueue(this)).reverse
+      breadthFirst0(Nil, Queue.empty.enqueue(self)).reverse
     }
 
     private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
@@ -167,7 +176,7 @@ object JsonAST {
         case JField(_, value) => find(value)
         case _ => Nil
       }
-      find(this) match {
+      find(self) match {
         case x :: Nil => x.value
         case x => JArray(x.map(_.value))
       }
@@ -190,7 +199,7 @@ object JsonAST {
      * </pre>
      */
     def \\[A <: JValue](clazz: Class[A]): List[A#Values] =
-      (this filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+      (self filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
 
     private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
       case x if x.getClass == clazz => true
@@ -205,37 +214,46 @@ object JsonAST {
      */
     def apply(path: JPath): JValue = get(path)
 
-    def get(path: JPath): JValue = path.extract(this)
+    def get(path: JPath): JValue = path.extract(self)
 
-    def insert(path: JPath, value: JValue): JValue = if ((this == JNull || this == JNothing) && path == JPath.Identity) value else {
+    def insert(path: JPath, value: JValue): Validation[Throwable, JValue] = {
+      Validation fromTryCatch { unsafeInsert(path, value) }
+    }
+
+    /**
+     * A safe merge function that ensures that values are not overwritten.
+     */
+    def insertAll(other: JValue): ValidationNEL[Throwable, JValue] = {
+      other.flattenWithPath.foldLeft[ValidationNEL[Throwable, JValue]](success(self)) {
+        case (acc, (path, value)) => acc flatMap { (jv: JValue) => jv.insert(path, value).toValidationNel }
+      }
+    }
+
+    def unsafeInsert(path: JPath, value: JValue): JValue = if ((self == JNull || self == JNothing) && path == JPath.Identity) value else {
       def arrayInsert(l: List[JValue], i: Int, rem: JPath, v: JValue): List[JValue] = {
         def update(l: List[JValue], j: Int): List[JValue] = l match {
-          case x :: xs => (if (j == i) x.insert(rem, v) else x) :: update(xs, j + 1)
+          case x :: xs => (if (j == i) x.unsafeInsert(rem, v) else x) :: update(xs, j + 1)
           case Nil => Nil
         }
 
         update(l.padTo(i + 1, JNothing), 0)
       }
 
-      this match {
+      self match {
         case obj @ JObject(fields) => path.nodes match {
-          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
-          
-          case x => sys.error("Objects are not indexed: attempted to insert " + x + " on " + this)
+          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).unsafeInsert(JPath(nodes), value)) :: fields.filterNot(_.name == name))
+          case x => sys.error("Objects are not indexed: attempted to insert " + value + " at " + path + " on " + self)
         }
 
         case arr @ JArray(elements) => path.nodes match {
           case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
-
-          case x => sys.error("Arrays have no fields: attempted to insert " + x + " on " + this)
+          case x => sys.error("Arrays have no fields: attempted to insert " + value + " at " + path + " on " + self)
         }
 
         case JNull | JNothing => path.nodes match {
           case Nil => value
-
-          case JPathIndex(_) :: _ => JArray(Nil).set(path, value)
-
-          case JPathField(_) :: _ => JObject(Nil).set(path, value)
+          case JPathIndex(_) :: _ => JArray(Nil).unsafeInsert(path, value)
+          case JPathField(_) :: _ => JObject(Nil).unsafeInsert(path, value)
         }
 
         case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated with " + (path, value))
@@ -252,24 +270,20 @@ object JsonAST {
         update(l.padTo(i + 1, JNothing), 0)
       }
 
-      this match {
+      self match {
         case obj @ JObject(fields) => path.nodes match {
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
-          
-          case x => sys.error("Objects are not indexed: attempted to set " + x + " on " + this)
+          case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
         }
 
         case arr @ JArray(elements) => path.nodes match {
           case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
-
-          case x => sys.error("Arrays have no fields: attempted to set " + x + " on " + this)
+          case x => sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
         }
 
         case _ => path.nodes match {
           case Nil => value
-
           case JPathIndex(_) :: _ => JArray(Nil).set(path, value)
-
           case JPathField(_) :: _ => JObject(Nil).set(path, value)
         }
       }
@@ -298,7 +312,7 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
      * </pre>
      */
-    def children: List[JValue] = this match {
+    def children: List[JValue] = self match {
       case JObject(l) => l
       case JArray(l) => l
       case JField(n, v) => List(v)
@@ -325,7 +339,7 @@ object JsonAST {
         }
       }
 
-      rec(z, JPath.Identity, this)
+      rec(z, JPath.Identity, self)
     }
 
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
@@ -347,7 +361,7 @@ object JsonAST {
         }, p, v)
       }
 
-      rec(z, JPath.Identity, this)
+      rec(z, JPath.Identity, self)
     }
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
@@ -385,7 +399,7 @@ object JsonAST {
         }
         case x => f(p, x)
       }
-      rec(JPath.Identity, this)
+      rec(JPath.Identity, self)
     }
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
@@ -438,7 +452,7 @@ object JsonAST {
         }
       }
 
-      rec(JPath.Identity, this)
+      rec(JPath.Identity, self)
     }
 
     /** Return a new JValue resulting from applying the given partial function <code>f</code>
@@ -491,7 +505,7 @@ object JsonAST {
         }
       }
 
-      target.expand(this).foldLeft(this) { (jvalue, expansion) =>
+      target.expand(self).foldLeft(self) { (jvalue, expansion) =>
         replace0(expansion, jvalue)
       }
     }
@@ -517,7 +531,7 @@ object JsonAST {
           case _ => None
         }
       }
-      find(this)
+      find(self)
     }
 
     /** Return a List of all elements which matches the given predicate.
@@ -555,7 +569,7 @@ object JsonAST {
         case _ => (path -> value) :: Nil
       }
 
-      flatten0(JPath.Identity)(this)
+      flatten0(JPath.Identity)(self)
     }
 
     /** Concatenate with another JSON.
@@ -579,7 +593,7 @@ object JsonAST {
         case (JField(n, v1), v2: JValue) => JField(n, append(v1, v2))
         case (x, y) => JArray(x :: y :: Nil)
       }
-      append(this, other)
+      append(self, other)
     }
 
     /** Return a JSON where all elements matching the given predicate are removed.
@@ -588,12 +602,12 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: JNull :: Nil) remove { _ == JNull }
      * </pre>
      */
-    def remove(p: JValue => Boolean): JValue = this mapUp {
+    def remove(p: JValue => Boolean): JValue = self mapUp {
       case x if p(x) => JNothing
       case x => x
     }
 
-    override def toString = JsonDSL.pretty(JsonDSL.render(this))
+    override def toString = JsonDSL.pretty(JsonDSL.render(self))
   }
 
   object JValue {

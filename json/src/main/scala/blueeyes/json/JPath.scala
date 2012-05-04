@@ -103,7 +103,7 @@ sealed trait JPath { self =>
 
   def length = nodes.length
 
-  override def toString = path
+  override def toString = if (nodes.isEmpty) "." else path
 }
 
 sealed trait JPathNode {
@@ -157,6 +157,8 @@ object JPath extends JPathSerialization {
   def apply(n: JPathNode*): JPath = CompositeJPath(n.toList)
 
   def apply(l: List[JPathNode]): JPath = apply(l: _*)
+
+  def unapplySeq(path: JPath): Option[List[JPathNode]] = Some(path.nodes)
 
   def unapplySeq(path: String): Option[List[JPathNode]] = Some(apply(path).nodes)
 

@@ -9,7 +9,7 @@ package blueeyes.json {
  * descriptive ValidationError will be thrown that contains the exact reason 
  * for the failure.
  */
-object Validation {
+object Validator {
   import _root_.blueeyes.json.JsonAST._
   
   case class ValidationError(message: String, path: String) extends Exception(message.replace("${path}", path))
