@@ -55,7 +55,7 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
       }
 
       val removeFuture = database(remove.from(collection))
-      val result = removeFuture.value must eventually (beSome)
+      val result = removeFuture.value must (eventually (beSome[Either[Throwable,blueeyes.persistence.mongo.MongoUpdateQuery#QueryResult]]))
 
       println("Execution time = " + (System.currentTimeMillis - start))
 

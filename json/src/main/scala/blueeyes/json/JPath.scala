@@ -103,7 +103,7 @@ sealed trait JPath { self =>
 
   def length = nodes.length
 
-  override def toString = if (nodes.isEmpty) "." else path
+  override def toString = path //if (nodes.isEmpty) "." else path
 }
 
 sealed trait JPathNode {
@@ -203,6 +203,11 @@ object JPath extends JPathSerialization {
 }
 
 trait JPathImplicits {
-  implicit def stringToJPath(s: String): JPath = JPath(s)
+  class StringExtensions(s: String) {
+    def jpath = JPath(s)
+  }
+
+  implicit def stringExtensions(s: String) = new StringExtensions(s)
 }
+
 object JPathImplicits extends JPathImplicits

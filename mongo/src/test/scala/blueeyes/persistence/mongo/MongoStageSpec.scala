@@ -67,7 +67,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         futures.value must eventually(200, 300.milliseconds) (beSome)
 
         val flushFuture = mongoStage.flushAll(Timeout(10000))
-        flushFuture.value must eventually (beSome)
+        flushFuture.value must (eventually(beSome[Either[Throwable, Int]]))
 
         forall(updates) {
           case (filter, update: UpdateFieldFunctions.IncF) =>

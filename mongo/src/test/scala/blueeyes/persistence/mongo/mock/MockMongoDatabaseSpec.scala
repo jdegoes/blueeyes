@@ -44,7 +44,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits with Futur
     val jobject2 = JObject(JField("bar", JArray(List(JString("1")))) :: JField("foo", JString("baz")) :: Nil)
     val database: MockDatabase = mongoDatabase(mongo)
     val future1  = database(insert(jobject, jobject2).into("bar"))
-    future1.value must eventually (beSome)
+    future1.value must (eventually(beSome[Either[Throwable,blueeyes.persistence.mongo.MongoUpdateQuery#QueryResult]]))
 
     val b = new StringBuilder()
     database.dump((v: String) => b.append(v))
@@ -57,7 +57,7 @@ class MockMongoDatabaseSpec extends Specification with MongoImplicits with Futur
 
     val database = mongoDatabase(mongo)
     val future1 = database(upsert("bar").set("foo" addToSet (MongoPrimitiveString("1"))))
-    future1.value must eventually (beSome)
+    future1.value must (eventually(beSome[Either[Throwable,blueeyes.persistence.mongo.MongoUpdateQuery#QueryResult]]))
 
     val future2 = database(select().from("bar"))
 

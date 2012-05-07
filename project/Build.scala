@@ -1,16 +1,13 @@
 import sbt._
 import Keys._
-import sbtassembly.Plugin.AssemblyKeys._
-import sbt.NameFilter._
 
 object BlueEyesBuild extends Build {
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
-    resolvers ++= Seq("ReportGrid repo"          at   "http://nexus.reportgrid.com/content/repositories/releases",
-                      "ReportGrid repo (public)" at   "http://nexus.reportgrid.com/content/repositories/public-releases",
-                      "ReportGrid snapshot repo"          at   "http://nexus.reportgrid.com/content/repositories/snapshots",
+    resolvers ++= Seq("ReportGrid repo (public)"          at   "http://nexus.reportgrid.com/content/repositories/public-releases",
                       "ReportGrid snapshot repo (public)" at   "http://nexus.reportgrid.com/content/repositories/public-snapshots",
-                      "Sonatype Releases"                 at          "http://oss.sonatype.org/content/repositories/releases",
-                      "Sonatype Snapshots"                at          "http://oss.sonatype.org/content/repositories/snapshots"),
+                      "Sonatype Releases"                 at   "http://oss.sonatype.org/content/repositories/releases",
+                      "Sonatype Snapshots"                at   "http://oss.sonatype.org/content/repositories/snapshots"),
+
     credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
     publishMavenStyle := true,
     pomIncludeRepository := { (repo: MavenRepository) => false },
@@ -32,7 +29,19 @@ object BlueEyesBuild extends Build {
       <developers>
         <developer>
           <id>jdegoes</id>
-          <name>John DeGoes</name>
+          <name>John De Goes</name>
+        </developer>
+        <developer>
+          <id>nuttycom</id>
+          <name>Kris Nuttycombe</name>
+        </developer>
+        <developer>
+          <id>mlagutko</id>
+          <name>Michael Lagutko</name>
+        </developer>
+        <developer>
+          <id>dchenbecker</id>
+          <name>Derek Chen-Becker</name>
         </developer>
       </developers>,
 
