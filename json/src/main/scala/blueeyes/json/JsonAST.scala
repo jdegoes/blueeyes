@@ -242,12 +242,14 @@ object JsonAST {
       self match {
         case obj @ JObject(fields) => path.nodes match {
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).unsafeInsert(JPath(nodes), value)) :: fields.filterNot(_.name == name))
-          case x => sys.error("Objects are not indexed: attempted to insert " + value + " at " + path + " on " + self)
+          case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + path + " on " + self)
+          case Nil => sys.error("JValue insert would overwrite existing data: " + self + " cannot be rewritten to " + value)
         }
 
         case arr @ JArray(elements) => path.nodes match {
           case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
-          case x => sys.error("Arrays have no fields: attempted to insert " + value + " at " + path + " on " + self)
+          case JPathField(_) :: _ => sys.error("Arrays have no fields: attempted to insert " + value + " at " + path + " on " + self)
+          case Nil => sys.error("JValue insert would overwrite existing data: " + self + " cannot be rewritten to" + value)
         }
 
         case JNull | JNothing => path.nodes match {
@@ -611,6 +613,8 @@ object JsonAST {
   }
 
   object JValue {
+    def apply(p: JPath, v: JValue) = JNothing.set(p, v)
+
     private def unflattenArray(elements: List[(JPath, JValue)]): JArray = {
       elements.foldLeft(JArray(Nil)) { (arr, t) => arr.set(t._1, t._2) --> classOf[JArray] }
     }

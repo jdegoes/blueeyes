@@ -8,6 +8,8 @@ scalaVersion := "2.9.1"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 
+publishArtifact in Test := true
+
 libraryDependencies ++= Seq(
   "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT" changing(),
   "joda-time"                   % "joda-time"           % "1.6.2"          % "optional",

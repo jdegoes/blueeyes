@@ -103,7 +103,7 @@ sealed trait JPath { self =>
 
   def length = nodes.length
 
-  override def toString = path //if (nodes.isEmpty) "." else path
+  override def toString = if (nodes.isEmpty) "." else path
 }
 
 sealed trait JPathNode {
