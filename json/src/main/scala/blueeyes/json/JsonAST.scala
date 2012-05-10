@@ -217,7 +217,10 @@ object JsonAST {
     def get(path: JPath): JValue = path.extract(self)
 
     def insert(path: JPath, value: JValue): Validation[Throwable, JValue] = {
-      Validation fromTryCatch { unsafeInsert(path, value) }
+      value match {
+        case JNothing => success[Throwable, JValue](this)
+        case value => Validation fromTryCatch { unsafeInsert(path, value) }
+      }
     }
 
     /**
@@ -609,7 +612,21 @@ object JsonAST {
       case x => x
     }
 
-    override def toString = JsonDSL.pretty(JsonDSL.render(self))
+    /**
+     * Remove instances of Nothing from the data structure.
+     */
+    def minimize: Option[JValue] = {
+      this match {
+        case JObject(fields)  => Some(JObject(fields flatMap { case JField(k, v) => v.minimize.map(JField(k, _)) }))
+        case JArray(elements) => Some(JArray(elements.flatMap(_.minimize)))
+        case JNothing => None
+        case value => Some(value)
+      }
+    }
+
+    override def toString = self match {
+      case value => JsonDSL.pretty(JsonDSL.renderAll(value))
+    }
   }
 
   object JValue {
@@ -863,24 +880,26 @@ trait Printer {
   import scala.collection.immutable.Stack
   import JsonAST._
 
+  def render(value: JValue): Document = {
+    value.minimize.map(renderAll).getOrElse(DocNil)
+  }
+
   /** Renders JSON.
    * @see Printer#compact
    * @see Printer#pretty
    */
-  def render(value: JValue): Document = value match {
-    case null          => text("null")
+  def renderAll(value: JValue): Document = value match {
     case JBool(true)   => text("true")
     case JBool(false)  => text("false")
     case JDouble(n)    => text(n.toString)
     case JInt(n)       => text(n.toString)
     case JNull         => text("null")
-    case JNothing      => sys.error("can't render 'nothing'")
-    case JString(null) => text("null")
+    case JNothing      => text("undefined")
     case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(elements) => text("[") :: series(trimArr(elements).map(render)) :: text("]")
-    case JField(n, v)  => text("\"" + quote(n) + "\":") :: render(v)
-    case JObject(obj)  =>
-      val nested = break :: fields(trimObj(obj).map(render _))
+    case JArray(elems) => text("[") :: series(elems map renderAll) :: text("]")
+    case JField(n, v)  => text("\"" + quote(n) + "\":") :: renderAll(v)
+    case JObject(fs)   =>
+      val nested = break :: fields(fs map renderAll)
       text("{") :: nest(2, nested) :: break :: text("}")
   }
 
@@ -920,8 +939,6 @@ trait Printer {
     }
   }
 
-  private def trimArr(xs: List[JValue]) = xs.filter(_ != JNothing)
-  private def trimObj(xs: List[JField]) = xs.filter(_.value != JNothing)
   private def series(docs: List[Document]) = fold(punctuate(text(","), docs))
   private def fields(docs: List[Document]) = fold(punctuate(text(",") :: break, docs))
   private def fold(docs: List[Document]) = docs.foldLeft[Document](empty)(_ :: _)

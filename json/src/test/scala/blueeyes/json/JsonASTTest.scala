@@ -136,6 +136,22 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     test.flattenWithPath must_== expected
   }
 
+  "flattenWithPath does not produce JNothing entries" in {
+    val test = JsonParser.parse("""{
+      "c":2,
+      "fn":[{
+        "fr":-2
+      }]
+    }""")
+
+    val expected = List(
+      JPath(".c") -> JInt(2),
+      JPath(".fn[0].fr") -> JInt(-2)
+    )
+
+    test.flattenWithPath must_== expected
+  }
+
   "unflatten is the inverse of flattenWithPath" in {
     val inverse = (value: JValue) => JValue.unflatten( value.flattenWithPath ) == value 
 
@@ -196,7 +212,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }
 
     val insertProp = (jv: JValue, p: JPath, toSet: JValue) => {
-      (!badPath(jv, p)) ==> {
+      (!badPath(jv, p) && (jv(p) == JNothing)) ==> {
         (jv, p.nodes) match {
           case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) => 
             ((p == JPath.Identity) && (jv.unsafeInsert(p, toSet) == toSet)) ||
