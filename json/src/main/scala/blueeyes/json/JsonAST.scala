@@ -27,6 +27,7 @@ import scalaz.Scalaz._
 import scalaz.std.string._
 import scalaz.std.math.bigInt._
 import scalaz.std.anyVal._
+import scala.annotation.tailrec
 
 object JsonAST {
   import scala.text.{Document, DocText}
@@ -232,37 +233,8 @@ object JsonAST {
       }
     }
 
-    def unsafeInsert(path: JPath, value: JValue): JValue = if ((self == JNull || self == JNothing) && path == JPath.Identity) value else {
-      def arrayInsert(l: List[JValue], i: Int, rem: JPath, v: JValue): List[JValue] = {
-        def update(l: List[JValue], j: Int): List[JValue] = l match {
-          case x :: xs => (if (j == i) x.unsafeInsert(rem, v) else x) :: update(xs, j + 1)
-          case Nil => Nil
-        }
-
-        update(l.padTo(i + 1, JNothing), 0)
-      }
-
-      self match {
-        case obj @ JObject(fields) => path.nodes match {
-          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).unsafeInsert(JPath(nodes), value)) :: fields.filterNot(_.name == name))
-          case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + path + " on " + self)
-          case Nil => sys.error("JValue insert would overwrite existing data: " + self + " cannot be rewritten to " + value)
-        }
-
-        case arr @ JArray(elements) => path.nodes match {
-          case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
-          case JPathField(_) :: _ => sys.error("Arrays have no fields: attempted to insert " + value + " at " + path + " on " + self)
-          case Nil => sys.error("JValue insert would overwrite existing data: " + self + " cannot be rewritten to" + value)
-        }
-
-        case JNull | JNothing => path.nodes match {
-          case Nil => value
-          case JPathIndex(_) :: _ => JArray(Nil).unsafeInsert(path, value)
-          case JPathField(_) :: _ => JObject(Nil).unsafeInsert(path, value)
-        }
-
-        case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated with " + (path, value))
-      }
+    def unsafeInsert(rootPath: JPath, rootValue: JValue): JValue = {
+      JValue.unsafeInsert(self, rootPath, rootValue)
     }
 
     def set(path: JPath, value: JValue): JValue = if (path == JPath.Identity) value else {
@@ -718,6 +690,49 @@ object JsonAST {
         nul    = EQ, nothing = EQ
       )
     } 
+
+
+    def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
+      def rec(target: JValue, path: JPath, value: JValue): JValue = {
+        if ((target == JNull || target == JNothing) && path == JPath.Identity) value else {
+          def arrayInsert(l: List[JValue], i: Int, rem: JPath, v: JValue): List[JValue] = {
+            def update(l: List[JValue], j: Int): List[JValue] = l match {
+              case x :: xs => (if (j == i) rec(x, rem, v) else x) :: update(xs, j + 1)
+              case Nil => Nil
+            }
+
+            update(l.padTo(i + 1, JNothing), 0)
+          }
+
+          target match {
+            case obj @ JObject(fields) => path.nodes match {
+              case JPathField(name)  :: nodes => JObject(JField(name, rec(obj \ name, JPath(nodes), value)) :: fields.filterNot(_.name == name))
+              case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
+              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
+                                  " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
+            }
+
+            case arr @ JArray(elements) => path.nodes match {
+              case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
+              case JPathField(_) :: _ => sys.error("Arrays have no fields: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
+              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
+                                    " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
+            }
+
+            case JNull | JNothing => path.nodes match {
+              case Nil => value
+              case JPathIndex(_) :: _ => rec(JArray(Nil), path, value)
+              case JPathField(_) :: _ => rec(JObject(Nil), path, value)
+            }
+
+            case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated to " + value + " at " + path + 
+                                " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
+          }
+        }
+      }
+
+      rec(rootTarget, rootPath, rootValue)
+    }
   }
 
   case object JNothing extends JValue {
