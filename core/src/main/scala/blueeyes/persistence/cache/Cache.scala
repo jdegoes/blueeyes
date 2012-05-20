@@ -17,13 +17,19 @@ case class CacheSettings[K, V](
  */
 object Cache {
   import java.util.concurrent.Executors
+  import Expirable._
 
   lazy val ScheduledExecutor = Executors.newScheduledThreadPool(1)
 
   /** Creates a concurrent cache with the specified settings and concurrency level.
    */
   def concurrent[K, V](settings: CacheSettings[K, V], concurrencyLevel: Int = 10): ConcurrentMap[K, V] = {
-    new ExpirableMap[K, V](newConcurrentMap(settings, concurrencyLevel), settings.expirationPolicy, new ExpirationPredicate(), ScheduledExecutor, settings.evict)
+    new ExpirableMap[K, V](newConcurrentMap(settings, concurrencyLevel), settings.expirationPolicy, expirationCheck[K, V], ScheduledExecutor, settings.evict)
+  }
+
+  def concurrentWithCheckedEviction[K, V](settings: CacheSettings[K, V], concurrencyLevel: Int = 10)(evictable: (K, V) => Boolean): ConcurrentMap[K, V] = {
+    val check = (expirable: Expirable[K, V]) => evictable(expirable.key, expirable.value) && expirationCheck(expirable)
+    new ExpirableMap[K, V](newConcurrentMap(settings, concurrencyLevel), settings.expirationPolicy, check, ScheduledExecutor, settings.evict)
   }
 
   private def newConcurrentMap[K, V](settings: CacheSettings[K, V], concurrencyLevel: Int): JConcurrentMap[K, Expirable[K, V]] = {

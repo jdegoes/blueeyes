@@ -1,13 +1,5 @@
 name := "blueeyes-mongo"
 
-version := "0.6.0-SNAPSHOT"
-
-organization := "com.reportgrid"
-
-scalaVersion := "2.9.1"
-
-scalacOptions ++= Seq("-deprecation", "-unchecked")
-
 fork := true
 
 libraryDependencies ++= Seq(

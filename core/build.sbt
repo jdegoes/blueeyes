@@ -1,13 +1,5 @@
 name := "blueeyes-core"
 
-version := "0.6.0-SNAPSHOT"
-
-organization := "com.reportgrid"
-
-scalaVersion := "2.9.1"
-
-scalacOptions ++= Seq("-deprecation", "-unchecked")
-
 libraryDependencies ++= Seq(
   "com.googlecode.concurrentlinkedhashmap" % "concurrentlinkedhashmap-lru" % "1.1",
   "commons-codec"               % "commons-codec"       % "1.5",
@@ -23,9 +15,7 @@ libraryDependencies ++= Seq(
   "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
 )
 
-
 resolvers ++= Seq(
-  "Typesafe Repository" at        "http://repo.typesafe.com/typesafe/releases/",
   "JBoss Releases" at             "http://repository.jboss.org/nexus/content/groups/public/",
   "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
   "Maven Repo 1" at               "http://repo1.maven.org/maven2/",

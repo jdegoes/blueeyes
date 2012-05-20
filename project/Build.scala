@@ -3,10 +3,11 @@ import Keys._
 
 object BlueEyesBuild extends Build {
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
-    resolvers ++= Seq("ReportGrid repo (public)"          at   "http://nexus.reportgrid.com/content/repositories/public-releases",
-                      "ReportGrid snapshot repo (public)" at   "http://nexus.reportgrid.com/content/repositories/public-snapshots",
-                      "Sonatype Releases"                 at   "http://oss.sonatype.org/content/repositories/releases",
-                      "Sonatype Snapshots"                at   "http://oss.sonatype.org/content/repositories/snapshots"),
+    resolvers ++= Seq("Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
+                      "ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
+                      "ReportGrid snapshot repo (public)" at "http://nexus.reportgrid.com/content/repositories/public-snapshots",
+                      "Sonatype Releases"                 at "http://oss.sonatype.org/content/repositories/releases",
+                      "Sonatype Snapshots"                at "http://oss.sonatype.org/content/repositories/snapshots"),
 
     credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
     publishMavenStyle := true,
@@ -49,7 +50,15 @@ object BlueEyesBuild extends Build {
       val nexus = "http://nexus.reportgrid.com/content/repositories/"
       if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
       else                                   Some("releases"  at nexus+"public-releases/")
-    }
+    },
+
+    scalaVersion := "2.9.1",
+
+    version := "0.6.0-SNAPSHOT",
+
+    organization := "com.reportgrid",
+
+    scalacOptions ++= Seq("-deprecation", "-unchecked")
   )
 
   lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings(nexusSettings : _*) aggregate(core, json, mongo)

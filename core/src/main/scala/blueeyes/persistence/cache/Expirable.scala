@@ -29,6 +29,23 @@ case class Expirable[K, V] private (key: K, _value: V, policy: ExpirationPolicy,
 }
 
 object Expirable {
+  def expirationCheck[K, V]: Expirable[K, V] => Boolean = {
+    def isPastTime(policyTime: Option[Long], baseTime: Long, currentTime: Long) = policyTime match {
+      case Some(policyTime) => currentTime > (policyTime + baseTime)
+      
+      case None => false
+    }
+
+    (expirable: Expirable[K, V]) => {
+      val policy = expirable.policy
+      val currentTime = nanoTime()
+      
+      !policy.eternal &&
+      (isPastTime(policy.timeToIdle(NANOSECONDS), expirable.accessTime(NANOSECONDS),   currentTime) ||
+       isPastTime(policy.timeToLive(NANOSECONDS), expirable.creationTime(NANOSECONDS), currentTime))
+    }
+  }
+
   /** Creates a new expirable entry given the specified creatione time and time unit. */
   def apply[K, V](key: K, value: V, policy: ExpirationPolicy, creationTime: Long, unit: TimeUnit): Expirable[K, V] = {
     new Expirable[K, V](key, value, policy, unit.toNanos(creationTime))

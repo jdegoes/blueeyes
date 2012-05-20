@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
 
 class ExpirationPredicateSpec extends Specification{
-  private val predicate = new ExpirationPredicate[String, String]()
+  private val predicate = Expirable.expirationCheck[String, String]
 
   "ExpirationPredicate: 'false' when policy is 'eternal'" in{
     val expirable = Expirable("foo", "bar", ExpirationPolicy(None, None, MILLISECONDS))

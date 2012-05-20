@@ -1,13 +1,5 @@
 name := "blueeyes-actor"
 
-version := "0.6.0-SNAPSHOT"
-
-organization := "com.reportgrid"
-
-scalaVersion := "2.9.1"
-
-scalacOptions ++= Seq("-deprecation", "-unchecked")
-
 libraryDependencies ++= Seq(
   "org.scalaz"                  %% "scalaz-core"        % "6.0.2",
   "com.typesafe.akka"           % "akka-actor"          % "2.0",

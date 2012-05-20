@@ -12,11 +12,11 @@ import java.util.concurrent.TimeUnit.NANOSECONDS
  * Scala's mutable concurrent map trait.
  */
 private[cache] class ExpirableMap[K, V](
-  val delegate: JConcurrentMap[K, Expirable[K, V]], 
-  val defaultPolicy: ExpirationPolicy, 
-  val hasExpired: Expirable[K, V] => Boolean,
-  val es: ScheduledExecutorService,
-  val evict: (K, V) => Unit) extends ConcurrentMap[K, V] {
+  delegate: JConcurrentMap[K, Expirable[K, V]], 
+  defaultPolicy: ExpirationPolicy, 
+  hasExpired: Expirable[K, V] => Boolean,
+  es: ScheduledExecutorService,
+  evict: (K, V) => Unit) extends ConcurrentMap[K, V] {
 
   override def size: Int = delegate.size
 
