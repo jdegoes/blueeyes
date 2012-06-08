@@ -8,11 +8,11 @@ libraryDependencies ++= Seq(
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "javolution"                  % "javolution"          % "5.5.1",
   "com.typesafe.akka"           % "akka-actor"          % "2.0",
-  "org.streum"                  %% "configrity"         % "0.9.0",
-  "com.weiglewilczek.slf4s"     %% "slf4s"              % "1.0.7",
-  "org.specs2"                  %% "specs2"             % "1.8"            % "provided",
-  "org.mockito"                 % "mockito-all"         % "1.8.5"          % "provided",
-  "org.scala-tools.testing"     %% "scalacheck"         % "1.9"            % "provided"
+  "org.streum"                  %  "configrity_2.9.1"   % "0.9.0",
+  "com.weiglewilczek.slf4s"     %  "slf4s_2.9.1"        % "1.0.7",
+  "org.specs2"                  %  "specs2_2.9.1"       % "1.8"            % "provided",
+  "org.mockito"                 %  "mockito-all"        % "1.8.5"          % "provided",
+  "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "provided"
 )
 
 resolvers ++= Seq(
