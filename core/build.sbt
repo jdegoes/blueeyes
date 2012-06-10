@@ -11,8 +11,8 @@ libraryDependencies ++= Seq(
   "org.streum"                  %  "configrity_2.9.1"   % "0.9.0",
   "com.weiglewilczek.slf4s"     %  "slf4s_2.9.1"        % "1.0.7",
   "org.specs2"                  %  "specs2_2.9.1"       % "1.8"            % "provided",
-  "org.mockito"                 %  "mockito-all"        % "1.9.0"          % "provided",
-  "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "provided"
+  "org.mockito"                 %  "mockito-all"        % "1.9.0"          % "test",
+  "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "test"
 )
 
 resolvers ++= Seq(

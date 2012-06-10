@@ -3,9 +3,9 @@ import Keys._
 
 object BlueEyesBuild extends Build {
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
-    resolvers ++= Seq("Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
-                      "ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
+    resolvers ++= Seq("ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
                       "ReportGrid snapshot repo (public)" at "http://nexus.reportgrid.com/content/repositories/public-snapshots",
+                      "Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
                       "Sonatype Releases"                 at "http://oss.sonatype.org/content/repositories/releases",
                       "Sonatype Snapshots"                at "http://oss.sonatype.org/content/repositories/snapshots"),
 

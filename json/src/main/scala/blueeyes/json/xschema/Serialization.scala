@@ -22,7 +22,7 @@ trait Extractor[A] extends Function[JValue, A] { self =>
     override def extract(jvalue: JValue): B = f(self.extract(jvalue))
   }
 
-  def kleisli = Kleisli[({type λ[α] = Validation[Error, α]})#λ, JValue, A](validated _)
+  def kleisli = Kleisli[({type λ[+α] = Validation[Error, α]})#λ, JValue, A](validated _)
   
   def apply(jvalue: JValue): A = extract(jvalue)
 }
