@@ -4,19 +4,21 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import blueeyes.bkka.AkkaDefaults
 
-import scala.collection.JavaConversions._
-import org.jboss.netty.channel.Channels._
-import org.jboss.netty.handler.codec.http.HttpHeaders._
-
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
-import org.jboss.netty.util.CharsetUtil
-import org.jboss.netty.handler.codec.http.{HttpHeaders, HttpChunk, HttpRequest => NettyHttpRequest}
 import org.jboss.netty.channel._
-import HttpNettyChunkedRequestHandler._
+import org.jboss.netty.channel.Channels._
+import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHeaders, HttpChunk => NettyChunk, HttpRequest => NettyRequest}
+import org.jboss.netty.util.CharsetUtil
+
 import blueeyes.core.data.{ Chunk, ByteChunk }
 import blueeyes.core.http.HttpRequest
 
+import scala.collection.JavaConverters._
+
 private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters with AkkaDefaults {
+  import HttpNettyChunkedRequestHandler._
+  import NettyHeaders._
+
   private var delivery: Option[(Either[HttpRequest[ByteChunk], Promise[ByteChunk]], ChannelBuffer)] = None
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
@@ -24,35 +26,34 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
     val current = delivery
 
     e.getMessage match {
-      case m: NettyHttpRequest => 
-        if (is100ContinueExpected(m)) write(ctx, succeededFuture(ctx.getChannel), CONTINUE.duplicate())
+      case nettyRequest: NettyRequest => 
+        if (is100ContinueExpected(nettyRequest)) write(ctx, succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
-        if (m.isChunked) {
-          List[String]() ++ m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING) match {
-            case HttpHeaders.Values.CHUNKED :: Nil => m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING)
-            case _ =>
+        if (nettyRequest.isChunked) {
+          nettyRequest.setChunked(false)
+          if (nettyRequest.getHeaders(NettyHeaders.Names.TRANSFER_ENCODING).asScala.exists(_ == NettyHeaders.Values.CHUNKED)) {
+            nettyRequest.removeHeader(NettyHeaders.Names.TRANSFER_ENCODING)
           }
-          m.setChunked(false)
-          delivery = Some(Left(fromNettyRequest(m, e.getRemoteAddress)), buffer)
+
+          delivery = Some(Left(fromNettyRequest(nettyRequest, e.getRemoteAddress)), buffer)
         } else {
           delivery = None
-          Channels.fireMessageReceived(ctx, fromNettyRequest(m, e.getRemoteAddress), e.getRemoteAddress)
+          Channels.fireMessageReceived(ctx, fromNettyRequest(nettyRequest, e.getRemoteAddress), e.getRemoteAddress)
         }
 
-      case chunk: HttpChunk =>  {
-        current.foreach{ value =>
-          val (nextDelivery, content) = value
+      case chunk: NettyChunk =>  
+        for ((nextDelivery, content) <- current) {
           content.writeBytes(chunk.getContent)
           if (chunk.isLast || content.capacity >= chunkSize) {
             val nextChunkFuture = if (!chunk.isLast) {
               val future = Promise[ByteChunk]()
               delivery   = Some(Right(future), buffer)
               Some(future)
-            }
-            else{
+            } else {
               delivery = None
               None
             }
+
             val chunkToSend = fromNettyContent(content, nextChunkFuture)
             nextDelivery match {
               case Left(x)  => Channels.fireMessageReceived(ctx, x.copy(content = chunkToSend), e.getRemoteAddress)
@@ -60,7 +61,6 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
             }
           }
         }
-      }
 
       case _ => 
         write(ctx, succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
@@ -88,7 +88,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
   }
 }
 
-object HttpNettyChunkedRequestHandler{
+object HttpNettyChunkedRequestHandler {
   val CONTINUE: ChannelBuffer    = ChannelBuffers.copiedBuffer("HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII)
   val BAD_REQUEST: ChannelBuffer = ChannelBuffers.copiedBuffer("HTTP/1.1 400 BadRequest\r\n\r\n", CharsetUtil.US_ASCII)
 }

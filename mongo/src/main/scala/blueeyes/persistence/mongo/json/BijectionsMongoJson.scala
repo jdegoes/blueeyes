@@ -43,7 +43,7 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
 
   private val ObjectIdPattern = """ObjectId\("([0-9a-f]*)"\)""".r
 
-  private def toStorageValue(v: JValue): ValidationNEL[String, Any] = v match {
+  private def toStorageValue(v: JValue): ValidationNEL[String, Any] = (v: @unchecked) match {
     case JNull | JNothing => success(null)
     case JString(ObjectIdPattern(id)) => new ObjectId(Hex.decodeHex(id.toCharArray)).success
     case JString(x) => x.success

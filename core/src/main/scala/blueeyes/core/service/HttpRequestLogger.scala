@@ -26,8 +26,8 @@ with AkkaDefaults { self =>
 
   private[HttpRequestLogger] class CompositeHttpRequestLogger(logger: HttpRequestLogger[T, S]) extends HttpRequestLogger[T, S]{
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[List[(FieldIdentifier, Either[String, Array[Byte]])]] = {
-      (self(request, response) ~ logger(request, response)).map { 
-        case prefix ~ suffix => prefix ::: suffix
+     (self(request, response) zip logger(request, response)).map { 
+        case (prefix, suffix) => prefix ::: suffix
       }
     }
   }

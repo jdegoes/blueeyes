@@ -39,6 +39,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress), remoteAddress))
     }
+
     "sends request and chunk when request is chunked and there is only one chunk" in {
       nettyRequest.setChunked(true)
       httpChunk.isLast() returns true
@@ -49,6 +50,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData)))
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
+
     "sends request and chunk when request is chunked and there is only more ther one chunk" in {
       nettyRequest.setChunked(true)
 
