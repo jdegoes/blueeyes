@@ -51,6 +51,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
     when(channel.write(Matchers.argThat(new ContentMatcher(nettyContent)))).thenReturn(channelFuture)
 
     nettyHandler.messageReceived(context, event)
+    Thread.sleep(2000)
 
     there was one(channelFuture).addListener(ChannelFutureListener.CLOSE)
   }

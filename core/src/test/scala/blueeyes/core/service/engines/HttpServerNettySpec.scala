@@ -258,9 +258,10 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       path("/file/write"){
         post { request: HttpRequest[ByteChunk] =>
           val promise = Promise[HttpResponse[ByteChunk]]()
-          request.content.foreach{value =>
-            val f = FileSink(Context.dataFile, value)
-            f.onSuccess { case v => promise.success(HttpResponse[ByteChunk]()) } 
+          for (value <- request.content) {
+            FileSink.write(Context.dataFile, value).onSuccess { 
+              case _ => promise.success(HttpResponse[ByteChunk]()) 
+            } 
           }
           promise
         }

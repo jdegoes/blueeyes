@@ -48,7 +48,7 @@ object FileSource {
 class FileSink(file: File) extends AkkaDefaults {
   private var output: Option[OutputStream] = None
 
-  def apply(chunk: ByteChunk): Future[Unit] = {
+  private[FileSink] def write(chunk: ByteChunk): Future[Unit] = {
     val promise  = Promise[Unit]()
     try {
       file.createNewFile()
@@ -89,12 +89,12 @@ class FileSink(file: File) extends AkkaDefaults {
     close
   }
 
-  private def close = {
+  private def close() = {
     output.foreach(_.close)
     output = None
   }
 }
 
-object FileSink{
-  def apply(file: File, chunk: ByteChunk) = new FileSink(file).apply(chunk)
+object FileSink {
+  def write(file: File, chunk: ByteChunk) = new FileSink(file).write(chunk)
 }

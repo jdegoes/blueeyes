@@ -25,7 +25,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
   "FileSink" should {
     "write data" in{
-      FileSink(dataFile, chunk) must whenDelivered {
+      FileSink.write(dataFile, chunk) must whenDelivered {
         (_: Unit) => {
           (dataFile.exists must_==(true)) and 
           (dataFile.length mustEqual(data.flatten.length))
@@ -35,7 +35,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write failed" in{
       val error  = new RuntimeException
-      val result = FileSink(dataFile, Chunk(data.head.toArray, Some(Future(throw error))))
+      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(Future(throw error))))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
@@ -44,7 +44,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write getting next chunk failed" in{
       val error  = new RuntimeException
-      val result = FileSink(dataFile, Chunk(data.head.toArray, Some(Promise.failed[ByteChunk](error))))
+      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(Promise.failed[ByteChunk](error))))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
@@ -53,19 +53,15 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel writing when result is canceled" in{
       val promise = Promise[ByteChunk]()
-      def next   = {
-        import scala.actors.Actor.actor
-        actor {
-          Thread.sleep(2000)
-          promise.success(Chunk(data.head.toArray))
-        }
-        Some(promise)
-      }
+      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(promise)))
 
-      val result = FileSink(dataFile, Chunk(data.head.toArray, next))
       val killed = new RuntimeException("killed")
       result.asInstanceOf[Promise[Unit]].failure(killed)
       
+      defaultActorSystem.scheduler.scheduleOnce(2000 millis) {
+        promise.success(Chunk(data.head.toArray))
+      }
+
       promise.failed must whenDelivered {
         (err: Throwable) => (err must_== killed) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
       }
@@ -91,7 +87,7 @@ class FileSourceSpec extends Specification with Data with AfterExample with Akka
         }
       }
 
-      val result = FileSink(dataFile, chunk)
+      val result = FileSink.write(dataFile, chunk)
       result must whenDelivered (be_==(()))
 
       val fileChunks = FileSource(dataFile)
