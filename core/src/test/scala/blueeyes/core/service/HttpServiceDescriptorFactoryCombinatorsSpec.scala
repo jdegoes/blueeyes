@@ -19,9 +19,10 @@ import java.io.File
 import scala.util.Random
 
 import org.specs2.specification.{Step, Fragments}
+import org.scalacheck.Gen._
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with BijectionsChunkJson with HttpRequestMatchers {
-  val logFilePrefix = "w3log-" + Random.nextString(16)
+  val logFilePrefix = "w3log-" + identifier.sample.get
   override def configuration = """
     services {
       foo {
@@ -65,7 +66,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   override protected def afterSpec = findLogFile foreach { _.delete }
 
   private def findLogFile = {
-    new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith(logFilePrefix) && file.getName.endsWith(".log") } headOption
+    new File(System.getProperty("java.io.tmpdir")).listFiles find { file => file.getName.startsWith(logFilePrefix) && file.getName.endsWith(".log") } 
   }
 
   "service" should {
