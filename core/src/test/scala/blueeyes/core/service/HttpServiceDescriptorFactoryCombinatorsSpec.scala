@@ -1,22 +1,27 @@
 package blueeyes.core.service
 
-import blueeyes.core.http.HttpStatusCodes._
 import test.BlueEyesServiceSpecification
+
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
-import blueeyes.json.JsonAST._
-import blueeyes.core.http.MimeTypes._
-import java.io.File
-import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.health.metrics.{eternity}
 import blueeyes.health.metrics.IntervalLength._
-import org.specs2.specification.{Step, Fragments}
+import blueeyes.core.http.test._
+import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
+import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
+import blueeyes.json.JsonAST._
 
 import akka.dispatch.Future
 import akka.util.Timeout
-import blueeyes.core.http.test._
+
+import java.io.File
+import scala.util.Random
+
+import org.specs2.specification.{Step, Fragments}
 
 class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with BijectionsChunkJson with HttpRequestMatchers {
+  val logFilePrefix = "w3log-" + Random.nextString(16)
   override def configuration = """
     services {
       foo {
@@ -43,7 +48,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
         }
       }
     }
-  """.format(System.getProperty("java.io.tmpdir") + File.separator + "w3log.log")
+  """.format(System.getProperty("java.io.tmpdir") + File.separator + logFilePrefix + ".log")
 
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
@@ -60,14 +65,14 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   override protected def afterSpec = findLogFile foreach { _.delete }
 
   private def findLogFile = {
-    new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith("w3log") && file.getName.endsWith(".log") } headOption
+    new File(System.getProperty("java.io.tmpdir")).listFiles filter { file => file.getName.startsWith(logFilePrefix) && file.getName.endsWith(".log") } headOption
   }
 
   "service" should {
     "support health monitor service" in {
       service.get("/foo") must whenDelivered {
         beLike {
-          case HttpResponse(status, _, None, _) => status must_== HttpStatus(OK)
+          case HttpResponse(HttpStatus(OK, _), _, None, _) => ok
         }
       }
     }
@@ -89,7 +94,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "RequestLogging: Creates logRequest" in{
-      findLogFile must_!=(None)
+      findLogFile must beSome[File]
     }
   }
 }

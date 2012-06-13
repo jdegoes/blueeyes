@@ -14,9 +14,9 @@ import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
 
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.channel._
+import org.jboss.netty.channel.{ SimpleChannelUpstreamHandler, MessageEvent, Channel, ChannelFutureListener, ChannelHandler, ChannelHandlerContext, ChannelStateEvent, ExceptionEvent }
 import org.jboss.netty.handler.codec.http.HttpHeaders._
-import org.jboss.netty.handler.codec.http.{DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk}
+import org.jboss.netty.handler.codec.http.{ DefaultHttpChunkTrailer, DefaultHttpChunk, HttpChunk }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
@@ -35,10 +35,11 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
       val keepAlive       = isKeepAlive(e.getMessage.asInstanceOf[HttpRequest[ByteChunk]])
       val message         = toNettyResponse(response, chunkedContent.isChunked)
       val content         = if (!chunkedContent.isChunked) {
-        chunkedContent.chunk.foreach(value => message.setContent(ChannelBuffers.copiedBuffer(value.data)))
-        None
-      }
-      else chunkedContent.chunk.map(content => new NettyChunkedInput(content, e.getChannel))
+                              chunkedContent.chunk.foreach(value => message.setContent(ChannelBuffers.copiedBuffer(value.data)))
+                              None
+                            } else {
+                              chunkedContent.chunk.map(content => new NettyChunkedInput(content, e.getChannel))
+                            }
 
       if (e.getChannel.isConnected){
         val messageFuture = e.getChannel.write(message)
@@ -49,12 +50,11 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
       }
     }
 
-    requestHandler.service(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]]).foreach{ responseFuture =>
+    for (responseFuture <- requestHandler.service(event.getMessage.asInstanceOf[HttpRequest[ByteChunk]])) {
       pendingResponses += responseFuture
 
-      responseFuture foreach { response =>
+      for (response <- responseFuture) {
         pendingResponses -= responseFuture
-
         writeResponse(event, response)
       }
     }
