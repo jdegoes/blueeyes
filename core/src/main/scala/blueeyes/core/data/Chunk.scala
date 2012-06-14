@@ -12,6 +12,8 @@ trait Incremental[A] extends Semigroup[A] {
 }
 
 case class Chunk[A](data: A, next: Option[Future[Chunk[A]]] = None) {
+  def isEOF = next.isEmpty
+
   def ++(other: Chunk[A])(implicit ctx: ExecutionContext): Chunk[A] = Chunk(data, next.map(_.map(_ ++ other)).orElse(Some(Future(other))))
 
   def suffix(a: A)(implicit s: Semigroup[A]): Chunk[A] = next match {

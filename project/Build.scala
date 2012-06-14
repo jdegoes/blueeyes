@@ -5,9 +5,13 @@ object BlueEyesBuild extends Build {
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
     resolvers ++= Seq("ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
                       "ReportGrid snapshot repo (public)" at "http://nexus.reportgrid.com/content/repositories/public-snapshots",
+                      "Sonatype Jetty"                    at "https://oss.sonatype.org/content/groups/jetty/",
                       "Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
                       "Sonatype Releases"                 at "http://oss.sonatype.org/content/repositories/releases",
-                      "Sonatype Snapshots"                at "http://oss.sonatype.org/content/repositories/snapshots"),
+                      "Sonatype Snapshots"                at "http://oss.sonatype.org/content/repositories/snapshots",
+                      "JBoss Releases"                    at "http://repository.jboss.org/nexus/content/groups/public/",
+                      "Maven Repo 1"                      at "http://repo1.maven.org/maven2/",
+                      "Guiceyfruit Googlecode"            at "http://guiceyfruit.googlecode.com/svn/repo/releases/"),
 
     credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
     publishMavenStyle := true,

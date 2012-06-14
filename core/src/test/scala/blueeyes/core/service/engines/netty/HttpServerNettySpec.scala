@@ -1,7 +1,11 @@
-package blueeyes.core.service.engines
+package blueeyes
+package core.service.engines
+package netty
 
 import blueeyes.core.service._
 import collection.mutable.ArrayBuilder.ofByte
+import engines.security.BlueEyesKeyStoreFactory
+import engines.{TestEngineService, TestEngineServiceContext, HttpClientXLightWeb}
 import org.specs2.mutable.Specification
 
 import akka.dispatch.Future
@@ -9,13 +13,11 @@ import akka.dispatch.Promise
 import akka.dispatch.Await
 import akka.util._
 
-import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http._
 import blueeyes.core.data.{FileSink, FileSource, Chunk, ByteChunk, BijectionsByteArray, BijectionsChunkString}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
-import security.BlueEyesKeyStoreFactory
 
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -42,7 +44,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
 
   private var port = 8585
   private var server: Option[NettyEngine] = None
-  
+
   override def is = args(sequential = true) ^ super.is
   override def map(fs: =>Fragments) = Step {
     var error: Option[Throwable] = None
@@ -69,10 +71,10 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       doneSignal.await()
     }while(error != None)
   } ^ fs ^ Step {
-    Context.dataFile.delete
+    TestEngineServiceContext.dataFile.delete
     server.foreach(_.stop)
   }
-  
+
 
   "HttpServer" should {
     "return empty response"in{
@@ -86,27 +88,27 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
     }
 
     "write file"in{
-      Context.dataFile.delete
+      TestEngineServiceContext.dataFile.delete
 
       client.post("/file/write")("foo") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (Context.dataFile.exists must be_==(true)) and
-            (Context.dataFile.length mustEqual("foo".length))
+            (TestEngineServiceContext.dataFile.exists must be_==(true)) and
+            (TestEngineServiceContext.dataFile.length mustEqual("foo".length))
         }
       }
     }
 
     "read file"in{
-      Context.dataFile.delete
+      TestEngineServiceContext.dataFile.delete
 
       akka.dispatch.Await.result(client.post("/file/write")("foo"), duration)
       client.get("/file/read") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content must beSome("foo")) 
+            (content must beSome("foo"))
         }
       }
     }
@@ -116,7 +118,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content must beSome(Context.context))
+            (content must beSome(TestEngineServiceContext.context))
         }
       }
     }
@@ -138,8 +140,8 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       client.parameters('bar -> "zar").get("/foo") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and 
-            (content must beSome(Context.context))
+            (status.code must be (OK)) and
+            (content must beSome(TestEngineServiceContext.context))
         }
       }
     }
@@ -148,17 +150,17 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
     "return huge delayed content"in{
-      val content = client.get[ByteChunk]("/huge/delayed") 
+      val content = client.get[ByteChunk]("/huge/delayed")
       content must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -166,7 +168,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
       sslClient.get("/bar/foo/adCode.html") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
-            content.get mustEqual(Context.context)
+            content.get mustEqual(TestEngineServiceContext.context)
         }
       }
     }
@@ -175,7 +177,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(Context.hugeContext.map(v => new String(v).mkString("")).mkString(""))) 
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -199,7 +201,7 @@ class HttpServerNettySpec extends Specification with BijectionsByteArray with Bi
   private def sslClient = new LocalHttpsClient(server.get.config).protocol("https").host("localhost").port(port + 1)
 }
 
-class SampleServer(configOverride: Configuration) extends SampleService with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
+class SampleServer(configOverride: Configuration) extends TestEngineService with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
   override def rootConfig = configOverride
 } 
 

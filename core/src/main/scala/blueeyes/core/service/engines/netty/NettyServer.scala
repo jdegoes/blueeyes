@@ -1,13 +1,12 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import com.weiglewilczek.slf4s.Logger
 import java.util.concurrent.Executors
 import org.jboss.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
-import blueeyes.core.service.HttpServer
 import org.jboss.netty.channel._
-
+import blueeyes.core.service.engines.InetInterfaceLookup
 import org.streum.configrity.Configuration
 
 class NettyServer(provider: NettyServerProvider){

@@ -12,14 +12,10 @@ libraryDependencies ++= Seq(
   "com.weiglewilczek.slf4s"     %  "slf4s_2.9.1"        % "1.0.7",
   "org.specs2"                  %  "specs2_2.9.1"       % "1.8"            % "provided",
   "org.mockito"                 %  "mockito-all"        % "1.9.0"          % "test",
-  "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "test"
-)
-
-resolvers ++= Seq(
-  "JBoss Releases" at             "http://repository.jboss.org/nexus/content/groups/public/",
-  "Sonatype Releases" at          "http://oss.sonatype.org/content/repositories/releases",
-  "Maven Repo 1" at               "http://repo1.maven.org/maven2/",
-  "Guiceyfruit Googlecode " at    "http://guiceyfruit.googlecode.com/svn/repo/releases/"
+  "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "test",
+  "javax.servlet"               % "javax.servlet-api"   % "3.0.1",
+  "org.eclipse.jetty"           % "jetty-server"        % "8.1.3.v20120416"          % "test" exclude("org.eclipse.jetty.orbit", "javax.servlet"),
+  "org.eclipse.jetty"           % "jetty-servlet"       % "8.1.3.v20120416"          % "test" exclude("org.eclipse.jetty.orbit", "javax.servlet")
 )
 
 parallelExecution in Test := false

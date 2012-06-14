@@ -77,4 +77,3 @@ class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with Mon
     }
   }
 }
-

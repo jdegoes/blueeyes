@@ -70,7 +70,13 @@ class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mo
 object RealDatabase {
   private class RealMongoActor extends Actor {
     def receive = {
-      case MongoQueryTask(query, collection, isVerified) => sender ! query(collection, isVerified)
+      case MongoQueryTask(query, collection, isVerified) =>
+        try {
+          sender ! query(collection, isVerified)
+        }
+        catch {
+          case e => sender ! akka.actor.Status.Failure(e)
+        }
     }
   }
 }
@@ -88,7 +94,7 @@ private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, da
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
-  lazy val disconnect = for {
+  def disconnect = for {
     _ <- ActorRefStop(actorSystem, disconnectTimeout).stop(mongoActor)
     //v <- Future.sequence(actors.map(ActorRefStop(actorSystem, disconnectTimeout).stop))
   } yield Nil
@@ -106,7 +112,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject]) = { 
+  def insert(objects: List[JObject]) = {
     objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map{objects: List[DBObject] =>
       collection.insert(objects)
     }
@@ -121,8 +127,8 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def ensureIndex(name: String, keysPaths: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     val indexOptions = JObject(
-      JField("name", JString(name)) :: 
-      JField("background", JBool(true)) :: 
+      JField("name", JString(name)) ::
+      JField("background", JBool(true)) ::
       JField("unique", JBool(unique)) :: options.fields
     )
 
@@ -237,5 +243,3 @@ class IterableViewImpl[+A, +Coll](delegate: Coll)(implicit f: Coll => Iterator[A
 
   protected def underlying = delegate
 }
-
-

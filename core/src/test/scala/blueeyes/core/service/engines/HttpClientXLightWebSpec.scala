@@ -7,6 +7,7 @@ import blueeyes.core.service.HttpRequestHandlerCombinators
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
+import netty.NettyEngine
 import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
 
@@ -70,7 +71,7 @@ with AkkaDefaults with HttpRequestMatchers {
 
   "HttpClientXLightWeb" should {
     "Support GET to invalid server should return http error" in {
-      val result = httpClient.get[String]("http://127.0.0.1:666/foo").failed 
+      val result = httpClient.get[String]("http://127.0.0.1:666/foo").failed
       result must whenDelivered {
         haveClass[HttpException]
       }
@@ -147,7 +148,7 @@ with AkkaDefaults with HttpRequestMatchers {
       val expected = "<html></html>"
       httpClient.headers(`Content-Type`(text/html) :: `Content-Length`(100) :: Nil).post(uri)(expected) must whenDelivered {
         beLike {
-          case HttpResponse(status, _, Some(content), _) => 
+          case HttpResponse(status, _, Some(content), _) =>
             (status.code must_== HttpStatusCodes.OK) and
             (content.trim must_== expected)
         }
@@ -165,7 +166,7 @@ with AkkaDefaults with HttpRequestMatchers {
       val chunk   = Chunk(expected, Some(Future(Chunk(expected))))
       httpClient.post[ByteChunk](uri)(chunk) must whenDelivered {
         beLike {
-          case HttpResponse(status, _, Some(content), _) => 
+          case HttpResponse(status, _, Some(content), _) =>
             (status.code must_== HttpStatusCodes.OK) and
             (new String(content.data).length must_== new String(expected ++ expected).length)
         }
@@ -175,7 +176,7 @@ with AkkaDefaults with HttpRequestMatchers {
    "Support HEAD requests" in {
       httpClient.head(uri) must whenDelivered {
         beLike {
-          case HttpResponse(status, _, _, _) => 
+          case HttpResponse(status, _, _, _) =>
             (status.code must_== HttpStatusCodes.OK)
         }
       }
@@ -184,7 +185,7 @@ with AkkaDefaults with HttpRequestMatchers {
    "Support response headers" in {
       httpClient.get(uri) must whenDelivered {
         beLike {
-          case HttpResponse(status, headers, _, _) => 
+          case HttpResponse(status, headers, _, _) =>
             (status.code must_== HttpStatusCodes.OK) and
             (headers.raw must haveKey("kludgy"))
         }
@@ -200,8 +201,8 @@ with AkkaDefaults with HttpRequestMatchers {
 
       Future.sequence(futures) must whenDelivered {
         beLike {
-          case responses => 
-          (responses.size must_== total) and 
+          case responses =>
+          (responses.size must_== total) and
           forall(responses) {
             response => response.status.code must_== HttpStatusCodes.OK
           }
@@ -241,10 +242,10 @@ with AkkaDefaults with HttpRequestMatchers {
     "Support POST requests with encoded URL should be preserved" in {
       val content = "Hello, world"
       httpClient.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content) must whenDelivered {
-        beLike { 
-          case HttpResponse(status, _, Some(content), _) => 
+        beLike {
+          case HttpResponse(status, _, Some(content), _) =>
             (status.code must_== HttpStatusCodes.OK) and
-            (content must contain("plckForumId=Cat:Wedding BoardsForum:238")) 
+            (content must contain("plckForumId=Cat:Wedding BoardsForum:238"))
           }
       }
     }

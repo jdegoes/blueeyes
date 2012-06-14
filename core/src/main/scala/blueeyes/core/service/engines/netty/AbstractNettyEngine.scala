@@ -1,15 +1,15 @@
-package blueeyes.core.service.engines
+package blueeyes.core.service.engines.netty
 
 import blueeyes.core.service.{HttpServer, HttpServerEngine}
 import com.weiglewilczek.slf4s.Logging
 import akka.dispatch.Future
 
-trait AbstractNettyEngine extends HttpServerEngine with HttpServer with Logging { 
+trait AbstractNettyEngine extends HttpServerEngine with HttpServer with Logging {
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private var servers: List[NettyServer]  = Nil
 
   override def start: Future[Unit] = {
-    super.start.map { _ => 
+    super.start.map { _ =>
       startStopLock.writeLock.lock()
       try {
         servers = nettyServers

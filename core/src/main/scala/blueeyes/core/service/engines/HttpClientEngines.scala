@@ -136,7 +136,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
   private def readChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
     val dataSource = response.getNonBlockingBody()
     dataSource.setDataHandler(new IBodyDataHandler{
-      var delivery: Either[HttpResponse[ByteChunk], Promise[ByteChunk]] = 
+      var delivery: Either[HttpResponse[ByteChunk], Promise[ByteChunk]] =
         Left(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = None, headers = headers))
 
       def onData(source: NonBlockingBodyDataSource) = {

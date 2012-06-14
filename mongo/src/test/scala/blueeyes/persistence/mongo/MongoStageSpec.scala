@@ -72,8 +72,8 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
         forall(updates) {
           case (filter, update: UpdateFieldFunctions.IncF) =>
             mockDatabase(select().from(collection).where(filter)).map(_.toList) must whenDelivered {
-              beLike { 
-                case x :: xs => 
+              beLike {
+                case x :: xs =>
                   val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
                   val value    = update.path.extract(x)
                   value must_== JsonAST.JInt(setValue * sendCount * actorsCount)

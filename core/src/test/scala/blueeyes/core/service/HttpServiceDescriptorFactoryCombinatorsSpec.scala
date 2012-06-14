@@ -63,7 +63,9 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
-  override protected def afterSpec = findLogFile foreach { _.delete }
+  override protected def afterSpec() = Step{
+    findLogFile foreach { _.delete }
+  }
 
   private def findLogFile = {
     new File(System.getProperty("java.io.tmpdir")).listFiles find { file => file.getName.startsWith(logFilePrefix) && file.getName.endsWith(".log") } 

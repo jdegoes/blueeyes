@@ -40,6 +40,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 //  import TransformerCombinators.{path$}
 
   val defaultHealthMonitorConfig = Seq(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))
+  val defaultShutdownTimeout     = akka.util.Timeout(10000)
 
   /** Augments the service with health monitoring. By default, various metrics
    * relating to request type, request timing, and request fulfillment are
@@ -53,6 +54,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
+  def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = healthMonitor(defaultShutdownTimeout)(f)
+
   def healthMonitor[T, S](shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)(f: HealthMonitor => ServiceDescriptorFactory[T, S])(implicit jValueBijection: Bijection[JValue, T]): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
       val intervals = context.config.detach("healthMonitor").get[List[String]]("intervals").map( _.map(IntervalParser.parse(_))).getOrElse(config).toList
@@ -145,6 +148,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
+  def requestLogging[T, S](f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = requestLogging(defaultShutdownTimeout)(f)
+
   def requestLogging[T, S](shutdownTimeout: Timeout)(f: => ServiceDescriptorFactory[T, S])(implicit contentBijection: Bijection[T, ByteChunk]): ServiceDescriptorFactory[T, S] = {
     import RollPolicies._
     (context: ServiceContext) => {

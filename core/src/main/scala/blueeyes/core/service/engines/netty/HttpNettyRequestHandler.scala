@@ -1,5 +1,4 @@
-package blueeyes.core.service.engines
-
+package blueeyes.core.service.engines.netty
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
@@ -79,17 +78,17 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
 
   override def channelDisconnected(ctx: ChannelHandlerContext, e: ChannelStateEvent) = {
     super.channelDisconnected(ctx, e)
-    
+
     killPending(new RuntimeException("Channel disconnected."))
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
     log.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
-    
+
     killPending(e.getCause)
-    // e.getChannel.close    
+    // e.getChannel.close
   }
-  
+
   private def killPending(why: Throwable) {
     // Kill all pending responses to this channel:
     pendingResponses.foreach(_.asInstanceOf[Promise[HttpResponse[ByteChunk]]].failure(why))
@@ -99,6 +98,7 @@ private[engines] class HttpNettyRequestHandler(requestHandler: AsyncCustomHttpSe
 
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
+
 private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) extends ChunkedInput with Logging with AkkaDefaults {
   private var done  = false
 
@@ -113,12 +113,12 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
 
   def isEndOfInput = !hasNextChunk()
 
-  def nextChunk = nextChunkFuture.value match { 
-    case Some(Right(chunk)) => 
+  def nextChunk = nextChunkFuture.value match {
+    case Some(Right(chunk)) =>
       val data = chunk.data
       if (!data.isEmpty) new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data)) else new DefaultHttpChunkTrailer()
 
-    case Some(Left(ex)) => 
+    case Some(Left(ex)) =>
       logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
       null
 
@@ -136,9 +136,9 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
 
   def hasNextChunk = {
     nextChunkFuture.value match {
-      case Some(Right(chunk)) => 
+      case Some(Right(chunk)) =>
         chunk.next match {
-          case Some(future)     => 
+          case Some(future)     =>
             setNextChunkFuture(future)
             true
 
@@ -151,10 +151,10 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
           case _ => false
         }
 
-      case Some(Left(ex)) => 
+      case Some(Left(ex)) =>
         logger.error("An error occurred retrieving the next chunk of data: " + ex.getMessage, ex)
         false
-      
+
       case _ => true
     }
   }

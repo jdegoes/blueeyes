@@ -64,7 +64,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   // I would like a better way to do this, but given the current relationship
   // to a locally defined main that bootstraps the server I didn't see a way
   // around the mutable var with a much more significant refactoring. NDM
-  private var rootConfiguration: Configuration = null
+  var rootConfiguration: Configuration = null
   
   /** The list of services that this server is supposed to run.
    */
@@ -221,7 +221,7 @@ trait HttpServer extends AsyncCustomHttpService[ByteChunk] with AkkaDefaults { s
   /** The status of the server.
    */
   def status: RunningStatus = _status
-  
+
   /** A default main function, which accepts the configuration file from the
    * command line, with flag "--configFile".
    */

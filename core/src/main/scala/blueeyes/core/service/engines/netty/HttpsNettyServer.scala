@@ -1,4 +1,5 @@
 package blueeyes.core.service.engines
+package netty
 
 import org.jboss.netty.channel.group.ChannelGroup
 import blueeyes.core.service._
