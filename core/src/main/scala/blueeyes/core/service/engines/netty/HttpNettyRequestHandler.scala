@@ -108,7 +108,8 @@ private[engines] class NettyChunkedInput(chunk: ByteChunk, channel: Channel) ext
   setNextChunkFuture(Future(chunk))
 
   def close() {
-    nextChunkFuture.asInstanceOf[Promise[ByteChunk]].failure(new RuntimeException("Connection closed."))
+    val promise = nextChunkFuture.asInstanceOf[Promise[ByteChunk]]
+    if (!promise.isCompleted) promise.failure(new RuntimeException("Connection closed."))
   }
 
   def isEndOfInput = !hasNextChunk()
