@@ -10,9 +10,9 @@ trait AkkaDefaults {
 }
 
 object AkkaDefaults {
-  val actorSystem = ActorSystem("blueeyes_actors")
+  val actorSystem = ActorSystem("blueeyes-actors")
 
-  val defaultFutureDispatch: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_async")
+  val defaultFutureDispatch: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes-async")
 }
 
 // vim: set ts=4 sw=4 et:
