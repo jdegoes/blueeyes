@@ -1,6 +1,6 @@
 package blueeyes.bkka
 
-import org.specs2.mutable.Specification 
+import org.specs2.mutable.Specification
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -14,7 +14,7 @@ import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 
 class StoppableSpec extends Specification with AkkaDefaults {
-  val actorSystem = ActorSystem("stoppable_spec")
+  val actorSystem = ActorSystem("stoppable-spec")
   implicit val timeout = Timeout(1000)
   val random = new scala.util.Random
 
@@ -40,8 +40,8 @@ class StoppableSpec extends Specification with AkkaDefaults {
       val b2a = new TestStopTarget("b2a")
 
       val stoppable = Stoppable(
-        root, 
-        Stoppable(a1, Stoppable(b1a) :: Stoppable(b1b) :: Nil) :: 
+        root,
+        Stoppable(a1, Stoppable(b1a) :: Stoppable(b1b) :: Nil) ::
         Stoppable(a2, Stoppable(b2a) :: Nil) :: Nil
       )
 
