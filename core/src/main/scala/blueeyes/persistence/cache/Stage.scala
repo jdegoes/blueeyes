@@ -29,7 +29,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
   def maximumCapacity: Int
 
-  private val actorSystem = ActorSystem("blueeyes_stage")
+  private val actorSystem = ActorSystem("blueeyes-stage")
 
   private class Cache extends scala.collection.mutable.Map[K, ExpirableValue[V]] { self =>
     private val impl = new javolution.util.FastMap[K, ExpirableValue[V]]
@@ -47,7 +47,7 @@ abstract class Stage[K, V](monitor: HealthMonitor = HealthMonitor.Noop) {
 
     def -= (k: K): this.type = {
       Option(impl.get(k)) foreach { v =>
-        flush(k, v.value) 
+        flush(k, v.value)
         impl.remove(k)
       }
 
