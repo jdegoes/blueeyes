@@ -127,6 +127,10 @@ trait MapReduceOutput {
   def drop(): Unit
 }
 
+case class MongoAggregationQuery(pipeline: JArray, collection: MongoCollection, outputCollection: Option[String] = None) extends MongoQuery with AggregationQueryBehavior {
+  def into(newOutputCollection: String) = copy(outputCollection = Some(newOutputCollection))
+}
+
 /** The MongoQueryBuilder creates mongo queries.
  * <p>
  * <pre>
@@ -176,6 +180,7 @@ trait MongoQueryBuilder{
   def upsert(collection: MongoCollection)       = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, true, false))
   def upsertMany(collection: MongoCollection)   = new SetQueryEntryPoint(MongoUpdateQuery(collection, _, None, true, true))
 
+  def aggregation(pipeline: JArray)               = new FromQueryEntryPoint(MongoAggregationQuery(pipeline, _, None))
   def mapReduce(map: String, reduce: String)    = new FromQueryEntryPoint(MongoMapReduceQuery(map, reduce, _, None, None))
   def group(initial: JObject, reduce: String, selection: JPath*) = new FromQueryEntryPoint(MongoGroupQuery(MongoSelection(Set(selection: _*)), _, initial, reduce))
 }

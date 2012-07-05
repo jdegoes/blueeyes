@@ -51,7 +51,7 @@ object RealMongo {
         case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
       }
 
-      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) }
+      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) } else { underlying.setReadPreference(ReadPreference.PRIMARY) }
 
       underlying
     }
@@ -81,7 +81,7 @@ object RealDatabase {
   }
 }
 
-private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
+private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, val database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
   private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
@@ -112,7 +112,17 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def requestStart() { collection.getDB.requestStart() }
 
-  def insert(objects: List[JObject]) = {
+  def aggregation(pipeline : JArray, output : Option[String] = None): Option[JObject] = {
+    // Set up the command object (Java driver doesn't yet provide an interface for this)
+    val cmd = JObject(List(JField("aggregate", JString(collection.getName)), 
+                           JField("pipeline", pipeline)))
+
+    MongoToJson.unapply(cmd).flatMap { 
+      obj: DBObject => MongoToJson(database.database.command(obj))
+    }.toOption
+  }
+
+  def insert(objects: List[JObject]) = { 
     objects.map(MongoToJson.unapply(_)).sequence[V, DBObject].map{objects: List[DBObject] =>
       collection.insert(objects)
     }

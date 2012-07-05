@@ -66,6 +66,8 @@ private[mongo] class MockDatabaseCollection(val name: String, val database: Mock
         }
 }""").asInstanceOf[JObject]
 
+  def aggregation(pipeline: JArray, output: Option[String]): Option[JObject] = None // TODO: Implement this !
+
   def insert(objects: List[JObject]) {
     writeLock{
       index(objects)

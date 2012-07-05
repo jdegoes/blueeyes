@@ -92,6 +92,17 @@ private[mongo] object QueryBehaviours{
     def outputCollection: Option[String]
   }
 
+  trait AggregationQueryBehavior extends MongoQueryBehaviour {
+    val isVerifiable = false
+    type QueryResult = Option[JObject]
+    def query(collection: DatabaseCollection): Option[JObject] = {
+      collection.aggregation(pipeline, outputCollection)
+    }
+    def pipeline: JArray
+    def collection: MongoCollection
+    def outputCollection: Option[String]
+  }
+
   trait RemoveQueryBehaviour extends MongoQueryBehaviour {
     val isVerifiable = true
     type QueryResult = Unit
