@@ -17,7 +17,7 @@ import histogram.{DynamicHistogram, ValueStrategy}
 
 abstract class TimedSample[V](val config: interval)(implicit valueStrategy: ValueStrategy[V], clock: Clock, m: Manifest[V])
 extends AsyncStatistic[Long, Map[Long, V]]{
-  val actorSystem = ActorSystem("timed_sample") //TODO: Specialize
+  val actorSystem = ActorSystem("timed-sample") //TODO: Specialize
   private[TimedSample] val actor = actorSystem.actorOf(Props(new TimedSampleActor(DynamicHistogram.empty(config.granularity.length, config.samples + 1, config.granularity.unit))))
 
   def +=(elem: Long): this.type = {
@@ -48,7 +48,7 @@ object TimedSample {
 
 private[metrics] class TimedSampleActor[V](var histogram: DynamicHistogram[V]) extends Actor {
   def receive = {
-    case DataRequest(time, data) => 
+    case DataRequest(time, data) =>
       histogram = histogram += (time, data)
 
     case DetailsRequest(promise) =>
@@ -56,7 +56,7 @@ private[metrics] class TimedSampleActor[V](var histogram: DynamicHistogram[V]) e
       val incomplete = details.keySet.toList.sortWith(_ > _).head
       promise.complete(Right(details - incomplete))
 
-    case CountRequest(promise) => 
+    case CountRequest(promise) =>
       promise.complete(Right(histogram.count))
   }
 }
