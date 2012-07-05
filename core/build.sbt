@@ -14,9 +14,14 @@ libraryDependencies ++= Seq(
   "org.mockito"                 %  "mockito-all"        % "1.9.0"          % "test",
   "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "test",
   "javax.servlet"               % "javax.servlet-api"   % "3.0.1",
-  "org.eclipse.jetty"           % "jetty-server"        % "8.1.3.v20120416"          % "test" exclude("org.eclipse.jetty.orbit", "javax.servlet"),
-  "org.eclipse.jetty"           % "jetty-servlet"       % "8.1.3.v20120416"          % "test" exclude("org.eclipse.jetty.orbit", "javax.servlet")
+  "org.eclipse.jetty"           % "jetty-server"        % "8.1.3.v20120416"          % "test",
+  "org.eclipse.jetty"           % "jetty-servlet"       % "8.1.3.v20120416"          % "test"
 )
+
+ivyXML := 
+<dependency org="org.eclipse.jetty.orbit" name="javax.servlet" rev="3.0.0.v201112011016">
+<artifact name="javax.servlet" type="orbit" ext="jar"/>
+</dependency>
 
 parallelExecution in Test := false
 
