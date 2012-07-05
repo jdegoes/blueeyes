@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
 )
 
 ivyXML := 
-<dependency org="org.eclipse.jetty.orbit" name="javax.servlet" rev="3.0.0.v201112011016">
+<dependency org="org.eclipse.jetty.orbit" name="javax.servlet" rev="3.0.0.v201112011016" conf="test">
 <artifact name="javax.servlet" type="orbit" ext="jar"/>
 </dependency>
 
