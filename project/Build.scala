@@ -15,6 +15,7 @@ object BlueEyesBuild extends Build {
 
     credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
     publishMavenStyle := true,
+    publishArtifact in Test := false,
     pomIncludeRepository := { (repo: MavenRepository) => false },
 
     pomExtra :=
@@ -50,29 +51,31 @@ object BlueEyesBuild extends Build {
         </developer>
       </developers>,
 
-    publishTo <<= (version) { version: String =>
-      val nexus = "http://nexus.reportgrid.com/content/repositories/"
-      if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
-      else                                   Some("releases"  at nexus+"public-releases/")
+    publishTo <<= version { v: String =>
+      val nexus = "https://oss.sonatype.org/"
+      if (v.trim.endsWith("SNAPSHOT"))
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+      else
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
 
     crossScalaVersions := Seq("2.9.1", "2.9.2"),
 
     version := "0.6.0-SNAPSHOT",
 
-    organization := "com.reportgrid",
+    organization := "com.github.jdegoes",
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
   )
 
   lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings(nexusSettings : _*) aggregate(core, json, mongo)
-  
+
   lazy val json  = Project(id = "json", base = file("json")).settings(nexusSettings : _*)
 
   lazy val core  = Project(id = "core", base = file("core")).settings(nexusSettings : _*) dependsOn json
 
   lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings : _*) dependsOn (core, json % "test->test")
-  
+
   //lazy val actor = Project(id = "actor", base = file("actor")).settings(nexusSettings : _*)
 }
 
