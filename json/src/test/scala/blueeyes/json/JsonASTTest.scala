@@ -84,6 +84,10 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     check(reorderProp)
   }
 
+  "delete" in {
+    JsonParser.parse("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JsonParser.parse("""{ "foo": { "baz": 2 } }"""))
+  }
+
   "Remove all" in {
     val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
     check(removeAllProp)

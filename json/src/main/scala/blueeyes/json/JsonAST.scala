@@ -266,6 +266,27 @@ object JsonAST {
       }
     }
 
+    def delete(path: JPath): Option[JValue] = {
+      path.nodes match {
+        case JPathField(name) :: xs => this match {
+          case JObject(fields) => Some(
+            JObject(fields flatMap {
+              case JField(`name`, value) => value.delete(JPath(xs: _*)) map { v => JField(name, v) }
+              case unmodified => Some(unmodified)
+            })
+          )
+          case unmodified => Some(unmodified)
+        }
+
+        case JPathIndex(idx) :: xs => this match {
+          case JArray(elements) => Some(JArray(elements.zipWithIndex.flatMap { case (v, i) => if (i == idx) v.delete(JPath(xs: _*)) else Some(v) }))
+          case unmodified => Some(unmodified)
+        }
+
+        case Nil => None
+      }
+    }
+
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
      * <p>
