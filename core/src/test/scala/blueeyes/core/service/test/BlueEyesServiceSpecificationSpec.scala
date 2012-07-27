@@ -29,7 +29,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
     }
 
     "support eventually asynch get by valid URL" in {
-      service.get[String]("/asynch/eventually") must whenDelivered { be_==(serviceResponse) }
+      service.get[String]("/asynch/eventually") must eventually { whenDelivered { be_==(serviceResponse) } }
     }
   }
 }

@@ -113,10 +113,10 @@ class StageSpec extends Specification with AkkaDefaults {
       }
 
       val futures   = Future.sequence(actors.map(actor => (actor ? "Send").mapTo[Unit]))
-      futures.value must eventually(200, 300.milliseconds) (beSome)
+      futures.value must eventually(200, 300.milliseconds) (beSome[Either[Throwable,List[Unit]]])
 
       val flushFuture = stage.flushAll(timeout)
-      flushFuture.value must eventually (beSome)
+      flushFuture.value must eventually (beSome[Either[Throwable,Int]])
 
       collected mustEqual(messagesCount * threadsCount)
 
@@ -148,10 +148,10 @@ class StageSpec extends Specification with AkkaDefaults {
       }
 
       val futures = Future.sequence(actors.map(actor => (actor ? "Send").mapTo[Unit]))
-      (futures.value must eventually(500, 300.milliseconds) (beSome))
+      (futures.value must eventually(500, 300.milliseconds) (beSome[Either[Throwable,List[Unit]]]))
 
       val flushFuture = stage.flushAll(timeout)
-      (flushFuture.value must eventually (beSome))
+      (flushFuture.value must eventually (beSome[Either[Throwable,Int]]))
 
       collected mustEqual(Map[String, Int](messages.distinct.map(v => (v(0), threadsPerMessagesType * messagesCount)): _*))
 
