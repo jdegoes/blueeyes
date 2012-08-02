@@ -27,5 +27,5 @@ class EternityTimedNumbersSample(implicit clock: Clock) extends SyncStatistic[Lo
 
   def config = eternity
 
-  def toJValue = JInt(count)
+  def toJValue = JNum(count)
 }

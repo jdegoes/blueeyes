@@ -11,7 +11,7 @@ class TimedEternityCountStatSpec extends Specification with TimedStatFixtures wi
       val timedSample = TimedCountStat(eternity)
       fill(timedSample)
 
-      timedSample.toJValue must whenDelivered (be_==(JObject(JField(eternity.toString, JArray(List(JInt(4)))) :: Nil)))
+      timedSample.toJValue must whenDelivered (be_==(JObject(JField(eternity.toString, JArray(List(JNum(4)))) :: Nil)))
     }
   }
 

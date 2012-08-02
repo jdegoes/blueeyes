@@ -85,7 +85,7 @@ with FutureMatchers {
     monitor.increment("requestCount")(3)
     monitor.export("request.export", export)
 
-    val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JInt(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JInt(2)))))))
+    val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JNum(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JNum(2)))))))
 
     monitor.toJValue must whenDelivered (be_==(monitorJson))
   }

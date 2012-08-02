@@ -401,7 +401,7 @@ object SampleSchemas extends SchemaHelpers {
         "Passport", "data.employee",
         Map(),
         List(
-          XRealField("value", Map(), XLong, JInt(-1), XOrderAscending)
+          XRealField("value", Map(), XLong, JNum(-1), XOrderAscending)
         )
       ),
       XProduct(
@@ -444,21 +444,21 @@ object SampleSchemas extends SchemaHelpers {
       "ConstantSingleton", "data.fringe",
       Map(),
       List(
-        XConstantField("constantNumber", Map(), XInt,     JInt(123)),
+        XConstantField("constantNumber", Map(), XInt,     JNum(123)),
         XConstantField("constantString", Map(), XString,  JString("foo")),
         XConstantField("constantBool",   Map(), XBoolean, JString("foo")),
-        XConstantField("constantDate",   Map(), XDate,    JInt(275296173))
+        XConstantField("constantDate",   Map(), XDate,    JNum(275296173))
       )
     ) :: 
     XProduct(
       "ConstantWithRealField", "data.fringe",
       Map(),
       List(
-        XRealField("value", Map(), XLong, JInt(-1), XOrderAscending),
-        XConstantField("constantNumber", Map(), XInt,     JInt(123)),
+        XRealField("value", Map(), XLong, JNum(-1), XOrderAscending),
+        XConstantField("constantNumber", Map(), XInt,     JNum(123)),
         XConstantField("constantString", Map(), XString,  JString("foo")),
         XConstantField("constantBool",   Map(), XBoolean, JBool(true)),
-        XConstantField("constantDate",   Map(), XDate,    JInt(275296173))
+        XConstantField("constantDate",   Map(), XDate,    JNum(275296173))
       )
     ) ::
     XUnion(
@@ -597,7 +597,7 @@ package data.fringe {
     implicit val ConstantWithRealFieldExtractor: Extractor[data.fringe.ConstantWithRealField] = new Extractor[data.fringe.ConstantWithRealField] {
       def extract(jvalue: JValue): data.fringe.ConstantWithRealField = {
         ConstantWithRealField(
-          extractField[Long](jvalue, "value", JInt(-1), blueeyes.json.xschema.DefaultExtractors.LongExtractor)
+          extractField[Long](jvalue, "value", JNum(-1), blueeyes.json.xschema.DefaultExtractors.LongExtractor)
         )
       }
     }

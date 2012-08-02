@@ -80,7 +80,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
               val version       = context.serviceVersion
               val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
               val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
-              val uptimeSeconds = JObject(JField("uptimeSeconds", JInt((System.currentTimeMillis - startTime) / 1000)) :: Nil)
+              val uptimeSeconds = JObject(JField("uptimeSeconds", JNum((System.currentTimeMillis - startTime) / 1000)) :: Nil)
               val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
 
               health map {health => HttpResponse[T](content=Some(jValueBijection(health.merge(who).merge(server).merge(uptimeSeconds))))}

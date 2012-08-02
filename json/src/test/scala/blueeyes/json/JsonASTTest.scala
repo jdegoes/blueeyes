@@ -125,7 +125,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "flattenWithPath for values produces a single value with the identity path" in {
-    val test = JInt(1)
+    val test = JNum(1)
 
     val expected = List((JPath.Identity, test))
 
@@ -133,9 +133,9 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "flattenWithPath on arrays produces index values" in {
-    val test = JArray(JInt(1) :: Nil)
+    val test = JArray(JNum(1) :: Nil)
 
-    val expected = List((JPath("[0]"), JInt(1)))
+    val expected = List((JPath("[0]"), JNum(1)))
 
     test.flattenWithPath must_== expected
   }
@@ -149,8 +149,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }""")
 
     val expected = List(
-      JPath(".c") -> JInt(2),
-      JPath(".fn[0].fr") -> JInt(-2)
+      JPath(".c") -> JNum(2),
+      JPath(".fn[0].fr") -> JNum(-2)
     )
 
     test.flattenWithPath must_== expected

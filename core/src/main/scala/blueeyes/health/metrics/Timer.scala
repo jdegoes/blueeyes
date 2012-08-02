@@ -99,7 +99,7 @@ class Timer extends SyncStatistic[Duration, Tuple5[Long, Duration, Duration, Dur
     this
   }
 
-  def toJValue: JValue = JObject(JField("minimumTime", JDouble(min.convert(TimeUnit.MILLISECONDS).time)) :: JField("maximumTime", JDouble(max.convert(TimeUnit.MILLISECONDS).time)) :: JField("averageTime", JDouble(mean.convert(TimeUnit.MILLISECONDS).time)) :: JField("standardDeviation", JDouble(standardDeviation.convert(TimeUnit.MILLISECONDS).time)) :: Nil)
+  def toJValue: JValue = JObject(JField("minimumTime", JNum(min.convert(TimeUnit.MILLISECONDS).time)) :: JField("maximumTime", JNum(max.convert(TimeUnit.MILLISECONDS).time)) :: JField("averageTime", JNum(mean.convert(TimeUnit.MILLISECONDS).time)) :: JField("standardDeviation", JNum(standardDeviation.convert(TimeUnit.MILLISECONDS).time)) :: Nil)
 
   private def updateVariance(ns: Long) {
     // initialize varianceM to the first reading if it's still blank

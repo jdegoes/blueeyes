@@ -33,14 +33,14 @@ object XmlExamples extends Specification {
 
   "Conversion transformation example 1" in {
     val json = toJson(users1).transform {
-      case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+      case JField("id", JString(s)) => JField("id", JNum(s.toInt))
     }
     compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":1,"name":"Harry"},{"id":2,"name":"David","nickname":"Dave"}]}}"""
   }
 
   "Conversion transformation example 2" in {
     val json = toJson(users2).transform {
-      case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+      case JField("id", JString(s)) => JField("id", JNum(s.toInt))
       case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
     }
     compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"}]}}"""
@@ -158,14 +158,14 @@ object XmlExamples extends Specification {
   }
 
   "Example with multiple attributes, multiple nested elements " in  {
-    val a1 = attrToObject("stats", "count", s => JInt(s.value.toInt)) _
+    val a1 = attrToObject("stats", "count", s => JNum(s.value.toInt)) _
     val a2 = attrToObject("messages", "href", identity) _
     val json = a1(a2(toJson(messageXml1)))
     compact(render(json)) mustEqual expected1
   }
 
   "Example with one attribute, one nested element " in {
-    val a = attrToObject("stats", "count", s => JInt(s.value.toInt)) _
+    val a = attrToObject("stats", "count", s => JNum(s.value.toInt)) _
     compact(render(a(toJson(messageXml2)))) mustEqual expected2
     compact(render(a(toJson(messageXml3)))) mustEqual expected2
   }

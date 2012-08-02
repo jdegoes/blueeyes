@@ -35,8 +35,7 @@ object JsonParser {
   case class FieldStart(name: String) extends Token
   case object End extends Token
   case class StringVal(value: String) extends Token
-  case class IntVal(value: BigInt) extends Token
-  case class DoubleVal(value: Double) extends Token
+  case class NumVal(value: BigDecimal) extends Token
   case class BoolVal(value: Boolean) extends Token
   case object NullVal extends Token
   case object OpenArr extends Token
@@ -196,8 +195,7 @@ object JsonParser {
         case OpenObj          => vals.push(JObject(Nil))
         case FieldStart(name) => vals.push(JField(name, null))
         case StringVal(x)     => newValue(JString(x))
-        case IntVal(x)        => newValue(JInt(x))
-        case DoubleVal(x)     => newValue(JDouble(x))
+        case NumVal(x)        => newValue(JNum(x))
         case BoolVal(x)       => newValue(JBool(x))
         case NullVal          => newValue(JNull)
         case CloseObj         => closeBlock(vals.pop(classOf[JValue]))
@@ -251,16 +249,12 @@ object JsonParser {
 
       def parseValue(first: Char) = {
         var wasInt = true
-        var doubleVal = false
         val s = new StringBuilder
         s.append(first)
         while (wasInt) {
           buf.next match{
             case Some(c) =>{
-              if (c == '.' || c == 'e' || c == 'E') {
-                doubleVal = true
-                s.append(c)
-              } else if (!(Character.isDigit(c) || c == '.' || c == 'e' || c == 'E' || c == '-')) {
+              if (!(Character.isDigit(c) || c == '.' || c == 'e' || c == 'E' || c == '-' || c == '+')) {
                 wasInt = false
                 buf.back
               } else s.append(c)
@@ -269,8 +263,7 @@ object JsonParser {
           }
         }
         val value = s.toString
-        if (doubleVal) DoubleVal(parseDouble(value))
-        else IntVal(BigInt(value))
+        NumVal(BigDecimal(value, java.math.MathContext.UNLIMITED))
       }
 
       def readString(charCount: Int) = {

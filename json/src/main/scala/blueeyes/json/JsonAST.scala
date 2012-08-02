@@ -645,8 +645,7 @@ object JsonAST {
         obj:    List[JField] => List[JField] => A,
         arr:    List[JValue] => List[JValue] => A,
         str:    String => String => A,
-        double: Double => Double => A,
-        int:    BigInt => BigInt => A,
+        num:    BigDecimal => BigDecimal => A,
         bool:   Boolean => Boolean => A,
         nul:    => A, nothing: => A) = {
         (jv1, jv2) match {
@@ -654,8 +653,7 @@ object JsonAST {
           case (JArray(a1) ,  JArray(a2))  => arr(a1)(a2)
           case (JString(s1),  JString(s2)) => str(s1)(s2)
           case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
-          case (JDouble(d1),  JDouble(d2)) => double(d1)(d2)
-          case (JInt(i1),     JInt(i2)) => int(11)(i2)
+          case (JNum(d1),     JNum(d2)) => num(d1)(d2)
           case (JNull,        JNull) => nul
           case (JNothing,     JNothing) => nul
           case _ => default
@@ -667,8 +665,7 @@ object JsonAST {
       case JObject(_)  => 7
       case JArray(_)   => 6
       case JString(_)  => 5
-      case JDouble(_)  => 4
-      case JInt(_)     => 2
+      case JNum(_)     => 4
       case JBool(_)    => 1
       case JNull       => 0
       case JNothing    => -1
@@ -697,16 +694,13 @@ object JsonAST {
 
       private val stringOrder = (Order[String].order _).curried
       private val boolOrder = (Order[Boolean].order _).curried
-      private val longOrder = (Order[Long].order _).curried
-      private val doubleOrder = (Order[Double].order _).curried
-      private val intOrder = (Order[BigInt].order _).curried
+      private val numOrder = (Order[BigDecimal].order _).curried
 
       def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
         obj    = objectOrder,
         arr    = arrayOrder,
         str    = stringOrder,
-        double = doubleOrder,
-        int    = intOrder,
+        num    = numOrder,
         bool   = boolOrder,
         nul    = EQ, nothing = EQ
       )
@@ -774,17 +768,14 @@ object JsonAST {
     
     def values = value
   }
-  case class JInt(value: BigInt) extends JValue {
-    type Values = BigInt
+  case class JNum(value: BigDecimal) extends JValue {
+    type Values = BigDecimal
     type Self = JValue
     
     def values = value
-  }
-  case class JDouble(value: Double) extends JValue {
-    type Values = Double
-    type Self = JValue
     
-    def values = value
+    // SI-6173
+    override val hashCode = 0
   }
   case class JString(value: String) extends JValue {
     type Values = String
@@ -846,12 +837,12 @@ object Implicits extends Implicits
 trait Implicits {
   import JsonAST._
 
-  implicit def int2jvalue(x: Int) = JInt(x)
-  implicit def long2jvalue(x: Long) = JInt(x)
-  implicit def bigint2jvalue(x: BigInt) = JInt(x)
-  implicit def double2jvalue(x: Double) = JDouble(x)
-  implicit def float2jvalue(x: Float) = JDouble(x)
-  implicit def bigdecimal2jvalue(x: BigDecimal) = JDouble(x.doubleValue)
+  implicit def int2jvalue(x: Int) = JNum(x)
+  implicit def long2jvalue(x: Long) = JNum(x)
+  implicit def bigint2jvalue(x: BigInt) = JNum(BigDecimal(x))
+  implicit def double2jvalue(x: Double) = JNum(x)
+  implicit def float2jvalue(x: Float) = JNum(x)
+  implicit def bigdecimal2jvalue(x: BigDecimal) = JNum(x)
   implicit def boolean2jvalue(x: Boolean) = JBool(x)
   implicit def string2jvalue(x: String) = JString(x)
 }
@@ -927,8 +918,7 @@ trait Printer {
   def renderAll(value: JValue): Document = value match {
     case JBool(true)   => text("true")
     case JBool(false)  => text("false")
-    case JDouble(n)    => text(n.toString)
-    case JInt(n)       => text(n.toString)
+    case JNum(n)       => text(n.toString)
     case JNull         => text("null")
     case JNothing      => text("undefined")
     case JString(s)    => text("\"" + quote(s) + "\"")
@@ -961,8 +951,7 @@ trait Printer {
         case JNull | JNothing => sys.error("impossible")
 
         case JBool(value)  => text(value.toString)
-        case JDouble(n)    => text(n.toString)
-        case JInt(n)       => text(n.toString)
+        case JNum(n)       => text(n.toString)
         case JString(null) => text("null")
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))

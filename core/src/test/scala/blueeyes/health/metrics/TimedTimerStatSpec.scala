@@ -12,7 +12,7 @@ class TimedTimerStatSpec extends Specification with TimedStatFixtures with bluee
       val timedSample = TimedTimerStat(config)
       fill(timedSample)
 
-      val values = ("minimumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("maximumTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("averageTime", List(JDouble(1.0E-6), JDouble(1.0E-6), JDouble(0.0))) :: ("standardDeviation", List(JDouble(0.0), JDouble(0.0), JDouble(0.0))) :: Nil
+      val values = ("minimumTime", List(JNum(1.0E-6), JNum(1.0E-6), JNum(0.0))) :: ("maximumTime", List(JNum(1.0E-6), JNum(1.0E-6), JNum(0.0))) :: ("averageTime", List(JNum(1.0E-6), JNum(1.0E-6), JNum(0.0))) :: ("standardDeviation", List(JNum(0.0), JNum(0.0), JNum(0.0))) :: Nil
       val jValue = timedSample.toJValue
       jValue must whenDelivered (be_==(JObject(values.map(kv => JField(kv._1, JObject(JField(config.toString, JArray(kv._2)) :: Nil))))))
     }

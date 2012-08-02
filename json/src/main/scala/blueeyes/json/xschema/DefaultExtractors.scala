@@ -18,8 +18,7 @@ trait DefaultExtractors {
     def extract(jvalue: JValue): String = jvalue match {
       case JString(str) => str
       
-      case JInt(i) => i.toString
-      case JDouble(d) => d.toString
+      case JNum(i) => i.toString
       case JBool(b) => b.toString
       
       case _ => sys.error("Expected String but found: " + jvalue)
@@ -36,8 +35,8 @@ trait DefaultExtractors {
       case JString(s) if (s.toLowerCase == "1") => true
       case JString(s) if (s.toLowerCase == "0") => false
       
-      case JInt(i) if (i.intValue == 1) => true
-      case JInt(i) if (i.intValue == 0) => false
+      case JNum(i) if (i.intValue == 1) => true
+      case JNum(i) if (i.intValue == 0) => false
       
       case _ => sys.error("Expected Boolean but found: " + jvalue)
     }
@@ -45,9 +44,7 @@ trait DefaultExtractors {
   
   implicit val IntExtractor: Extractor[Int] = new Extractor[Int] {
     def extract(jvalue: JValue): Int = jvalue match {
-      case JInt(i)    => i.intValue
-      case JDouble(d) => d.toInt
-      
+      case JNum(i)    => i.intValue
       case JString(s) => s.toInt
       
       case _ => sys.error("Expected Integer but found: " + jvalue)
@@ -56,9 +53,7 @@ trait DefaultExtractors {
   
   implicit val LongExtractor: Extractor[Long] = new Extractor[Long] {
     def extract(jvalue: JValue): Long = jvalue match {
-      case JInt(i)    => i.longValue
-      case JDouble(d) => d.toLong
-      
+      case JNum(i)    => i.longValue
       case JString(s) => s.toLong
       
       case _ => sys.error("Expected Long but found: " + jvalue)
@@ -67,9 +62,7 @@ trait DefaultExtractors {
   
   implicit val FloatExtractor: Extractor[Float] = new Extractor[Float] {
     def extract(jvalue: JValue): Float = jvalue match {
-      case JInt(i)    => i.floatValue
-      case JDouble(d) => d.toFloat
-      
+      case JNum(i)    => i.floatValue
       case JString(s) => s.toFloat
       
       case _ => sys.error("Expected Float but found: " + jvalue)
@@ -78,9 +71,7 @@ trait DefaultExtractors {
 
   implicit val DoubleExtractor: Extractor[Double] = new Extractor[Double] {
     def extract(jvalue: JValue): Double = jvalue match {
-      case JInt(i)    => i.doubleValue
-      case JDouble(d) => d
-      
+      case JNum(i)    => i.doubleValue
       case JString(s) => s.toDouble
 
       case _ => sys.error("Expected Double but found: " + jvalue)
@@ -89,9 +80,7 @@ trait DefaultExtractors {
   
   implicit val BigDecimalExtractor: Extractor[BigDecimal] = new Extractor[BigDecimal] {
     def extract(jvalue: JValue): BigDecimal = jvalue match {
-      case JInt(i)    => BigDecimal(i)
-      case JDouble(d) => BigDecimal(d)
-      
+      case JNum(i)    => i
       case JString(s) => BigDecimal(s)
       
       case _ => sys.error("Expected BigDecimal but found: " + jvalue)

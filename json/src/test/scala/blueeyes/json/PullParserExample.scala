@@ -7,10 +7,10 @@ object PullParserExample extends Specification {
 
   "Pull parsing example" in {
     val parser = (p: Parser) => {
-      def parse: BigInt = p.nextToken match {
+      def parse: BigDecimal = p.nextToken match {
         case FieldStart("postalCode") => p.nextToken match {
-          case IntVal(code) => code
-          case _ => p.fail("expected int")
+          case NumVal(code) => code
+          case _ => p.fail("expected num")
         }
         case End => p.fail("no field named 'postalCode'")
         case _ => parse

@@ -21,27 +21,27 @@ trait DefaultDecomposers {
   }
   
   implicit val IntDecomposer: Decomposer[Int] = new Decomposer[Int] {
-    def decompose(tvalue: Int): JValue = JInt(BigInt(tvalue))
+    def decompose(tvalue: Int): JValue = JNum(tvalue)
   }
   
   implicit val LongDecomposer: Decomposer[Long] = new Decomposer[Long] {
-    def decompose(tvalue: Long): JValue = JInt(BigInt(tvalue))
+    def decompose(tvalue: Long): JValue = JNum(tvalue)
   }
   
   implicit val FloatDecomposer: Decomposer[Float] = new Decomposer[Float] {
-    def decompose(tvalue: Float): JValue = JDouble(tvalue.toDouble)
+    def decompose(tvalue: Float): JValue = JNum(tvalue)
   }
 
   implicit val DoubleDecomposer: Decomposer[Double] = new Decomposer[Double] {
-    def decompose(tvalue: Double): JValue = JDouble(tvalue)
+    def decompose(tvalue: Double): JValue = JNum(tvalue)
   }
   
   implicit val BigDecimalDecomposer: Decomposer[BigDecimal] = new Decomposer[BigDecimal] {
-    def decompose(tvalue: BigDecimal): JValue = JString(tvalue.toString)
+    def decompose(tvalue: BigDecimal): JValue = JNum(tvalue)
   }
   
   implicit val DateDecomposer: Decomposer[JDate] = new Decomposer[JDate] {
-    def decompose(date: JDate): JValue = JInt(date.getTime)
+    def decompose(date: JDate): JValue = JNum(date.getTime)
   }
   
   implicit def OptionDecomposer[T](implicit decomposer: Decomposer[T]): Decomposer[Option[T]] = new Decomposer[Option[T]] {
@@ -92,7 +92,7 @@ trait DefaultDecomposers {
   }
 
   implicit val DateTimeDecomposer = new Decomposer[DateTime] {
-    def decompose(dateTime: DateTime): JValue = JInt(dateTime.getMillis)
+    def decompose(dateTime: DateTime): JValue = JNum(dateTime.getMillis)
   }
 }
 

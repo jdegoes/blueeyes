@@ -173,8 +173,7 @@ object Xml {
       case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
       case JArray(xs) => xs flatMap { v => toXml(name, v) }
       case JField(n, v) => new XmlNode(name, toXml(n, v))
-      case JInt(x) => new XmlElem(name, x.toString)
-      case JDouble(x) => new XmlElem(name, x.toString)
+      case JNum(x) => new XmlElem(name, x.toString)
       case JString(x) => new XmlElem(name, x)
       case JBool(x) => new XmlElem(name, x.toString)
       case JNull => new XmlElem(name, "null")

@@ -10,7 +10,7 @@ private[metrics] trait TimedAverageStatReport extends AsyncStatistic[Long, Map[L
   def toJValue = details.map { details =>
     val buildDetails = details.toList.sortWith((e1, e2) => (e1._1 > e2._1))
     val safeInterval = if (intervalLengthInSeconds == 0) 1 else intervalLengthInSeconds
-    val perSecond    = buildDetails.map(kv => JDouble(kv._2 / safeInterval))
+    val perSecond    = buildDetails.map(kv => JNum(kv._2 / safeInterval))
     JObject(JField("perSecond", JObject(JField(config.toString, JArray(perSecond)) :: Nil)) :: Nil)
   }
 
@@ -35,7 +35,7 @@ object TimedAverageStat {
 }
 
 private[metrics] trait TimedCountStatReport extends AsyncStatistic[Long, Map[Long, Double]]{
-  def toJValue = details.map {details => JObject(JField(config.toString, JArray(details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JInt(kv._2.toLong)))) :: Nil) }
+  def toJValue = details.map {details => JObject(JField(config.toString, JArray(details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JNum(kv._2.toLong)))) :: Nil) }
 
   protected def config: IntervalConfig
 }
@@ -55,7 +55,7 @@ object TimedCountStat {
 }
 
 private[metrics] trait TimedErrorStatReport extends AsyncStatistic[Long, Map[Long, Double]]{
-  def toJValue = details map {details =>JObject(JField(config.toString, JArray(details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JInt(kv._2.toLong)))) :: Nil) }
+  def toJValue = details map {details =>JObject(JField(config.toString, JArray(details.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(kv => JNum(kv._2.toLong)))) :: Nil) }
 
   protected def config: IntervalConfig
 }
