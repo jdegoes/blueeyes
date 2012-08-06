@@ -9,14 +9,14 @@ import blueeyes.persistence.mongo._
 class PushFieldEvaluatorSpec  extends Specification{
   "create new Array for not existing field" in {
     val operation = ("foo" inc (MongoPrimitiveInt(2))).asInstanceOf[MongoUpdateField]
-    PushFieldEvaluator(JNothing, operation.filter) mustEqual(JArray(JInt(2) :: Nil))
+    PushFieldEvaluator(JNothing, operation.filter) mustEqual(JArray(JNum(2) :: Nil))
   }
   "add new element existing field" in {
     val operation = ("foo" inc (MongoPrimitiveInt(3))).asInstanceOf[MongoUpdateField]
-    PushFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: JInt(3) :: Nil))
+    PushFieldEvaluator(JArray(JNum(2) :: Nil), operation.filter) mustEqual(JArray(JNum(2) :: JNum(3) :: Nil))
   }
   "cannot push to not Array field" in {
     val operation = ("foo" inc (MongoPrimitiveInt(3))).asInstanceOf[MongoUpdateField]
-    PushFieldEvaluator(JInt(2), operation.filter) must throwA[MongoException]
+    PushFieldEvaluator(JNum(2), operation.filter) must throwA[MongoException]
   }
 }

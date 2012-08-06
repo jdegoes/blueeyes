@@ -76,7 +76,7 @@ class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits w
                 case x :: xs =>
                   val setValue = update.value.asInstanceOf[MongoPrimitiveInt].value
                   val value    = update.path.extract(x)
-                  value must_== JsonAST.JInt(setValue * sendCount * actorsCount)
+                  value must_== JsonAST.JNum(setValue * sendCount * actorsCount)
               }
             }
         }

@@ -115,10 +115,7 @@ private[mongo] object Evaluators{
     import Predef._
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
       case (JString(x1),  JString(x2)) => augmentString(x1) > augmentString(x2)
-      case (JInt(x1),     JInt(x2))    => x1 > x2
-      case (JDouble(x1),  JDouble(x2)) => x1 > x2
-      case (JDouble(x1),  JInt(x2))    => x1 > x2.doubleValue
-      case (JInt(x1),     JDouble(x2)) => x1.doubleValue > x2
+      case (JNum(x1),     JNum(x2))    => x1 > x2
       case (JBool(x1),    JBool(x2))   => x1 > x2
       case _ => false
     }
@@ -130,10 +127,7 @@ private[mongo] object Evaluators{
     import Predef._
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
       case (JString(x1),  JString(x2)) => augmentString(x1) < augmentString(x2)
-      case (JInt(x1),     JInt(x2))    => x1 < x2
-      case (JDouble(x1),  JDouble(x2)) => x1 < x2
-      case (JDouble(x1),  JInt(x2))    => x1 < x2.doubleValue
-      case (JInt(x1),     JDouble(x2)) => x1.doubleValue < x2
+      case (JNum(x1),     JNum(x2))    => x1 < x2
       case (JBool(x1),    JBool(x2))   => x1 < x2
       case _ => false
     }
@@ -157,8 +151,7 @@ private[mongo] object Evaluators{
   }
   case object ModFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
-      case (JInt(x1),     JArray(JInt(y1) :: JInt(y2) :: Nil))    => x1 % y1 == y2
-      case (JDouble(x1),  JArray(JInt(y1) :: JInt(y2) :: Nil))    => x1 % y1.toDouble == y2
+      case (JNum(x1),     JArray(JNum(y1) :: JNum(y2) :: Nil))    => x1 % y1 == y2
       case _ => false
     }
   }
@@ -170,7 +163,7 @@ private[mongo] object Evaluators{
   }
   case object SizeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = (v1, v2) match {
-      case (JArray(x1), JInt(x2)) => x1.size == x2
+      case (JArray(x1), JNum(x2)) => x1.size == x2
       case _ => false
     }
   }
@@ -197,15 +190,14 @@ private[mongo] object Evaluators{
 
   case object TypeFieldFilterEvaluator extends FieldFilterEvaluator{
     def apply(v1: JValue, v2: JValue) = v2 match {
-      case JInt(x) => (v1, x.intValue()) match{
+      case JNum(x) => (v1, x.intValue()) match{
         case (JString(_), 2)  => true
-        case (JDouble(_), 1)  => true
+        case (JNum(_), 1)  => true
         case (JObject(_), 3)  => true
         case (JArray(_),  4)  => true
         case (JBool(_),   8)  => true
         case (JNull,      10) => true
-        case (JInt(_),    18) => true
-        case (JInt(_),    1) => true
+        case (JNum(_),    18) => true
         case _ => false
       }
       case _ => false
@@ -215,13 +207,13 @@ private[mongo] object Evaluators{
   trait NearFilterEvaluatorBase extends FieldFilterEvaluator with GeoTools{
     def apply(v1: JValue, v2: JValue) = {
       def evaluate(x: Double, y: Double) = v2 match{
-        case JObject(JField(query, JArray(List(JDouble(nearX), JDouble(nearY)))) :: Nil) => true
-        case JObject(JField(query, JArray(List(JDouble(nearX), JDouble(nearY)))) :: JField("$maxDistance", JDouble(maxDistance)) :: Nil) => isNear(nearX, nearY, x, y, maxDistance)
+        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY)))) :: Nil) => true
+        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY)))) :: JField("$maxDistance", JNum(maxDistance)) :: Nil) => isNear(nearX.doubleValue, nearY.doubleValue, x.doubleValue, y.doubleValue, maxDistance.doubleValue)
         case _ => false
       }
       normalizeGeoField(v1) match {
-        case (JArray(JDouble(x) :: JDouble(y) :: xs))                        => evaluate(x, y)
-        case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
+        case (JArray(JNum(x) :: JNum(y) :: xs))                        => evaluate(x.doubleValue, y.doubleValue)
+        case (JObject(JField(_, JNum(x)) :: JField(_, JNum(y)) :: xs)) => evaluate(x.doubleValue, y.doubleValue)
         case _ => false
       }
     }
@@ -247,19 +239,19 @@ private[mongo] object Evaluators{
 
   case object WithinFilterEvaluator extends FieldFilterEvaluator with GeoTools{
     def apply(v1: JValue, v2: JValue) = {
-      def extractPoints(points: List[JValue]) = points.collect{case JArray(JDouble(x) :: JDouble(y) :: Nil) => (x, y)}
+      def extractPoints(points: List[JValue]) = points.collect{case JArray(JNum(x) :: JNum(y) :: Nil) => (x.doubleValue, y.doubleValue)}
       def evaluate(x: Double, y: Double) = v2 match{
-        case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JDouble(lowerLeftX) :: JDouble(lowerLeftY) :: Nil) :: JArray(JDouble(upperRightX) :: JDouble(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => x >= lowerLeftX && x <= upperRightX && y >= lowerLeftY && y <= upperRightY
-        case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radius) :: Nil)) :: Nil)) :: Nil) => distanceInMiles(centerX, centerY, x, y) <= radius
-        case JObject(JField("$within", JObject(JField("$centerSphere",  JArray(JArray(JDouble(centerX) :: JDouble(centerY) :: Nil) :: JDouble(radiusInRadians) :: Nil)) :: Nil)) :: Nil) =>
+        case JObject(JField("$within", JObject(JField("$box",     JArray(JArray(JNum(lowerLeftX) :: JNum(lowerLeftY) :: Nil) :: JArray(JNum(upperRightX) :: JNum(upperRightY) :: Nil) :: Nil)) :: Nil)) :: Nil) => x >= lowerLeftX && x <= upperRightX && y >= lowerLeftY && y <= upperRightY
+        case JObject(JField("$within", JObject(JField("$center",  JArray(JArray(JNum(centerX) :: JNum(centerY) :: Nil) :: JNum(radius) :: Nil)) :: Nil)) :: Nil) => distanceInMiles(centerX.doubleValue, centerY.doubleValue, x, y) <= radius
+        case JObject(JField("$within", JObject(JField("$centerSphere",  JArray(JArray(JNum(centerX) :: JNum(centerY) :: Nil) :: JNum(radiusInRadians) :: Nil)) :: Nil)) :: Nil) =>
           if (radiusInRadians > 0.492) throw new MongoException(13462, "Spherical distance would require wrapping, which isn't implemented yet")
-          distanceInMiles(centerX, centerY, x, y) <= (radiusInRadians * earthRadiusInMiles)
-        case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => inPolygon((x, y), extractPoints(points).toArray)
+          distanceInMiles(centerX.doubleValue, centerY.doubleValue, x, y) <= (radiusInRadians * earthRadiusInMiles)
+        case JObject(JField("$within", JObject(JField("$polygon", JArray(points)) :: Nil)) :: Nil) => inPolygon((x.doubleValue, y.doubleValue), extractPoints(points).toArray)
         case _ => false
       }
       normalizeGeoField(v1) match {
-        case (JArray(JDouble(x) :: JDouble(y) :: xs))                        => evaluate(x, y)
-        case (JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs)) => evaluate(x, y)
+        case (JArray(JNum(x) :: JNum(y) :: xs))                        => evaluate(x.doubleValue, y.doubleValue)
+        case (JObject(JField(_, JNum(x)) :: JField(_, JNum(y)) :: xs)) => evaluate(x.doubleValue, y.doubleValue)
         case _ => false
       }
     }
@@ -270,8 +262,7 @@ private[mongo] object Evaluators{
       case (e: JObject, JString(function)) =>
         RhinoScript(build(function, e))().map{_ match{
           case JBool(v)   => v
-          case JInt(v)    => v != 0
-          case JDouble(v) => v != 0
+          case JNum(v)    => v != 0
           case JString(v) => v.length != 0
           case JObject(v) => true
           case JArray(v)  => true
@@ -296,17 +287,7 @@ private[mongo] object Evaluators{
     }
   }
 
-  def normalizeGeoField(v: JValue) = v match{
-    case JArray(elements) => JArray(elements.map{element => element match {
-      case JInt(x) => JDouble(x.toDouble)
-      case _ => element
-    }})
-    case JObject(fields) => JObject(fields.map{field => field match{
-      case JField(name, JInt(x)) => JField(name, JDouble(x.toDouble))
-      case _ => field
-    }})
-    case _ => v
-  }
+  def normalizeGeoField(v: JValue) = v
 
   def inPolygon(point: (Double, Double), polygon: Array[(Double, Double)]): Boolean = {
     var oddNodes = false

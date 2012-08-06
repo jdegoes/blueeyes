@@ -17,22 +17,22 @@ class AddToSetFieldEvaluatorSpec  extends Specification{
   }
   "add new element to existing field" in {
     val operation = ("foo" addToSet (MongoPrimitiveInt(3), MongoPrimitiveInt(4))).asInstanceOf[MongoUpdateField]
-    AddToSetFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: JInt(3) :: JInt(4) :: Nil))
+    AddToSetFieldEvaluator(JArray(JNum(2) :: Nil), operation.filter) mustEqual(JArray(JNum(2) :: JNum(3) :: JNum(4) :: Nil))
   }
   "can add not array" in {
     val operation = ("foo" addToSet (MongoPrimitiveInt(3))).asInstanceOf[MongoUpdateField]
-    AddToSetFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: JInt(3) :: Nil))
+    AddToSetFieldEvaluator(JArray(JNum(2) :: Nil), operation.filter) mustEqual(JArray(JNum(2) :: JNum(3) :: Nil))
   }
   "add array with existing element" in {
     val operation = ("foo" addToSet (MongoPrimitiveInt(3), MongoPrimitiveInt(2))).asInstanceOf[MongoUpdateField]
-    AddToSetFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: JInt(3) :: Nil))
+    AddToSetFieldEvaluator(JArray(JNum(2) :: Nil), operation.filter) mustEqual(JArray(JNum(2) :: JNum(3) :: Nil))
   }
   "does not add existing element" in {
     val operation = ("foo" addToSet (MongoPrimitiveInt(2))).asInstanceOf[MongoUpdateField]
-    AddToSetFieldEvaluator(JArray(JInt(2) :: Nil), operation.filter) mustEqual(JArray(JInt(2) :: Nil))
+    AddToSetFieldEvaluator(JArray(JNum(2) :: Nil), operation.filter) mustEqual(JArray(JNum(2) :: Nil))
   }
   "cannot add to not Array field" in {
     val operation = ("foo" addToSet (MongoPrimitiveInt(3))).asInstanceOf[MongoUpdateField]
-    AddToSetFieldEvaluator(JInt(2), operation.filter) must throwA[MongoException]
+    AddToSetFieldEvaluator(JNum(2), operation.filter) must throwA[MongoException]
   }
 }

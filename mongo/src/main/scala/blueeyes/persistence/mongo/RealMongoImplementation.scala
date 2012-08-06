@@ -144,7 +144,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
     def toMongoIndexType(indexType: IndexType) = {
       indexType match{
-        case OrdinaryIndex   => JInt(1)
+        case OrdinaryIndex   => JNum(1)
         case GeospatialIndex => JString("2d")
       }
     }
@@ -218,9 +218,9 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   private def toMongoSort(sort: Option[MongoSort]): Option[DBObject] = sort.map(toMongoSort(_)) map { jvo2dbo(_) }
   private def toMongoSort2(sort: Option[MongoSort]): DBObject = jvo2dbo(sort.map(toMongoSort(_)).getOrElse(JObject(Nil)))
-  private def toMongoSort(sort: MongoSort) = JObject(JField(JPathExtension.toMongoField(sort.sortField), JInt(sort.sortOrder.order)) :: Nil)
+  private def toMongoSort(sort: MongoSort) = JObject(JField(JPathExtension.toMongoField(sort.sortField), JNum(sort.sortOrder.order)) :: Nil)
   private def toMongoKeys(selection : MongoSelection): JObject = toMongoKeys(selection.selection)
-  private def toMongoKeys(keysPaths: Iterable[JPath]): JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
+  private def toMongoKeys(keysPaths: Iterable[JPath]): JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JNum(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 
   private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v ||| {

@@ -45,7 +45,7 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
       (andFilter && (filter3 && filter4)).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter3.filter.asInstanceOf[JObject].fields ++ filter4.filter.asInstanceOf[JObject].fields))
     }
     "create valid json for AND filter with $eq filter" in {
-      (("foo" === 1) && ("foo" !== 2)).filter mustEqual(JObject(JField("foo", JInt(1)) :: JField("foo", JObject(JField("$ne", JInt(2)) :: Nil)) :: Nil))
+      (("foo" === 1) && ("foo" !== 2)).filter mustEqual(JObject(JField("foo", JNum(1)) :: JField("foo", JObject(JField("$ne", JNum(2)) :: Nil)) :: Nil))
     }
 
     "combine with filter3 to create a new filter" in {

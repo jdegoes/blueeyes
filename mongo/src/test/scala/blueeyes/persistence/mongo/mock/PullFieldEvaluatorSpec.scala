@@ -12,7 +12,7 @@ class PullFieldEvaluatorSpec  extends Specification{
 
   "pull element by simple filter" in {
     val operation = ("foo" pull ("" === 1)).asInstanceOf[MongoUpdateField]
-     PullFieldEvaluator(JsonParser.parse("[1, 2]"), operation.filter) mustEqual(JArray(JInt(2) :: Nil))
+     PullFieldEvaluator(JsonParser.parse("[1, 2]"), operation.filter) mustEqual(JArray(JNum(2) :: Nil))
   }
 
   "pull element by by complex filter " in {
@@ -25,6 +25,6 @@ class PullFieldEvaluatorSpec  extends Specification{
   }
   "cannot pull from not Array field" in {
     val operation = ("foo" pull ("" === 3)).asInstanceOf[MongoUpdateField]
-    PullFieldEvaluator(JInt(2), operation.filter) must throwA[MongoException]
+    PullFieldEvaluator(JNum(2), operation.filter) must throwA[MongoException]
   }
 }

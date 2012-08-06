@@ -13,16 +13,16 @@ class BijectionsMongoJsonSpec extends Specification {
       toJson("string", "foo") mustEqual (JString("foo"))
     }
     "convert int type" in {
-      toJson("int", 22) mustEqual (JInt(22))
+      toJson("int", 22) mustEqual (JNum(22))
     }
     "convert Double type" in {
-      toJson("Double", 22.2) mustEqual (JDouble(22.2))
+      toJson("Double", 22.2) mustEqual (JNum(22.2))
     }
     "convert Long type" in {
-      toJson("Double", 1261597307000l) mustEqual (JInt(1261597307000l))
+      toJson("Double", 1261597307000l) mustEqual (JNum(1261597307000l))
     }
     "convert Float type" in {
-      toJson("Float", 22F) mustEqual (JDouble(22))
+      toJson("Float", 22F) mustEqual (JNum(22))
     }
     "convert Boolean type" in {
       toJson("Boolean", true) mustEqual (JBool(true))
@@ -52,7 +52,7 @@ class BijectionsMongoJsonSpec extends Specification {
       val array = new BasicDBList()
       array.add(new java.lang.Integer(1))
       array.add("2")
-      toJson("array", array) mustEqual(JArray(List(JInt(1), JString("2"))))
+      toJson("array", array) mustEqual(JArray(List(JNum(1), JString("2"))))
     }
 //    "remove reserved mongo keys" in {
 //      val dbObject = new BasicDBObject()
@@ -67,13 +67,13 @@ class BijectionsMongoJsonSpec extends Specification {
       toMongo("string", JString("foo")) mustEqual ("foo")
     }
     "convert int type" in {
-      toMongo("int", JInt(22)) mustEqual (22)
+      toMongo("int", JNum(22)) mustEqual (22)
     }
     "convert Double type" in {
-      toMongo("Double", JDouble(22.2)) mustEqual (22.2)
+      toMongo("Double", JNum(22.2)) mustEqual (22.2)
     }
     "convert Long type" in {
-      toMongo("Long", JInt(1261597307000l)) mustEqual (1261597307000l)
+      toMongo("Long", JNum(1261597307000l)) mustEqual (1261597307000l)
     }
     "convert Boolean type" in {
       toMongo("Boolean", JBool(true)) mustEqual (java.lang.Boolean.TRUE)

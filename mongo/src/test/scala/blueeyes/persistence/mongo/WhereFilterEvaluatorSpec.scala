@@ -5,7 +5,7 @@ import blueeyes.json.JsonAST._
 import Evaluators._
 
 class WhereFilterEvaluatorSpec extends Specification{
-  private val jObject      = JObject(JField("address", JObject( JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject      = JObject(JField("address", JObject( JField("code", JNum(1)) :: Nil)) :: Nil)
 
   "WhereFilterEvaluator" should{
     "return true when script uses 'obj' and return true" in{

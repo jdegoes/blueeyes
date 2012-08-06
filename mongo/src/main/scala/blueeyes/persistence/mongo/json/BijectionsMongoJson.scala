@@ -18,10 +18,10 @@ import scalaz.std.AllInstances._
 
 object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
   override def extractString (value: String)                  = JString(value).success
-  override def extractInteger(value: java.lang.Integer)       = JInt(value.intValue).success
-  override def extractLong   (value: java.lang.Long)          = JInt(value.longValue).success
-  override def extractFloat  (value: java.lang.Float)         = JDouble(value.doubleValue).success
-  override def extractDouble (value: java.lang.Double)        = JDouble(value.doubleValue).success
+  override def extractInteger(value: java.lang.Integer)       = JNum(value.intValue).success
+  override def extractLong   (value: java.lang.Long)          = JNum(value.longValue).success
+  override def extractFloat  (value: java.lang.Float)         = JNum(value.floatValue).success
+  override def extractDouble (value: java.lang.Double)        = JNum(value.doubleValue).success
   override def extractBoolean(value: java.lang.Boolean)       = JBool(value).success
   override def extractDate   (value: java.util.Date)          = "Date type is not supported".fail.toValidationNel
   override def extractRegex  (value: java.util.regex.Pattern) = "Regex type is not supported".fail.toValidationNel
@@ -47,8 +47,7 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
     case JNull | JNothing => success(null)
     case JString(ObjectIdPattern(id)) => new ObjectId(Hex.decodeHex(id.toCharArray)).success
     case JString(x) => x.success
-    case JInt(x)    => x.longValue.success
-    case JDouble(x) => x.doubleValue.success
+    case JNum(x)    => x.doubleValue.success
     case JBool(x)   => x.success
     case JArray(x)  => x.map(toStorageValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, Any].map(_.asJava)
     case jobject @ JObject(_) => unapply(jobject)

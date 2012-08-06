@@ -253,8 +253,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
   private def filter(pathAndValue: (JPath, JValue)) = {
     pathAndValue._2 match{
-      case e: JInt    => filterForInt(pathAndValue._1, e)
-      case e: JDouble => filterForDouble(pathAndValue._1, e)
+      case e: JNum    => filterForNum(pathAndValue._1, e)
       case e: JBool   => filterForBoolean(pathAndValue._1, e)
       case e: JString => filterForString(pathAndValue._1, e)
       case e: JArray  => filterForArray(pathAndValue._1, e)
@@ -264,8 +263,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   }
   private def allFilters(pathAndValue: (JPath, JValue)): List[MongoFilter] = {
     removeUnclear(pathAndValue._2 match{
-      case e: JInt    => allFiltersForInt(pathAndValue._1, e)
-      case e: JDouble => allFiltersForDouble(pathAndValue._1, e)
+      case e: JNum    => allFiltersForNum(pathAndValue._1, e)
       case e: JBool   => allFiltersForBoolean(pathAndValue._1, e)
       case e: JString => allFiltersForString(pathAndValue._1, e)
       case e: JArray  => allFiltersForArray(pathAndValue._1, e)
@@ -280,16 +278,14 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
   }
 
   def filterForNull(path: JPath)                    = Gen.oneOf[MongoFilter](allFiltersForNull(path)).sample.get
-  def filterForInt(path: JPath, value: JInt)        = Gen.oneOf[MongoFilter](allFiltersForInt(path, value)).sample.get
+  def filterForNum(path: JPath, value: JNum)        = Gen.oneOf[MongoFilter](allFiltersForNum(path, value)).sample.get
   def filterForString(path: JPath, value: JString)  = Gen.oneOf[MongoFilter](allFiltersForString(path, value)).sample.get
   def filterForArray(path: JPath, value: JArray)    = Gen.oneOf[MongoFilter](allFiltersForArray(path, value)).sample.get
-  def filterForDouble(path: JPath, value: JDouble)  = Gen.oneOf[MongoFilter](allFiltersForDouble(path, value)).sample.get
   def filterForBoolean(path: JPath, value: JBool)   = Gen.oneOf[MongoFilter](allFiltersForBoolean(path, value)).sample.get
 
   def allFiltersForNull(path: JPath)                    = List[MongoFilter](path.hasType[JNull.type], path === JNull)
-  def allFiltersForInt(path: JPath, value: JInt)        = List[MongoFilter](path.hasType[JInt], path.isDefined, path !== JNull, path === value, path !== JInt(value.value - 1), path > JInt(value.value - 1), path >= JInt(value.value - 1), path < JInt(value.value + 1), path <= JInt(value.value + 1), path.anyOf(MongoPrimitiveInt(value.value.toInt)))
   def allFiltersForString(path: JPath, value: JString)  = List[MongoFilter](path.hasType[JString], path.isDefined, path !== JNull, path === value, path regex value.value, path !== JString(value.value + "a"), path.anyOf(MongoPrimitiveString(value.value)))
   def allFiltersForArray(path: JPath, value: JArray)    = List[MongoFilter](path.hasType[JArray], path.isDefined, path !== JNull, path === value, path !== JArray(JString("a") :: value.elements), path.hasSize(value.elements.length), path.contains[MongoPrimitive](value.elements.map(jvalueToMongoPrimitive): _*))
-  def allFiltersForDouble(path: JPath, value: JDouble)  = List[MongoFilter](path.hasType[JDouble], path.isDefined, path !== JNull, path === value, path !== JDouble(value.value - 10.02E301), path > JDouble(value.value - 10.02E301), path >= JDouble(value.value - 10.02E301), path < JDouble(value.value + 10.02E301), path <= JDouble(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value)))
+  def allFiltersForNum(path: JPath, value: JNum)        = List[MongoFilter](path.hasType[JNum], path.isDefined, path !== JNull, path === value, path !== JNum(value.value - 10.02E301), path > JNum(value.value - 10.02E301), path >= JNum(value.value - 10.02E301), path < JNum(value.value + 10.02E301), path <= JNum(value.value + 10.02E301), path.anyOf(MongoPrimitiveDouble(value.value.toDouble)))
   def allFiltersForBoolean(path: JPath, value: JBool)   = List[MongoFilter](path.hasType[JBool], path.isDefined, path !== JNull, path === value, path !== JBool(!value.value), path.anyOf(MongoPrimitiveBoolean(value.value)))
 }

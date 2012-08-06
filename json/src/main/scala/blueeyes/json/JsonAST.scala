@@ -777,6 +777,19 @@ object JsonAST {
     // SI-6173
     override val hashCode = 0
   }
+  case object JNum extends (BigDecimal => JNum) {
+    
+    // John says this is a good idea™.  I think he's crazy.  Discuss.
+    def apply(double: Double): JValue = fromDouble(double)
+    
+    def fromDouble(double: Double): JValue = {
+      try {
+        new JNum(BigDecimal(double))
+      } catch {
+        case _: NumberFormatException => JNothing
+      }
+    }
+  }
   case class JString(value: String) extends JValue {
     type Values = String
     type Self = JValue

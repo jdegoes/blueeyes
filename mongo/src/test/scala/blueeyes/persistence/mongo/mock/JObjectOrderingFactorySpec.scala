@@ -6,8 +6,8 @@ import blueeyes.json.JPath
 import blueeyes.json.JsonAST._
 
 class JObjectOrderingFactorySpec extends Specification{
-  private val nearFilter = MongoFieldFilter("foo", MongoFilterOperators.$near, JObject(List(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))))))
-  private val nearSphereFilter = MongoFieldFilter("foo", MongoFilterOperators.$nearSphere, JObject(List(JField("$nearSphere", JArray(List(JDouble(1.0), JDouble(2.0)))))))
+  private val nearFilter = MongoFieldFilter("foo", MongoFilterOperators.$near, JObject(List(JField("$near", JArray(List(JNum(1.0), JNum(2.0)))))))
+  private val nearSphereFilter = MongoFieldFilter("foo", MongoFilterOperators.$nearSphere, JObject(List(JField("$nearSphere", JArray(List(JNum(1.0), JNum(2.0)))))))
   "JObjectOrderingFactory" should{
     "creates JObjectOrdering when sort is defined" in{
       JObjectOrderingFactory(None, Some(JPath("foo") >> )) must beSome(JObjectOrdering("foo", 1))

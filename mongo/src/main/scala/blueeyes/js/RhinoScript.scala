@@ -8,10 +8,10 @@ trait RhinoJsonImplicits{
   trait CanConvertToJValue { def toJValue: JValue }
 
   implicit def string2JValue(v: String)             = new CanConvertToJValue { def toJValue: JString = JString(v) }
-  implicit def long2JValue(v: java.lang.Long)       = new CanConvertToJValue { def toJValue: JInt    = JInt(v.longValue) }
-  implicit def integer2JValue(v: java.lang.Integer) = new CanConvertToJValue { def toJValue: JInt    = JInt(v.intValue) }
-  implicit def double2JValue(v: java.lang.Double)   = new CanConvertToJValue { def toJValue: JDouble = JDouble(v.doubleValue) }
-  implicit def float2JValue(v: java.lang.Float)     = new CanConvertToJValue { def toJValue: JDouble = JDouble(v.floatValue.doubleValue) }
+  implicit def long2JValue(v: java.lang.Long)       = new CanConvertToJValue { def toJValue: JNum    = JNum(v.longValue) }
+  implicit def integer2JValue(v: java.lang.Integer) = new CanConvertToJValue { def toJValue: JNum    = JNum(v.intValue) }
+  implicit def double2JValue(v: java.lang.Double)   = new CanConvertToJValue { def toJValue: JValue = JNum.fromDouble(v.doubleValue) }
+  implicit def float2JValue(v: java.lang.Float)     = new CanConvertToJValue { def toJValue: JValue = JNum.fromDouble(v.floatValue.doubleValue) }
   implicit def boolean2JValue(v: java.lang.Boolean) = new CanConvertToJValue { def toJValue: JBool   = JBool(v.booleanValue) }
   implicit def arrayList2JValue[T](v: java.util.ArrayList[T]) = new CanConvertToJValue { def toJValue: JArray = JArray(v.map(anyRef2JValue).toList) }
   implicit def dbObject2JValue(v: Scriptable) = new CanConvertToJValue { def toJValue: JObject = scriptableObject2JObject(v) }

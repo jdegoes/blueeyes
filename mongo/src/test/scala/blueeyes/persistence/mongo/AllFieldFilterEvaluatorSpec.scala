@@ -6,9 +6,9 @@ import Evaluators._
 
 class AllFieldFilterEvaluatorSpec  extends Specification {
   "returns true when not all elemenets matched" in {
-    AllFieldFilterEvaluator(JArray(JInt(2) :: JInt(3) :: Nil ), JArray(JInt(1) :: JInt(2) :: JInt(3) :: Nil )) must be_==(true)
+    AllFieldFilterEvaluator(JArray(JNum(2) :: JNum(3) :: Nil ), JArray(JNum(1) :: JNum(2) :: JNum(3) :: Nil )) must be_==(true)
   }
   "returns false when all elemenets matched" in {
-    AllFieldFilterEvaluator(JArray(JInt(2) :: JInt(3) :: JInt(4) :: Nil ), JArray(JInt(1) :: JInt(2) :: JInt(3) :: Nil )) must be_==(false)
+    AllFieldFilterEvaluator(JArray(JNum(2) :: JNum(3) :: JNum(4) :: Nil ), JArray(JNum(1) :: JNum(2) :: JNum(3) :: Nil )) must be_==(false)
   }
 }

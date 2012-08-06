@@ -12,16 +12,16 @@ class GteFieldFilterEvaluatorSpec extends Specification {
     GteFieldFilterEvaluator(JString("a"), JString("b")) must be_==(false)
   }
   "returns true when one number greater then another number" in {
-    GteFieldFilterEvaluator(JInt(2), JInt(1)) must be_==(true)
+    GteFieldFilterEvaluator(JNum(2), JNum(1)) must be_==(true)
   }
   "returns false when one number less then another number" in {
-    GteFieldFilterEvaluator(JInt(1), JInt(2)) must be_==(false)
+    GteFieldFilterEvaluator(JNum(1), JNum(2)) must be_==(false)
   }
   "returns true when one double greater then another double" in {
-    GteFieldFilterEvaluator(JDouble(2.2), JDouble(1.1)) must be_==(true)
+    GteFieldFilterEvaluator(JNum(2.2), JNum(1.1)) must be_==(true)
   }
   "returns false when one double less then another double" in {
-    GteFieldFilterEvaluator(JDouble(1.1), JDouble(2.2)) must be_==(false)
+    GteFieldFilterEvaluator(JNum(1.1), JNum(2.2)) must be_==(false)
   }
   "returns true when one boolean greater then another boolean" in {
     GteFieldFilterEvaluator(JBool(true), JBool(false)) must be_==(true)
@@ -30,9 +30,9 @@ class GteFieldFilterEvaluatorSpec extends Specification {
     GteFieldFilterEvaluator(JBool(false), JBool(true)) must be_==(false)
   }
   "returns false when different object are compared" in {
-    GteFieldFilterEvaluator(JBool(false), JInt(1)) must be_==(false)
+    GteFieldFilterEvaluator(JBool(false), JNum(1)) must be_==(false)
   }
   "returns true when objecta are the same" in {
-    GteFieldFilterEvaluator(JInt(1), JInt(1)) must be_==(true)
+    GteFieldFilterEvaluator(JNum(1), JNum(1)) must be_==(true)
   }
 }
