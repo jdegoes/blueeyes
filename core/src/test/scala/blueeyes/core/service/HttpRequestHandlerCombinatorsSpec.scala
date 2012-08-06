@@ -58,7 +58,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
 
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")).
       toOption.get.map(_.content.map(ChunkToString)) must whenDelivered {
-        beSome("""jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});""")
+        beSome("""jsFunc("foo",{"headers":{},"status":{"code":"OK","reason":""}});""")
       }
     }
 
@@ -82,7 +82,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
       handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
         case Success(future) => future must whenDelivered {
           beSome {
-            """jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});"""
+            """jsFunc({"bar":123},{"headers":{},"status":{"code":"OK","reason":""}});"""
           }
         }
       }
@@ -105,7 +105,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
       handler.service(request).map(_.map(_.content.map(ChunkToString))) must {
         beLike {
           case Success(future) => future must whenDelivered {
-            beSome("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});""")
+            beSome("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":"OK","reason":""}});""")
           }
         }
       }
@@ -127,7 +127,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
 
       handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
         case Success(future) => future must whenDelivered {
-          beSome("""jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});""")
+          beSome("""jsFunc(undefined,{"headers":{},"status":{"code":"OK","reason":""}});""")
         }
       }
     }
@@ -148,7 +148,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
       handler.service(request).map(_.map(_.content.map(ChunkToString))) must beLike {
         case Success(future) => future must whenDelivered {
           beSome {
-            """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});"""
+            """jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":"OK","reason":""}});"""
           }
         }
       }
@@ -170,7 +170,7 @@ with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
       
       errorHandler.service(request) must beLike {
         case Success(future) => future must succeedWithContent {
-          (byteChunk: ByteChunk) => ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});"""
+          (byteChunk: ByteChunk) => ChunkToString(byteChunk) must_== """jsFunc("bang",{"headers":{},"status":{"code":"BadRequest","reason":"Funky request."}});"""
         }
       }
     }
