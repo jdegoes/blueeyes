@@ -88,7 +88,7 @@ object BlueEyesBuild extends Build {
 
   lazy val core  = Project(id = "core", base = file("core")).settings((nexusSettings ++ commonSettings ++ coreSettings): _*) dependsOn json
 
-  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings : _*) dependsOn (core, json % "test->test")
+  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings ++ commonSettings : _*) dependsOn (core, json % "test->test")
 
   //lazy val actor = Project(id = "actor", base = file("actor")).settings(nexusSettings : _*)
 }
