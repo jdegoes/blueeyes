@@ -779,7 +779,7 @@ object JsonAST {
   }
   case object JNum extends (BigDecimal => JNum) {
     
-    // John says this is a good idea™.  I think he's crazy.  Discuss.
+    // John's idea...
     def apply(double: Double): JValue = fromDouble(double)
     
     def fromDouble(double: Double): JValue = {
