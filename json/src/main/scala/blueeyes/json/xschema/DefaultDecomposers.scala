@@ -2,6 +2,7 @@ package blueeyes.json.xschema
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
+import java.math.MathContext
 import scala.math.BigDecimal
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -21,19 +22,19 @@ trait DefaultDecomposers {
   }
   
   implicit val IntDecomposer: Decomposer[Int] = new Decomposer[Int] {
-    def decompose(tvalue: Int): JValue = JNum(tvalue)
+    def decompose(tvalue: Int): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val LongDecomposer: Decomposer[Long] = new Decomposer[Long] {
-    def decompose(tvalue: Long): JValue = JNum(tvalue)
+    def decompose(tvalue: Long): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val FloatDecomposer: Decomposer[Float] = new Decomposer[Float] {
-    def decompose(tvalue: Float): JValue = JNum(tvalue)
+    def decompose(tvalue: Float): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
 
   implicit val DoubleDecomposer: Decomposer[Double] = new Decomposer[Double] {
-    def decompose(tvalue: Double): JValue = JNum(tvalue)
+    def decompose(tvalue: Double): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val BigDecimalDecomposer: Decomposer[BigDecimal] = new Decomposer[BigDecimal] {
@@ -41,7 +42,7 @@ trait DefaultDecomposers {
   }
   
   implicit val DateDecomposer: Decomposer[JDate] = new Decomposer[JDate] {
-    def decompose(date: JDate): JValue = JNum(date.getTime)
+    def decompose(date: JDate): JValue = JNum(BigDecimal(date.getTime, MathContext.UNLIMITED))
   }
   
   implicit def OptionDecomposer[T](implicit decomposer: Decomposer[T]): Decomposer[Option[T]] = new Decomposer[Option[T]] {
