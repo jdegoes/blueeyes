@@ -42,7 +42,7 @@ object Examples extends Specification {
     val uppercased = parse(person).transform { case JField(n, v) => JField(n.toUpperCase, v) }
     val rendered = compact(render(uppercased))
     rendered mustEqual
-      """{"PERSON":{"NAME":"Joe","AGE":35,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33}}}}"""
+      """{"PERSON":{"NAME":"Joe","AGE":35.0,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33.0}}}}"""
   }
 
   "Remove example" in {
@@ -105,13 +105,13 @@ object Examples extends Specification {
 
   "JSON building example" in {
     val json = concat(JField("name", JString("joe")), JField("age", JNum(34))) ++ concat(JField("name", JString("mazy")), JField("age", JNum(31)))
-    compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
+    compact(render(json)) mustEqual """[{"name":"joe","age":34.0},{"name":"mazy","age":31.0}]"""
   }
 
   "JSON building with implicit primitive conversions example" in {
     import Implicits._
     val json = concat(JField("name", "joe"), JField("age", 34)) ++ concat(JField("name", "mazy"), JField("age", 31))
-    compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
+    compact(render(json)) mustEqual """[{"name":"joe","age":34.0},{"name":"mazy","age":31.0}]"""
   }
 
   "Example which collects all integers and forms a new JSON" in {
@@ -120,7 +120,7 @@ object Examples extends Specification {
       case x: JNum => a ++ x
       case _ => a
     }}
-    compact(render(ints)) mustEqual """[35,33]"""
+    compact(render(ints)) mustEqual """[35.0,33.0]"""
   }
 
   "Example which folds up to form a flattened list" in {
@@ -174,11 +174,11 @@ object Examples extends Specification {
 {
   "person": {
     "name": "Joe",
-    "age": 35,
+    "age": 35.0,
     "spouse": {
       "person": {
         "name": "Marilyn",
-        "age": 33
+        "age": 33.0
       }
     }
   }
@@ -207,11 +207,11 @@ object Examples extends Specification {
   "children": [
     {
       "name": "Mary",
-      "age": 5
+      "age": 5.0
     },
     {
       "name": "Mazy",
-      "age": 3
+      "age": 3.0
     }
   ]
 }

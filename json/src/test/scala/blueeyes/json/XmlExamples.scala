@@ -35,7 +35,7 @@ object XmlExamples extends Specification {
     val json = toJson(users1).transform {
       case JField("id", JString(s)) => JField("id", JNum(s.toInt))
     }
-    compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":1,"name":"Harry"},{"id":2,"name":"David","nickname":"Dave"}]}}"""
+    compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":1.0,"name":"Harry"},{"id":2.0,"name":"David","nickname":"Dave"}]}}"""
   }
 
   "Conversion transformation example 2" in {
@@ -43,7 +43,7 @@ object XmlExamples extends Specification {
       case JField("id", JString(s)) => JField("id", JNum(s.toInt))
       case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
     }
-    compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"}]}}"""
+    compact(render(json)) mustEqual """{"users":{"user":[{"id":1.0,"name":"Harry"}]}}"""
   }
 
   "Primitive array example" in {
@@ -63,15 +63,15 @@ object XmlExamples extends Specification {
 
     printer.format(xml(0)) mustEqual printer.format(
       <lotto>
-        <id>5</id>
-        <winning-numbers>2,45,34,23,7,5,3</winning-numbers>
+        <id>5.0</id>
+        <winning-numbers>2.0,45.0,34.0,23.0,7.0,5.0,3.0</winning-numbers>
         <winners>
-          <winner-id>23</winner-id>
-          <numbers>2,45,34,23,3,5</numbers>
+          <winner-id>23.0</winner-id>
+          <numbers>2.0,45.0,34.0,23.0,3.0,5.0</numbers>
         </winners>
         <winners>
-          <winner-id>54</winner-id>
-          <numbers>52,3,12,11,18,22</numbers>
+          <winner-id>54.0</winner-id>
+          <numbers>52.0,3.0,12.0,11.0,18.0,22.0</numbers>
         </winners>
       </lotto>)
   }
@@ -177,7 +177,7 @@ object XmlExamples extends Specification {
     </message>
 
 //  val expected1 = """{"message":{"expiry_date":"20091126","word":"ant","text":"text","self":"me","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
-  val expected1 = """{"message":{"expiry_date":"20091126","text":"text","self":"me","word":"ant","stats":{"count":0},"messages":{"href":"https://domain.com/message/ant"}}}"""
+  val expected1 = """{"message":{"expiry_date":"20091126","text":"text","self":"me","word":"ant","stats":{"count":0.0},"messages":{"href":"https://domain.com/message/ant"}}}"""
 
   val messageXml2 =
     <message expiry_date="20091126">
@@ -186,7 +186,7 @@ object XmlExamples extends Specification {
 
   val messageXml3 = <message expiry_date="20091126"><stats count="0"></stats></message>
 
-  val expected2 = """{"message":{"expiry_date":"20091126","stats":{"count":0}}}"""
+  val expected2 = """{"message":{"expiry_date":"20091126","stats":{"count":0.0}}}"""
 
   case class Winner(`winner-id`: Long, numbers: List[Int])
   case class Lotto(id: Long, `winning-numbers`: List[Int], winners: List[Winner],
