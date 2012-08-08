@@ -30,6 +30,10 @@ sealed trait JPath { self =>
   def \ (that: String): JPath = JPath(self.nodes :+ JPathField(that))
   def \ (that: Int):    JPath = JPath(self.nodes :+ JPathIndex(that))
 
+  def \: (that: JPath):  JPath = JPath(that.nodes ++ self.nodes)
+  def \: (that: String): JPath = JPath(JPathField(that) +: self.nodes)
+  def \: (that: Int):    JPath = JPath(JPathIndex(that) +: self.nodes)
+
   def hasPrefix(p: JPath): Boolean = nodes.startsWith(p.nodes)
 
   def dropPrefix(p: JPath): Option[JPath] = {
