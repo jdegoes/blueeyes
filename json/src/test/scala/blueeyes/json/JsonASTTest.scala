@@ -166,6 +166,17 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     runArbitraryPathSpec
   }
 
+  "sort arrays" in {
+    import scalaz.Order
+    import scalaz.Ordering._
+ 
+    val v1 = JsonParser.parse("""[1, 1, 1]""")
+    val v2 = JsonParser.parse("""[1, 1, 1]""")
+ 
+    Order[JValue].order(v1, v2) must_== EQ
+  }
+  
+
   def runArbitraryPathSpec = {
     import org.scalacheck.Prop._
 

@@ -674,31 +674,20 @@ object JsonAST {
       case JNothing    => -1
     }
 
-    import scalaz.Order
-
-    private val objectOrder: Order[JObject] = new Order[JObject] {
-      def order(o1: JObject, o2: JObject) = objectOrder0(o1.fields)(o2.fields)
+    private implicit lazy val jfieldOrder: Order[JField] = new Order[JField] {
+      def order(f1: JField, f2: JField) = (f1.name ?|? f2.name) |+| (f1.value ?|? f2.value)
     }
 
-    private val objectOrder0 = (o1: List[JField]) => (o2: List[JField]) => {
-      (o1.size ?|? o2.size) |+| 
-      (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
-        case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
-      }   
-    }   
+    lazy val objectOrder: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.sortBy(_.name))
+    private lazy val objectOrder0 = (Order[List[JField]].contramap((_: List[JField]).sortBy(_.name)).order _).curried
 
-    private val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
-    private val arrayOrder0 = (Order[List[JValue]].order _).curried
+    lazy val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+    private lazy val arrayOrder0 = (Order[List[JValue]].order _).curried
 
-    private val stringOrder0 = (Order[String].order _).curried
-    private val boolOrder0 = (Order[Boolean].order _).curried
-    private val numOrder0 = (Order[BigDecimal].order _).curried
-
-    implicit val order: Order[JValue] = new Order[JValue] {
-      import scalaz.std.anyVal._
-      import scalaz.Ordering
-      import scalaz.Ordering._
-      import scalaz.syntax.order._
+    implicit lazy val order: Order[JValue] = new Order[JValue] {
+      private val stringOrder0 = (Order[String].order _).curried
+      private val boolOrder0 = (Order[Boolean].order _).curried
+      private val numOrder0 = (Order[BigDecimal].order _).curried
 
       def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
         obj    = objectOrder0,
