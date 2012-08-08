@@ -16,17 +16,20 @@
 
 package blueeyes.json
 
-import scalaz.NonEmptyList
-import scalaz.Validation
+import scalaz._
+import scalaz.Ordering._
 import scalaz.Validation._
-import scalaz.ValidationNEL
-import scalaz.syntax.applicative._
-import scalaz.syntax.semigroup._
-import scalaz.syntax.order._
-import scalaz.Scalaz._
-import scalaz.std.string._
-import scalaz.std.math.bigInt._
 import scalaz.std.anyVal._
+import scalaz.std.list._
+import scalaz.std.math.bigInt._
+import scalaz.std.string._
+import scalaz.std.tuple._
+
+import scalaz.syntax.applicative._
+import scalaz.syntax.bifunctor._
+import scalaz.syntax.order._
+import scalaz.syntax.semigroup._
+
 import scala.annotation.tailrec
 
 object JsonAST {
@@ -672,36 +675,37 @@ object JsonAST {
     }
 
     import scalaz.Order
+
+    private val objectOrder: Order[JObject] = new Order[JObject] {
+      def order(o1: JObject, o2: JObject) = objectOrder0(o1.fields)(o2.fields)
+    }
+
+    private val objectOrder0 = (o1: List[JField]) => (o2: List[JField]) => {
+      (o1.size ?|? o2.size) |+| 
+      (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
+        case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
+      }   
+    }   
+
+    private val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+    private val arrayOrder0 = (Order[List[JValue]].order _).curried
+
+    private val stringOrder0 = (Order[String].order _).curried
+    private val boolOrder0 = (Order[Boolean].order _).curried
+    private val numOrder0 = (Order[BigDecimal].order _).curried
+
     implicit val order: Order[JValue] = new Order[JValue] {
       import scalaz.std.anyVal._
       import scalaz.Ordering
       import scalaz.Ordering._
       import scalaz.syntax.order._
 
-      private val objectOrder = (o1: List[JField]) => (o2: List[JField]) => {
-        (o1.size ?|? o2.size) |+| 
-        (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
-          case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
-        }   
-      }   
-
-      private val arrayOrder = (o1: List[JValue]) => (o2: List[JValue]) => {
-        (o1.length ?|? o2.length) |+| 
-        (o1 zip o2).foldLeft[Ordering](EQ) {
-          case (ord, (v1, v2)) => ord |+| (v1 ?|? v2) 
-        }   
-      }   
-
-      private val stringOrder = (Order[String].order _).curried
-      private val boolOrder = (Order[Boolean].order _).curried
-      private val numOrder = (Order[BigDecimal].order _).curried
-
       def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
-        obj    = objectOrder,
-        arr    = arrayOrder,
-        str    = stringOrder,
-        num    = numOrder,
-        bool   = boolOrder,
+        obj    = objectOrder0,
+        arr    = arrayOrder0,
+        str    = stringOrder0,
+        num    = numOrder0,
+        bool   = boolOrder0,
         nul    = EQ, nothing = EQ
       )
     } 
