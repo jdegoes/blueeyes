@@ -658,7 +658,7 @@ object JsonAST {
           case (JString(s1),  JString(s2)) => str(s1)(s2)
           case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
           case (JDouble(d1),  JDouble(d2)) => double(d1)(d2)
-          case (JInt(i1),     JInt(i2)) => int(11)(i2)
+          case (JInt(i1),     JInt(i2)) => int(i1)(i2)
           case (JNull,        JNull) => nul
           case (JNothing,     JNothing) => nul
           case _ => default
@@ -679,26 +679,27 @@ object JsonAST {
 
     import scalaz.Order
 
-    private val objectOrder: Order[JObject] = new Order[JObject] {
+    lazy val objectOrder: Order[JObject] = new Order[JObject] {
       def order(o1: JObject, o2: JObject) = objectOrder0(o1.fields)(o2.fields)
     }
 
-    private val objectOrder0 = (o1: List[JField]) => (o2: List[JField]) => {
+    private lazy val objectOrder0 = (o1: List[JField]) => (o2: List[JField]) => {
       (o1.size ?|? o2.size) |+| 
       (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
         case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
       }   
     }   
 
-    private val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
-    private val arrayOrder0 = (Order[List[JValue]].order _).curried
+    lazy val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
 
-    private val stringOrder0 = (Order[String].order _).curried
-    private val boolOrder0 = (Order[Boolean].order _).curried
-    private val doubleOrder0 = (Order[Double].order _).curried
-    private val intOrder0 = (Order[BigInt].order _).curried
+    private lazy val arrayOrder0 = (Order[List[JValue]].order _).curried
 
-    implicit val order: Order[JValue] = new Order[JValue] {
+    implicit lazy val order: Order[JValue] = new Order[JValue] {
+      private val stringOrder0 = (Order[String].order _).curried
+      private val boolOrder0 = (Order[Boolean].order _).curried
+      private val doubleOrder0 = (Order[Double].order _).curried
+      private val intOrder0 = (Order[BigInt].order _).curried
+
       def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
         obj    = objectOrder0,
         arr    = arrayOrder0,
