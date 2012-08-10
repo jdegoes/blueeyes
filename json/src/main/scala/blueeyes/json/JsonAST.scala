@@ -232,7 +232,7 @@ object JsonAST {
      */
     def insertAll(other: JValue): ValidationNEL[Throwable, JValue] = {
       other.flattenWithPath.foldLeft[ValidationNEL[Throwable, JValue]](success(self)) {
-        case (acc, (path, value)) => acc flatMap { (jv: JValue) => jv.insert(path, value).toValidationNel }
+        case (acc, (path, value)) => acc flatMap { (_: JValue).insert(path, value).toValidationNEL }
       }
     }
 

@@ -15,7 +15,7 @@ sealed trait NotServed {
 }
 
 case class DispatchError(exception: HttpException) extends NotServed {
-  override def or[A](result: => Validation[NotServed, A]) = this.fail[A]
+  override def or[A](result: => Validation[NotServed, A]) = this.failure[A]
 }
 
 object DispatchError {
@@ -25,7 +25,7 @@ object DispatchError {
 
 case class Inapplicable private[service] (services: AnyService*) extends NotServed {
   override def or[A](result: => Validation[NotServed, A]) = result match {
-    case Failure(Inapplicable(others @ _*)) => Inapplicable(services ++ others: _*).fail[A]
+    case Failure(Inapplicable(others @ _*)) => Inapplicable(services ++ others: _*).failure[A]
     case other => other
   }
 }
@@ -205,3 +205,5 @@ object Metadata {
     }
   }
 }
+
+//type ServiceMetadata //ctags help
