@@ -58,18 +58,18 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val specs2Version = "1.11"
+  val specs2Version = "1.12.1-SNAPSHOT"
 
   val commonSettings = Seq(
-    crossScalaVersions := Seq("2.9.1", "2.9.2"),
+    crossScalaVersions := Seq("2.9.2"),
 
     version := "0.6.1-SNAPSHOT",
 
     organization := "com.reportgrid",
 
     libraryDependencies ++= Seq(
-      "org.specs2"                  %  "specs2_2.9.1"       % specs2Version    % "test",
-      "org.scala-tools.testing"     %  "scalacheck_2.9.1"   % "1.9"            % "test"
+      "org.specs2"         %%  "specs2"       % specs2Version    % "test",
+      "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test"
     ),
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
@@ -82,7 +82,7 @@ object BlueEyesBuild extends Build {
   // Core exposes some specs2 helpers, so we need a "provided" scope
   val coreSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.specs2"                  %  "specs2_2.9.1"       % specs2Version    % "provided"
+      "org.specs2"         %%  "specs2"       % specs2Version    % "provided"
     )
   )
 

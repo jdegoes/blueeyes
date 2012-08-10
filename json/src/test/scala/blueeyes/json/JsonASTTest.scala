@@ -175,7 +175,6 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
  
     Order[JValue].order(v1, v2) must_== EQ
   }
-  
 
   def runArbitraryPathSpec = {
     import org.scalacheck.Prop._

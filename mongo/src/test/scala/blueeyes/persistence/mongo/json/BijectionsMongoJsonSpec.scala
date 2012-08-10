@@ -57,7 +57,7 @@ class BijectionsMongoJsonSpec extends Specification {
 //    "remove reserved mongo keys" in {
 //      val dbObject = new BasicDBObject()
 //      dbObject.put("_id", "4b7d91799790c34331062bc0")
-//      val jObject: JObject  = MongoToJson(dbObject) ||| { errors => sys.error(errors.list.mkString("; ")) }
+//      val jObject: JObject  = MongoToJson(dbObject) valueOr { errors => sys.error(errors.list.mkString("; ")) }
 //
 //      (jObject \ "_id") mustEqual (JNothing)
 //    }
@@ -117,13 +117,13 @@ class BijectionsMongoJsonSpec extends Specification {
   private def toJson[T](key: String, value: T) = {
     val dbObject = new BasicDBObject()
     dbObject.put(key, value)    
-    jValue(key, MongoToJson(dbObject) ||| { errors => sys.error(errors.list.mkString("; ")) })
+    jValue(key, MongoToJson(dbObject) valueOr { errors => sys.error(errors.list.mkString("; ")) })
   }
 
   private def toMongo(key: String, value: JValue) = toMongoObject(key, value).get(key)
 
   private implicit def toMongoObject(key: String, value: JValue): DBObject = {
-    MongoToJson.unapply(JObject(List(JField(key, value)))) ||| {
+    MongoToJson.unapply(JObject(List(JField(key, value)))) valueOr {
       errors => sys.error(errors.list.mkString("; "))
     }
   }
