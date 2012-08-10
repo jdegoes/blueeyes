@@ -22,7 +22,7 @@ trait MongoBijection[V, F, O <: V] extends PartialBijection[DBObject, O] {
   def extractRegex  (value: java.util.regex.Pattern): ValidationNEL[String, V]
   def extractBinary (value: Array[Byte]): ValidationNEL[String, V]
   def extractId     (value: ObjectId): ValidationNEL[String, V]
-  def extractOther  (value: Any) = ("No extractor configured for value of type " + value.getClass.getName).fail.toValidationNel
+  def extractOther  (value: Any) = ("No extractor configured for value of type " + value.getClass.getName).failure.toValidationNEL
   def buildNull: ValidationNEL[String, V]
 
   def buildArray  (values: Seq[V]): V

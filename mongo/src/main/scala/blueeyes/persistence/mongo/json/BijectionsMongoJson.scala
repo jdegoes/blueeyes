@@ -23,9 +23,9 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
   override def extractFloat  (value: java.lang.Float)         = JDouble(value.doubleValue).success
   override def extractDouble (value: java.lang.Double)        = JDouble(value.doubleValue).success
   override def extractBoolean(value: java.lang.Boolean)       = JBool(value).success
-  override def extractDate   (value: java.util.Date)          = "Date type is not supported".fail.toValidationNel
-  override def extractRegex  (value: java.util.regex.Pattern) = "Regex type is not supported".fail.toValidationNel
-  override def extractBinary (value: Array[Byte])             = "Binary type is not supported".fail.toValidationNel
+  override def extractDate   (value: java.util.Date)          = "Date type is not supported".failure.toValidationNEL
+  override def extractRegex  (value: java.util.regex.Pattern) = "Regex type is not supported".failure.toValidationNEL
+  override def extractBinary (value: Array[Byte])             = "Binary type is not supported".failure.toValidationNEL
   override def extractId     (value: ObjectId)                = JString("ObjectId(\"" + Hex.encodeHexString(value.toByteArray) + "\")").success
   override def buildNull                                      = JNull.success
 
