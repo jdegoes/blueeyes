@@ -82,6 +82,8 @@ trait DefaultDecomposers {
 
   implicit def ListDecomposer[T: Decomposer]: Decomposer[List[T]] = SeqDecomposer[T].contramap((_: List[T]).toSeq)
   
+  implicit def VectorDecomposer[T: Decomposer]: Decomposer[Vector[T]] = SeqDecomposer[T].contramap((_: Vector[T]).toSeq)
+  
   implicit def MapDecomposer[K, V](implicit keyDecomposer: Decomposer[K], valueDecomposer: Decomposer[V]): Decomposer[Map[K, V]] = new Decomposer[Map[K, V]] {
     def decompose(tvalue: Map[K, V]): JValue = SeqDecomposer(Tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
   }

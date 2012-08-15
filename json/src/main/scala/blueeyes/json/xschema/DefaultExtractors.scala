@@ -154,6 +154,14 @@ trait DefaultExtractors {
     }
   }
   
+  implicit def VectorExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Vector[T]] = new Extractor[Vector[T]] {
+    def extract(jvalue: JValue): Vector[T] = jvalue match {
+      case JArray(values) => values.map(elementExtractor.extract _)(collection.breakOut) : Vector[T]
+
+      case _ => sys.error("Expected Vector but found: " + jvalue)
+    }
+  }
+  
   implicit def MapExtractor[K, V](implicit keyExtractor: Extractor[K], valueExtractor: Extractor[V]): Extractor[Map[K, V]] = new Extractor[Map[K, V]] {
     def extract(jvalue: JValue): Map[K, V] = Map(ListExtractor(Tuple2Extractor(keyExtractor, valueExtractor)).extract(jvalue): _*)
   }
