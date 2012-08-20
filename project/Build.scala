@@ -58,7 +58,7 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val specs2Version = "1.12.1-SNAPSHOT"
+  val specs2Version = "1.12.1"
 
   val commonSettings = Seq(
     crossScalaVersions := Seq("2.9.2"),
