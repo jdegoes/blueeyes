@@ -12,5 +12,5 @@ class FutureMonad(context: ExecutionContext) extends Applicative[Future] with Mo
 }
 
 object AkkaTypeClasses {
-  implicit def futureApplicative(implicit context: ExecutionContext) = new FutureMonad
+  implicit def futureApplicative(implicit context: ExecutionContext) = new FutureMonad(context)
 }
