@@ -58,7 +58,7 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val specs2Version = "1.12.1"
+  val specs2Version = "1.12.2-SNAPSHOT"
 
   val commonSettings = Seq(
     crossScalaVersions := Seq("2.9.2"),
@@ -68,7 +68,7 @@ object BlueEyesBuild extends Build {
     organization := "com.reportgrid",
 
     libraryDependencies ++= Seq(
-      "org.specs2"         %%  "specs2"       % specs2Version    % "test",
+      "org.specs2"         %%  "specs2"       % specs2Version    % "test" changing(),
       "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test"
     ),
 
