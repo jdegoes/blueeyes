@@ -214,7 +214,10 @@ object HttpHeaders {
 
   case class Authorization(credentials: String) extends HttpHeaderRequest {
     def value = credentials
+
+    def basic = BasicAuthCredentialsParser.parse(credentials)
   }
+
   implicit case object Authorization extends HttpHeaderField[Authorization] {
     override def parse(s: String) = Some(apply(s))
     def unapply(t: (String, String)) = parse(t).map(_.credentials)
