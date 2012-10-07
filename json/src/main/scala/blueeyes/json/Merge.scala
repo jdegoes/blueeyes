@@ -32,7 +32,6 @@ object Merge {
   def merge(val1: JValue, val2: JValue): JValue = (val1, val2) match {
     case (JObject(xs), JObject(ys)) => JObject(mergeFields(xs, ys))
     case (JArray(xs), JArray(ys)) => JArray(mergeVals(xs, ys))
-    case (JField(n1, v1), JField(n2, v2)) if n1 == n2 => JField(n1, merge(v1, v2))
     case (f1: JField, f2: JField) => f2
     case (JNothing, x) => x
     case (x, JNothing) => x
@@ -43,7 +42,9 @@ object Merge {
     def mergeRec(xleft: List[JField], yleft: List[JField]): List[JField] = xleft match {
       case Nil => yleft
       case JField(xn, xv) :: xs => yleft find (_.name == xn) match {
-        case Some(y @ JField(yn, yv)) => JField(xn, merge(xv, yv)) :: mergeRec(xs, yleft.filterNot (_ == y))
+        case Some(y @ JField(yn, yv)) => 
+          JField(xn, merge(xv, yv)) :: mergeRec(xs, yleft.filterNot (_ == y))
+
         case None => JField(xn, xv) :: mergeRec(xs, yleft)
       }
     }

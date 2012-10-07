@@ -39,38 +39,23 @@ object Examples extends Specification {
   }
 
   "Transformation example" in {
-    val uppercased = parse(person).transform { case JField(n, v) => JField(n.toUpperCase, v) }
+    val uppercased = parse(person).transform(JField.liftCollect { case JField(n, v) => JField(n.toUpperCase, v) })
     val rendered = compact(render(uppercased))
     rendered mustEqual
       """{"PERSON":{"NAME":"Joe","AGE":35,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33}}}}"""
   }
 
   "Remove example" in {
-    val json = parse(person) remove { _ == JField("name", "Marilyn") }
+    val json = parse(person) remove { _ == JString("Marilyn") }
     compact(render(json \\ "name")) mustEqual "\"Joe\""
   }
 
-  "Queries on person example" in {
-    val json = parse(person)
-    val filtered = json filter {
-      case JField("name", _) => true
-      case _ => false
-    }
-    filtered mustEqual List(JField("name", JString("Joe")), JField("name", JString("Marilyn")))
-
-    val found = json find {
-      case JField("name", _) => true
-      case _ => false
-    }
-    found mustEqual Some(JField("name", JString("Joe")))
-  }
-
   "Object array example" in {
-    val json = parse(objArray)
+    val json = parse(objArray).asInstanceOf[JObject]
+
     compact(render(json \ "children" \ "name")) mustEqual """["Mary","Mazy"]"""
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"Mazy\""
-    (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
   "Unbox values using XPath-like type expression" in {
@@ -104,14 +89,12 @@ object Examples extends Specification {
   }
 
   "JSON building example" in {
-    val json = concat(JField("name", JString("joe")), JField("age", JInt(34))) ++ concat(JField("name", JString("mazy")), JField("age", JInt(31)))
-    compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
-  }
+    val json = concat(JObject(JField("name", JString("joe")) :: Nil), 
+                      JObject(JField("age", JInt(34)) :: Nil)) ++ 
+               concat(JObject(JField("name", JString("mazy")) :: Nil), 
+                      JObject(JField("age", JInt(31)) :: Nil))
 
-  "JSON building with implicit primitive conversions example" in {
-    import Implicits._
-    val json = concat(JField("name", "joe"), JField("age", 34)) ++ concat(JField("name", "mazy"), JField("age", 31))
-    compact(render(json)) mustEqual """[{"name":"joe","age":34},{"name":"mazy","age":31}]"""
+    compact(render(json)) mustEqual """[{"name":"joe"},{"age":34},{"name":"mazy"},{"age":31}]"""
   }
 
   "Example which collects all integers and forms a new JSON" in {
@@ -151,7 +134,7 @@ object Examples extends Specification {
   "Renders JSON as Scala code" in {
     val json = parse(lotto)
 
-    Printer.compact(renderScala(json)) mustEqual """JObject(JField("lotto",JObject(JField("lotto-id",JInt(5))::JField("winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil))::JField("winners",JArray(JObject(JField("winner-id",JInt(23))::JField("numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil))::Nil)::JObject(JField("winner-id",JInt(54))::JField("numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil))::Nil)::Nil))::Nil))::Nil)"""
+    Printer.compact(renderScala(json)) mustEqual """JObject("lotto",JObject("lotto-id",JInt(5)::"winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil)::"winners",JArray(JObject("winner-id",JInt(23)::"numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil)::Nil)::JObject("winner-id",JInt(54)::"numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil)::Nil)::Nil)::Nil)::Nil)"""
   }
 
   val lotto = """

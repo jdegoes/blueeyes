@@ -41,12 +41,7 @@ object Validator {
      * ValidationError as necessary.
      */
     def --> [A <: JValue](clazz: Class[A]): A = {
-      def extractTyped(value: JValue) = if (value.getClass == clazz) value.asInstanceOf[A] else failType(path, clazz, value.getClass)
-      
-      value match {
-        case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
-        case _ => extractTyped(value)
-      }
+      if (value.getClass == clazz) value.asInstanceOf[A] else failType(path, clazz, value.getClass)
     }
     
     /**
