@@ -80,7 +80,7 @@ object JsonParser {
       astParser(new Parser(buf))
     } catch {
       case e: ParseException => throw e
-      case e: Exception => throw new ParseException("parsing failed", e)
+      case e: Exception => throw e
     } finally { buf.release }
   }
   
@@ -151,33 +151,32 @@ object JsonParser {
 
     // This is a slightly faster way to correct order of fields and arrays than using 'map'.
     def reverse(v: JValue): JValue = v match {
-      case JObject(l) => JObject(l.map(reverse).asInstanceOf[List[JField]].reverse)
+      case JObject(l) => JObject(l.map(_.map(reverse)).asInstanceOf[List[JField]].reverse)
       case JArray(l) => JArray(l.map(reverse).reverse)
-      case JField(name, value) => JField(name, reverse(value))
       case x => x
     }
 
-    def closeBlock(v: JValue) {
+    def closeBlock(v: AnyRef) {
       vals.peekOption match {
         case Some(f: JField) =>
           val field = vals.pop(classOf[JField])
-          val newField = JField(field.name, v)
+          val newField = JField(field.name, v.asInstanceOf[JValue])
           val obj = vals.peek(classOf[JObject])
           vals.replace(JObject(newField :: obj.fields))
         case Some(o: JObject) => v match {
           case x: JField => vals.replace(JObject(x :: o.fields))
           case _ => p.fail("expected field but got " + v)
         }
-        case Some(a: JArray) => vals.replace(JArray(v :: a.elements))
+        case Some(a: JArray) => vals.replace(JArray(v.asInstanceOf[JValue] :: a.elements))
         case Some(x) => p.fail("expected field, array or object but got " + x)
-        case None => root = Some(reverse(v))
+        case None => root = Some(reverse(v.asInstanceOf[JValue]))
       }
     }
 
     def newValue(v: JValue) {
       if (vals.peekOption.isEmpty) root = Some(v)
       else {
-        vals.peek(classOf[JValue]) match {
+        vals.peekAny match {
           case f: JField =>
             vals.pop(classOf[JField])
             val newField = JField(f.name, v)
@@ -198,7 +197,7 @@ object JsonParser {
         case NumVal(x)        => newValue(JNum(x))
         case BoolVal(x)       => newValue(JBool(x))
         case NullVal          => newValue(JNull)
-        case CloseObj         => closeBlock(vals.pop(classOf[JValue]))
+        case CloseObj         => closeBlock(vals.popAny)
         case OpenArr          => vals.push(JArray(Nil))
         case CloseArr         => closeBlock(vals.pop(classOf[JArray]))
         case End              =>
@@ -210,14 +209,16 @@ object JsonParser {
 
   private class ValStack(parser: Parser) {
     import java.util.LinkedList
-    private[this] val stack = new LinkedList[JValue]()
+    private[this] val stack = new LinkedList[AnyRef]()
 
-    def pop[A <: JValue](expectedType: Class[A]) = convert(stack.poll, expectedType)
-    def push(v: JValue) = stack.addFirst(v)
-    def peek[A <: JValue](expectedType: Class[A]) = convert(stack.peek, expectedType)
-    def replace[A <: JValue](newTop: JValue) = stack.set(0, newTop)
+    def pop[A](expectedType: Class[A]) = convert(stack.poll, expectedType)
+    def popAny = stack.poll
+    def push(v: AnyRef) = stack.addFirst(v)
+    def peek[A](expectedType: Class[A]) = convert(stack.peek, expectedType)
+    def peekAny = stack.peek
+    def replace[A](newTop: AnyRef) = stack.set(0, newTop)
 
-    private def convert[A <: JValue](x: JValue, expectedType: Class[A]): A = {
+    private def convert[A](x: AnyRef, expectedType: Class[A]): A = {
       if (x == null) parser.fail("expected object or array")
       try { x.asInstanceOf[A] } catch { case _: ClassCastException => parser.fail("unexpected " + x) }
     }

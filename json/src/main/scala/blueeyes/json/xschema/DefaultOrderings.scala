@@ -145,18 +145,13 @@ trait DefaultOrderings {
         case JString(v2) => v1.compare(v2)
         case _ => -1
       }
-      case v1 @ JField(_, _) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) => 1
-        case v2 @ JField(_, _) => JFieldOrdering.compare(v1, v2)
-        case _ => -1
-      }
       case JObject(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) | JField(_, _) => 1
+        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) => 1
         case JObject(v2) => ListOrdering(JFieldOrdering).compare(v1, v2)
         case _ => -1
       }
       case JArray(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) | JField(_, _) | JObject(_) => 1
+        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) | JObject(_) => 1
         case JArray(v2) => ListOrdering(JValueOrdering).compare(v1, v2)
         case _ => -1
       }

@@ -32,6 +32,7 @@ case class Diff(changed: JValue, added: JValue, deleted: JValue) {
     }
     Diff(applyTo(changed), applyTo(added), applyTo(deleted))
   }
+  def merge(that: Diff) = Diff(changed merge that.changed, added merge that.added, deleted merge that.deleted)
 }
 
 /** Computes a diff between two JSONs.
@@ -50,25 +51,21 @@ object Diff {
     case (x, y) if x == y => Diff(JNothing, JNothing, JNothing)
     case (JObject(xs), JObject(ys)) => diffFields(xs, ys)
     case (JArray(xs), JArray(ys)) => diffVals(xs, ys)
-    case (JField(xn, xv), JField(yn, yv)) if (xn == yn) => diff(xv, yv) map (JField(xn, _))
-    case (x @ JField(xn, xv), y @ JField(yn, yv)) if (xn != yn) => Diff(JNothing, y, x)
     case (JNum(x), JNum(y)) if (x != y) => Diff(JNum(y), JNothing, JNothing)
     case (JString(x), JString(y)) if (x != y) => Diff(JString(y), JNothing, JNothing)
     case (JBool(x), JBool(y)) if (x != y) => Diff(JBool(y), JNothing, JNothing)
     case (x, y) => Diff(JNothing, y, x)
   }
 
-  private def diffFields(vs1: List[JField], vs2: List[JField]) = {
+  private def diffFields(vs1: List[JField], vs2: List[JField]): Diff = {
     def diffRec(xleft: List[JField], yleft: List[JField]): Diff = xleft match {
       case Nil => Diff(JNothing, if (yleft.isEmpty) JNothing else JObject(yleft), JNothing)
       case x :: xs => yleft find (_.name == x.name) match {
         case Some(y) =>
-          val Diff(c1, a1, d1) = diff(x, y)
-          val Diff(c2, a2, d2) = diffRec(xs, yleft.filterNot (_ == y))
-          Diff(c1 ++ c2, a1 ++ a2, d1 ++ d2) map {
-            case f: JField => JObject(f :: Nil)
-            case x => x
-          }
+          val diffedPair = diff(x.value, y.value) map (v => JObject(JField(x.name, v) :: Nil))
+
+          diffedPair merge (diffRec(xs, yleft.filterNot (_ == y)))
+
         case None =>
           val Diff(c, a, d) = diffRec(xs, yleft)
           Diff(c, a, JObject(x :: Nil) merge d)

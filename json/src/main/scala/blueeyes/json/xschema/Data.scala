@@ -796,7 +796,7 @@ case object XOrderIgnore extends blueeyes.json.xschema.XOrder
 trait Extractors {
   protected def extractField[T](jvalue: JValue, name: String, default: JValue, e: Extractor[T]): T = {
     try {
-      e.extract((jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default))
+      e.extract((jvalue \ name).getOrElse(default))
     }
     catch {
       case _ => e.extract(default)

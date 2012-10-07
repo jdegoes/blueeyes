@@ -42,8 +42,13 @@ trait ArbitraryJValue {
   def genField = for (name <- alphaStr; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
 
   def genJValueClass: Gen[Class[_ <: JValue]] = oneOf(
-    JNull.getClass.asInstanceOf[Class[JValue]], JNothing.getClass.asInstanceOf[Class[JValue]], classOf[JNum], 
-    classOf[JBool], classOf[JString], classOf[JField], classOf[JArray], classOf[JObject])
+    JNull.getClass.asInstanceOf[Class[JValue]], 
+    JNothing.getClass.asInstanceOf[Class[JValue]], 
+    classOf[JNum], 
+    classOf[JBool], 
+    classOf[JString], 
+    classOf[JArray], 
+    classOf[JObject])
 
   def listSize = choose(0, 5).sample.get
 

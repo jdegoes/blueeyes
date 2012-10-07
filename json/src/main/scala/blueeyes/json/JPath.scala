@@ -75,27 +75,12 @@ sealed trait JPath { self =>
   def tail: JPath = JPath(nodes.tail: _*)
 
   def expand(jvalue: JValue): List[JPath] = {
-    def isRegex(s: String) = s.startsWith("(") && s.endsWith(")")
-
     def expand0(current: List[JPathNode], right: List[JPathNode], d: JValue): List[JPath] = right match {
       case Nil => JPath(current) :: Nil
 
       case head :: tail => head match {
         case x @ JPathIndex(index) => expand0(current :+ x, tail, jvalue(index))
-        case x @ JPathField(name) if (isRegex(name)) => {
-          val regex = name.r
 
-          jvalue.children.flatMap { child =>
-            child match {
-              case JField(regex(name), value) =>
-                val expandedNode = JPathField(name)
-
-                expand0(current :+ expandedNode, tail, value)
-
-              case _ => Nil
-            }
-          }
-        }
         case x @ JPathField(name) => expand0(current :+ x, tail, jvalue \ name)
       }
     }
