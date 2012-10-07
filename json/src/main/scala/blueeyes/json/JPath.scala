@@ -2,8 +2,8 @@ package blueeyes.json
 
 import util.matching.Regex
 
-import xschema._
-import xschema.DefaultSerialization._
+import serialization._
+import serialization.DefaultSerialization._
 import JsonAST._
 import scalaz.Order
 import scalaz.Ordering

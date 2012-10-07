@@ -1,4 +1,4 @@
-package blueeyes.json.xschema 
+package blueeyes.json.serialization 
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}

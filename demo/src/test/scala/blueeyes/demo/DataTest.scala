@@ -4,7 +4,7 @@ package blueeyes.demo {
   import blueeyes.json.JsonParser._
   import blueeyes.json.JsonAST._
   
-  import blueeyes.json.xschema.DefaultSerialization._
+  import blueeyes.json.serialization.DefaultSerialization._
   
   import blueeyes.demo.Serialization._
   import blueeyes.demo.Constants._

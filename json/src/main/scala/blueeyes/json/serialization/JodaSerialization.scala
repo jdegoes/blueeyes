@@ -1,5 +1,5 @@
 package blueeyes.json
-package xschema
+package serialization
 
 import JsonAST._
 import DefaultSerialization._

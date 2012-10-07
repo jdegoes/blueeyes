@@ -12,7 +12,7 @@ import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 import blueeyes.json.JsonAST._
 import blueeyes.json.Printer._
-import blueeyes.json.xschema.DefaultSerialization._
+import blueeyes.json.serialization.DefaultSerialization._
 
 import java.net.URLDecoder._
 
@@ -326,7 +326,7 @@ extends DelegatingService[Chunk[T], Future[HttpResponse[Chunk[T]]], Future[JValu
 object JsonpService extends AkkaDefaults {
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit toJson: T => Future[JValue]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
     import blueeyes.json.JsonParser.parse
-    import blueeyes.json.xschema.DefaultSerialization._
+    import blueeyes.json.serialization.DefaultSerialization._
     import Bijection._
 
     r.parameters.get('callback) match {
@@ -390,7 +390,7 @@ object JsonpService extends AkkaDefaults {
   }
 
   def jsonpChunkedResponse[T, U](r: HttpResponse[Chunk[U]], callback: Option[String])(implicit u2s: U => String, s2t: String => T): HttpResponse[Chunk[T]] = {
-    import blueeyes.json.xschema.DefaultSerialization._
+    import blueeyes.json.serialization.DefaultSerialization._
     import blueeyes.json.Printer._
     import Bijection._
 

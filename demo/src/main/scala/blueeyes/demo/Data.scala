@@ -2,7 +2,7 @@
 package blueeyes.demo {
   import blueeyes.json.JsonParser._
   import blueeyes.json.JsonAST._
-  import blueeyes.json.xschema.{SerializationImplicits, Extractor, Decomposer}
+  import blueeyes.json.serialization.{SerializationImplicits, Extractor, Decomposer}
   
   
   trait Orderings {
@@ -38,11 +38,11 @@ package blueeyes.demo {
     implicit val ContactExtractor: Extractor[blueeyes.demo.Contact] = new Extractor[blueeyes.demo.Contact] {
       override def extract(jvalue: JValue): blueeyes.demo.Contact = {
         Contact(
-          extractField[String](jvalue, "name", JString(""), blueeyes.json.xschema.DefaultExtractors.StringExtractor),
-          extractField[Option[String]](jvalue, "email", JString(""), blueeyes.json.xschema.DefaultExtractors.OptionExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor)),
-          extractField[Option[String]](jvalue, "country", JString(""), blueeyes.json.xschema.DefaultExtractors.OptionExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor)),
-          extractField[Option[String]](jvalue, "city", JString(""), blueeyes.json.xschema.DefaultExtractors.OptionExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor)),
-          extractField[Option[String]](jvalue, "address", JString(""), blueeyes.json.xschema.DefaultExtractors.OptionExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor))
+          extractField[String](jvalue, "name", JString(""), blueeyes.json.serialization.DefaultExtractors.StringExtractor),
+          extractField[Option[String]](jvalue, "email", JString(""), blueeyes.json.serialization.DefaultExtractors.OptionExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor)),
+          extractField[Option[String]](jvalue, "country", JString(""), blueeyes.json.serialization.DefaultExtractors.OptionExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor)),
+          extractField[Option[String]](jvalue, "city", JString(""), blueeyes.json.serialization.DefaultExtractors.OptionExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor)),
+          extractField[Option[String]](jvalue, "address", JString(""), blueeyes.json.serialization.DefaultExtractors.OptionExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor))
         )
       }
     }
@@ -53,11 +53,11 @@ package blueeyes.demo {
     implicit val ContactDecomposer: Decomposer[blueeyes.demo.Contact] = new Decomposer[blueeyes.demo.Contact] {
       def decompose(tvalue: blueeyes.demo.Contact): JValue = {
         JObject(
-          JField("name", blueeyes.json.xschema.DefaultDecomposers.StringDecomposer.decompose(tvalue.name)) ::
-          JField("email", blueeyes.json.xschema.DefaultDecomposers.OptionDecomposer(blueeyes.json.xschema.DefaultDecomposers.StringDecomposer).decompose(tvalue.email)) ::
-          JField("country", blueeyes.json.xschema.DefaultDecomposers.OptionDecomposer(blueeyes.json.xschema.DefaultDecomposers.StringDecomposer).decompose(tvalue.country)) ::
-          JField("city", blueeyes.json.xschema.DefaultDecomposers.OptionDecomposer(blueeyes.json.xschema.DefaultDecomposers.StringDecomposer).decompose(tvalue.city)) ::
-          JField("address", blueeyes.json.xschema.DefaultDecomposers.OptionDecomposer(blueeyes.json.xschema.DefaultDecomposers.StringDecomposer).decompose(tvalue.address)) :: Nil
+          JField("name", blueeyes.json.serialization.DefaultDecomposers.StringDecomposer.decompose(tvalue.name)) ::
+          JField("email", blueeyes.json.serialization.DefaultDecomposers.OptionDecomposer(blueeyes.json.serialization.DefaultDecomposers.StringDecomposer).decompose(tvalue.email)) ::
+          JField("country", blueeyes.json.serialization.DefaultDecomposers.OptionDecomposer(blueeyes.json.serialization.DefaultDecomposers.StringDecomposer).decompose(tvalue.country)) ::
+          JField("city", blueeyes.json.serialization.DefaultDecomposers.OptionDecomposer(blueeyes.json.serialization.DefaultDecomposers.StringDecomposer).decompose(tvalue.city)) ::
+          JField("address", blueeyes.json.serialization.DefaultDecomposers.OptionDecomposer(blueeyes.json.serialization.DefaultDecomposers.StringDecomposer).decompose(tvalue.address)) :: Nil
         )
       }
     }

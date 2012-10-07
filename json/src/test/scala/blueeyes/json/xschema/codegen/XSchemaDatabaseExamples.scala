@@ -1,4 +1,4 @@
-package blueeyes.json.xschema.codegen {
+package blueeyes.json.serialization.codegen {
 
 import _root_.org.specs2.mutable.Specification
 
@@ -7,9 +7,9 @@ import java.io.{Writer, PrintWriter}
 object XSchemaDatabaseExamples extends Specification {
   import _root_.blueeyes.json.JsonAST._
   import _root_.blueeyes.json.JsonParser._
-  import _root_.blueeyes.json.xschema._
-  import _root_.blueeyes.json.xschema.DefaultSerialization._
-  import _root_.blueeyes.json.xschema.SampleSchemas._
+  import _root_.blueeyes.json.serialization._
+  import _root_.blueeyes.json.serialization.DefaultSerialization._
+  import _root_.blueeyes.json.serialization.SampleSchemas._
   
   "Common primitive fields in products of a coproduct are identified" in {
     val db = XSchemaDatabase(DataSocialGenderSchema)

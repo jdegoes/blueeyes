@@ -32,7 +32,7 @@ import scala.annotation.tailrec
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
-  import blueeyes.json.xschema.DefaultOrderings.{JValueOrdering, JFieldOrdering}
+  import blueeyes.json.serialization.DefaultOrderings.{JValueOrdering, JFieldOrdering}
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>

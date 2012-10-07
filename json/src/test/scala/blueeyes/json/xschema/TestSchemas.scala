@@ -1,4 +1,4 @@
-package blueeyes.json.xschema {
+package blueeyes.json.serialization {
 
 import _root_.blueeyes.json.JsonAST._
 import _root_.blueeyes.json.JsonParser.{parse => j}
@@ -12,140 +12,140 @@ class BootstrapXSchema extends SchemaHelpers {
   def apply: XRoot = XRoot(
     List(
       XProduct(
-        "XRoot", "blueeyes.json.xschema",
+        "XRoot", "blueeyes.json.serialization",
         Map(),
         List(
-          XRealField("definitions", Map(), XList(XDefinitionRef("XDefinition", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending),
-          XRealField("constants",   Map(), XList(XDefinitionRef("XConstant", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("definitions", Map(), XList(XDefinitionRef("XDefinition", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending),
+          XRealField("constants",   Map(), XList(XDefinitionRef("XConstant", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending),
           XRealField("properties",  Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending)
         )
       ),
       XCoproduct(
-        "XSchema", "blueeyes.json.xschema",
+        "XSchema", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XDefinition", "blueeyes.json.xschema"),
-          XDefinitionRef("XReference",  "blueeyes.json.xschema"),
-          XDefinitionRef("XField",      "blueeyes.json.xschema"),
-          XDefinitionRef("XConstant",   "blueeyes.json.xschema")
+          XDefinitionRef("XDefinition", "blueeyes.json.serialization"),
+          XDefinitionRef("XReference",  "blueeyes.json.serialization"),
+          XDefinitionRef("XField",      "blueeyes.json.serialization"),
+          XDefinitionRef("XConstant",   "blueeyes.json.serialization")
         ),
         j("""{ "XString": {} } """)
       ),
       XCoproduct(
-        "XReference", "blueeyes.json.xschema",
+        "XReference", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XPrimitiveRef",  "blueeyes.json.xschema"),
-          XDefinitionRef("XContainerRef",  "blueeyes.json.xschema"),
-          XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema")
+          XDefinitionRef("XPrimitiveRef",  "blueeyes.json.serialization"),
+          XDefinitionRef("XContainerRef",  "blueeyes.json.serialization"),
+          XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization")
         ),
         j("""{ "XString": {} } """)
       ),
       XCoproduct(
-        "XPrimitiveRef", "blueeyes.json.xschema",
+        "XPrimitiveRef", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XBoolean", "blueeyes.json.xschema"),
-          XDefinitionRef("XInt",     "blueeyes.json.xschema"),
-          XDefinitionRef("XLong",    "blueeyes.json.xschema"),
-          XDefinitionRef("XFloat",   "blueeyes.json.xschema"),
-          XDefinitionRef("XDouble",  "blueeyes.json.xschema"),
-          XDefinitionRef("XString",  "blueeyes.json.xschema"),
-          XDefinitionRef("XJSON",    "blueeyes.json.xschema"),
-          XDefinitionRef("XDate",    "blueeyes.json.xschema")
+          XDefinitionRef("XBoolean", "blueeyes.json.serialization"),
+          XDefinitionRef("XInt",     "blueeyes.json.serialization"),
+          XDefinitionRef("XLong",    "blueeyes.json.serialization"),
+          XDefinitionRef("XFloat",   "blueeyes.json.serialization"),
+          XDefinitionRef("XDouble",  "blueeyes.json.serialization"),
+          XDefinitionRef("XString",  "blueeyes.json.serialization"),
+          XDefinitionRef("XJSON",    "blueeyes.json.serialization"),
+          XDefinitionRef("XDate",    "blueeyes.json.serialization")
         ),
         j("""{ "XString": {} } """)
       ),
       XCoproduct(
-        "XContainerRef", "blueeyes.json.xschema",
+        "XContainerRef", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XCollection", "blueeyes.json.xschema"),
-          XDefinitionRef("XMap",        "blueeyes.json.xschema"),
-          XDefinitionRef("XOptional",   "blueeyes.json.xschema"),
-          XDefinitionRef("XTuple",      "blueeyes.json.xschema")
+          XDefinitionRef("XCollection", "blueeyes.json.serialization"),
+          XDefinitionRef("XMap",        "blueeyes.json.serialization"),
+          XDefinitionRef("XOptional",   "blueeyes.json.serialization"),
+          XDefinitionRef("XTuple",      "blueeyes.json.serialization")
         ),
         j(""" { "XList": { "elementType": { "XString": {} } } } """)
       ),
       XProduct(
-        "XDefinitionRef", "blueeyes.json.xschema",
+        "XDefinitionRef", "blueeyes.json.serialization",
         Map(),
         List(
           XRealField("name", Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace", Map(), XString, JString(""), XOrderAscending)
         )
       ),
-      XProduct("XBoolean", "blueeyes.json.xschema", Map(), List()),
-      XProduct("XInt",     "blueeyes.json.xschema", Map(), List()),
-      XProduct("XLong",    "blueeyes.json.xschema", Map(), List()),
-      XProduct("XFloat",   "blueeyes.json.xschema", Map(), List()),
-      XProduct("XDouble",  "blueeyes.json.xschema", Map(), List()),
-      XProduct("XString",  "blueeyes.json.xschema", Map(), List()),
-      XProduct("XJSON",    "blueeyes.json.xschema", Map(), List()),
-      XProduct("XDate",    "blueeyes.json.xschema", Map(), List()),
+      XProduct("XBoolean", "blueeyes.json.serialization", Map(), List()),
+      XProduct("XInt",     "blueeyes.json.serialization", Map(), List()),
+      XProduct("XLong",    "blueeyes.json.serialization", Map(), List()),
+      XProduct("XFloat",   "blueeyes.json.serialization", Map(), List()),
+      XProduct("XDouble",  "blueeyes.json.serialization", Map(), List()),
+      XProduct("XString",  "blueeyes.json.serialization", Map(), List()),
+      XProduct("XJSON",    "blueeyes.json.serialization", Map(), List()),
+      XProduct("XDate",    "blueeyes.json.serialization", Map(), List()),
       XCoproduct(
-        "XCollection", "blueeyes.json.xschema",
+        "XCollection", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XList", "blueeyes.json.xschema"),
-          XDefinitionRef("XSet", "blueeyes.json.xschema"),
-          XDefinitionRef("XArray", "blueeyes.json.xschema")
+          XDefinitionRef("XList", "blueeyes.json.serialization"),
+          XDefinitionRef("XSet", "blueeyes.json.serialization"),
+          XDefinitionRef("XArray", "blueeyes.json.serialization")
         ),
         j(""" { "XList": { "elementType": { "XString": {} } } } """)
       ),
-      XProduct("XList", "blueeyes.json.xschema", Map(),
-        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
+      XProduct("XList", "blueeyes.json.serialization", Map(),
+        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
       ),
-      XProduct("XSet", "blueeyes.json.xschema", Map(),
-        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
+      XProduct("XSet", "blueeyes.json.serialization", Map(),
+        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
       ),
-      XProduct("XArray", "blueeyes.json.xschema", Map(),
-        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
+      XProduct("XArray", "blueeyes.json.serialization", Map(),
+        List(XRealField("elementType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
       ),
-      XProduct("XMap", "blueeyes.json.xschema", Map(),
+      XProduct("XMap", "blueeyes.json.serialization", Map(),
         List(
-          XRealField("keyType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending),
-          XRealField("valueType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending)
+          XRealField("keyType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending),
+          XRealField("valueType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending)
         )
       ),
-      XProduct("XOptional", "blueeyes.json.xschema", Map(),
-        List(XRealField("optionalType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
+      XProduct("XOptional", "blueeyes.json.serialization", Map(),
+        List(XRealField("optionalType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
       ),
-      XProduct("XTuple", "blueeyes.json.xschema", Map(),
-        List(XRealField("types", Map(), XList(XDefinitionRef("XReference", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending))
+      XProduct("XTuple", "blueeyes.json.serialization", Map(),
+        List(XRealField("types", Map(), XList(XDefinitionRef("XReference", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending))
       ),
       XCoproduct(
-        "XDefinition", "blueeyes.json.xschema",
+        "XDefinition", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XProduct", "blueeyes.json.xschema"),
-          XDefinitionRef("XMultitype", "blueeyes.json.xschema")
+          XDefinitionRef("XProduct", "blueeyes.json.serialization"),
+          XDefinitionRef("XMultitype", "blueeyes.json.serialization")
         ),
         j(""" { "XProduct": {} } """)
       ),
       XCoproduct(
-        "XMultitype", "blueeyes.json.xschema",
+        "XMultitype", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XCoproduct", "blueeyes.json.xschema"),
-          XDefinitionRef("XUnion", "blueeyes.json.xschema")
+          XDefinitionRef("XCoproduct", "blueeyes.json.serialization"),
+          XDefinitionRef("XUnion", "blueeyes.json.serialization")
         ),
         j(""" { "XCoproduct": {} } """)
       ),
       XCoproduct(
-        "XField", "blueeyes.json.xschema",
+        "XField", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XRealField", "blueeyes.json.xschema"),
-          XDefinitionRef("XViewField", "blueeyes.json.xschema"),
-          XDefinitionRef("XConstantField", "blueeyes.json.xschema")
+          XDefinitionRef("XRealField", "blueeyes.json.serialization"),
+          XDefinitionRef("XViewField", "blueeyes.json.serialization"),
+          XDefinitionRef("XConstantField", "blueeyes.json.serialization")
         ),
         j(""" { "XRealField": {} } """)
       ),
       XProduct(
-        "XProduct", "blueeyes.json.xschema",
+        "XProduct", "blueeyes.json.serialization",
         Map(
-          "scala.class.traits" -> string("blueeyes.json.xschema.XProductBehavior"),
+          "scala.class.traits" -> string("blueeyes.json.serialization.XProductBehavior"),
           "xschema.doc" -> string("""A product is analogous to a record: it contains fields, which may be
                               any type, have default values, and have a user-defined ordering.
                               Products are the fundamental building blocks used to construct most 
@@ -155,13 +155,13 @@ class BootstrapXSchema extends SchemaHelpers {
           XRealField("name",        Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace",   Map(), XString, JString(""), XOrderAscending),
           XRealField("properties",  Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("terms",       Map(), XList(XDefinitionRef("XField", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("terms",       Map(), XList(XDefinitionRef("XField", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending),
           
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema"))
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization"))
         )
       ),
       XProduct(
-        "XCoproduct", "blueeyes.json.xschema",
+        "XCoproduct", "blueeyes.json.serialization",
         Map(
           "xschema.doc" -> string("""A coproduct is a data structure that can assume one of N other types. 
                               These types must be either products, or other coproducts -- primitives
@@ -174,14 +174,14 @@ class BootstrapXSchema extends SchemaHelpers {
           XRealField("name",        Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace",   Map(), XString, JString(""), XOrderAscending),
           XRealField("properties",  Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("terms",       Map(), XList(XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("terms",       Map(), XList(XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending),
           XRealField("default",     Map(), XJSON, JNothing, XOrderAscending),
           
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema"))
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization"))
         )
       ),
       XProduct(
-        "XUnion", "blueeyes.json.xschema",
+        "XUnion", "blueeyes.json.serialization",
         Map(
           "xschema.doc" -> string("""A union is a C-style union of N types -- referred to as terms. Unlike 
                               coproducts, unions have no effect on the type hierarchy of the specified 
@@ -196,68 +196,68 @@ class BootstrapXSchema extends SchemaHelpers {
           XRealField("name",        Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace",   Map(), XString, JString(""), XOrderAscending),
           XRealField("properties",  Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("terms",       Map(), XList(XDefinitionRef("XReference", "blueeyes.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("terms",       Map(), XList(XDefinitionRef("XReference", "blueeyes.json.serialization")), j("""[]"""), XOrderAscending),
           XRealField("default",     Map(), XJSON, JNothing, XOrderAscending),
           
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema"))
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization"))
         )
       ),
       XProduct(
-        "XConstant", "blueeyes.json.xschema",
+        "XConstant", "blueeyes.json.serialization",
         Map(),
         List(
           XRealField("name",         Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace",    Map(), XString, JString(""), XOrderAscending),
           XRealField("properties",   Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("constantType", Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XString": {} }  """), XOrderAscending),
+          XRealField("constantType", Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XString": {} }  """), XOrderAscending),
           XRealField("default",      Map(), XJSON, JString(""), XOrderAscending),
           
-          XViewField("referenceTo",  Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.xschema"))
+          XViewField("referenceTo",  Map(), XDefinitionRef("XDefinitionRef", "blueeyes.json.serialization"))
         )
       ),
       XProduct(
-        "XRealField", "blueeyes.json.xschema",
+        "XRealField", "blueeyes.json.serialization",
         Map(),
         List(
           XRealField("name",       Map(), XString, JString(""), XOrderAscending),
           XRealField("properties", Map(), XMap(XString, XJSON), JArray(Nil), XOrderAscending),
-          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XString": {} }  """), XOrderAscending),
+          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XString": {} }  """), XOrderAscending),
           XRealField("default",    Map(), XJSON, JString(""), XOrderAscending),
-          XRealField("order",      Map(), XDefinitionRef("XOrder", "blueeyes.json.xschema"), j(""" { "XOrderAscending": {} } """), XOrderAscending)
+          XRealField("order",      Map(), XDefinitionRef("XOrder", "blueeyes.json.serialization"), j(""" { "XOrderAscending": {} } """), XOrderAscending)
         )
       ),
       XProduct(
-        "XViewField", "blueeyes.json.xschema",
+        "XViewField", "blueeyes.json.serialization",
         Map(),
         List(
           XRealField("name",       Map(), XString, JString(""), XOrderAscending),
           XRealField("properties", Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending)
+          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending)
         )
       ),
       XProduct(
-        "XConstantField", "blueeyes.json.xschema",
+        "XConstantField", "blueeyes.json.serialization",
         Map(),
         List(
           XRealField("name",       Map(), XString, JString(""), XOrderAscending),
           XRealField("properties", Map(), XMap(XString, XJSON), j("""[]"""), XOrderAscending),
-          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.xschema"), j(""" { "XString": {} }  """), XOrderAscending),
+          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "blueeyes.json.serialization"), j(""" { "XString": {} }  """), XOrderAscending),
           XRealField("default",    Map(), XJSON, JString(""), XOrderAscending)
         )
       ),
       XCoproduct(
-        "XOrder", "blueeyes.json.xschema",
+        "XOrder", "blueeyes.json.serialization",
         Map(),
         List(
-          XDefinitionRef("XOrderAscending",  "blueeyes.json.xschema"),
-          XDefinitionRef("XOrderDescending", "blueeyes.json.xschema"),
-          XDefinitionRef("XOrderIgnore",     "blueeyes.json.xschema")
+          XDefinitionRef("XOrderAscending",  "blueeyes.json.serialization"),
+          XDefinitionRef("XOrderDescending", "blueeyes.json.serialization"),
+          XDefinitionRef("XOrderIgnore",     "blueeyes.json.serialization")
         ),
         j(""" { "XOrderAscending": {} } """)
       ),
-      XProduct("XOrderAscending",  "blueeyes.json.xschema", Map(), List()),
-      XProduct("XOrderDescending", "blueeyes.json.xschema", Map(), List()),
-      XProduct("XOrderIgnore",     "blueeyes.json.xschema", Map(), List())
+      XProduct("XOrderAscending",  "blueeyes.json.serialization", Map(), List()),
+      XProduct("XOrderDescending", "blueeyes.json.serialization", Map(), List()),
+      XProduct("XOrderIgnore",     "blueeyes.json.serialization", Map(), List())
     ),
     Nil,
     Map(
@@ -350,7 +350,7 @@ object SampleSchemas extends SchemaHelpers {
       )
     ),
     Map(
-      "scala.imports" -> array("blueeyes.json.xschema.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}", "java.lang.reflect._")
+      "scala.imports" -> array("blueeyes.json.serialization.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}", "java.lang.reflect._")
     )
   )
   
@@ -435,7 +435,7 @@ object SampleSchemas extends SchemaHelpers {
     ),
     Nil,
     Map(
-      "scala.imports" -> array("blueeyes.json.xschema.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}", "java.lang.reflect._")
+      "scala.imports" -> array("blueeyes.json.serialization.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}", "java.lang.reflect._")
     )
   )
   
@@ -507,8 +507,8 @@ object SampleSchemas extends SchemaHelpers {
 package data.fringe {
   import blueeyes.json.JsonParser._
   import blueeyes.json.JsonAST._
-  import blueeyes.json.xschema.{SerializationImplicits, Extractor, Decomposer}
-  import blueeyes.json.xschema.DefaultOrderings._
+  import blueeyes.json.serialization.{SerializationImplicits, Extractor, Decomposer}
+  import blueeyes.json.serialization.DefaultOrderings._
   
   
   trait Orderings {
@@ -529,7 +529,7 @@ package data.fringe {
         import Stream.{cons, empty}
         
         return if (v1 == v2) 0 else {      
-          val comparisons = cons(blueeyes.json.xschema.DefaultOrderings.LongOrdering.compare(v1.value, v2.value) * 1, empty)
+          val comparisons = cons(blueeyes.json.serialization.DefaultOrderings.LongOrdering.compare(v1.value, v2.value) * 1, empty)
           
           comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
@@ -541,7 +541,7 @@ package data.fringe {
         if (v1 == v2) 0
         else v1 match {
           case x: String => v2 match {
-            case y: String => blueeyes.json.xschema.DefaultOrderings.StringOrdering.compare(x, y)
+            case y: String => blueeyes.json.serialization.DefaultOrderings.StringOrdering.compare(x, y)
             case y: data.fringe.ConstantWithRealField => -1
           }
           case x: data.fringe.ConstantWithRealField => v2 match {
@@ -557,7 +557,7 @@ package data.fringe {
         import Stream.{cons, empty}
         
         return if (v1 == v2) 0 else {      
-          val comparisons = cons(data.fringe.Orderings.UnionOfStringAndProductOrdering.compare(v1.value, v2.value) * 1, cons(blueeyes.json.xschema.DefaultOrderings.MapOrdering(blueeyes.json.xschema.DefaultOrderings.StringOrdering, blueeyes.json.xschema.DefaultOrderings.StringOrdering).compare(v1.stringMap, v2.stringMap) * 1, empty))
+          val comparisons = cons(data.fringe.Orderings.UnionOfStringAndProductOrdering.compare(v1.value, v2.value) * 1, cons(blueeyes.json.serialization.DefaultOrderings.MapOrdering(blueeyes.json.serialization.DefaultOrderings.StringOrdering, blueeyes.json.serialization.DefaultOrderings.StringOrdering).compare(v1.stringMap, v2.stringMap) * 1, empty))
           
           comparisons.dropWhile(_ == 0).append(0 :: Nil).head
         }
@@ -597,13 +597,13 @@ package data.fringe {
     implicit val ConstantWithRealFieldExtractor: Extractor[data.fringe.ConstantWithRealField] = new Extractor[data.fringe.ConstantWithRealField] {
       def extract(jvalue: JValue): data.fringe.ConstantWithRealField = {
         ConstantWithRealField(
-          extractField[Long](jvalue, "value", JInt(-1), blueeyes.json.xschema.DefaultExtractors.LongExtractor)
+          extractField[Long](jvalue, "value", JInt(-1), blueeyes.json.serialization.DefaultExtractors.LongExtractor)
         )
       }
     }
     
     lazy val UnionOfStringAndProductExtractorFunction: PartialFunction[JField, Any] = ({
-      case JField("String", value) => blueeyes.json.xschema.DefaultExtractors.StringExtractor.extract(value)
+      case JField("String", value) => blueeyes.json.serialization.DefaultExtractors.StringExtractor.extract(value)
       case JField("ConstantWithRealField", value) => data.fringe.Extractors.ConstantWithRealFieldExtractor.extract(value)
     }: PartialFunction[JField, Any])
     val UnionOfStringAndProductExtractor: Extractor[Any] = new Extractor[Any] {
@@ -629,7 +629,7 @@ package data.fringe {
       def extract(jvalue: JValue): data.fringe.ProductWithUnionField = {
         ProductWithUnionField(
           extractField[Any](jvalue, "value", JObject(JField("String",JString(""))::Nil), data.fringe.Extractors.UnionOfStringAndProductExtractor),
-          extractField[Map[String, String]](jvalue, "stringMap", JObject(JField("foo",JString("bar"))::Nil), blueeyes.json.xschema.DefaultExtractors.StringMapExtractor(blueeyes.json.xschema.DefaultExtractors.StringExtractor))
+          extractField[Map[String, String]](jvalue, "stringMap", JObject(JField("foo",JString("bar"))::Nil), blueeyes.json.serialization.DefaultExtractors.StringMapExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor))
         )
       }
     }
@@ -648,7 +648,7 @@ package data.fringe {
     implicit val ConstantWithRealFieldDecomposer: Decomposer[data.fringe.ConstantWithRealField] = new Decomposer[data.fringe.ConstantWithRealField] {
       def decompose(tvalue: data.fringe.ConstantWithRealField): JValue = {
         JObject(
-          JField("value", blueeyes.json.xschema.DefaultDecomposers.LongDecomposer.decompose(tvalue.value)) :: Nil
+          JField("value", blueeyes.json.serialization.DefaultDecomposers.LongDecomposer.decompose(tvalue.value)) :: Nil
         )
       }
     }
@@ -656,7 +656,7 @@ package data.fringe {
     val UnionOfStringAndProductDecomposer: Decomposer[Any] = new Decomposer[Any] {
       def decompose(tvalue: Any): JValue = {
         tvalue match {
-          case x: String => JObject(JField("String", blueeyes.json.xschema.DefaultDecomposers.StringDecomposer.decompose(x)) :: Nil)
+          case x: String => JObject(JField("String", blueeyes.json.serialization.DefaultDecomposers.StringDecomposer.decompose(x)) :: Nil)
           case x: data.fringe.ConstantWithRealField => JObject(JField("ConstantWithRealField", data.fringe.Decomposers.ConstantWithRealFieldDecomposer.decompose(x)) :: Nil)
         }
       }
@@ -666,7 +666,7 @@ package data.fringe {
       def decompose(tvalue: data.fringe.ProductWithUnionField): JValue = {
         JObject(
           JField("value", data.fringe.Decomposers.UnionOfStringAndProductDecomposer.decompose(tvalue.value)) ::
-          JField("stringMap", blueeyes.json.xschema.DefaultDecomposers.StringMapDecomposer(blueeyes.json.xschema.DefaultDecomposers.StringDecomposer).decompose(tvalue.stringMap)) :: Nil
+          JField("stringMap", blueeyes.json.serialization.DefaultDecomposers.StringMapDecomposer(blueeyes.json.serialization.DefaultDecomposers.StringDecomposer).decompose(tvalue.stringMap)) :: Nil
         )
       }
     }
@@ -680,7 +680,7 @@ package data.fringe {
   object Constants {
     import Serialization._
     
-    lazy val ConstantBool: Boolean = blueeyes.json.xschema.DefaultExtractors.BooleanExtractor.extract(JBool(true))
+    lazy val ConstantBool: Boolean = blueeyes.json.serialization.DefaultExtractors.BooleanExtractor.extract(JBool(true))
   }
 }// These tests were auto-generated by Lift Json XSchema - do not edit
 package data.fringe {
@@ -689,7 +689,7 @@ package data.fringe {
   import blueeyes.json.JsonParser._
   import blueeyes.json.JsonAST._
   
-  import blueeyes.json.xschema.DefaultSerialization._
+  import blueeyes.json.serialization.DefaultSerialization._
   
   import data.fringe.Serialization._
   import data.fringe.Constants._

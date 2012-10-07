@@ -2,7 +2,7 @@
   "definitions":[{
     "XProduct":{
       "name":"XRoot",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -17,7 +17,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XDefinition",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -40,7 +40,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XConstant",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -84,22 +84,22 @@
   },{
     "XCoproduct":{
       "name":"XSchema",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XDefinition",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XReference",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XField",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XConstant",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XString":{
@@ -110,19 +110,19 @@
   },{
     "XCoproduct":{
       "name":"XReference",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XPrimitiveRef",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XContainerRef",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XDefinitionRef",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XString":{
@@ -133,34 +133,34 @@
   },{
     "XCoproduct":{
       "name":"XPrimitiveRef",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XBoolean",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XInt",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XLong",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XFloat",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XDouble",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XString",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XJSON",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XDate",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XString":{
@@ -171,22 +171,22 @@
   },{
     "XCoproduct":{
       "name":"XContainerRef",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XCollection",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XMap",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XOptional",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XTuple",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XList":{
@@ -201,7 +201,7 @@
   },{
     "XProduct":{
       "name":"XDefinitionRef",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -246,7 +246,7 @@
   },{
     "XProduct":{
       "name":"XBoolean",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -255,7 +255,7 @@
   },{
     "XProduct":{
       "name":"XInt",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -264,7 +264,7 @@
   },{
     "XProduct":{
       "name":"XLong",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -273,7 +273,7 @@
   },{
     "XProduct":{
       "name":"XFloat",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -282,7 +282,7 @@
   },{
     "XProduct":{
       "name":"XDouble",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -291,7 +291,7 @@
   },{
     "XProduct":{
       "name":"XString",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -300,7 +300,7 @@
   },{
     "XProduct":{
       "name":"XJSON",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -309,7 +309,7 @@
   },{
     "XProduct":{
       "name":"XDate",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -318,19 +318,19 @@
   },{
     "XCoproduct":{
       "name":"XCollection",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XList",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XSet",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XArray",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XList":{
@@ -345,7 +345,7 @@
   },{
     "XProduct":{
       "name":"XList",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -358,7 +358,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -378,7 +378,7 @@
   },{
     "XProduct":{
       "name":"XSet",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -391,7 +391,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -411,7 +411,7 @@
   },{
     "XProduct":{
       "name":"XArray",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -424,7 +424,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -444,7 +444,7 @@
   },{
     "XProduct":{
       "name":"XMap",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -457,7 +457,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -481,7 +481,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -501,7 +501,7 @@
   },{
     "XProduct":{
       "name":"XOptional",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -514,7 +514,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -534,7 +534,7 @@
   },{
     "XProduct":{
       "name":"XTuple",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -549,7 +549,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XReference",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -566,16 +566,16 @@
   },{
     "XCoproduct":{
       "name":"XDefinition",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XProduct",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XMultitype",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XProduct":{
@@ -586,16 +586,16 @@
   },{
     "XCoproduct":{
       "name":"XMultitype",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XCoproduct",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XUnion",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XCoproduct":{
@@ -606,19 +606,19 @@
   },{
     "XCoproduct":{
       "name":"XField",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XRealField",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XViewField",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XConstantField",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XRealField":{
@@ -629,9 +629,9 @@
   },{
     "XProduct":{
       "name":"XProduct",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
-        "scala.class.traits":"blueeyes.json.xschema.XProductBehavior",
+        "scala.class.traits":"blueeyes.json.serialization.XProductBehavior",
         "xschema.doc":"A product is analogous to a record: it contains fields, which may be\n                              any type, have default values, and have a user-defined ordering.\n                              Products are the fundamental building blocks used to construct most \n                              data structures."
       },
       "terms":[{
@@ -708,7 +708,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XField",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -729,7 +729,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XDefinitionRef",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           }
         }
@@ -738,7 +738,7 @@
   },{
     "XProduct":{
       "name":"XCoproduct",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         "xschema.doc":"A coproduct is a data structure that can assume one of N other types. \n                              These types must be either products, or other coproducts -- primitives\n                              are not allowed because they cannot be mapped cleanly to most languages\n                              (see unions for a disjoint structure that allows primitives). <p>\n                              Note that most languages cannot handle coproducts of unions.\n                              "
       },
@@ -816,7 +816,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XDefinitionRef",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -854,7 +854,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XDefinitionRef",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           }
         }
@@ -863,7 +863,7 @@
   },{
     "XProduct":{
       "name":"XUnion",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         "xschema.doc":"A union is a C-style union of N types -- referred to as terms. Unlike \n                              coproducts, unions have no effect on the type hierarchy of the specified \n                              terms, and the terms may include primitive types, in addition to references\n                              to products, coproducts, and other unions. Although unions have names and \n                              namespaces, most languages do not have explicit support for union types, \n                              and in such cases, no entity will be generated for them; they will be \n                              translated into the supertype of all the terms. <p>Some code generators \n                              may not be able to handle unions or coproducts that contain unions."
       },
@@ -941,7 +941,7 @@
               "elementType":{
                 "XDefinitionRef":{
                   "name":"XReference",
-                  "namespace":"blueeyes.json.xschema"
+                  "namespace":"blueeyes.json.serialization"
                 }
               }
             }
@@ -979,7 +979,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XDefinitionRef",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           }
         }
@@ -988,7 +988,7 @@
   },{
     "XProduct":{
       "name":"XConstant",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1064,7 +1064,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -1105,7 +1105,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XDefinitionRef",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           }
         }
@@ -1114,7 +1114,7 @@
   },{
     "XProduct":{
       "name":"XRealField",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1172,7 +1172,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -1213,7 +1213,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XOrder",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -1232,7 +1232,7 @@
   },{
     "XProduct":{
       "name":"XViewField",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1290,7 +1290,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -1310,7 +1310,7 @@
   },{
     "XProduct":{
       "name":"XConstantField",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1368,7 +1368,7 @@
           "fieldType":{
             "XDefinitionRef":{
               "name":"XReference",
-              "namespace":"blueeyes.json.xschema"
+              "namespace":"blueeyes.json.serialization"
             }
           },
           "default":{
@@ -1405,19 +1405,19 @@
   },{
     "XCoproduct":{
       "name":"XOrder",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
       "terms":[{
         "name":"XOrderAscending",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XOrderDescending",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       },{
         "name":"XOrderIgnore",
-        "namespace":"blueeyes.json.xschema"
+        "namespace":"blueeyes.json.serialization"
       }],
       "default":{
         "XOrderAscending":{
@@ -1428,7 +1428,7 @@
   },{
     "XProduct":{
       "name":"XOrderAscending",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1437,7 +1437,7 @@
   },{
     "XProduct":{
       "name":"XOrderDescending",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
@@ -1446,7 +1446,7 @@
   },{
     "XProduct":{
       "name":"XOrderIgnore",
-      "namespace":"blueeyes.json.xschema",
+      "namespace":"blueeyes.json.serialization",
       "properties":{
         
       },
