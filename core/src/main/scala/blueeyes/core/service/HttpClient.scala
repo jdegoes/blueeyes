@@ -74,7 +74,7 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
       request.copy(content = request.content.map(transcoder.apply(_)), headers = request.headers + Tuple2("Content-Type", mimeType.value))
     } map {response =>
       val newC = response.content.map(transcoder.unapply(_))
-      response.copy(content = response.content.map(transcoder.unapply(_)))
+      response.copy(content = newC)
     }
   }
 
@@ -85,7 +85,7 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
       request.copy(content = request.content.map(transcoder.apply(_)))
     } map {response =>
       val newC = response.content.map(transcoder.unapply(_))
-      response.copy(content = response.content.map(transcoder.unapply(_)))
+      response.copy(content = newC)
     }
   }
 

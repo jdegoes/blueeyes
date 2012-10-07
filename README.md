@@ -761,6 +761,13 @@ BlueEyes provides support for both pillars:
 </tbody>
 </table>
 
+## Development
+
+To release
+
+- Login at oss.sonatype.org
+- Run the publish command for core, json, and mongo
+
 ## License
 
 Copyright (c) 2010-2011
