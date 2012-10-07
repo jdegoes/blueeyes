@@ -1,3 +1,9 @@
+# NOTE
+
+BlueEyes 1.0 development is currently underway in the master branch. If you wish to use the current stable version of BlueEyes, please use the 0.6x branch.
+
+While many features will be retained, BlueEyes 1.0 is not expected to be backward compatible -- some reworking will be required.
+
 # BlueEyes
 
 BlueEyes is a lightweight, asynchronous web framework for the Scala programming language. The framework lets you quickly and easily create high-performing web services that embrace the machinery and language of HTTP. The framework tries to get out of your way and let you concentrate on logic instead of boilerplate.
@@ -49,7 +55,7 @@ Library dependency:
 </dependency>
 ```
 
-### SBT 0.10
+### SBT 0.10+
 
 ```scala
 resolvers ++= Seq(
@@ -61,7 +67,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.reportgrid" % "blueeyes_2.9.1" % "0.4.24" % "compile"
+  "com.reportgrid" % "blueeyes_2.9.1" % "0.6" % "compile"
 )
 ```
 
