@@ -32,6 +32,7 @@ import scala.annotation.tailrec
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
+  import blueeyes.json.xschema.DefaultOrderings.{JValueOrdering, JFieldOrdering}
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
@@ -52,7 +53,9 @@ object JsonAST {
 
     def getOrElse(that: => JValue) = if (self == JNothing) that else self
 
-    def compare(that: JValue): Int = blueeyes.json.xschema.DefaultOrderings.JValueOrdering.compare(self, that)
+    def compare(that: JValue): Int = JValueOrdering.compare(self, that)
+
+    def sort: JValue
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
@@ -713,36 +716,48 @@ object JsonAST {
     type Self = JValue
 
     def values = None
+
+    def sort: JValue = this
   }
   case object JNull extends JValue {
     type Values = Null
     type Self = JValue
     
     def values = null
+
+    def sort: JValue = this
   }
   case class JBool(value: Boolean) extends JValue {
     type Values = Boolean
     type Self = JValue
     
     def values = value
+
+    def sort: JBool = this
   }
   case class JInt(value: BigInt) extends JValue {
     type Values = BigInt
     type Self = JValue
     
     def values = value
+
+    def sort: JInt = this
   }
   case class JDouble(value: Double) extends JValue {
     type Values = Double
     type Self = JValue
     
     def values = value
+
+    def sort: JDouble = this
   }
   case class JString(value: String) extends JValue {
     type Values = String
     type Self = JValue
     
     def values = value
+
+    def sort: JString = this
   }
   case class JField(name: String, value: JValue) {
     def map(f: JValue => JValue): JField = JField(name, f(value))
@@ -792,9 +807,12 @@ object JsonAST {
     def get(name: String): JValue = fields.find(_.name == name).map(_.value).getOrElse(JNothing)
     
     def values = Map() ++ fields.map(field => (field.name, field.value.values): (String, Any))
+
     def partition(f: JField => Boolean): (JObject, JObject) = {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
+
+    def sort: JObject = JObject(fields.map(_.map(_.sort)).sorted(JFieldOrdering))
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
 
@@ -814,6 +832,8 @@ object JsonAST {
     type Self = JArray
     
     def values = elements.map(_.values)
+
+    def sort: JArray = JArray(elements.map(_.sort).sorted(JValueOrdering))
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }

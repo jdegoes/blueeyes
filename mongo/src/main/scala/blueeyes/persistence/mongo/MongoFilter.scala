@@ -131,7 +131,7 @@ sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter 
 
   private def eqsQuery(queries: Seq[MongoFilter]) = {
     implicit val concatMonoid = ConcatMonoid
-    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue).asInstanceOf[JValue])
+    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JObject(JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue) :: Nil))
     (JObject(Nil) +: fields).toList.suml.asInstanceOf[JObject]
   }
 
@@ -215,7 +215,6 @@ trait MongoFilterImplicits {
     case x: JObject => MongoPrimitiveJObject(x)
     case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))
     case JNull | JNothing => MongoPrimitiveNull
-    case JField(_, _) => sys.error("Cannot convert JField to Mongo primitive")
   }
 
   implicit def optionToMongoPrimitive[T <% MongoPrimitive](value: Option[T]) = MongoPrimitiveOption(value.map(a => a : MongoPrimitive))
