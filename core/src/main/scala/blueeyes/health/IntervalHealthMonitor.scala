@@ -77,7 +77,7 @@ class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMo
         case eternity    => List(0l)
       }
 
-      JArray(errors.foldLeft(initial){(result, e) => result zip e map (v => v._1 + v._2)}.map(JInt(_)))
+      JArray(errors.foldLeft(initial){(result, e) => result zip e map (v => v._1 + v._2)}.map(JNum(_)))
     }
 
     errorsCount.map(count => errorsCountPath.map(jvalueToJObject(_, count)).getOrElse(JObject(Nil)))

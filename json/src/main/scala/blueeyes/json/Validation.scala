@@ -82,26 +82,13 @@ object Validator {
   def stringField(name: String, json: JPathValue) = (json \ name --> classOf[JString]).values
   
   /**
-   * Utility function to extract the specified field as a JInt or JDouble, then
-   * return the number as a double.
+   * Utility function to extract the specified field as a JNum, then
+   * return the number as a BigDecimal.
    */
   def numberField(name: String, json: JPathValue) = (json \ name).value match {
-    case JInt(i)    => i.doubleValue
-    case JDouble(d) => d
+    case JNum(d) => d
     case x @ _ => throw ValidationError("Expected ${path} to be number, but was: " + x, json ^ name)
   }
-  
-  /**
-   * Utility function to extract the specified field as a JInt, then return the
-   * integer as a BigInt.
-   */
-  def integerField(name: String, json: JPathValue) = (json \ name --> classOf[JInt]).values
-  
-  /**
-   * Utility function to extract the specified field as a JDouble, then return 
-   * the double as a Double.
-   */
-  def doubleField(name: String, json: JPathValue) = (json \ name --> classOf[JDouble]).values
   
   /**
    * Utility operator to convert a JValue into a validated JPathValue.

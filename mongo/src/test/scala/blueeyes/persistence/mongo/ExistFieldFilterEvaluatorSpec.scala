@@ -7,7 +7,7 @@ import Evaluators._
 class ExistFieldFilterEvaluatorSpec  extends Specification {
 
   "always returns true" in {
-    ExistsFieldFilterEvaluator(JArray(JInt(2) :: JInt(3) :: Nil ), JBool(true)) must be_==(true)
-    ExistsFieldFilterEvaluator(JInt(4), JBool(true)) must be_==(true)
+    ExistsFieldFilterEvaluator(JArray(JNum(2) :: JNum(3) :: Nil ), JBool(true)) must be_==(true)
+    ExistsFieldFilterEvaluator(JNum(4), JBool(true)) must be_==(true)
   }
 }

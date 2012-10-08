@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import blueeyes.json.JsonAST.JInt
+import blueeyes.json.JsonAST.JNum
 import org.specs2.mutable.Specification
 
 class CounterSpec extends Specification {
@@ -25,7 +25,7 @@ class CounterSpec extends Specification {
       val counter = new Counter(0)
       counter += 2
 
-      counter.toJValue mustEqual(JInt(2))
+      counter.toJValue mustEqual(JNum(2))
     }
   }
 

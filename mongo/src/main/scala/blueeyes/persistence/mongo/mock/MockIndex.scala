@@ -42,10 +42,10 @@ private[mock] trait MockIndex extends JObjectFields{
   private def checkGeospatialRange(newObjects: List[JObject], index: (Seq[(JPath, IndexType)], JObject)){
     def rangeValue(options: JObject, rangeName: String, defaultValue: Int): Int = options.fields.find{field =>
       field.name == rangeName && {field.value match{
-        case JInt(_) => true
+        case JNum(_) => true
         case _ => false
       }}
-    }.map(_.value.asInstanceOf[JInt].value.toInt).getOrElse(defaultValue)
+    }.map(_.value.asInstanceOf[JNum].value.toInt).getOrElse(defaultValue)
 
     val geospatialIndexes = index._1.filter(_._2 == GeospatialIndex)
     geospatialIndexes.foreach{geoIndex =>
@@ -54,12 +54,12 @@ private[mock] trait MockIndex extends JObjectFields{
       def checkRange(x: Double) = if (x <= min || x >= max) throw new MongoException("point not in range")
       newObjects.foreach{jObject =>
         Evaluators.normalizeGeoField(jObject.get(geoIndex._1)) match{
-          case JArray(JDouble(x) :: JDouble(y) :: xs)                         =>
-            checkRange(x)
-            checkRange(y)
-          case JObject(JField(_, JDouble(x)) :: JField(_, JDouble(y)) :: xs) =>
-            checkRange(x)
-            checkRange(y)
+          case JArray(JNum(x) :: JNum(y) :: xs)                         =>
+            checkRange(x.doubleValue)
+            checkRange(y.doubleValue)
+          case JObject(JField(_, JNum(x)) :: JField(_, JNum(y)) :: xs) =>
+            checkRange(x.doubleValue)
+            checkRange(y.doubleValue)
           case JArray(x :: Nil)            => throw new MongoException("geo field only has 1 element.")
           case JObject(JField(_, _):: Nil) => throw new MongoException("geo field only has 1 element.")
           case JArray(x :: y :: xs)        => throw new MongoException("geo values have to be numbers: { 0: %s, 1: %s }".format(x.toString, y.toString))

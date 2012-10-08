@@ -9,7 +9,7 @@ class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures 
       val timedSample = TimedAverageStat(eternity)
       fill(timedSample)
 
-      val histogramValue = JArray(List(JDouble(4)))
+      val histogramValue = JArray(List(JNum(4)))
       timedSample.toJValue must whenDelivered (be_==(JObject(JField("perSecond", JObject(JField(eternity.toString, histogramValue) :: Nil)) :: Nil)))
     }
   }

@@ -41,9 +41,9 @@ class Sample(val size: Int) extends SyncStatistic[Double, Option[Map[Long, Doubl
   }
 
   def toJValue = {
-    val histogramJValue: List[JField] = details.map(v => v.toList.map(kv => JField(kv._1.toString, JDouble(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
+    val histogramJValue: List[JField] = details.map(v => v.toList.map(kv => JField(kv._1.toString, JNum(kv._2)))).map(fs => JField("histogram", JObject(fs)) :: Nil).getOrElse(Nil)
 
-    JObject(JField("count", JInt(count)) :: histogramJValue)
+    JObject(JField("count", JNum(count)) :: histogramJValue)
   }
 
   private def writeLock[S](f: => S): S = {

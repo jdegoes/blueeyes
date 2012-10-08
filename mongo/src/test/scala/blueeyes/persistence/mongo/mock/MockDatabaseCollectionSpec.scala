@@ -12,9 +12,9 @@ import scalaz._
 import Scalaz._
 
 class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDefaults {
-  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JInt(40), JInt(40)))) :: Nil)
-  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JInt(50), JInt(50)))) :: Nil)
-  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JInt(60), JInt(60)))) :: Nil)
+  private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: JField("location", JArray(List(JNum(40), JNum(40)))) :: Nil)
+  private val jObject1 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: JField("location", JArray(List(JNum(50), JNum(50)))) :: Nil)
+  private val jObject2 = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("3")) ::  Nil)) :: JField("location", JArray(List(JNum(60), JNum(60)))) :: Nil)
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
   private val foo  = JsonParser.parse("""{ "id" : 2001, "x" : 1, "y" : 1 }""").asInstanceOf[JObject]
@@ -38,7 +38,7 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     val result = collection.mapReduce(map, reduce, None, None)
 
     val outputCollection = result.outputCollection.collection
-    outputCollection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(List(JField("count",JDouble(2.0)))) :: JObject(List(JField("count",JDouble(3.0)))) :: JObject(List(JField("count",JDouble(1.0)))) :: Nil)
+    outputCollection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(List(JField("count",JNum(2.0)))) :: JObject(List(JField("count",JNum(3.0)))) :: JObject(List(JField("count",JNum(1.0)))) :: Nil)
   }
 
   "group objects" in{
@@ -55,7 +55,7 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be_==(true)
 
     val withNaN = result.elements.filter(v => v.asInstanceOf[JObject].fields.head == JField("address.city", JString("C"))).head.asInstanceOf[JObject]
-    withNaN.fields.tail.head.value.asInstanceOf[JDouble].value.isNaN() must be_==(true)
+    withNaN.fields.tail.head.value must beLike { case JNothing => ok }
   }
 
   "store jobjects" in{
@@ -110,7 +110,7 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     val collection = newCollection
 
     collection.ensureIndex("index", List[Tuple2[JPath, IndexType]](Tuple2(JPath("location"), GeospatialIndex)), true, JObject(Nil))
-    collection.insert(JObject(List(JField("location", JArray(List(JInt(-181), JInt(40)))))) :: Nil)  must throwA[MongoException]
+    collection.insert(JObject(List(JField("location", JArray(List(JNum(-181), JNum(40)))))) :: Nil)  must throwA[MongoException]
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
   }
@@ -118,7 +118,7 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     val collection = newCollection
 
     collection.ensureIndex("index", List[Tuple2[JPath, IndexType]](Tuple2(JPath("location"), GeospatialIndex)), true, JObject(Nil))
-    collection.insert(JObject(List(JField("location", JArray(List(JInt(40)))))) :: Nil)  must throwA[MongoException]
+    collection.insert(JObject(List(JField("location", JArray(List(JNum(40)))))) :: Nil)  must throwA[MongoException]
 
     collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(Nil)
   }
@@ -369,14 +369,14 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
 
     collection.update(None, "foo".inc(1) , true, false)
 
-    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(JField("foo", JInt(1)) :: Nil) :: Nil)
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(JField("foo", JNum(1)) :: Nil) :: Nil)
   }
   "insert filter values by update field when upsert is true" in{
     val collection = newCollection
 
     collection.update(Some(("bar" === 1) & ("my.name" === "Michael")), "foo".inc(1) , true, false)
 
-    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(JField("foo", JInt(1)) :: JField("my", JObject(JField("name", JString("Michael")) :: Nil)) :: JField("bar", JInt(1)) :: Nil) :: Nil)
+    collection.select(MongoSelection(Set()), None, None, None, None, None, false).toList mustEqual(JObject(JField("foo", JNum(1)) :: JField("my", JObject(JField("name", JString("Michael")) :: Nil)) :: JField("bar", JNum(1)) :: Nil) :: Nil)
   }
   "does insert filter values by update object when upsert is true" in{
     val collection = newCollection
@@ -481,14 +481,14 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     val collection = newCollection
 
     collection.insert(jObject :: jObject3 :: Nil)
-    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))) :: Nil))), None, None, None, None, false).toList
+    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JNum(1.0), JNum(2.0)))) :: Nil))), None, None, None, None, false).toList
     select mustEqual(jObject :: Nil)
   }
   "select jobjects by filter with near filter and order result by distance" in{
     val collection = newCollection
 
     collection.insert(jObject2 :: jObject :: jObject1 :: Nil)
-    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JDouble(1.0), JDouble(2.0)))) :: Nil))), None, None, None, None, false).toList
+    val select = collection.select(MongoSelection(Set()), Some(MongoFieldFilter("location", $near, JObject(JField("$near", JArray(List(JNum(1.0), JNum(2.0)))) :: Nil))), None, None, None, None, false).toList
     select mustEqual(jObject :: jObject1 :: jObject2 :: Nil)
   }
   "select jobjects by filter with exists" in{

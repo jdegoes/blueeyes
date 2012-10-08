@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import java.util.concurrent.atomic.AtomicLong
-import blueeyes.json.JsonAST.JInt
+import blueeyes.json.JsonAST.JNum
 
 /**
  * A thread-safe counter which can go up or down from its initial value.
@@ -32,5 +32,5 @@ class Counter(initial: Long) extends SyncStatistic[Long, Long]{
 
   def details = count
 
-  def toJValue = JInt(count)
+  def toJValue = JNum(count)
 }

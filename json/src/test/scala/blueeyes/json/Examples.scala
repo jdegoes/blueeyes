@@ -42,7 +42,7 @@ object Examples extends Specification {
     val uppercased = parse(person).transform(JField.liftCollect { case JField(n, v) => JField(n.toUpperCase, v) })
     val rendered = compact(render(uppercased))
     rendered mustEqual
-      """{"PERSON":{"NAME":"Joe","AGE":35,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33}}}}"""
+      """{"PERSON":{"NAME":"Joe","AGE":35.0,"SPOUSE":{"PERSON":{"NAME":"Marilyn","AGE":33.0}}}}"""
   }
 
   "Remove example" in {
@@ -59,9 +59,9 @@ object Examples extends Specification {
   }
 
   "Unbox values using XPath-like type expression" in {
-    parse(objArray) \ "children" \\ classOf[JInt] mustEqual List(5, 3)
-    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
-    parse(lotto) \\ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    parse(objArray) \ "children" \\ classOf[JNum] mustEqual List(5, 3)
+    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JNum] mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    parse(lotto) \\ "winning-numbers" \ classOf[JNum] mustEqual List(2, 45, 34, 23, 7, 5, 3)
   }
 
   "Quoted example" in {
@@ -82,28 +82,28 @@ object Examples extends Specification {
   }
 
   "Exponent example" in {
-    parse("""{"num": 2e5 }""") mustEqual JObject(List(JField("num", JDouble(200000.0))))
-    parse("""{"num": -2E5 }""") mustEqual JObject(List(JField("num", JDouble(-200000.0))))
-    parse("""{"num": 2.5e5 }""") mustEqual JObject(List(JField("num", JDouble(250000.0))))
-    parse("""{"num": 2.5e-5 }""") mustEqual JObject(List(JField("num", JDouble(2.5e-5))))
+    parse("""{"num": 2e5 }""") mustEqual JObject(List(JField("num", JNum(200000.0))))
+    parse("""{"num": -2E5 }""") mustEqual JObject(List(JField("num", JNum(-200000.0))))
+    parse("""{"num": 2.5e5 }""") mustEqual JObject(List(JField("num", JNum(250000.0))))
+    parse("""{"num": 2.5e-5 }""") mustEqual JObject(List(JField("num", JNum(2.5e-5))))
   }
 
   "JSON building example" in {
     val json = concat(JObject(JField("name", JString("joe")) :: Nil), 
-                      JObject(JField("age", JInt(34)) :: Nil)) ++ 
+                      JObject(JField("age", JNum(34)) :: Nil)) ++ 
                concat(JObject(JField("name", JString("mazy")) :: Nil), 
-                      JObject(JField("age", JInt(31)) :: Nil))
+                      JObject(JField("age", JNum(31)) :: Nil))
 
-    compact(render(json)) mustEqual """[{"name":"joe"},{"age":34},{"name":"mazy"},{"age":31}]"""
+    compact(render(json)) mustEqual """[{"name":"joe"},{"age":34.0},{"name":"mazy"},{"age":31.0}]"""
   }
 
   "Example which collects all integers and forms a new JSON" in {
     val json = parse(person)
     val ints = json.foldDown(JNothing: JValue) { (a, v) => v match {
-      case x: JInt => a ++ x
+      case x: JNum => a ++ x
       case _ => a
     }}
-    compact(render(ints)) mustEqual """[35,33]"""
+    compact(render(ints)) mustEqual """[35.0,33.0]"""
   }
 
   "Example which folds up to form a flattened list" in {
@@ -134,7 +134,7 @@ object Examples extends Specification {
   "Renders JSON as Scala code" in {
     val json = parse(lotto)
 
-    Printer.compact(renderScala(json)) mustEqual """JObject("lotto",JObject("lotto-id",JInt(5)::"winning-numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(7)::JInt(5)::JInt(3)::Nil)::"winners",JArray(JObject("winner-id",JInt(23)::"numbers",JArray(JInt(2)::JInt(45)::JInt(34)::JInt(23)::JInt(3)::JInt(5)::Nil)::Nil)::JObject("winner-id",JInt(54)::"numbers",JArray(JInt(52)::JInt(3)::JInt(12)::JInt(11)::JInt(18)::JInt(22)::Nil)::Nil)::Nil)::Nil)::Nil)"""
+    Printer.compact(renderScala(json)) mustEqual """JObject("lotto",JObject("lotto-id",JNum(5)::"winning-numbers",JArray(JNum(2)::JNum(45)::JNum(34)::JNum(23)::JNum(7)::JNum(5)::JNum(3)::Nil)::"winners",JArray(JObject("winner-id",JNum(23)::"numbers",JArray(JNum(2)::JNum(45)::JNum(34)::JNum(23)::JNum(3)::JNum(5)::Nil)::Nil)::JObject("winner-id",JNum(54)::"numbers",JArray(JNum(52)::JNum(3)::JNum(12)::JNum(11)::JNum(18)::JNum(22)::Nil)::Nil)::Nil)::Nil)::Nil)"""
   }
 
   val lotto = """
@@ -157,11 +157,11 @@ object Examples extends Specification {
 {
   "person": {
     "name": "Joe",
-    "age": 35,
+    "age": 35.0,
     "spouse": {
       "person": {
         "name": "Marilyn",
-        "age": 33
+        "age": 33.0
       }
     }
   }
@@ -190,11 +190,11 @@ object Examples extends Specification {
   "children": [
     {
       "name": "Mary",
-      "age": 5
+      "age": 5.0
     },
     {
       "name": "Mazy",
-      "age": 3
+      "age": 3.0
     }
   ]
 }

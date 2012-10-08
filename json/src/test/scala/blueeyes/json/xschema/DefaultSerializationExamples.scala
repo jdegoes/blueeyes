@@ -34,18 +34,18 @@ object DefaultSerializationExamples extends Specification {
   }
   
   "Reals can be extracted from integers" in {
-    FloatExtractor(JInt(12)) mustEqual 12.0F
-    DoubleExtractor(JInt(12)) mustEqual 12.0
+    FloatExtractor(JNum(12)) mustEqual 12.0F
+    DoubleExtractor(JNum(12)) mustEqual 12.0
   }
   
   "Booleans can be extracted from integers" in {
-    BooleanExtractor(JInt(0)) mustEqual false
-    BooleanExtractor(JInt(1)) mustEqual true
+    BooleanExtractor(JNum(0)) mustEqual false
+    BooleanExtractor(JNum(1)) mustEqual true
   }
   
   "Integers can be extracted from reals" in {
-    IntExtractor(JDouble(12.0)) mustEqual 12
-    LongExtractor(JDouble(12.0)) mustEqual 12L
+    IntExtractor(JNum(12.0)) mustEqual 12
+    LongExtractor(JNum(12.0)) mustEqual 12L
   }
   
   "Map of String to something is decomposed to object" in {

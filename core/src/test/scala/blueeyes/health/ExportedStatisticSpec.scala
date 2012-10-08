@@ -1,7 +1,7 @@
 package blueeyes.health
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST.JInt
+import blueeyes.json.JsonAST.JNum
 
 class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{
   "ExportedStatistic: gets lazy value" in{
@@ -22,6 +22,6 @@ class ExportedStatisticSpec extends Specification with blueeyes.json.Implicits{
 
     value = 1
 
-    statistic.toJValue mustEqual (JInt(1))
+    statistic.toJValue mustEqual (JNum(1))
   }
 }

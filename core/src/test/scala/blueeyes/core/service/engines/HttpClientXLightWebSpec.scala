@@ -146,7 +146,7 @@ with AkkaDefaults with HttpRequestMatchers {
 
     "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
       val expected = "<html></html>"
-      httpClient.headers(`Content-Type`(text/html) :: `Content-Length`(100) :: Nil).post(uri)(expected) must whenDelivered {
+      httpClient.headers(`Content-Type`(MimeTypes.text/html) :: `Content-Length`(100) :: Nil).post(uri)(expected) must whenDelivered {
         beLike {
           case HttpResponse(status, _, Some(content), _) =>
             (status.code must_== HttpStatusCodes.OK) and

@@ -2,6 +2,7 @@ package blueeyes.json.serialization
 
 import blueeyes.json.JsonAST._
 import java.util.{Date => JDate}
+import java.math.MathContext
 import scala.math.BigDecimal
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -21,27 +22,27 @@ trait DefaultDecomposers {
   }
   
   implicit val IntDecomposer: Decomposer[Int] = new Decomposer[Int] {
-    def decompose(tvalue: Int): JValue = JInt(BigInt(tvalue))
+    def decompose(tvalue: Int): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val LongDecomposer: Decomposer[Long] = new Decomposer[Long] {
-    def decompose(tvalue: Long): JValue = JInt(BigInt(tvalue))
+    def decompose(tvalue: Long): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val FloatDecomposer: Decomposer[Float] = new Decomposer[Float] {
-    def decompose(tvalue: Float): JValue = JDouble(tvalue.toDouble)
+    def decompose(tvalue: Float): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
 
   implicit val DoubleDecomposer: Decomposer[Double] = new Decomposer[Double] {
-    def decompose(tvalue: Double): JValue = JDouble(tvalue)
+    def decompose(tvalue: Double): JValue = JNum(BigDecimal(tvalue, MathContext.UNLIMITED))
   }
   
   implicit val BigDecimalDecomposer: Decomposer[BigDecimal] = new Decomposer[BigDecimal] {
-    def decompose(tvalue: BigDecimal): JValue = JString(tvalue.toString)
+    def decompose(tvalue: BigDecimal): JValue = JNum(tvalue)
   }
   
   implicit val DateDecomposer: Decomposer[JDate] = new Decomposer[JDate] {
-    def decompose(date: JDate): JValue = JInt(date.getTime)
+    def decompose(date: JDate): JValue = JNum(BigDecimal(date.getTime, MathContext.UNLIMITED))
   }
   
   implicit def OptionDecomposer[T](implicit decomposer: Decomposer[T]): Decomposer[Option[T]] = new Decomposer[Option[T]] {
@@ -81,6 +82,8 @@ trait DefaultDecomposers {
 
   implicit def ListDecomposer[T: Decomposer]: Decomposer[List[T]] = SeqDecomposer[T].contramap((_: List[T]).toSeq)
   
+  implicit def VectorDecomposer[T: Decomposer]: Decomposer[Vector[T]] = SeqDecomposer[T].contramap((_: Vector[T]).toSeq)
+  
   implicit def MapDecomposer[K, V](implicit keyDecomposer: Decomposer[K], valueDecomposer: Decomposer[V]): Decomposer[Map[K, V]] = new Decomposer[Map[K, V]] {
     def decompose(tvalue: Map[K, V]): JValue = SeqDecomposer(Tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
   }
@@ -92,7 +95,7 @@ trait DefaultDecomposers {
   }
 
   implicit val DateTimeDecomposer = new Decomposer[DateTime] {
-    def decompose(dateTime: DateTime): JValue = JInt(dateTime.getMillis)
+    def decompose(dateTime: DateTime): JValue = JNum(dateTime.getMillis)
   }
 }
 

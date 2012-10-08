@@ -32,11 +32,11 @@ class MimeTypeSpec extends Specification{
   }
 
   "Accept-Type:  Should be able to create a new instance with \"text/html, video/quicktime, application/json\" " in {
-    HttpHeaders.Accept(text/html, video/quicktime, application/json).value mustEqual "text/html, video/quicktime, application/json"
+    HttpHeaders.Accept(MimeTypes.text/html, video/quicktime, application/json).value mustEqual "text/html, video/quicktime, application/json"
   }
 
   "Content-Type:  Should be able to create a new instance with text/html" in {
-    HttpHeaders.`Content-Type`(text/html).value mustEqual "text/html"
+    HttpHeaders.`Content-Type`(MimeTypes.text/html).value mustEqual "text/html"
   }
 
   "Content-Type:  Should be */* with anymaintype/anysubtype" in {

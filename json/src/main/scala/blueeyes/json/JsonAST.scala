@@ -16,17 +16,20 @@
 
 package blueeyes.json
 
-import scalaz.NonEmptyList
-import scalaz.Validation
+import scalaz._
+import scalaz.Ordering._
 import scalaz.Validation._
-import scalaz.ValidationNEL
-import scalaz.syntax.applicative._
-import scalaz.syntax.semigroup._
-import scalaz.syntax.order._
-import scalaz.Scalaz._
-import scalaz.std.string._
-import scalaz.std.math.bigInt._
 import scalaz.std.anyVal._
+import scalaz.std.list._
+import scalaz.std.math.bigInt._
+import scalaz.std.string._
+import scalaz.std.tuple._
+
+import scalaz.syntax.applicative._
+import scalaz.syntax.bifunctor._
+import scalaz.syntax.order._
+import scalaz.syntax.semigroup._
+
 import scala.annotation.tailrec
 
 object JsonAST {
@@ -205,7 +208,7 @@ object JsonAST {
      */
     def insertAll(other: JValue): ValidationNEL[Throwable, JValue] = {
       other.flattenWithPath.foldLeft[ValidationNEL[Throwable, JValue]](success(self)) {
-        case (acc, (path, value)) => acc flatMap { (jv: JValue) => jv.insert(path, value).toValidationNel }
+        case (acc, (path, value)) => acc flatMap { (_: JValue).insert(path, value).toValidationNEL }
       }
     }
 
@@ -239,6 +242,27 @@ object JsonAST {
           case JPathIndex(_) :: _ => JArray(Nil).set(path, value)
           case JPathField(_) :: _ => JObject(Nil).set(path, value)
         }
+      }
+    }
+
+    def delete(path: JPath): Option[JValue] = {
+      path.nodes match {
+        case JPathField(name) :: xs => this match {
+          case JObject(fields) => Some(
+            JObject(fields flatMap {
+              case JField(`name`, value) => value.delete(JPath(xs: _*)) map { v => JField(name, v) }
+              case unmodified => Some(unmodified)
+            })
+          )
+          case unmodified => Some(unmodified)
+        }
+
+        case JPathIndex(idx) :: xs => this match {
+          case JArray(elements) => Some(JArray(elements.zipWithIndex.flatMap { case (v, i) => if (i == idx) v.delete(JPath(xs: _*)) else Some(v) }))
+          case unmodified => Some(unmodified)
+        }
+
+        case Nil => None
       }
     }
 
@@ -600,8 +624,7 @@ object JsonAST {
         obj:    List[JField] => List[JField] => A,
         arr:    List[JValue] => List[JValue] => A,
         str:    String => String => A,
-        double: Double => Double => A,
-        int:    BigInt => BigInt => A,
+        num:    BigDecimal => BigDecimal => A,
         bool:   Boolean => Boolean => A,
         nul:    => A, nothing: => A) = {
         (jv1, jv2) match {
@@ -609,8 +632,7 @@ object JsonAST {
           case (JArray(a1) ,  JArray(a2))  => arr(a1)(a2)
           case (JString(s1),  JString(s2)) => str(s1)(s2)
           case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
-          case (JDouble(d1),  JDouble(d2)) => double(d1)(d2)
-          case (JInt(i1),     JInt(i2)) => int(11)(i2)
+          case (JNum(d1),     JNum(d2)) => num(d1)(d2)
           case (JNull,        JNull) => nul
           case (JNothing,     JNothing) => nul
           case _ => default
@@ -622,51 +644,36 @@ object JsonAST {
       case JObject(_)  => 7
       case JArray(_)   => 6
       case JString(_)  => 5
-      case JDouble(_)  => 4
-      case JInt(_)     => 2
+      case JNum(_)     => 4
       case JBool(_)    => 1
       case JNull       => 0
       case JNothing    => -1
     }
 
-    import scalaz.Order
-    implicit val order: Order[JValue] = new Order[JValue] {
-      import scalaz.std.anyVal._
-      import scalaz.Ordering
-      import scalaz.Ordering._
-      import scalaz.syntax.order._
+    private implicit lazy val jfieldOrder: Order[JField] = new Order[JField] {
+      def order(f1: JField, f2: JField) = (f1.name ?|? f2.name) |+| (f1.value ?|? f2.value)
+    }
 
-      private val objectOrder = (o1: List[JField]) => (o2: List[JField]) => {
-        (o1.size ?|? o2.size) |+| 
-        (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
-          case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
-        }   
-      }   
+    lazy val objectOrder: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.sortBy(_.name))
+    private lazy val objectOrder0 = (Order[List[JField]].contramap((_: List[JField]).sortBy(_.name)).order _).curried
 
-      private val arrayOrder = (o1: List[JValue]) => (o2: List[JValue]) => {
-        (o1.length ?|? o2.length) |+| 
-        (o1 zip o2).foldLeft[Ordering](EQ) {
-          case (ord, (v1, v2)) => ord |+| (v1 ?|? v2) 
-        }   
-      }   
+    lazy val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+    private lazy val arrayOrder0 = (Order[List[JValue]].order _).curried
 
-      private val stringOrder = (Order[String].order _).curried
-      private val boolOrder = (Order[Boolean].order _).curried
-      private val longOrder = (Order[Long].order _).curried
-      private val doubleOrder = (Order[Double].order _).curried
-      private val intOrder = (Order[BigInt].order _).curried
+    implicit lazy val order: Order[JValue] = new Order[JValue] {
+      private val stringOrder0 = (Order[String].order _).curried
+      private val boolOrder0 = (Order[Boolean].order _).curried
+      private val numOrder0 = (Order[BigDecimal].order _).curried
 
       def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
-        obj    = objectOrder,
-        arr    = arrayOrder,
-        str    = stringOrder,
-        double = doubleOrder,
-        int    = intOrder,
-        bool   = boolOrder,
+        obj    = objectOrder0,
+        arr    = arrayOrder0,
+        str    = stringOrder0,
+        num    = numOrder0,
+        bool   = boolOrder0,
         nul    = EQ, nothing = EQ
       )
     } 
-
 
     def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
       def rec(target: JValue, path: JPath, value: JValue): JValue = {
@@ -735,21 +742,28 @@ object JsonAST {
 
     def sort: JBool = this
   }
-  case class JInt(value: BigInt) extends JValue {
-    type Values = BigInt
+  case class JNum(value: BigDecimal) extends JValue {
+    type Values = BigDecimal
     type Self = JValue
     
     def values = value
+    
+    // SI-6173
+    override val hashCode = 0
 
-    def sort: JInt = this
+    def sort: JNum = this
   }
-  case class JDouble(value: Double) extends JValue {
-    type Values = Double
-    type Self = JValue
+  case object JNum extends (BigDecimal => JNum) {
+    // John's idea...
+    def apply(double: Double): JValue = fromDouble(double)
     
-    def values = value
-
-    def sort: JDouble = this
+    def fromDouble(double: Double): JValue = {
+      try {
+        new JNum(BigDecimal(double))
+      } catch {
+        case _: NumberFormatException => JNothing
+      }
+    }
   }
   case class JString(value: String) extends JValue {
     type Values = String
@@ -852,12 +866,12 @@ object Implicits extends Implicits
 trait Implicits {
   import JsonAST._
 
-  implicit def int2jvalue(x: Int) = JInt(x)
-  implicit def long2jvalue(x: Long) = JInt(x)
-  implicit def bigint2jvalue(x: BigInt) = JInt(x)
-  implicit def double2jvalue(x: Double) = JDouble(x)
-  implicit def float2jvalue(x: Float) = JDouble(x)
-  implicit def bigdecimal2jvalue(x: BigDecimal) = JDouble(x.doubleValue)
+  implicit def int2jvalue(x: Int) = JNum(x)
+  implicit def long2jvalue(x: Long) = JNum(x)
+  implicit def bigint2jvalue(x: BigInt) = JNum(BigDecimal(x))
+  implicit def double2jvalue(x: Double) = JNum(x)
+  implicit def float2jvalue(x: Float) = JNum(x)
+  implicit def bigdecimal2jvalue(x: BigDecimal) = JNum(x)
   implicit def boolean2jvalue(x: Boolean) = JBool(x)
   implicit def string2jvalue(x: String) = JString(x)
 }
@@ -933,8 +947,7 @@ trait Printer {
   def renderAll(value: JValue): Document = value match {
     case JBool(true)   => text("true")
     case JBool(false)  => text("false")
-    case JDouble(n)    => text(n.toString)
-    case JInt(n)       => text(n.toString)
+    case JNum(n)       => text(n.toString)
     case JNull         => text("null")
     case JNothing      => text("undefined")
     case JString(s)    => text("\"" + quote(s) + "\"")
@@ -971,8 +984,7 @@ trait Printer {
         case JNull | JNothing => sys.error("impossible")
 
         case JBool(value)  => text(value.toString)
-        case JDouble(n)    => text(n.toString)
-        case JInt(n)       => text(n.toString)
+        case JNum(n)       => text(n.toString)
         case JString(null) => text("null")
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))

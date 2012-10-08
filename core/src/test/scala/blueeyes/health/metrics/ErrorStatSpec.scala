@@ -29,6 +29,6 @@ class ErrorStatSpec extends Specification{
     stats += new NullPointerException()
     stats += new NullPointerException()
 
-    stats.toJValue mustEqual (JObject(JField("errorCount", JInt(2)) :: JField("errorDistribution", JObject(JField(classOf[NullPointerException].getName, JInt(2)) :: Nil)) :: Nil))
+    stats.toJValue mustEqual (JObject(JField("errorCount", JNum(2)) :: JField("errorDistribution", JObject(JField(classOf[NullPointerException].getName, JNum(2)) :: Nil)) :: Nil))
   }
 }

@@ -84,6 +84,10 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     check(reorderProp)
   }
 
+  "delete" in {
+    JsonParser.parse("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JsonParser.parse("""{ "foo": { "baz": 2 } }"""))
+  }
+
   "Remove all" in {
     val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
     check(removeAllProp)
@@ -121,7 +125,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "flattenWithPath for values produces a single value with the identity path" in {
-    val test = JInt(1)
+    val test = JNum(1)
 
     val expected = List((JPath.Identity, test))
 
@@ -129,9 +133,9 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "flattenWithPath on arrays produces index values" in {
-    val test = JArray(JInt(1) :: Nil)
+    val test = JArray(JNum(1) :: Nil)
 
-    val expected = List((JPath("[0]"), JInt(1)))
+    val expected = List((JPath("[0]"), JNum(1)))
 
     test.flattenWithPath must_== expected
   }
@@ -145,8 +149,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }""")
 
     val expected = List(
-      JPath(".c") -> JInt(2),
-      JPath(".fn[0].fr") -> JInt(-2)
+      JPath(".c") -> JNum(2),
+      JPath(".fn[0].fr") -> JNum(-2)
     )
 
     test.flattenWithPath must_== expected
@@ -160,6 +164,16 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
   "Set and retrieve an arbitrary jvalue at an arbitrary path" in {
     runArbitraryPathSpec
+  }
+
+  "sort arrays" in {
+    import scalaz.Order
+    import scalaz.Ordering._
+ 
+    val v1 = JsonParser.parse("""[1, 1, 1]""")
+    val v2 = JsonParser.parse("""[1, 1, 1]""")
+ 
+    Order[JValue].order(v1, v2) must_== EQ
   }
 
   def runArbitraryPathSpec = {

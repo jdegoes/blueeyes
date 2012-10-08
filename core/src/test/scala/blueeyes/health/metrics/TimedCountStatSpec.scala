@@ -12,7 +12,7 @@ class TimedCountStatSpec extends Specification with TimedStatFixtures with bluee
       fill(timedSample)
 
       val jValue = timedSample.toJValue
-      jValue must whenDelivered (be_==(JObject(JField(config.toString, (JArray(List(JInt(4), JInt(3), JInt(0))))) :: Nil)))
+      jValue must whenDelivered (be_==(JObject(JField(config.toString, (JArray(List(JNum(4), JNum(3), JNum(0))))) :: Nil)))
     }
   }
 

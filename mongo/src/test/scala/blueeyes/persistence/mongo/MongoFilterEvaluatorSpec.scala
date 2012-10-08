@@ -61,7 +61,7 @@ class MongoFilterEvaluatorSpec extends Specification{
        MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
     }
     "select element from array" in {
-       MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JInt(1) :: Nil)
+       MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JNum(1) :: Nil)
     }
 
     "select element by complex filter " in {

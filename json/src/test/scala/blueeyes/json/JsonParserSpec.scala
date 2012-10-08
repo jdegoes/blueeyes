@@ -73,11 +73,11 @@ object ParserBugs extends Specification {
   }
 
   "Does not hang when parsing 2.2250738585072012e-308" in {
-    allCatch.opt(JsonParser.parse(""" [ 2.2250738585072012e-308 ] """)) mustEqual None
+    allCatch.opt(JsonParser.parse(""" [ 2.2250738585072012e-308 ] """)) mustNotEqual None
   }
 
   "Does not hang when parsing 22.250738585072012e-309" in {
-    allCatch.opt(JsonParser.parse(""" [ 22.250738585072012e-309 ] """)) mustEqual None
+    allCatch.opt(JsonParser.parse(""" [ 22.250738585072012e-309 ] """)) mustNotEqual None
   }
 
   "Can parse funky characters" in {

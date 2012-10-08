@@ -7,7 +7,7 @@ import com.mongodb.MongoException
 
 class WhereFilterScriptBuilderSpec extends Specification with Evaluators.WhereFilterScriptBuilder{
   private val scriptPattern = """var obj = %s; obj.evaluate = %s; obj.evaluate()"""
-  private val jObject       = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JInt(1)) :: Nil)) :: Nil)
+  private val jObject       = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JNum(1)) :: Nil)) :: Nil)
   private val json          = Printer.compact(Printer.render(jObject))
 
   "WhereFilterScriptBuilder" should{

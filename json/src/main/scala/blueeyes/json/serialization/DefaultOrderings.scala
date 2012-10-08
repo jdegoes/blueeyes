@@ -135,28 +135,23 @@ trait DefaultOrderings {
         case JBool(v2) => v1.compare(v2)
         case _ => -1
       }
-      case JInt(v1) => v2 match {
+      case JNum(v1) => v2 match {
         case JNothing | JNull | JBool(_) => 1
-        case JInt(v2) => v1.compare(v2)
-        case _ => -1
-      }
-      case JDouble(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JInt(_) => 1
-        case JDouble(v2) => v1.compare(v2)
+        case JNum(v2) => v1.compare(v2)
         case _ => -1
       }
       case JString(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) => 1
+        case JNothing | JNull | JBool(_) | JNum(_) => 1
         case JString(v2) => v1.compare(v2)
         case _ => -1
       }
       case JObject(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) | JString(_) => 1
+        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) => 1
         case JObject(v2) => ListOrdering(JFieldOrdering).compare(v1, v2)
         case _ => -1
       }
       case JArray(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) | JString(_) | JObject(_) => 1
+        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) | JObject(_) => 1
         case JArray(v2) => ListOrdering(JValueOrdering).compare(v1, v2)
         case _ => -1
       }

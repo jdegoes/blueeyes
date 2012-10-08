@@ -17,12 +17,12 @@ class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinato
   }
   
   "refineContentType should refine content type when possible" in {
-    jIntCaller { refineContentType { jIntHandler } } must succeedWithContent(be_==(JInt(123)))
+    jIntCaller { refineContentType { jIntHandler } } must succeedWithContent(be_==(JNum(123)))
   }
   
   def jObjectCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future(JObject(Nil)))))
   
-  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future(JInt(123)))))
+  def jIntCaller(h: Handler[JValue, JValue]) = h(HttpRequest(uri = "/", method = GET, content = Some(Future(JNum(123)))))
   
-  def jIntHandler(r: HttpRequest[Future[JInt]]): Future[HttpResponse[JValue]] = Future(HttpResponse(content = Some(JInt(123): JValue)))
+  def jIntHandler(r: HttpRequest[Future[JNum]]): Future[HttpResponse[JValue]] = Future(HttpResponse(content = Some(JNum(123): JValue)))
 }

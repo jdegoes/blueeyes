@@ -34,12 +34,8 @@ private[mock] object MockMongoUpdateEvaluators{
   }  
   case object IncFieldEvaluator extends UpdateFieldEvaluator{
     def apply(value: JValue, filter: MongoFilter) = (value, <<(filter)) match {
-      case (JInt(x1),     JInt(x2))    => JInt(x1 + x2)
-      case (JDouble(x1),  JDouble(x2)) => JDouble(x1 + x2)
-      case (JDouble(x1),  JInt(x2))    => JDouble(x1 + x2.doubleValue)
-      case (JInt(x1),     JDouble(x2)) => JDouble(x1.doubleValue + x2)
-      case (JNothing,     JInt(x2))    => JInt(x2)
-      case (JNothing,     JDouble(x2)) => JDouble(x2)
+      case (JNum(x1),     JNum(x2))    => JNum(x1 + x2)
+      case (JNothing,     JNum(x2))    => JNum(x2)
       case _ => throw new MongoException("Modifier $inc allowed for numbers only")
     }
   }
@@ -87,7 +83,7 @@ private[mock] object MockMongoUpdateEvaluators{
     def apply(value: JValue, filter: MongoFilter) = value match{
       case JArray(Nil) => value
       case JArray(x)   => <<(filter) match{
-        case JInt(y)   => if (y.intValue == 1) JArray(x.dropRight(1)) else if (y.intValue == -1) JArray(x.drop(1)) else throw new MongoException("Cannot apply $pop modifier to non-JInt(1|-1)")  
+        case JNum(y)   => if (y.intValue == 1) JArray(x.dropRight(1)) else if (y.intValue == -1) JArray(x.drop(1)) else throw new MongoException("Cannot apply $pop modifier to non-JInt(1|-1)")  
         case _ => throw new MongoException("Cannot apply $pop modifier to non-JInt(1|-1)")
       }
       case _ => throw new MongoException("Cannot apply $pop modifier to non-array")

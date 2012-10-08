@@ -53,30 +53,44 @@ object BlueEyesBuild extends Build {
         </developer>
       </developers>,
 
-    publishTo <<= version { v: String =>
-      val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
-      else
-        Some("releases" at nexus + "service/local/staging/deploy/maven2")
-    },
+    publishTo <<= (version) { version: String =>
+      val nexus = "http://nexus.reportgrid.com/content/repositories/"
+      if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
+      else                                   Some("releases"  at nexus+"public-releases/")
+    }
+  )
 
-    crossScalaVersions := Seq("2.9.1", "2.9.2"),
+  val specs2Version = "1.12.2-SNAPSHOT"
+
+  val commonSettings = Seq(
+    crossScalaVersions := Seq("2.9.2"),
 
     version := "1.0.0-SNAPSHOT",
 
-    organization := "com.github.jdegoes",
+    organization := "com.reportgrid",
+
+    libraryDependencies ++= Seq(
+      "org.specs2"         %%  "specs2"       % specs2Version    % "test" changing(),
+      "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test"
+    ),
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
   )
 
-  lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings(nexusSettings : _*) aggregate(core, json, mongo)
+  lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings((nexusSettings ++ commonSettings): _*) aggregate(core, json, mongo)
+  
+  lazy val json  = Project(id = "json", base = file("json")).settings((nexusSettings ++ commonSettings): _*)
 
-  lazy val json  = Project(id = "json", base = file("json")).settings(nexusSettings : _*)
+  // Core exposes some specs2 helpers, so we need a "provided" scope
+  val coreSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.specs2"         %%  "specs2"       % specs2Version    % "provided"
+    )
+  )
 
-  lazy val core  = Project(id = "core", base = file("core")).settings(nexusSettings : _*) dependsOn json
+  lazy val core  = Project(id = "core", base = file("core")).settings((nexusSettings ++ commonSettings ++ coreSettings): _*) dependsOn json
 
-  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings : _*) dependsOn (core, json % "test->test")
+  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings ++ commonSettings : _*) dependsOn (core, json % "test->test")
 
   //lazy val actor = Project(id = "actor", base = file("actor")).settings(nexusSettings : _*)
 }

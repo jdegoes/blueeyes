@@ -170,16 +170,16 @@ case class MongoPrimitiveString(value: String) extends MongoPrimitive {
   def toJValue = JString(value)
 }
 case class MongoPrimitiveLong(value: Long) extends MongoPrimitive {
-  def toJValue = JInt(value)
+  def toJValue = JNum(value)
 }
 case class MongoPrimitiveInt(value: Int) extends MongoPrimitive {
-  def toJValue = JInt(value)
+  def toJValue = JNum(value)
 }
 case class MongoPrimitiveBigInt(value: BigInt) extends MongoPrimitive {
-  def toJValue = JInt(value)
+  def toJValue = JNum(BigDecimal(value))
 }
 case class MongoPrimitiveDouble(value: Double) extends MongoPrimitive {
-  def toJValue = JDouble(value)
+  def toJValue = JNum(value)
 }
 case class MongoPrimitiveBoolean(value: Boolean) extends MongoPrimitive {
   def toJValue = JBool(value)
@@ -209,8 +209,7 @@ trait MongoFilterImplicits {
 
   implicit def jvalueToMongoPrimitive(value: JValue): MongoPrimitive = value match {
     case x: JString => MongoPrimitiveString(x.value)
-    case x: JInt    => MongoPrimitiveLong(x.value.longValue())
-    case x: JDouble => MongoPrimitiveDouble(x.value)
+    case x: JNum    => MongoPrimitiveDouble(x.value.doubleValue)
     case x: JBool   => MongoPrimitiveBoolean(x.value)
     case x: JObject => MongoPrimitiveJObject(x)
     case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))
@@ -247,12 +246,11 @@ trait MongoFilterImplicits {
   Max key	 127
   */
   implicit val MongoPrimitiveJStringWitness = new MongoPrimitiveWitness[JString](2)
-  implicit val MongoPrimitiveJDoubleWitness = new MongoPrimitiveWitness[JDouble](1)
   implicit val MongoPrimitiveJObjectWitness = new MongoPrimitiveWitness[JObject](3)
   implicit val MongoPrimitiveJArrayWitness  = new MongoPrimitiveWitness[JArray](4)
   implicit val MongoPrimitiveJBoolWitness   = new MongoPrimitiveWitness[JBool](8)
   implicit val MongoPrimitiveJNullWitness   = new MongoPrimitiveWitness[JNull.type](10)
-  implicit val MongoPrimitiveJIntWitness    = new MongoPrimitiveWitness[JInt](18)
+  implicit val MongoPrimitiveJNumWitness    = new MongoPrimitiveWitness[JNum](18)
 }
 object MongoFilterImplicits extends MongoFilterImplicits
 
@@ -315,17 +313,17 @@ case class MongoFilterBuilder(jpath: JPath) {
   def nearSphere(x: Double, y: Double, maxDistance: Option[Double] = None) = nearQuery($nearSphere, x, y, maxDistance)
 
   private def nearQuery(operator: MongoFilterOperator, x: Double, y: Double, maxDistance: Option[Double] = None) = {
-    val nearField = JField(operator.unmangledName, JArray(List(JDouble(x), JDouble(y))))
-    val fields    = maxDistance.map(v => List(JField("$maxDistance", JDouble(v)))).getOrElse(Nil)
+    val nearField = JField(operator.unmangledName, JArray(List(JNum(x), JNum(y))))
+    val fields    = maxDistance.map(v => List(JField("$maxDistance", JNum(v)))).getOrElse(Nil)
     MongoFieldFilter(jpath, operator, JObject(nearField :: fields))
   }
 
   def within(shape: WithinShape) = {
     val withinValue = shape match{
-      case x: Box          => JField("$box",     JArray(JArray(JDouble(x.lowerLeft._1) :: JDouble(x.lowerLeft._2) :: Nil) :: JArray(JDouble(x.upperRight._1) :: JDouble(x.upperRight._2) :: Nil) :: Nil))
-      case x: Circle       => JField("$center",  JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radius) :: Nil))
-      case x: Polygon      => JField("$polygon", JArray(x.points.toList.map(point => JArray(JDouble(point._1) :: JDouble(point._2) :: Nil))))
-      case x: CenterSphere => JField("$centerSphere", JArray(JArray(JDouble(x.center._1) :: JDouble(x.center._2) :: Nil) :: JDouble(x.radiusInRadians) :: Nil))
+      case x: Box          => JField("$box",     JArray(JArray(JNum(x.lowerLeft._1) :: JNum(x.lowerLeft._2) :: Nil) :: JArray(JNum(x.upperRight._1) :: JNum(x.upperRight._2) :: Nil) :: Nil))
+      case x: Circle       => JField("$center",  JArray(JArray(JNum(x.center._1) :: JNum(x.center._2) :: Nil) :: JNum(x.radius) :: Nil))
+      case x: Polygon      => JField("$polygon", JArray(x.points.toList.map(point => JArray(JNum(point._1) :: JNum(point._2) :: Nil))))
+      case x: CenterSphere => JField("$centerSphere", JArray(JArray(JNum(x.center._1) :: JNum(x.center._2) :: Nil) :: JNum(x.radiusInRadians) :: Nil))
     }
     MongoFieldFilter(jpath, $within, JObject(JField("$within", JObject(withinValue :: Nil)) :: Nil))
   }
