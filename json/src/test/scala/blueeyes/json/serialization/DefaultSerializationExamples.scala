@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package blueeyes.json.serialization {
+package blueeyes.json.serialization 
 
 import org.specs2.mutable.Specification
 
@@ -74,7 +74,3 @@ object DefaultSerializationExamples extends Specification {
     ArrayExtractor(scala.reflect.ClassManifest.Int, IntExtractor).extract(s).toList mustEqual l.toList
   }
 }
-
-
-}
-
