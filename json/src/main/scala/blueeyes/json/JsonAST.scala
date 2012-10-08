@@ -35,7 +35,6 @@ import scala.annotation.tailrec
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
-  import blueeyes.json.serialization.DefaultOrderings.{JValueOrdering, JFieldOrdering}
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
@@ -50,13 +49,12 @@ object JsonAST {
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] { self =>
     type Values
-    type Self <: JValue
 
     def toOption = if (self == JNothing) None else Some(self)
 
     def getOrElse(that: => JValue) = if (self == JNothing) that else self
 
-    def compare(that: JValue): Int = JValueOrdering.compare(self, that)
+    def compare(that: JValue): Int = JValue.order(self, that).toInt
 
     def sort: JValue
 
@@ -620,7 +618,7 @@ object JsonAST {
 
     case class paired(jv1: JValue, jv2: JValue) {
       assert(jv1 != null && jv2 != null)
-      def fold[A](default: => A)(
+      final def fold[A](default: => A)(
         obj:    List[JField] => List[JField] => A,
         arr:    List[JValue] => List[JValue] => A,
         str:    String => String => A,
@@ -640,7 +638,7 @@ object JsonAST {
       }
     }
 
-    def typeIndex(jv: JValue) = jv match {
+    @inline final def typeIndex(jv: JValue) = jv match {
       case JObject(_)  => 7
       case JArray(_)   => 6
       case JString(_)  => 5
@@ -650,29 +648,19 @@ object JsonAST {
       case JNothing    => -1
     }
 
-    private implicit lazy val jfieldOrder: Order[JField] = new Order[JField] {
-      def order(f1: JField, f2: JField) = (f1.name ?|? f2.name) |+| (f1.value ?|? f2.value)
-    }
-
-    lazy val objectOrder: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.sortBy(_.name))
-    private lazy val objectOrder0 = (Order[List[JField]].contramap((_: List[JField]).sortBy(_.name)).order _).curried
-
-    lazy val arrayOrder: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
-    private lazy val arrayOrder0 = (Order[List[JValue]].order _).curried
-
-    implicit lazy val order: Order[JValue] = new Order[JValue] {
-      private val stringOrder0 = (Order[String].order _).curried
-      private val boolOrder0 = (Order[Boolean].order _).curried
-      private val numOrder0 = (Order[BigDecimal].order _).curried
-
-      def order(jv1: JValue, jv2: JValue) = paired(jv1, jv2).fold(typeIndex(jv1) ?|? typeIndex(jv2))(
-        obj    = objectOrder0,
-        arr    = arrayOrder0,
-        str    = stringOrder0,
-        num    = numOrder0,
-        bool   = boolOrder0,
-        nul    = EQ, nothing = EQ
-      )
+    implicit final val order: Order[JValue] = new Order[JValue] {
+      def order(jv1: JValue, jv2: JValue) = {
+        (typeIndex(jv1) ?|? typeIndex(jv2)) |+|
+        //since we can only get equality from values of the same type, we can just cast
+        (jv1 match {
+          case v: JObject => JObject.order(v, jv2.asInstanceOf[JObject])
+          case v: JArray  => JArray.order(v, jv2.asInstanceOf[JArray])
+          case v: JString => v.value ?|? jv2.asInstanceOf[JString].value
+          case v: JNum    => v.value ?|? jv2.asInstanceOf[JNum].value
+          case v: JBool   => v.value ?|? jv2.asInstanceOf[JBool].value
+          case _ => EQ
+        })
+      }
     } 
 
     def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
@@ -720,31 +708,30 @@ object JsonAST {
 
   case object JNothing extends JValue {
     type Values = None.type
-    type Self = JValue
 
-    def values = None
+    final val values = None
 
-    def sort: JValue = this
+    final val sort: JValue = this
   }
+
   case object JNull extends JValue {
     type Values = Null
-    type Self = JValue
     
     def values = null
 
     def sort: JValue = this
   }
+ 
   case class JBool(value: Boolean) extends JValue {
     type Values = Boolean
-    type Self = JValue
     
     def values = value
 
     def sort: JBool = this
   }
+
   case class JNum(value: BigDecimal) extends JValue {
     type Values = BigDecimal
-    type Self = JValue
     
     def values = value
     
@@ -767,16 +754,23 @@ object JsonAST {
   }
   case class JString(value: String) extends JValue {
     type Values = String
-    type Self = JValue
     
     def values = value
 
     def sort: JString = this
   }
+
   case class JField(name: String, value: JValue) {
     def map(f: JValue => JValue): JField = JField(name, f(value))
   }
+
   object JField extends ((String, JValue) => JField) {
+    implicit final val order: Order[JField] = new Order[JField] {
+      def order(f1: JField, f2: JField) = (f1.name ?|? f2.name) |+| (f1.value ?|? f2.value)
+    }
+
+    implicit final val ordering = order.toScalaOrdering
+
     def liftFilter(f: JField => Boolean): JValue => JValue = (value: JValue) => value match {
       case JObject(fields) => JObject(fields.filter(f))
       case _ => value
@@ -816,7 +810,6 @@ object JsonAST {
     type Field = JField
     type Value = JValue
     type Values = Map[String, Any]
-    type Self = JObject
 
     def get(name: String): JValue = fields.find(_.name == name).map(_.value).getOrElse(JNothing)
     
@@ -826,7 +819,7 @@ object JsonAST {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
 
-    def sort: JObject = JObject(fields.map(_.map(_.sort)).sorted(JFieldOrdering))
+    def sort: JObject = JObject(fields.filter(_.value ne JNothing).map(_.map(_.sort)).sorted)
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
 
@@ -838,21 +831,22 @@ object JsonAST {
     }
   }
   object JObject {
-    lazy val empty = JObject(Nil)
+    final val empty = JObject(Nil)
+    final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.filter(_.value ne JNothing).sortBy(_.name))
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
-    type Self = JArray
     
     def values = elements.map(_.values)
 
-    def sort: JArray = JArray(elements.map(_.sort).sorted(JValueOrdering))
+    def sort: JArray = JArray(elements.filter(_ ne JNothing).map(_.sort).sorted)
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
   object JArray {
-    lazy val empty = JArray(Nil)
+    final val empty = JArray(Nil)
+    final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
   }
 }
 

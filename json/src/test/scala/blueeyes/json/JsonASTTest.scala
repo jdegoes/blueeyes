@@ -20,6 +20,7 @@ package json
 import org.scalacheck._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import scalaz.Ordering._
 
 object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   import JsonAST._
@@ -174,6 +175,53 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     val v2 = JsonParser.parse("""[1, 1, 1]""")
  
     Order[JValue].order(v1, v2) must_== EQ
+  }
+
+  "sort objects by key" in {
+    val v1 = JObject(
+      JField("a", JNum(1)) ::
+      JField("b", JNum(2)) ::
+      JField("c", JNum(3)) :: Nil
+    )
+
+    val v2 = JObject(
+      JField("b", JNum(2)) ::
+      JField("c", JNum(3)) :: Nil
+    )
+
+    JValue.order(v1, v2) must_== LT
+  }
+
+  "sort objects by key then value" in {
+    val v1 = JObject(
+      JField("a", JNum(1)) ::
+      JField("b", JNum(2)) ::
+      JField("c", JNum(3)) :: Nil
+    )
+
+    val v2 = JObject(
+      JField("a", JNum(2)) ::
+      JField("b", JNum(3)) :: 
+      JField("c", JNum(4)) :: Nil
+    )
+    
+    JValue.order(v1, v2) must_== LT
+  }
+
+  "sort objects with undefined members" in {
+    val v1 = JObject(
+      JField("a", JNothing) ::
+      JField("b", JNum(2)) ::
+      JField("c", JNum(3)) :: Nil
+    )
+
+    val v2 = JObject(
+      JField("a", JNum(2)) ::
+      JField("b", JNum(3)) :: 
+      JField("c", JNum(4)) :: Nil
+    )
+
+    JValue.order(v1, v2) must_== GT
   }
 
   def runArbitraryPathSpec = {

@@ -107,65 +107,6 @@ trait DefaultOrderings {
     }
   }
   
-  object JFieldOrdering extends Ordering[JField] {
-    def compare(v1: JField, v2: JField): Int = {
-      import Stream.{cons, empty}
-      
-      return if (v1 == v2) 0 else {      
-        val comparisons = cons(StringOrdering.compare(v1.name, v2.name), cons(JValueOrdering.compare(v1.value, v2.value), empty))
-      
-        comparisons.dropWhile(_ == 0).append(0 :: Nil).head
-      }
-    }
-  }
-  
-  object JValueOrdering extends Ordering[JValue] {
-    def compare(v1: JValue, v2: JValue): Int = v1 match {
-      case JNothing => v2 match {
-        case JNothing => 0
-        case _ => -1
-      }
-      case JNull => v2 match {
-        case JNothing => 1
-        case JNull => 0
-        case _ => -1
-      }
-      case JBool(v1) => v2 match {
-        case JNothing | JNull => 1
-        case JBool(v2) => v1.compare(v2)
-        case _ => -1
-      }
-      case JNum(v1) => v2 match {
-        case JNothing | JNull | JBool(_) => 1
-        case JNum(v2) => v1.compare(v2)
-        case _ => -1
-      }
-      case JString(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) => 1
-        case JString(v2) => v1.compare(v2)
-        case _ => -1
-      }
-      case JObject(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) => 1
-        case JObject(v2) => ListOrdering(JFieldOrdering).compare(v1, v2)
-        case _ => -1
-      }
-      case JArray(v1) => v2 match {
-        case JNothing | JNull | JBool(_) | JNum(_) | JString(_) | JObject(_) => 1
-        case JArray(v2) => ListOrdering(JValueOrdering).compare(v1, v2)
-        case _ => -1
-      }
-    }
-  }
-
-  object JArrayOrdering extends Ordering[JArray] {
-    def compare(v1: JArray, v2: JArray): Int = ListOrdering(JValueOrdering).compare(v1.elements, v2.elements)
-  }
-
-  object JObjectOrdering extends Ordering[JObject] {
-    def compare(v1: JObject, v2: JObject): Int = ListOrdering(JFieldOrdering).compare(v1.fields, v2.fields)
-  }
-  
   object DateOrdering extends Ordering[JDate] {
     def compare(v1: JDate, v2: JDate) = if (v1.getTime < v2.getTime) -1 else if (v1.getTime > v2.getTime) 1 else 0
   }
