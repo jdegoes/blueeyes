@@ -50,14 +50,6 @@ object Examples extends Specification {
     compact(render(json \\ "name")) mustEqual "\"Joe\""
   }
 
-  "Object array example" in {
-    val json = parse(objArray).asInstanceOf[JObject]
-
-    compact(render(json \ "children" \ "name")) mustEqual """["Mary","Mazy"]"""
-    compact(render((json \ "children")(0) \ "name")) mustEqual "\"Mary\""
-    compact(render((json \ "children")(1) \ "name")) mustEqual "\"Mazy\""
-  }
-
   "Unbox values using XPath-like type expression" in {
     parse(objArray) \ "children" \\ classOf[JNum] mustEqual List(5, 3)
     parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JNum] mustEqual List(2, 45, 34, 23, 7, 5, 3)
