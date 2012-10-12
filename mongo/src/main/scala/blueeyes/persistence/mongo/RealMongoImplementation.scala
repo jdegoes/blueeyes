@@ -223,15 +223,15 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   private def toMongoKeys(keysPaths: Iterable[JPath]): JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JInt(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 
-  private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v ||| {
+  private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v valueOr {
     errors => sys.error("An error occurred deserializing the database object: " + errors.list.mkString("; "))
   }
 
-  private implicit def jvo2dbo(obj: JObject): DBObject = MongoToJson.unapply(obj) ||| {
+  private implicit def jvo2dbo(obj: JObject): DBObject = MongoToJson.unapply(obj) valueOr {
     errors => sys.error("An error occurred serializing the JSON object to mongo: " + errors.list.mkString("; "))
   }
 
-  private def dbo2jvo(dbo: DBObject): JObject = MongoToJson(dbo) ||| {
+  private def dbo2jvo(dbo: DBObject): JObject = MongoToJson(dbo) valueOr {
     errors => sys.error("Errors occurred deserializing the explain object: " + errors.list.mkString("; "))
   }
 }
