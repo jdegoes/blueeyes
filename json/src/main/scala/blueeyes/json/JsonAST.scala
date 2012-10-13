@@ -722,6 +722,34 @@ object JsonAST {
 
     def sort: JBool = this
   }
+  /*
+
+  sealed trait JNum {
+    def bigDecimal: BigDecimal
+
+    def long: Long
+
+    def double: Double
+
+    def string: String
+
+    ...
+  }
+
+  object JNum {
+    def apply(value: BigDecimal): JNum = JNumBD
+    
+    def apply(value: Long): JNum = {
+  
+    }
+    
+    def apply(value: Double): JNum
+
+    case class StrNum(value: String) extends JNum {
+      
+    }
+  }
+  */
 
   case class JNum(value: BigDecimal) extends JValue {
     type Values = BigDecimal
