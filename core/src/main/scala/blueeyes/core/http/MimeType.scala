@@ -149,6 +149,7 @@ object MimeTypes {
   case object `x-shockwave-flash` extends ApplicationType("swf" :: Nil)
   case object `x-tar` extends ApplicationType("tar" :: Nil)
   case object `x-ttf` extends ApplicationType("ttf" :: Nil)
+  case object `x-www-form-urlencoded` extends ApplicationType("x-www-form-urlencoded" :: Nil)
   case object zip extends ApplicationType("zip" :: Nil)
 
   /* Audio Types */
