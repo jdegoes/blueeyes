@@ -779,10 +779,6 @@ object JsonAST {
 
   type JField = (String, JValue)
 
-  /*(name: String, value: JValue) {
-    def map(f: JValue => JValue): JField = JField(name, f(value))
-  }*/
-
   object JField extends ((String, JValue) => JField) {
     def apply(name: String, value: JValue): JField = (name, value)
 
