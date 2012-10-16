@@ -6,7 +6,7 @@ object BlueEyesBuild extends Build {
     resolvers ++= Seq(
       "ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
       "ReportGrid snapshot repo (public)" at "http://nexus.reportgrid.com/content/repositories/public-snapshots",
-      "Sonatype Jetty"                    at "https://oss.sonatype.org/content/groups/jetty/",
+      "Sonatype Jetty"                    at "http://oss.sonatype.org/content/groups/jetty/",
       "Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype Releases"                 at "http://oss.sonatype.org/content/repositories/releases",
       "Sonatype Snapshots"                at "http://oss.sonatype.org/content/repositories/snapshots",
