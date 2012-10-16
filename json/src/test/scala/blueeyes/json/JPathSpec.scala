@@ -24,8 +24,11 @@ import Arbitrary._
 import JsonAST._
 
 import org.specs2.ScalaCheck
+import org.scalacheck._
 
 object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
+  override val defaultPrettyParams = Pretty.Params(2)
+
   "Parser" should {
     "parse all valid JPath strings" in {
       check { (jpath: JPath) =>

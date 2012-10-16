@@ -525,7 +525,7 @@ object JsonAST {
 
         case JObject(fields) => 
           fields.flatMap { field =>
-            flatten0(path \ field._2)(field._2)
+            flatten0(path \ field._1)(field._2)
           }
         
         case JArray(Nil) => (path -> value) :: Nil
