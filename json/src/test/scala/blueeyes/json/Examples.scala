@@ -20,7 +20,7 @@ import org.specs2.mutable.Specification
 
 object Examples extends Specification {
   import JsonAST._
-  import JsonDSL._
+  import Printer._
   import JsonParser._
 
   "Lotto example" in {
@@ -31,7 +31,7 @@ object Examples extends Specification {
 
   "Person example" in {
     val json = parse(person)
-    val renderedPerson = JsonDSL.pretty(render(json))
+    val renderedPerson = pretty(render(json))
     json mustEqual parse(renderedPerson)
     render(json) mustEqual render(personDSL)
     compact(render(json \\ "name")) mustEqual """["Joe","Marilyn"]"""
@@ -161,15 +161,23 @@ object Examples extends Specification {
 """
 
   val personDSL =
-    ("person" ->
-      ("name" -> "Joe") ~
-      ("age" -> 35) ~
-      ("spouse" ->
-        ("person" ->
-          ("name" -> "Marilyn") ~
-          ("age" -> 33)
+    JObject(
+      JField("person",
+        JObject(
+          JField("name", JString("Joe")) ::
+          JField("age", JNum(35)) ::
+          JField("spouse",
+            JObject(
+              JField("person", 
+                JObject(
+                  JField("name", JString("Marilyn")) ::
+                  JField("age", JNum(33)) :: Nil
+                )
+              ) :: Nil
+            )
+          ) :: Nil
         )
-      )
+      ) :: Nil
     )
 
   val objArray =
@@ -193,5 +201,5 @@ object Examples extends Specification {
 """
 
   val quoted = """["foo \" \n \t \r bar"]"""
-  val symbols = ("f1" -> 'foo) ~ ("f2" -> 'bar)
+  val symbols = JObject(JField("f1", JString("foo")) :: JField("f2", JString("bar")) :: Nil)
 }
