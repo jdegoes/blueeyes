@@ -70,7 +70,7 @@ object Validator {
     val field = json \ name 
     val array = field --> classOf[JArray]
     
-    array.values.foldLeft[(Int, List[A])]((0, Nil)) { (cur, e) =>
+    array.elements.foldLeft[(Int, List[A])]((0, Nil)) { (cur, e) =>
       (cur._1 + 1, f(field !! cur._1) :: cur._2)
     }._2.reverse
   }
@@ -79,7 +79,7 @@ object Validator {
    * Utility function to extract the specified field as a JString, then return 
    * the string.
    */
-  def stringField(name: String, json: JPathValue) = (json \ name --> classOf[JString]).values
+  def stringField(name: String, json: JPathValue) = (json \ name --> classOf[JString]).value
   
   /**
    * Utility function to extract the specified field as a JNum, then

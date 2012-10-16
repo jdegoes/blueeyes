@@ -50,15 +50,8 @@ object Examples extends Specification {
     compact(render(json \\ "name")) mustEqual "\"Joe\""
   }
 
-  "Unbox values using XPath-like type expression" in {
-    parse(objArray) \ "children" \\ classOf[JNum] mustEqual List(5, 3)
-    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JNum] mustEqual List(2, 45, 34, 23, 7, 5, 3)
-    parse(lotto) \\ "winning-numbers" \ classOf[JNum] mustEqual List(2, 45, 34, 23, 7, 5, 3)
-  }
-
   "Quoted example" in {
-    val json = parse(quoted)
-    List("foo \" \n \t \r bar") mustEqual json.values
+    parse(quoted) mustEqual JArray(List(JString("foo \" \n \t \r bar")))
   }
 
   "Null example" in {

@@ -48,8 +48,6 @@ object JsonAST {
    * Data type for Json AST.
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] { self =>
-    type Values
-
     def toOption = if (self == JNothing) None else Some(self)
 
     def getOrElse(that: => JValue) = if (self == JNothing) that else self
@@ -150,29 +148,6 @@ object JsonAST {
       }
     }
 
-    /** XPath-like expression to query JSON fields by type. Matches only fields on
-     * next level.
-     * <p>
-     * Example:<pre>
-     * json \ classOf[JInt]
-     * </pre>
-     */
-    def \[A <: JValue](clazz: Class[A]): List[A#Values] = children.filter(typePredicate(clazz) _ ).asInstanceOf[List[A]] map { _.values }
-
-    /** XPath-like expression to query JSON fields by type. Returns all matching fields.
-     * <p>
-     * Example:<pre>
-     * json \\ classOf[JInt]
-     * </pre>
-     */
-    def \\[A <: JValue](clazz: Class[A]): List[A#Values] =
-      (self filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
-
-    private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
-      case x if x.getClass == clazz => true
-      case _ => false
-    }
-
     /** Gets the specified value located at the terminal of the specified path.
      * <p>
      * Example:<pre>
@@ -261,14 +236,6 @@ object JsonAST {
      * </pre>
      */
     def apply(i: Int): JValue = JNothing
-
-    /** Return unboxed values from JSON
-     * <p>
-     * Example:<pre>
-     * JObject(JField("name", JString("joe")) :: Nil).values == Map("name" -> "joe")
-     * </pre>
-     */
-    def values: Values
 
     /** Return direct child elements.
      * <p>
@@ -695,27 +662,17 @@ object JsonAST {
   }
 
   case object JNothing extends JValue {
-    type Values = None.type
-
     final val values = None
 
     final val sort: JValue = this
   }
 
   case object JNull extends JValue {
-    type Values = Null
-    
-    def values = null
-
     def sort: JValue = this
   }
 
   sealed trait JBool extends JValue { self =>
-    type Values = Boolean
-
     def value: Boolean
-
-    def values = value
 
     def sort: JBool = self
   }
@@ -764,10 +721,6 @@ object JsonAST {
   */
 
   case class JNum(value: BigDecimal) extends JValue {
-    type Values = BigDecimal
-    
-    def values = value
-    
     // SI-6173
     override val hashCode = 0
 
@@ -786,10 +739,6 @@ object JsonAST {
     }
   }
   case class JString(value: String) extends JValue {
-    type Values = String
-    
-    def values = value
-
     def sort: JString = this
   }
 
@@ -845,12 +794,9 @@ object JsonAST {
   case class JObject(fields: List[JField]) extends JValue {
     type Field = JField
     type Value = JValue
-    type Values = Map[String, Any]
-
+    
     def get(name: String): JValue = fields.find(_._1 == name).map(_._2).getOrElse(JNothing)
     
-    def values = Map() ++ fields.map(field => (field._1, field._2.values): (String, Any))
-
     def partition(f: JField => Boolean): (JObject, JObject) = {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
@@ -872,10 +818,6 @@ object JsonAST {
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
-    type Values = List[Any]
-    
-    def values = elements.map(_.values)
-
     def sort: JArray = JArray(elements.filter(_ ne JNothing).map(_.sort).sorted)
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
