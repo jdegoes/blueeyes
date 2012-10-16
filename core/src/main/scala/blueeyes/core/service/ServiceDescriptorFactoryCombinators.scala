@@ -35,7 +35,8 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.util.Timeout
 
-trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with AkkaDefaults with blueeyes.json.Implicits {
+trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with AkkaDefaults {
+  private implicit def stringToJString(value: String): JString = JString(value)
 //  private[this] object TransformerCombinators
 //  import TransformerCombinators.{path$}
 
@@ -79,7 +80,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             request: HttpRequest[T] => {
               val version       = context.serviceVersion
               val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
-              val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", context.port) :: JField("sslPort", context.sslPort) :: Nil)) :: Nil)
+              val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", JNum(context.port)) :: JField("sslPort", JNum(context.sslPort)) :: Nil)) :: Nil)
               val uptimeSeconds = JObject(JField("uptimeSeconds", JNum((System.currentTimeMillis - startTime) / 1000)) :: Nil)
               val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
 
