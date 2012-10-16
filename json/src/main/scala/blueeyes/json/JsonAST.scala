@@ -67,6 +67,12 @@ object JsonAST {
      */
     def \ (nameToFind: String): JValue = self match {
       case j @ JObject(fields) => j.get(nameToFind)
+      case j @ JArray(elements) => 
+        elements.map(_ \ nameToFind) match {
+          case Nil => JNothing
+          case x :: Nil => x
+          case elements @ x :: xs => JArray(elements)
+        }
       case _ => JNothing
     }
 
