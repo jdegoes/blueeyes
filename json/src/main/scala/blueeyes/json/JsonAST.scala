@@ -709,24 +709,41 @@ object JsonAST {
 
     def sort: JValue = this
   }
- 
-  case class JBool(value: Boolean) extends JValue {
+
+  sealed trait JBool extends JValue { self =>
     type Values = Boolean
-    
+
+    def value: Boolean
+
     def values = value
 
-    def sort: JBool = this
+    def sort: JBool = self
   }
+
+  case object JTrue extends JBool {
+    def value = true
+  }
+
+  case object JFalse extends JBool {
+    def value = false
+  }
+
+  object JBool {
+    def apply(value: Boolean): JBool = if (value) JTrue else JFalse
+
+    def unapply(value: JBool): Option[Boolean] = Some(value.value)
+  }
+
   /*
 
   sealed trait JNum {
-    def bigDecimal: BigDecimal
+    def toBigDecimal: BigDecimal
 
-    def long: Long
+    def toLong: Long
 
-    def double: Double
+    def toDouble: Double
 
-    def string: String
+    def toRawString: String
 
     ...
   }
