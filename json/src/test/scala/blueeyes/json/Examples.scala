@@ -107,7 +107,7 @@ object Examples extends Specification {
 
     val folded = (json.foldUpWithPath[List[(JPath, JValue)]](Nil) { (list, path, json) =>
       (path, json) :: list
-    }).reverse.collect { case (p, j) if (!j.isInstanceOf[JField]) => (p, j) }
+    }).reverse.collect { case (p, j) => (p, j) }
 
     val formed = form(
       JPath("person.name"),
