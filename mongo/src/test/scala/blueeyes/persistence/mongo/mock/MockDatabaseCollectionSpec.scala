@@ -55,7 +55,7 @@ class MockDatabaseCollectionSpec extends Specification with blueeyes.bkka.AkkaDe
     result.elements.contains(parse("""{"address.city":"A","csum":17.0} """))  must be_==(true)
 
     val withNaN = result.elements.filter(v => v.asInstanceOf[JObject].fields.head == JField("address.city", JString("C"))).head.asInstanceOf[JObject]
-    withNaN.fields.tail.head.value must beLike { case JNothing => ok }
+    withNaN.fields.tail.head._2 must beLike { case JNothing => ok }
   }
 
   "store jobjects" in{
