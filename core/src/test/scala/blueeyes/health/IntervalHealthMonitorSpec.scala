@@ -45,7 +45,7 @@ with FutureMatchers {
     
     promise.failure(new NullPointerException())
 
-    monitor.errorStats.size must_== (1)
+    monitor.errorStats.size must eventually(be_== (1))
   }
 
   "records sample event" in {
