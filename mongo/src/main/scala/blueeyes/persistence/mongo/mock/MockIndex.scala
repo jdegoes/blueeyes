@@ -41,11 +41,11 @@ private[mock] trait MockIndex extends JObjectFields{
 
   private def checkGeospatialRange(newObjects: List[JObject], index: (Seq[(JPath, IndexType)], JObject)){
     def rangeValue(options: JObject, rangeName: String, defaultValue: Int): Int = options.fields.find{field =>
-      field.name == rangeName && {field.value match{
+      field._1 == rangeName && {field._2 match{
         case JNum(_) => true
         case _ => false
       }}
-    }.map(_.value.asInstanceOf[JNum].value.toInt).getOrElse(defaultValue)
+    }.map(_._2.asInstanceOf[JNum].value.toInt).getOrElse(defaultValue)
 
     val geospatialIndexes = index._1.filter(_._2 == GeospatialIndex)
     geospatialIndexes.foreach{geoIndex =>

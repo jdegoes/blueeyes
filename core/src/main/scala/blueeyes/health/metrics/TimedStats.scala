@@ -81,7 +81,7 @@ private[metrics] trait TimedTimerStatReport extends AsyncStatistic[Long, Map[Lon
     val buildDetails  = value.toList.sortWith((e1, e2) => (e1._1 > e2._1)).map(_._2.toJValue).collect{case e: JObject => e}
     buildDetails match{
       case x :: xs =>
-        val fieldsNames   = buildDetails.head.fields.map(_.name)
+        val fieldsNames   = buildDetails.head.fields.map(_._1)
         val values        = fieldsNames.map{name => (name, buildDetails.map(_ \ name))}
         JObject(values.map(kv => JField(kv._1, JObject(JField(config.toString, JArray(kv._2)) :: Nil))))
       case Nil     => JObject(Nil)

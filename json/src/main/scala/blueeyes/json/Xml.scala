@@ -170,7 +170,7 @@ object Xml {
    */
   def toXml(json: JValue): NodeSeq = {
     def toXml(name: String, json: JValue): NodeSeq = json match {
-      case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
+      case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f._1, f._2) })
       case JArray(xs) => xs flatMap { v => toXml(name, v) }
       case JNum(x) => new XmlElem(name, x.toString)
       case JString(x) => new XmlElem(name, x)
@@ -180,7 +180,7 @@ object Xml {
     }
 
     json match {
-      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
+      case JObject(fields) => fields flatMap { f => toXml(f._1, f._2) }
       case x => toXml("root", x)
     }
   }

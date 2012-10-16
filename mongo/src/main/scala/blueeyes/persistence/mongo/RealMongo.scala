@@ -175,7 +175,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
     val result = collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
 
-    JArray(MongoToJson(result.asInstanceOf[DBObject]).fields.map(_.value))
+    JArray(MongoToJson(result.asInstanceOf[DBObject]).fields.map(_._2))
   }
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
@@ -186,7 +186,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     val key    = JPathExtension.toMongoField(selection)
     val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
 
-    MongoToJson(result.asInstanceOf[DBObject]).fields.map(_.value)
+    MongoToJson(result.asInstanceOf[DBObject]).fields.map(_._2)
   }
 
   def getLastError: Option[BasicDBObject] = {

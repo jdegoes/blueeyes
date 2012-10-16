@@ -18,6 +18,8 @@ package blueeyes {
 package json {
 
 import scalaz.{Failure,Success,Validation}
+import scalaz.syntax.arrow._
+import scalaz.std.function._
 
 /** Fast imperative parser.
  */
@@ -151,20 +153,20 @@ object JsonParser {
 
     // This is a slightly faster way to correct order of fields and arrays than using 'map'.
     def reverse(v: JValue): JValue = v match {
-      case JObject(l) => JObject(l.map(_.map(reverse)).asInstanceOf[List[JField]].reverse)
+      case JObject(l) => JObject(l.map((reverse _).second).asInstanceOf[List[JField]].reverse)
       case JArray(l) => JArray(l.map(reverse).reverse)
       case x => x
     }
 
     def closeBlock(v: AnyRef) {
       vals.peekOption match {
-        case Some(f: JField) =>
+        case Some(f: (_, _)) =>
           val field = vals.pop(classOf[JField])
-          val newField = JField(field.name, v.asInstanceOf[JValue])
+          val newField = JField(field._1, v.asInstanceOf[JValue])
           val obj = vals.peek(classOf[JObject])
           vals.replace(JObject(newField :: obj.fields))
         case Some(o: JObject) => v match {
-          case x: JField => vals.replace(JObject(x :: o.fields))
+          case x: (_, _) => vals.replace(JObject(x.asInstanceOf[JField] :: o.fields))
           case _ => p.fail("expected field but got " + v)
         }
         case Some(a: JArray) => vals.replace(JArray(v.asInstanceOf[JValue] :: a.elements))
@@ -177,9 +179,9 @@ object JsonParser {
       if (vals.peekOption.isEmpty) root = Some(v)
       else {
         vals.peekAny match {
-          case f: JField =>
+          case f: (_, _) =>
             vals.pop(classOf[JField])
-            val newField = JField(f.name, v)
+            val newField = JField(f._1.asInstanceOf[String], v)
             val obj = vals.peek(classOf[JObject])
             vals.replace(JObject(newField :: obj.fields))
           case a: JArray => vals.replace(JArray(v :: a.elements))

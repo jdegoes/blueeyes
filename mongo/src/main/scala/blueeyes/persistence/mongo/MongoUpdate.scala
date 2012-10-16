@@ -95,9 +95,9 @@ private[mongo] object MongoUpdateObject {
 
   private def decompose(jObject: JObject, parentPath: Option[JPath]): Seq[MongoUpdateField] = {
     jObject.fields.map(field => {
-      val fieldPath = parentPath.map(_ \ field.name).getOrElse(JPath(field.name))
+      val fieldPath = parentPath.map(_ \ field._1).getOrElse(JPath(field._1))
 
-      jvalueToMongoPrimitive(field.value) match {
+      jvalueToMongoPrimitive(field._2) match {
         case MongoPrimitiveJObject(x)   => decompose(x, Some(fieldPath))
         case v                          => Set(fieldPath.set(v).asInstanceOf[MongoUpdateField])
       }

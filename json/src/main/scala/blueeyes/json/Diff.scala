@@ -60,9 +60,9 @@ object Diff {
   private def diffFields(vs1: List[JField], vs2: List[JField]): Diff = {
     def diffRec(xleft: List[JField], yleft: List[JField]): Diff = xleft match {
       case Nil => Diff(JNothing, if (yleft.isEmpty) JNothing else JObject(yleft), JNothing)
-      case x :: xs => yleft find (_.name == x.name) match {
+      case x :: xs => yleft find (_._1 == x._1) match {
         case Some(y) =>
-          val diffedPair = diff(x.value, y.value) map (v => JObject(JField(x.name, v) :: Nil))
+          val diffedPair = diff(x._2, y._2) map (v => JObject(JField(x._1, v) :: Nil))
 
           diffedPair merge (diffRec(xs, yleft.filterNot (_ == y)))
 
