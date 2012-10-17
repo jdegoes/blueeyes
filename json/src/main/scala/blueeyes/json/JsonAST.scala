@@ -615,6 +615,16 @@ object JsonAST {
       case JNothing    => -1
     }
 
+    implicit final val jnumOrder: Order[JNum] = new Order[JNum] {
+      def order(v1: JNum, v2: JNum) = (v1, v2) match {
+        case (JNumStr(v1), JNumStr(v2)) => v1 ?|? v2
+        case (JNumLong(v1), JNumLong(v2)) => v1 ?|? v2
+        case (JNumDouble(v1), JNumDouble(v2)) => v1 ?|? v2
+        case (JNumBigDec(v1), JNumBigDec(v2)) => v1 ?|? v2
+        case (_, _) => v1.toBigDecimal ?|? v2.toBigDecimal
+      }
+    }
+
     implicit final val order: Order[JValue] = new Order[JValue] {
       def order(jv1: JValue, jv2: JValue) = {
         (typeIndex(jv1) ?|? typeIndex(jv2)) |+|
@@ -623,7 +633,7 @@ object JsonAST {
           case v: JObject => JObject.order(v, jv2.asInstanceOf[JObject])
           case v: JArray  => JArray.order(v, jv2.asInstanceOf[JArray])
           case v: JString => v.value ?|? jv2.asInstanceOf[JString].value
-          case v: JNum    => v.value ?|? jv2.asInstanceOf[JNum].value
+          case v: JNum    => v ?|? jv2.asInstanceOf[JNum]
           case v: JBool   => v.value ?|? jv2.asInstanceOf[JBool].value
           case _ => EQ
         })
@@ -710,13 +720,7 @@ object JsonAST {
   /*
 
   sealed trait JNum {
-    def toBigDecimal: BigDecimal
-
-    def toLong: Long
-
-    def toDouble: Double
-
-    def toRawString: String
+    
 
     ...
   }
@@ -735,33 +739,102 @@ object JsonAST {
     }
   }
   */
+  sealed trait JNum extends JValue {
+    def isNaN: Boolean
 
-  case class JNum(value: BigDecimal) extends JValue {
-    // SI-6173
-    override val hashCode = 0
+    def toBigDecimal: BigDecimal
+
+    def toLong: Long
+
+    def toDouble: Double
+
+    def toRawString: String
 
     def sort: JNum = this
   }
-  case object JNum extends (BigDecimal => JNum) {
-    // John's idea...
-    def apply(double: Double): JValue = fromDouble(double)
-    
+
+  case class JNumStr(value: String) extends JNum {
+    def isNaN: Boolean = false
+
+    def toBigDecimal: BigDecimal = BigDecimal(value)
+
+    def toLong: Long = value.toLong
+
+    def toDouble: Double = value.toDouble
+
+    def toRawString: String = value
+  }
+
+  case class JNumLong(value: Long) extends JNum {
+    def isNaN: Boolean = false
+
+    def toBigDecimal: BigDecimal = BigDecimal(value)
+
+    def toLong: Long = value
+
+    def toDouble: Double = value.toDouble
+
+    def toRawString: String = value.toString
+  }
+
+  case class JNumDouble(value: Double) extends JNum {
+    def isNaN: Boolean = value.isNaN
+
+    def toBigDecimal: BigDecimal = BigDecimal(value)
+
+    def toLong: Long = value.toLong
+
+    def toDouble: Double = value
+
+    def toRawString: String = value.toString
+  }
+
+  case class JNumBigDec(value: BigDecimal) extends JNum {
+    def isNaN: Boolean = false
+
+    def toBigDecimal: BigDecimal = value
+
+    def toLong: Long = value.toLong
+
+    def toDouble: Double = value.toDouble
+
+    def toRawString: String = value.toString
+
+    // SI-6173
+    override val hashCode = 0
+  }
+  case object JNumBigDec extends (BigDecimal => JNum) {
     def fromDouble(double: Double): JValue = {
       try {
-        new JNum(BigDecimal(double))
+        JNumBigDec(BigDecimal(double))
       } catch {
         case _: NumberFormatException => JNothing
       }
     }
   }
+
+  case object JNum {
+    def apply(value: Double): JValue = JNumDouble(value)
+
+    def apply(value: String): JValue = JNumStr(value)
+
+    def apply(value: Long): JValue = JNumLong(value)
+
+    def apply(value: BigDecimal): JValue = JNumBigDec(value)
+    
+    def unapply(value: JNum): Option[BigDecimal] = {
+      try { Some(value.toBigDecimal) }
+      catch { case _ : NumberFormatException => None }
+    }
+  }
+
   case class JString(value: String) extends JValue {
     def sort: JString = this
   }
 
-
   type JField = (String, JValue)
 
-  object JField extends ((String, JValue) => JField) {
+  case object JField extends ((String, JValue) => JField) {
     def apply(name: String, value: JValue): JField = (name, value)
 
     def unapply(value: JField): Option[(String, JValue)] = Some(value)
@@ -810,6 +883,8 @@ object JsonAST {
   case class JObject(fields: Map[String, JValue]) extends JValue {
     def get(name: String): JValue = fields.get(name).getOrElse(JNothing)
 
+    def ++ (that: JObject): JObject = JObject(this.fields ++ that.fields)
+
     def + (field: JField): JObject = copy(fields = fields + field)
 
     def - (name: String): JObject = copy(fields = fields - name)
@@ -826,11 +901,13 @@ object JsonAST {
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
   }
-  object JObject {
+  case object JObject extends (Map[String, JValue] => JObject) {
     final val empty = JObject(Nil)
     final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.toList.sorted.filter(_._2 ne JNothing).sortBy(_._2))
 
     def apply(fields: Traversable[JField]): JObject = JObject(fields.toMap)
+
+    def apply(fields: JField*): JObject = JObject(fields.toMap)
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
@@ -838,7 +915,7 @@ object JsonAST {
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
   }
-  object JArray {
+  case object JArray extends (List[JValue] => JArray) {
     final val empty = JArray(Nil)
     final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
   }

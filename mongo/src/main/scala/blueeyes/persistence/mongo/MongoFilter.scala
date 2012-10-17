@@ -120,7 +120,7 @@ sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter 
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false
       case _ => true
     }}
-    JObject(notEqsQuery(notEqs).fields ::: eqsQuery(eqs).fields)
+    notEqsQuery(notEqs) ++ eqsQuery(eqs)
   }
 
   private def notEqsQuery(queries: Seq[MongoFilter]) = {

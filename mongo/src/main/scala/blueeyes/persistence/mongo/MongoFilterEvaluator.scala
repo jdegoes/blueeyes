@@ -207,8 +207,9 @@ private[mongo] object Evaluators{
   trait NearFilterEvaluatorBase extends FieldFilterEvaluator with GeoTools{
     def apply(v1: JValue, v2: JValue) = {
       def evaluate(x: Double, y: Double) = v2 match{
-        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY)))) :: Nil) => true
-        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY)))) :: JField("$maxDistance", JNum(maxDistance)) :: Nil) => isNear(nearX.doubleValue, nearY.doubleValue, x.doubleValue, y.doubleValue, maxDistance.doubleValue)
+        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY))))) => true
+        case JObject(JField(query, JArray(List(JNum(nearX), JNum(nearY)))), JField("$maxDistance", JNum(maxDistance))) => 
+          isNear(nearX.doubleValue, nearY.doubleValue, x.doubleValue, y.doubleValue, maxDistance.doubleValue)
         case _ => false
       }
       normalizeGeoField(v1) match {
