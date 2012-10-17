@@ -14,6 +14,14 @@ sealed trait Context {
   def isObj: Boolean
 }
 
+final class SingleContext extends Context {
+  var value: JValue = null
+  def add(s: String): Unit = value = JString(s)
+  def add(v: JValue): Unit = value = v
+  def finish = value
+  def isObj = false
+}
+
 final class ArrContext extends Context {
   private val vs = mutable.ListBuffer.empty[JValue]
 

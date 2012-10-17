@@ -24,6 +24,7 @@ import scalaz.syntax.arrow._
 import scalaz.std.function._
 
 import scala.annotation.{switch, tailrec}
+import scala.collection.mutable
 
 import java.lang.Character.isHighSurrogate
 import java.lang.Double.parseDouble
@@ -36,16 +37,31 @@ import java.nio.ByteBuffer
 object JsonParser {
   import java.io._
 
-  def parse(reader: Reader): JValue = sys.error("not implemented yet")
-  def parse(str: String): JValue = parseString(str)
+  // legacy parsing methods
+  def parse(str: String): JValue = new StringParser(str).parse()
+
   def parseOpt(str: String): Option[JValue] = try {
-    Some(parseString(str))
+    Some(parse(str))
   } catch {
     case e: Exception => None
   }
 
-  def parseString(str: String): JValue = new StringParser(str).parse(0)
-  def parsePath(path: String): JValue = new PathParser(path).parse(0)
+  type R[A] = Validation[Throwable, A]
+
+  // TODO: parsing from InputStream, ByteBuffer, etc
+  // TODO: async parsing
+  
+  def parseFromString(str: String): R[JValue] =
+    Validation.fromTryCatch(new StringParser(str).parse())
+
+  def parseManyFromString(str: String): R[Seq[JValue]] =
+    Validation.fromTryCatch(new StringParser(str).parseMany())
+
+  def parseFromPath(path: String): R[JValue] =
+    Validation.fromTryCatch(new PathParser(path).parse())
+
+  def parseManyFromPath(path: String): R[Seq[JValue]] =
+    Validation.fromTryCatch(new PathParser(path).parseMany())
 }
 
 // underlying parser code adapted from jawn under MIT license.
@@ -120,37 +136,103 @@ trait Parser {
   /**
    * Parse the given number, and add it to the given context.
    *
-   * This code relies on parseLong/parseDouble to blow up for invalid inputs;
-   * it does not try to exactly model the JSON input because we're not actually
-   * going to "build" the numbers ourselves. It just needs to be sure that for
-   * valid JSON we will find the right "number region".
+   * We don't actually instantiate a number here, but rather save the string
+   * for future use. This ends up being way faster and has the nice side-effect
+   * that we know exactly how the user represented the number.
    *
-   * TODO: We spend a *lot* of time in parseDouble() so
-   * consider other possible alternatives.
+   * It would probably be possible to keep track of the whether the number is
+   * expected to be whole, decimal, etc. but we don't do that at the moment.
    */
   final def parseNum(i: Int, ctxt: Context): Int = {
     var j = i
     var c = at(j)
 
-    if (c == '-') { j += 1; c = at(j) }
-    while ('0' <= c && c <= '9') { j += 1; c = at(j) }
-
-    if (c == '.' || c == 'e' || c == 'E') {
+    if (c == '-') {
       j += 1
       c = at(j)
-      while ('0' <= c && c <= '9' || c == '+' || c == '-' || c == 'e' || c == 'E') {
+    }
+    while ('0' <= c && c <= '9') { j += 1; c = at(j) }
+
+    if (c == '.') {
+      j += 1
+      c = at(j)
+      while ('0' <= c && c <= '9') { j += 1; c = at(j) }
+    }
+
+    if (c == 'e' || c == 'E') {
+      j += 1
+      c = at(j)
+      if (c == '+' || c == '-') {
         j += 1
         c = at(j)
       }
-      ctxt.add(JNum(at(i, j)))
-      j
-    } else if (j - i < 19) {
-      ctxt.add(JNum(at(i, j)))
-      j
-    } else {
-      ctxt.add(JNum(at(i, j)))
-      j
+      while ('0' <= c && c <= '9') { j += 1; c = at(j) }
     }
+
+    ctxt.add(JNum(at(i, j)))
+    j
+  }
+
+  /**
+   * This number parser is a bit slower because it has to be sure it doesn't
+   * run off the end of the input. Normally (when operating in rparse in the
+   * context of an outer array or objedct) we don't have to worry about this
+   * and can just grab characters, because if we run out of characters that
+   * would indicate bad input.
+   *
+   * This method has all the same caveats as the previous method.
+   */
+  final def parseNumSlow(i: Int, ctxt: Context): Int = {
+    var j = i
+    var c = at(j)
+
+    if (c == '-') {
+      // any valid input will require at least one digit after -
+      j += 1
+      c = at(j)
+    }
+    while ('0' <= c && c <= '9') {
+      j += 1
+      if (atEof(j)) {
+        ctxt.add(JNum(at(i, j)))
+        return j
+      }
+      c = at(j)
+    }
+
+    if (c == '.') {
+      // any valid input will require at least one digit after .
+      j += 1
+      c = at(j)
+      while ('0' <= c && c <= '9') {
+        j += 1
+        if (atEof(j)) {
+          ctxt.add(JNum(at(i, j)))
+          return j
+        }
+        c = at(j)
+      }
+    }
+
+    if (c == 'e' || c == 'E') {
+      // any valid input will require at least one digit after e, e+, etc
+      j += 1
+      c = at(j)
+      if (c == '+' || c == '-') {
+        j += 1
+        c = at(j)
+      }
+      while ('0' <= c && c <= '9') {
+        j += 1
+        if (atEof(j)) {
+          ctxt.add(JNum(at(i, j)))
+          return j
+        }
+        c = at(j)
+      }
+    }
+    ctxt.add(JNum(at(i, j)))
+    j
   }
 
   /**
@@ -170,13 +252,13 @@ trait Parser {
    * Parse the JSON constant "true".
    */
   final def parseTrue(i: Int) =
-    if (is(i, i + 4, "true")) JBool(true) else die(i, "expected true")
+    if (is(i, i + 4, "true")) JTrue else die(i, "expected true")
 
   /**
    * Parse the JSON constant "false".
    */
   final def parseFalse(i: Int) =
-    if (is(i, i + 5, "false")) JBool(false) else die(i, "expected false")
+    if (is(i, i + 5, "false")) JFalse else die(i, "expected false")
 
   /**
    * Parse the JSON constant "null".
@@ -191,7 +273,25 @@ trait Parser {
    * valid, as well as more traditional documents like [1,2,3,4,5]. However,
    * multiple top-level objects are not allowed.
    */
-  final def parse(i: Int): JValue = (at(i): @switch) match {
+  final def parse(): JValue = {
+    val (value, i) = parse(0)
+    var j = i
+    while (!atEof(j)) {
+      (at(j): @switch) match {
+        case ' ' => j += 1
+        case '\t' => j += 1
+        case '\n' => j += 1
+      }
+    }
+    if (!atEof(j)) sys.error("expected eof")
+    value
+  }
+
+  /**
+   * Parse and return the "next" JSON value as well as the position beyond it.
+   * This method is used by both parse() as well as parseMany().
+   */
+  final def parse(i: Int): (JValue, Int) = (at(i): @switch) match {
     // ignore whitespace
     case ' ' => parse(i + 1)
     case '\t' => parse(i + 1)
@@ -204,22 +304,46 @@ trait Parser {
 
     // we have a single top-level number
     case '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
-      JNum(all(i))
+      val ctxt = new SingleContext
+      val j = parseNumSlow(i, ctxt)
+      (ctxt.value, j)
 
     // we have a single top-level string
     case '"' =>
-      val ctxt = new ArrContext
+      val ctxt = new SingleContext
       val j = parseString(i, ctxt)
-      if (atEof(j)) ctxt.finish.elements.head else die(j, "expected eof")
+      (ctxt.value, j)
 
     // we have a single top-level constant
-    case 't' => if (atEof(i + 4)) parseTrue(i) else die(i + 4, "expected eof")
-    case 'f' => if (atEof(i + 5)) parseFalse(i) else die(i + 5, "expected eof")
-    case 'n' => if (atEof(i + 4)) parseNull(i) else die(i + 4, "expected eof")
+    case 't' => (parseTrue(i), i + 4)
+    case 'f' => (parseFalse(i), i + 5)
+    case 'n' => (parseNull(i), i + 4)
 
     // invalid
-    case _ =>
-      die(i, "expected json value")
+    case _ => die(i, "expected json value")
+  }
+
+  /**
+   * Parse the given document into a sequence of JSON values. These might be
+   * containers like objects and arrays, or primtitives like numbers and
+   * strings.
+   *
+   * JSON objects may only be separated by whitespace. Thus, "top-level" commas
+   * and other characters will become parse errors.
+   */
+  final def parseMany(): Seq[JValue] = {
+    val results = mutable.ArrayBuffer.empty[JValue]
+    var i = 0
+    while (!atEof(i)) {
+      (at(i): @switch) match {
+        case ' ' | '\t' | '\n' => i += 1
+        case _ =>
+          val (value, j) = parse(i)
+          results.append(value)
+          i = j
+      }
+    }
+    results
   }
 
   /**
@@ -234,7 +358,7 @@ trait Parser {
    * constructed if/else statements or something else.
    */
   @tailrec
-  final def rparse(state: Int, j: Int, stack: List[Context]): JValue = {
+  final def rparse(state: Int, j: Int, stack: List[Context]): (JValue, Int) = {
     val i = reset(j)
     (state: @switch) match {
       // we are inside an object or array expecting to see data
@@ -293,7 +417,7 @@ trait Parser {
 
         case ']' => stack match {
           case ctxt1 :: Nil =>
-            ctxt1.finish
+            (ctxt1.finish, i + 1)
           case ctxt1 :: ctxt2 :: tail =>
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
@@ -312,7 +436,7 @@ trait Parser {
 
         case '}' => stack match {
           case ctxt1 :: Nil =>
-            ctxt1.finish
+            (ctxt1.finish, i + 1)
           case ctxt1 :: ctxt2 :: tail =>
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
@@ -345,7 +469,7 @@ trait Parser {
 
         case ']' => stack match {
           case ctxt1 :: Nil =>
-            ctxt1.finish
+            (ctxt1.finish, i + 1)
           case ctxt1 :: ctxt2 :: tail =>
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
@@ -367,7 +491,7 @@ trait Parser {
 
         case '}' => stack match {
           case ctxt1 :: Nil =>
-            ctxt1.finish
+            (ctxt1.finish, i + 1)
           case ctxt1 :: ctxt2 :: tail =>
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
@@ -385,8 +509,8 @@ trait Parser {
  * Parser companion, with convenience methods.
  */
 object Parser {
-  def parseString(s: String): JValue = new StringParser(s).parse(0)
-  def parsePath(s: String): JValue = new PathParser(s).parse(0)
+  def parseString(s: String): JValue = new StringParser(s).parse()
+  def parsePath(s: String): JValue = new PathParser(s).parse()
 }
 
 /**
