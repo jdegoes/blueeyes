@@ -908,6 +908,12 @@ object JsonAST {
     def apply(fields: Traversable[JField]): JObject = JObject(fields.toMap)
 
     def apply(fields: JField*): JObject = JObject(fields.toMap)
+
+    def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
+      case JObject(fields) => Some(fields.toSeq)
+
+      case _ => None
+    }
   }
 
   case class JArray(elements: List[JValue]) extends JValue {

@@ -71,13 +71,6 @@ case class MongoSelectQuery(selection: MongoSelection, collection: MongoCollecti
   def snapshot                      : MongoSelectQuery = copy(isSnapshot = true)
   def explain                       : MongoExplainQuery = MongoExplainQuery(selection, collection, filter, sort, skip, limit, hint, isSnapshot)
 }
-case class MongoMultiSelectQuery(filters: Seq[MongoFilter], collection: MongoCollection,
-                                sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery with MultiSelectQuery{
-  require(!filters.isEmpty)
-  def hint(newHint: Hint)           : MongoMultiSelectQuery = copy(hint = Some(newHint))
-  def sortBy(newSort: MongoSort)    : MongoMultiSelectQuery = copy(sort = Some(newSort))
-  def explain                       : MongoExplainQuery = MongoExplainQuery(MongoSelection(Set()), collection, Some(MongoOrFilter(filters)), sort, None, None, hint, false)
-}
 case class MongoSelectOneQuery(selection: MongoSelection, collection: MongoCollection, filter: Option[MongoFilter] = None,
                               sort: Option[MongoSort] = None, hint: Option[Hint] = None) extends MongoQuery with SelectOneQueryBehaviour{
   def where (newFilter: MongoFilter): MongoSelectOneQuery = copy(filter = Some(newFilter))
@@ -158,7 +151,6 @@ trait MongoQueryBuilder{
     def set(value: MongoUpdate): T = f(value)
   }
 
-  def multiSelect(filters: MongoFilter*)        = new FromQueryEntryPoint(MongoMultiSelectQuery(filters, _))
   def select(selection: JPath*)                 = new FromQueryEntryPoint(MongoSelectQuery(MongoSelection(Set(selection: _*)), _))
   def selectAndUpdate(collection: MongoCollection) = new SetQueryEntryPoint(MongoSelectAndUpdateQuery(collection, _, None, None, MongoSelection(Set()), false, false))
   def selectAndUpsert(collection: MongoCollection) = new SetQueryEntryPoint(MongoSelectAndUpdateQuery(collection, _, None, None, MongoSelection(Set()), false, true))

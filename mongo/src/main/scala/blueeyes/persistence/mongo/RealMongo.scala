@@ -137,10 +137,10 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
 
   def ensureIndex(name: String, keysPaths: Seq[(JPath, IndexType)], unique: Boolean, options: JObject) {
     val indexOptions = JObject(
-      JField("name", JString(name)) ::
-      JField("background", JBool(true)) ::
-      JField("unique", JBool(unique)) :: options.fields
-    )
+      JField("name", JString(name)),
+      JField("background", JBool(true)),
+      JField("unique", JBool(unique))
+    ) ++ options
 
     def toMongoIndexType(indexType: IndexType) = {
       indexType match{
@@ -175,7 +175,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   def group(selection: MongoSelection, filter: Option[MongoFilter], initial: JObject, reduce: String): JArray = {
     val result = collection.group(toMongoKeys(selection), toMongoFilter(filter), initial, reduce)
 
-    JArray(MongoToJson(result.asInstanceOf[DBObject]).fields.map(_._2))
+    JArray(MongoToJson(result.asInstanceOf[DBObject]).fields.values.toList)
   }
 
   def mapReduce(map: String, reduce: String, outputCollection: Option[String], filter: Option[MongoFilter]) = {
@@ -186,7 +186,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
     val key    = JPathExtension.toMongoField(selection)
     val result = filter.map(v => collection.distinct(key, v.filter.asInstanceOf[JObject])).getOrElse(collection.distinct(key))
 
-    MongoToJson(result.asInstanceOf[DBObject]).fields.map(_._2)
+    MongoToJson(result.asInstanceOf[DBObject]).fields.values.toList
   }
 
   def getLastError: Option[BasicDBObject] = {

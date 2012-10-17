@@ -94,7 +94,7 @@ private[mongo] object MongoUpdateObject {
   def decompose(jObject: JObject): Seq[MongoUpdateField] = decompose(jObject, None)
 
   private def decompose(jObject: JObject, parentPath: Option[JPath]): Seq[MongoUpdateField] = {
-    jObject.fields.map(field => {
+    jObject.fields.toSeq.map(field => {
       val fieldPath = parentPath.map(_ \ field._1).getOrElse(JPath(field._1))
 
       jvalueToMongoPrimitive(field._2) match {
@@ -334,29 +334,15 @@ private[mongo] object UpdateFieldFunctions{
   }
 
   case class PullF(path: JPath, filter: MongoFilter) extends MongoUpdateField{
-    import MongoFilterEvaluator._
-
     val operator = $pull
 
     override protected def fuseWithImpl(older: Change1) = (filter, older) match {
-      case (_, SetF(f, v))         => Some(SetF(path, pull(v, filter)))
+      case (_, SetF(f, v))         => None
 
       case (x: MongoFieldFilter, PullF(_, y: MongoFieldFilter)) if (x.lhs == JPath("") && x.operator == $eq && y.lhs == JPath("") && y.operator == $eq) => Some(PullAllF(path, List(x.rhs, y.rhs)))
       case (x: MongoFieldFilter, PullAllF(_, oldValue)) if (x.lhs == JPath("") && x.operator == $eq) => Some(PullAllF(path, x.rhs :: oldValue))
 
       case (_, _) => sys.error("""PullF can be only combined with SetF PullAllF (when self.filter is ("" === value)) and PullF (when self.filter is ("" === value) and older.filter is ("" === value)). Older=""" + older)
-    }
-
-    private def pull(v1: MongoPrimitive, filter: MongoFilter): MongoPrimitive  = v1 match{
-      case MongoPrimitiveArray(x)  => {
-        val valuesAndJValues  = x.zip(x.map(_.toJValue))
-        val matchedJVales     = valuesAndJValues.unzip._2.filter(filter)
-        val filtered          = valuesAndJValues.filterNot(v => matchedJVales contains v._2).unzip._1
-
-        MongoPrimitiveArray(filtered)
-      }
-
-      case _ => throw new MongoException("Cannot apply $pull modifier to non-array")
     }
   }
 }
