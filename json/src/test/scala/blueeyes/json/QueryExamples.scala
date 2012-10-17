@@ -36,7 +36,7 @@ object QueryExamples extends Specification {
   "List of IPs in cluster2" in {
     val ips = for { 
       cluster @ JObject(x) <- json \ "data_center"
-      if (x contains JField("name", JString("cluster2")))
+      if (x.get("name") == Some(JString("cluster2")))
       JString(ip) <- cluster \\ "ip" } yield ip
     ips mustEqual List("192.168.2.125", "192.168.2.126")
   }

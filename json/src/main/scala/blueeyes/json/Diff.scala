@@ -57,18 +57,24 @@ object Diff {
     case (x, y) => Diff(JNothing, y, x)
   }
 
-  private def diffFields(vs1: List[JField], vs2: List[JField]): Diff = {
-    def diffRec(xleft: List[JField], yleft: List[JField]): Diff = xleft match {
-      case Nil => Diff(JNothing, if (yleft.isEmpty) JNothing else JObject(yleft), JNothing)
-      case x :: xs => yleft find (_._1 == x._1) match {
-        case Some(y) =>
-          val diffedPair = diff(x._2, y._2) map (v => JObject(JField(x._1, v) :: Nil))
+  private def diffFields(vs1: Map[String, JValue], vs2: Map[String, JValue]): Diff = {
+    def diffRec(xleft: Map[String, JValue], yleft: Map[String, JValue]): Diff = {
+      if (xleft.isEmpty) Diff(JNothing, if (yleft.isEmpty) JNothing else JObject(yleft), JNothing)
+      else {
+        val x = xleft.head
+        val xs = xleft.tail
 
-          diffedPair merge (diffRec(xs, yleft.filterNot (_ == y)))
+        yleft.get(x._1) match {
+          case Some(yv) =>
+            val diffedPair = diff(x._2, yv) map (v => JObject(JField(x._1, v) :: Nil))
 
-        case None =>
-          val Diff(c, a, d) = diffRec(xs, yleft)
-          Diff(c, a, JObject(x :: Nil) merge d)
+            diffedPair merge (diffRec(xs, yleft - x._1))
+
+          case None =>
+            val Diff(c, a, d) = diffRec(xs, yleft)
+            
+            Diff(c, a, JObject(x :: Nil) merge d)
+        }
       }
     }
 

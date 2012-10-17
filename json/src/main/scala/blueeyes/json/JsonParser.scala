@@ -153,7 +153,7 @@ object JsonParser {
 
     // This is a slightly faster way to correct order of fields and arrays than using 'map'.
     def reverse(v: JValue): JValue = v match {
-      case JObject(l) => JObject(l.map((reverse _).second).asInstanceOf[List[JField]].reverse)
+      case JObject(l) => JObject(l.map((reverse _).second))
       case JArray(l) => JArray(l.map(reverse).reverse)
       case x => x
     }
@@ -164,9 +164,9 @@ object JsonParser {
           val field = vals.pop(classOf[JField])
           val newField = JField(field._1, v.asInstanceOf[JValue])
           val obj = vals.peek(classOf[JObject])
-          vals.replace(JObject(newField :: obj.fields))
+          vals.replace(obj + newField)
         case Some(o: JObject) => v match {
-          case x: (_, _) => vals.replace(JObject(x.asInstanceOf[JField] :: o.fields))
+          case x: (_, _) => vals.replace(o + x.asInstanceOf[JField])
           case _ => p.fail("expected field but got " + v)
         }
         case Some(a: JArray) => vals.replace(JArray(v.asInstanceOf[JValue] :: a.elements))
@@ -183,7 +183,7 @@ object JsonParser {
             vals.pop(classOf[JField])
             val newField = JField(f._1.asInstanceOf[String], v)
             val obj = vals.peek(classOf[JObject])
-            vals.replace(JObject(newField :: obj.fields))
+            vals.replace(obj + newField)
           case a: JArray => vals.replace(JArray(v :: a.elements))
           case _ => p.fail("expected field or array")
         }

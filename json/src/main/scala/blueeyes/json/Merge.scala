@@ -37,14 +37,18 @@ object Merge {
     case (_, y) => y
   }
 
-  private def mergeFields(vs1: List[JField], vs2: List[JField]): List[JField] = {
-    def mergeRec(xleft: List[JField], yleft: List[JField]): List[JField] = xleft match {
-      case Nil => yleft
-      case JField(xn, xv) :: xs => yleft find (_._1 == xn) match {
-        case Some(y @ JField(yn, yv)) => 
-          JField(xn, merge(xv, yv)) :: mergeRec(xs, yleft.filterNot (_ == y))
+  private def mergeFields(vs1: Map[String, JValue], vs2: Map[String, JValue]): Map[String, JValue] = {
+    def mergeRec(xleft: Map[String, JValue], yleft: Map[String, JValue]): Map[String, JValue] = {
+      if (xleft.isEmpty) yleft
+      else {
+        val (xn, xv) = xleft.head
+        val xs = xleft.tail
 
-        case None => JField(xn, xv) :: mergeRec(xs, yleft)
+        yleft.get(xn) match {
+          case Some(yv) => mergeRec(xs, yleft - xn) + JField(xn, merge(xv, yv))
+
+          case None => mergeRec(xs, yleft) + JField(xn, xv)
+        }
       }
     }
 

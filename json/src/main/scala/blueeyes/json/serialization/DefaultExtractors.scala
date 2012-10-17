@@ -168,7 +168,7 @@ trait DefaultExtractors {
   
   implicit def StringMapExtractor[V](implicit valueExtractor: Extractor[V]): Extractor[Map[String, V]] = new Extractor[Map[String, V]] {
     def extract(jvalue: JValue): Map[String, V] = jvalue match {
-      case JObject(fields) => Map((fields.map { field => (field._1, valueExtractor.extract(field._2)) }): _*)
+      case JObject(fields) => fields.mapValues(valueExtractor.extract)
       
       case _ => Map(ListExtractor(Tuple2Extractor(StringExtractor, valueExtractor)).extract(jvalue): _*)
     }

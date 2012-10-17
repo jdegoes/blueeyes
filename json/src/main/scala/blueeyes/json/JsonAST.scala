@@ -109,7 +109,7 @@ object JsonAST {
           breadthFirst0(head :: cur, 
             head match {
               case JObject(fields) =>
-                nextQueue.enqueue(fields.map(_._2))
+                nextQueue.enqueue(fields.values.toList)
 
               case JArray(elements) =>
                 nextQueue.enqueue(elements)
@@ -190,7 +190,11 @@ object JsonAST {
 
       self match {
         case obj @ JObject(fields) => path.nodes match {
-          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_._1 == name))
+          case JPathField(name) :: nodes => 
+            val (child, rest) = obj.partitionField(name)
+
+            rest + JField(name, child.set(JPath(nodes), value))
+
           case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
         }
 
@@ -243,10 +247,10 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
      * </pre>
      */
-    def children: List[JValue] = self match {
-      case JObject(l) => l.map(_._2)
+    def children: Iterable[JValue] = self match {
+      case JObject(fields) => fields.values
       case JArray(l) => l
-      case _ => Nil
+      case _ => List.empty
     }
 
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
@@ -482,25 +486,26 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil) flattenWithPath
      * </pre>
      */
-    def flattenWithPath: List[(JPath, JValue)] = {
-      def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
-        case JObject(Nil) => (path -> value) :: Nil
+    def flattenWithPath: Vector[(JPath, JValue)] = {
+      def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
+        case JObject.empty => Vector((path -> value))
 
         case JObject(fields) => 
-          fields.flatMap { field =>
-            flatten0(path \ field._1)(field._2)
+          fields.foldLeft(Vector.empty[(JPath, JValue)]) { 
+            case (acc, field) =>
+              acc ++ flatten0(path \ field._1)(field._2)
           }
         
-        case JArray(Nil) => (path -> value) :: Nil
+        case JArray(Nil) => Vector((path -> value))
 
         case JArray(elements) => 
-          elements.zipWithIndex.flatMap { tuple =>
+          Vector(elements: _*).zipWithIndex.flatMap { tuple =>
             val (element, index) = tuple
 
             flatten0(path \ index)(element)
           }
 
-        case _ => (path -> value) :: Nil
+        case _ => Vector((path -> value))
       }
 
       flatten0(JPath.Identity)(self)
@@ -557,24 +562,31 @@ object JsonAST {
   object JValue {
     def apply(p: JPath, v: JValue) = JNothing.set(p, v)
 
-    private def unflattenArray(elements: List[(JPath, JValue)]): JArray = {
+    private def unflattenArray(elements: Seq[(JPath, JValue)]): JArray = {
       elements.foldLeft(JArray(Nil)) { (arr, t) => arr.set(t._1, t._2) --> classOf[JArray] }
     }
 
-    private def unflattenObject(elements: List[(JPath, JValue)]): JObject = {
+    private def unflattenObject(elements: Seq[(JPath, JValue)]): JObject = {
       elements.foldLeft(JObject(Nil)) { (obj, t) => obj.set(t._1, t._2) --> classOf[JObject] }
     }
 
-    def unflatten(elements: List[(JPath, JValue)]): JValue = elements.sortBy( _._1 ) match {
-      case ((JPath.Identity, value) :: Nil) => value
-      case arr @ ((p, _) :: _) if p.path.startsWith("[") => unflattenArray(arr)
-      case obj                                           => unflattenObject(obj)
+    def unflatten(elements: Seq[(JPath, JValue)]): JValue = {
+      if (elements.isEmpty) JNothing
+      else {
+        val sorted = elements.sortBy(_._1)
+
+        val (xp, xv) = sorted.head
+
+        if (xp == JPath.Identity && sorted.size == 1) xv
+        else if (xp.path.startsWith("[")) unflattenArray(sorted)
+        else unflattenObject(sorted)
+      }      
     }    
 
     case class paired(jv1: JValue, jv2: JValue) {
       assert(jv1 != null && jv2 != null)
       final def fold[A](default: => A)(
-        obj:    List[JField] => List[JField] => A,
+        obj:    Map[String, JValue] => Map[String, JValue] => A,
         arr:    List[JValue] => List[JValue] => A,
         str:    String => String => A,
         num:    BigDecimal => BigDecimal => A,
@@ -632,7 +644,11 @@ object JsonAST {
 
           target match {
             case obj @ JObject(fields) => path.nodes match {
-              case JPathField(name)  :: nodes => JObject(JField(name, rec(obj \ name, JPath(nodes), value)) :: fields.filterNot(_._1 == name))
+              case JPathField(name) :: nodes => 
+                val (child, rest) = obj.partitionField(name)
+
+                rest + JField(name, rec(child, JPath(nodes), value))
+
               case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
               case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
                                   " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
@@ -791,30 +807,30 @@ object JsonAST {
     }
   }
 
-  case class JObject(fields: List[JField]) extends JValue {
-    type Field = JField
-    type Value = JValue
-    
-    def get(name: String): JValue = fields.find(_._1 == name).map(_._2).getOrElse(JNothing)
+  case class JObject(fields: Map[String, JValue]) extends JValue {
+    def get(name: String): JValue = fields.get(name).getOrElse(JNothing)
+
+    def + (field: JField): JObject = copy(fields = fields + field)
+
+    def - (name: String): JObject = copy(fields = fields - name)
+
+    def partitionField(field: String): (JValue, JObject) = {
+      (get(field), JObject(fields - field))
+    }
     
     def partition(f: JField => Boolean): (JObject, JObject) = {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
 
-    def sort: JObject = JObject(fields.filter(_._2 ne JNothing).map(_.map(_.sort)).sorted)
+    def sort: JObject = JObject(fields.filter(_._2 ne JNothing).map(_.map(_.sort)))
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
-
-    override lazy val hashCode = Set(this.fields: _*).hashCode
-
-    override def equals(that: Any): Boolean = that match {
-      case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
-      case _ => false
-    }
   }
   object JObject {
     final val empty = JObject(Nil)
-    final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.filter(_._2 ne JNothing).sortBy(_._2))
+    final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.toList.sorted.filter(_._2 ne JNothing).sortBy(_._2))
+
+    def apply(fields: Traversable[JField]): JObject = JObject(fields.toMap)
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
@@ -863,7 +879,7 @@ trait Printer {
     case JString(s)    => text("\"" + quote(s) + "\"")
     case JArray(elems) => text("[") :: series(elems map renderAll) :: text("]")
     case JObject(fs)   =>
-      val renderedFields = fs.map { field =>
+      val renderedFields = fs.toList.map { field =>
         text("\"" + quote(field._1) + "\":") :: renderAll(field._2)
       }
 
@@ -899,7 +915,7 @@ trait Printer {
         case JString(s)    => text(scalaQuote(s))
         case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
         case JObject(fs)  =>
-          val renderedFields = fs.map { field =>
+          val renderedFields = fs.toList.map { field =>
             text(scalaQuote(field._1) + ",") :: renderScala(field._2)
           }
 

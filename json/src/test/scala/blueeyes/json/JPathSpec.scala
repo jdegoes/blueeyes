@@ -44,11 +44,11 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
   "Extractor" should {
     "extract all existing paths" in {
 
-      implicit val arb: Arbitrary[(JValue, List[(JPath, JValue)])] = Arbitrary {
+      implicit val arb: Arbitrary[(JValue, Vector[(JPath, JValue)])] = Arbitrary {
         for (jv <- arbitrary[JObject]) yield (jv, jv.flattenWithPath)
       }
 
-      check { (testData: (JValue, List[(JPath, JValue)])) =>
+      check { (testData: (JValue, Vector[(JPath, JValue)])) =>
         testData match {
           case (obj, allPathValues) => 
             val allProps = allPathValues.map {
