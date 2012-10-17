@@ -803,15 +803,6 @@ object JsonAST {
     // SI-6173
     override val hashCode = 0
   }
-  case object JNumBigDec extends (BigDecimal => JNum) {
-    def fromDouble(double: Double): JValue = {
-      try {
-        JNumBigDec(BigDecimal(double))
-      } catch {
-        case _: NumberFormatException => JNothing
-      }
-    }
-  }
 
   case object JNum {
     def apply(value: Double): JValue = if (value.isNaN || value == Double.PositiveInfinity || value == Double.NegativeInfinity) JNothing else JNumDouble(value)
