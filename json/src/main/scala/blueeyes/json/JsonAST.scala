@@ -751,7 +751,7 @@ object JsonAST {
     def sort: JNum = this
   }
 
-  case class JNumStr(value: String) extends JNum {
+  final case class JNumStr private[json] (value: String) extends JNum {
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value.toLong
@@ -761,7 +761,7 @@ object JsonAST {
     def toRawString: String = value
   }
 
-  case class JNumLong(value: Long) extends JNum {
+  final case class JNumLong(value: Long) extends JNum {
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value
@@ -771,7 +771,7 @@ object JsonAST {
     def toRawString: String = value.toString
   }
 
-  case class JNumDouble(value: Double) extends JNum {
+  final case class JNumDouble(value: Double) extends JNum {
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value.toLong
@@ -781,7 +781,7 @@ object JsonAST {
     def toRawString: String = value.toString
   }
 
-  case class JNumBigDec(value: BigDecimal) extends JNum {
+  final case class JNumBigDec(value: BigDecimal) extends JNum {
     def toBigDecimal: BigDecimal = value
 
     def toLong: Long = value.toLong
