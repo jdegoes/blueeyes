@@ -35,11 +35,11 @@ object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck
     check(parsing)
   }
 
-  "Buffer size does not change parsing result" in {
-    val bufSize = Gen.choose(2, 64)
-    val parsing = (x: JValue, s1: Int, s2: Int) => { parseVal(x, s1) mustEqual parseVal(x, s2) }
-    forAll(genObject, bufSize, bufSize)(parsing)
-  }
+  //"Buffer size does not change parsing result" in {
+  //  val bufSize = Gen.choose(2, 64)
+  //  val parsing = (x: JValue, s1: Int, s2: Int) => { parseVal(x, s1) mustEqual parseVal(x, s2) }
+  //  forAll(genObject, bufSize, bufSize)(parsing)
+  //}
 
   "Parsing is thread safe" in {
     import java.util.concurrent._
@@ -55,16 +55,16 @@ object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck
     parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
   }
 
-  private def parseVal(json: JValue, bufSize: Int) = {
-    val existingSize = JsonParser.Segments.segmentSize
-    try {
-      JsonParser.Segments.segmentSize = bufSize
-      JsonParser.Segments.clear
-      JsonParser.parse(compact(render(json)))
-    } finally {
-      JsonParser.Segments.segmentSize = existingSize
-    }
-  }
+  //private def parseVal(json: JValue, bufSize: Int) = {
+  //  val existingSize = JsonParser.Segments.segmentSize
+  //  try {
+  //    JsonParser.Segments.segmentSize = bufSize
+  //    JsonParser.Segments.clear
+  //    JsonParser.parse(compact(render(json)))
+  //  } finally {
+  //    JsonParser.Segments.segmentSize = existingSize
+  //  }
+  //}
 }
 
 object ParserBugs extends Specification {

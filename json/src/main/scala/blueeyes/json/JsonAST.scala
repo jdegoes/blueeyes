@@ -31,6 +31,7 @@ import scalaz.syntax.order._
 import scalaz.syntax.semigroup._
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 object JsonAST {
   import scala.text.{Document, DocText}
