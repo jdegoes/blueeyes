@@ -28,10 +28,10 @@ import scala.util.control.Exception._
 object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JsonAST._
   import JsonParser._
-  import Printer._
+  //import Printer._
 
   "Any valid json can be parsed" in {
-    val parsing = (json: JValue) => { parse(Printer.pretty(render(json))); true }
+    val parsing = (json: JValue) => { parse(json.renderPretty); true }
     check(parsing)
   }
 
