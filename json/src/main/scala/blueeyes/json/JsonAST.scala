@@ -526,6 +526,8 @@ object JsonAST {
         case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
         case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
         case (v: JValue, JArray(xs)) => JArray(v :: xs)
+        // TODO: Change semantics for objects to the following:
+        // case (JObject(f1s), JObject(f2s)) => JObject(f1s ++ f2s)
         case (x, y) => JArray(x :: y :: Nil)
       }
       append(self, other)
@@ -717,28 +719,6 @@ object JsonAST {
     def unapply(value: JBool): Option[Boolean] = Some(value.value)
   }
 
-  /*
-
-  sealed trait JNum {
-    
-
-    ...
-  }
-
-  object JNum {
-    def apply(value: BigDecimal): JNum = JNumBD
-    
-    def apply(value: Long): JNum = {
-  
-    }
-    
-    def apply(value: Double): JNum
-
-    case class StrNum(value: String) extends JNum {
-      
-    }
-  }
-  */
   sealed trait JNum extends JValue {
     def toBigDecimal: BigDecimal
 
