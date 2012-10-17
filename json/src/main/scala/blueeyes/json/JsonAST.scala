@@ -771,7 +771,7 @@ object JsonAST {
     def toRawString: String = value.toString
   }
 
-  final case class JNumDouble(value: Double) extends JNum {
+  final case class JNumDouble private[json] (value: Double) extends JNum {
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value.toLong
