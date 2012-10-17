@@ -740,8 +740,6 @@ object JsonAST {
   }
   */
   sealed trait JNum extends JValue {
-    def isNaN: Boolean
-
     def toBigDecimal: BigDecimal
 
     def toLong: Long
@@ -754,8 +752,6 @@ object JsonAST {
   }
 
   case class JNumStr(value: String) extends JNum {
-    def isNaN: Boolean = false
-
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value.toLong
@@ -766,8 +762,6 @@ object JsonAST {
   }
 
   case class JNumLong(value: Long) extends JNum {
-    def isNaN: Boolean = false
-
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value
@@ -778,8 +772,6 @@ object JsonAST {
   }
 
   case class JNumDouble(value: Double) extends JNum {
-    def isNaN: Boolean = value.isNaN
-
     def toBigDecimal: BigDecimal = BigDecimal(value)
 
     def toLong: Long = value.toLong
@@ -790,8 +782,6 @@ object JsonAST {
   }
 
   case class JNumBigDec(value: BigDecimal) extends JNum {
-    def isNaN: Boolean = false
-
     def toBigDecimal: BigDecimal = value
 
     def toLong: Long = value.toLong
