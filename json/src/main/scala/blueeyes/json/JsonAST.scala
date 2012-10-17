@@ -814,13 +814,13 @@ object JsonAST {
   }
 
   case object JNum {
-    def apply(value: Double): JValue = JNumDouble(value)
+    def apply(value: Double): JValue = if (value.isNaN || value == Double.PositiveInfinity || value == Double.NegativeInfinity) JNothing else JNumDouble(value)
 
-    def apply(value: String): JValue = JNumStr(value)
+    private[json] def apply(value: String): JNum = JNumStr(value)
 
-    def apply(value: Long): JValue = JNumLong(value)
+    def apply(value: Long): JNum = JNumLong(value)
 
-    def apply(value: BigDecimal): JValue = JNumBigDec(value)
+    def apply(value: BigDecimal): JNum = JNumBigDec(value)
     
     def unapply(value: JNum): Option[BigDecimal] = {
       try { Some(value.toBigDecimal) }
