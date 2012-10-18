@@ -681,6 +681,14 @@ object JsonAST {
     final def toLong: Long = value.toLong
     final def toDouble: Double = value.toDouble
     final def toRawString: String = value
+
+    override def equals(other: Any) = other match {
+      case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
+      case JNumLong(n) => n.toString == value
+      case JNumDouble(n) => BigDecimal(n) == BigDecimal(value)
+      case JNumBigDec(n) => n == BigDecimal(value)
+      case _ => false
+    }
   }
 
   case class JNumLong(value: Long) extends JNum {
@@ -688,6 +696,18 @@ object JsonAST {
     final def toLong: Long = value
     final def toDouble: Double = value.toDouble
     final def toRawString: String = value.toString
+
+    override def equals(other: Any) = other match {
+      case JNumStr(s) => value.toString == s
+      case JNumLong(n) => n == value
+      case JNumDouble(n) =>
+        if (n % 1.0 == 0.0 && n <= Int.MaxValue && n >= Int.MinValue)
+          n.toLong == value
+        else
+          BigDecimal(n) == BigDecimal(value)
+      case JNumBigDec(n) => n == value
+      case _ => false
+    }
   }
 
   case class JNumDouble private[json] (value: Double) extends JNum {
@@ -695,6 +715,18 @@ object JsonAST {
     final def toLong: Long = value.toLong
     final def toDouble: Double = value
     final def toRawString: String = value.toString
+
+    override def equals(other: Any) = other match {
+      case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
+      case JNumLong(n) =>
+        if (value % 1.0 == 0.0 && value <= Int.MaxValue && value >= Int.MinValue)
+          value.toLong == n
+        else
+          BigDecimal(n) == BigDecimal(value)
+      case JNumDouble(n) => n == value
+      case JNumBigDec(n) => n == BigDecimal(value)
+      case _ => false
+    }
   }
 
   case class JNumBigDec(value: BigDecimal) extends JNum {
@@ -705,6 +737,14 @@ object JsonAST {
 
     // SI-6173
     override val hashCode = 0
+
+    override def equals(other: Any) = other match {
+      case JNumStr(s) => BigDecimal(s) == value
+      case JNumLong(n) => n == value
+      case JNumDouble(n) => BigDecimal(n) == value
+      case JNumBigDec(n) => n == value
+      case _ => false
+    }
   }
 
   case object JNum {
