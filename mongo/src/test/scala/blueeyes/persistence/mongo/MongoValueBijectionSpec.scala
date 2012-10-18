@@ -84,7 +84,7 @@ class MongoValueBijectionSpec extends Specification {
     val dbObject = new BasicDBObject()
     dbObject.put(key, mongoValue)
 
-    MongoToMongoValue(dbObject) ||| {
+    MongoToMongoValue(dbObject) valueOr {
       errors => sys.error(errors.list.mkString("; "))
     }
   }
@@ -154,7 +154,7 @@ class MongoValueBijectionSpec extends Specification {
 
   private def toMongo(key: String, value: MongoValue) = toMongoObject(key, value).get(key)
 
-  private def toMongoObject(key: String, value: MongoValue): DBObject = MongoValueToMongo(MongoObject(List(MongoField(key, value)))) ||| {
+  private def toMongoObject(key: String, value: MongoValue): DBObject = MongoValueToMongo(MongoObject(List(MongoField(key, value)))) valueOr {
     errors => sys.error(errors.list.mkString("; "))
   }
 }
