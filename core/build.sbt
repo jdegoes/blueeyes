@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
   "javolution"                  % "javolution"          % "5.5.1",
   "com.typesafe.akka"           % "akka-actor"          % "2.0.2",
   "org.streum"                  %%  "configrity-core"   % "0.10.2",
-  "com.weiglewilczek.slf4s"     %%  "slf4s"             % "1.0.7",
+  "com.weiglewilczek.slf4s"     %  "slf4s_2.9.1"        % "1.0.7",
   "org.mockito"                 %  "mockito-all"        % "1.9.0"          % "test",
   "javax.servlet"               % "javax.servlet-api"   % "3.0.1",
   "org.eclipse.jetty"           % "jetty-server"        % "8.1.3.v20120416"          % "test",
