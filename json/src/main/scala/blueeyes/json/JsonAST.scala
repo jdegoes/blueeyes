@@ -39,6 +39,8 @@ object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
 
+  import JValue.{RenderMode, Compact, Pretty, Canonical}
+
   def buildString(f: StringBuilder => Unit): String = {
     val sb = new StringBuilder
     f(sb)
@@ -69,7 +71,9 @@ object JsonAST {
 
     def renderPretty: String = renderCompact
 
-    protected[json] def internalRender(sb: StringBuilder, pretty: Boolean, indent: String) {
+    def renderCanonical: String = renderCompact
+
+    protected[json] def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
       sb.append(renderCompact)
     }
 
@@ -575,6 +579,11 @@ object JsonAST {
   }
 
   object JValue {
+    sealed trait RenderMode
+    case object Pretty extends RenderMode
+    case object Compact extends RenderMode
+    case object Canonical extends RenderMode
+
     def apply(p: JPath, v: JValue) = JNothing.set(p, v)
 
     private def unflattenArray(elements: Seq[(JPath, JValue)]): JArray = {
@@ -702,6 +711,7 @@ object JsonAST {
     }
   }
 
+
   case object JNothing extends JValue {
     final def values = None
     final def sort: JValue = this
@@ -819,7 +829,7 @@ object JsonAST {
     final def sort: JString = this
     final def renderCompact: String = JString.escape(value)
     final override def renderPretty: String = JString.escape(value)
-    final override def internalRender(sb: StringBuilder, pretty: Boolean, indent: String) {
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
       JString.internalEscape(sb, value)
     }
   }
@@ -927,50 +937,54 @@ object JsonAST {
       case _ => false
     }
 
-    final override def renderCompact: String = buildString(internalRender(_, false, ""))
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
 
-    final override def renderPretty: String = buildString(internalRender(_, true, ""))
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
 
-    final override def internalRender(sb: StringBuilder, pretty: Boolean, indent: String) {
-      val indent2 = indent + "  "
-      if (!pretty) {
-        // render as compactly as possible
-        sb.append("{")
-        var seen = false
-        fields.foreach {
-          case (k, v) =>
-            if (seen) sb.append(",") else seen = true
-            JString.internalEscape(sb, k)
-            sb.append(":")
-            v.internalRender(sb, false, "")
-        }
-        sb.append("}")
-      } else if (fields.size < 4 && !isNested) {
-        // few keys, no nested values, just render on one line
-        sb.append("{")
-        var seen = false
-        fields.foreach {
-          case (k, v) =>
-            if (seen) sb.append(", ") else seen = true
-            JString.internalEscape(sb, k)
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("{")
+          var seen = false
+          fields.foreach {
+            case (k, v) =>
+              if (seen) sb.append(",") else seen = true
+              JString.internalEscape(sb, k)
+              sb.append(":")
+              v.internalRender(sb, Compact, "")
+          }
+          sb.append("}")
+
+        case _ => 
+          val indent2 = indent + "  "
+          val oneLine = fields.size < 4 && !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("{")
+          if (!oneLine) sb.append("\n")
+
+          var seen = false
+          def handlePair(tpl: (String, JValue)) {
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            JString.internalEscape(sb, tpl._1)
             sb.append(": ")
-            v.internalRender(sb, true, "")
-        }
-        sb.append("}")
-      } else {
-        sb.append("{\n")
-        var seen = false
-        fields.foreach {
-          case (k, v) =>
-            if (seen) sb.append(",\n") else seen = true
-            sb.append(indent2)
-            JString.internalEscape(sb, k)
-            sb.append(": ")
-            v.internalRender(sb, true, indent2)
-        }
-        sb.append("\n")
-        sb.append(indent)
-        sb.append("}")
+            tpl._2.internalRender(sb, mode, indent2)
+          }
+
+          if (mode == Canonical)
+            fields.toSeq.sorted.foreach(handlePair)
+          else
+            fields.foreach(handlePair)
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("}")
       }
     }
   }
@@ -1001,41 +1015,44 @@ object JsonAST {
       case _ => false
     }
 
-    final override def renderCompact: String = buildString(internalRender(_, false, ""))
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
 
-    final override def renderPretty: String = buildString(internalRender(_, true, ""))
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
 
-    final override def internalRender(sb: StringBuilder, pretty: Boolean, indent: String) {
-      val indent2 = indent + "  "
-      if (!pretty) {
-        // render as compactly as possible
-        sb.append("[")
-        var seen = false
-        elements.foreach { v =>
-          if (seen) sb.append(",") else seen = true
-          v.internalRender(sb, false, "")
-        }
-        sb.append("]")
-      } else if (!isNested) {
-        // few keys, no nested values, just render on one line
-        sb.append("[")
-        var seen = false
-        elements.foreach { v =>
-          if (seen) sb.append(", ") else seen = true
-          v.internalRender(sb, true, "")
-        }
-        sb.append("]")
-      } else {
-        sb.append("[\n")
-        var seen = false
-        elements.foreach { v => 
-          if (seen) sb.append(",\n") else seen = true
-          sb.append(indent2)
-          v.internalRender(sb, true, indent2)
-        }
-        sb.append("\n")
-        sb.append(indent)
-        sb.append("]")
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("[")
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(",") else seen = true
+            v.internalRender(sb, mode, "")
+          }
+          sb.append("]")
+
+        case _ =>
+          val indent2 = indent + "  "
+          val oneLine = !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("[")
+          if (!oneLine) sb.append("\n")
+          
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            v.internalRender(sb, mode, indent2)
+          }
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("]")
       }
     }
   }
