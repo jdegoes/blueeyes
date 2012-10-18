@@ -58,7 +58,7 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
       val exam: MongoFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
       val cfilter: MongoFilter = ((filter1 && filter2 && filter3) || (filter2 && filter3) || (filter1 && filter3)) //|| (filter1 && filter2)
       cfilter.filter mustEqual
-      JParser.parse("""
+      JParser.parseFromString("""
          {
         "$or":[{
           "foo":{

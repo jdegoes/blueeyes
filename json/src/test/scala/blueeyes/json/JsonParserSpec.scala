@@ -48,15 +48,15 @@ object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck
 
 object ParserBugs extends Specification {
   "Unicode ffff is a valid char in string literal" in {
-    JParser.parseOpt(""" {"x":"\uffff"} """).isDefined mustEqual true
+    JParser.parseFromString(""" {"x":"\uffff"} """) must not(throwAn[java.lang.Exception])
   }
 
   "Does not hang when parsing 2.2250738585072012e-308" in {
-    allCatch.opt(JParser.parse(""" [ 2.2250738585072012e-308 ] """)) mustNotEqual None
+    allCatch.opt(JParser.parseFromString(""" [ 2.2250738585072012e-308 ] """)) mustNotEqual None
   }
 
   "Does not hang when parsing 22.250738585072012e-309" in {
-    allCatch.opt(JParser.parse(""" [ 22.250738585072012e-309 ] """)) mustNotEqual None
+    allCatch.opt(JParser.parseFromString(""" [ 22.250738585072012e-309 ] """)) mustNotEqual None
   }
 
   "Can parse funky characters" in {

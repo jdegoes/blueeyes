@@ -6,7 +6,7 @@ import blueeyes.json.{JPath, JParser}
 import org.specs2.mock._
 
 class ExplainQueryBehaviourSpec extends Specification with Mockito{
-  private val explanation = JParser.parse("""{
+  private val explanation = JParser.parseFromString("""{
     "cursor" : "BasicCursor",
     "nscanned" : 3,
     "nscannedObjects" : 3,

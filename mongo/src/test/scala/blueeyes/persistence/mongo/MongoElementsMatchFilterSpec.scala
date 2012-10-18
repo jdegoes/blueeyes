@@ -12,9 +12,9 @@ class MongoElementsMatchFilterSpec extends Specification{
   private val andFilter  = filter1 && filter2
 
   "create valid json for or filter" in {
-    (andFilter.elemMatch("name")).filter mustEqual (JParser.parse(""" {"name": {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} }} """))
+    (andFilter.elemMatch("name")).filter mustEqual (JParser.parseFromString(""" {"name": {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} }} """))
   }
   "create valid json for or filter when path is empty" in {
-    (andFilter.elemMatch("")).filter mustEqual (JParser.parse(""" {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} } """))
+    (andFilter.elemMatch("")).filter mustEqual (JParser.parseFromString(""" {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} } """))
   }
 }
