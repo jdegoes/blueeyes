@@ -35,6 +35,8 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
+class ParseException(msg: String) extends Exception(msg)
+
 object JsonParser {
   import java.io._
 
@@ -140,7 +142,7 @@ trait Parser {
    * Used to generate error messages with character info and byte addresses.
    */
   protected[this] def die(i: Int, msg: String) =
-    sys.error("%s got %s (%d)" format (msg, at(i), i))
+    throw new ParseException("%s got %s (%d)" format (msg, at(i), i))
 
   /**
    * Parse the given number, and add it to the given context.
@@ -290,9 +292,10 @@ trait Parser {
         case ' ' => j += 1
         case '\t' => j += 1
         case '\n' => j += 1
+        case _ => die(j, "expected whitespace")
       }
     }
-    if (!atEof(j)) sys.error("expected eof")
+    if (!atEof(j)) die(j, "expected eof")
     value
   }
 
@@ -403,6 +406,9 @@ trait Parser {
           val ctxt = stack.head
           ctxt.add(parseNull(i))
           rparse(if (ctxt.isObj) OBJEND else ARREND, i + 4, stack)
+
+        case _ =>
+          die(i, "expected json value")
       }
 
       // we are in an object expecting to see a key
@@ -798,7 +804,7 @@ final class PathParser(name: java.io.File) extends Parser {
         sb.extend(at(j, j + 4))
         j += 4
       } else {
-        sys.error("invalid UTF-8 encoding")
+        die(j, "invalid UTF-8 encoding")
       }
       j = reset(j)
       c = byte(j)
@@ -902,7 +908,7 @@ final class ByteBufferParser(src: ByteBuffer) extends Parser {
         sb.extend(at(j, j + 4))
         j += 4
       } else {
-        sys.error("invalid UTF-8 encoding")
+        die(j, "invalid UTF-8 encoding")
       }
       j = reset(j)
       c = byte(j)
