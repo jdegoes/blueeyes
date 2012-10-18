@@ -150,8 +150,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }""")
 
     val expected = List(
-      JPath(".c") -> JNum(2),
-      JPath(".fn[0].fr") -> JNum(-2)
+      JPath(".c") -> JNum("2"),
+      JPath(".fn[0].fr") -> JNum("-2")
     )
 
     test.flattenWithPath must_== expected

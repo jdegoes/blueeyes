@@ -205,23 +205,23 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       println("--------OBJECT--------")
       values.foreach{value =>
         println("----------------")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("--------OBJECT--------")
       println("-REAL-")
       real.foreach{value =>
         println("--")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("-REAL-")
       println("-MOCK-")
       mock.foreach{value =>
         println("--")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("-MOCK-")
       println("--------QUERY--------")
-      println(Printer.compact(Printer.render(selectQuery.filter.get.filter)))
+      selectQuery.filter.get.filter.renderCompact
       println("--------QUERY--------")
       oneQuery(selectQuery, mockDatabase)
     }

@@ -1,22 +1,26 @@
 package blueeyes.core.data
 
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 
 import scala.xml.NodeSeq
 import scala.xml.XML
 
 trait BijectionsByteArray {
-  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
+  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream, PrintStream}
+  import java.nio.ByteBuffer
 
-  implicit val JValueToByteArray    = new Bijection[JValue, Array[Byte]]{
-    def unapply(s: Array[Byte])  = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s)))
+  implicit val JValueToByteArray = new Bijection[JValue, Array[Byte]]{
+    def unapply(arr: Array[Byte]) = {
+      val bb = ByteBuffer.wrap(arr)
+      val r = JsonParser.parseFromByteBuffer(bb)
+      r.valueOr(e => throw e)
+    }
     def apply(t: JValue)         = {
       val stream = new ByteArrayOutputStream()
-
-      compact(render(t), new OutputStreamWriter(stream))
-
+      val printer = new PrintStream(stream, false, "UTF-8")
+      printer.append(t.renderCompact)
+      printer.close()
       stream.toByteArray()
     }
   }
