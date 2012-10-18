@@ -33,6 +33,7 @@ import java.lang.Long.parseLong
 
 import java.io.FileInputStream
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 object JsonParser {
   import java.io._
@@ -57,10 +58,10 @@ object JsonParser {
   def parseManyFromString(str: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new StringParser(str).parseMany())
 
-  def parseFromPath(path: String): R[JValue] =
+  def parseFromPath(path: File): R[JValue] =
     Validation.fromTryCatch(new PathParser(path).parse())
 
-  def parseManyFromPath(path: String): R[Seq[JValue]] =
+  def parseManyFromPath(path: File): R[Seq[JValue]] =
     Validation.fromTryCatch(new PathParser(path).parseMany())
 
   def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
@@ -77,6 +78,8 @@ object JsonParser {
  * Parser contains the state machine that does all the work. The only 
  */
 trait Parser {
+
+  final val utf8 = Charset.forName("UTF-8")
 
   /**
    * Read all remaining data from 'i' onwards and return it as a String.
@@ -516,7 +519,7 @@ trait Parser {
  */
 object Parser {
   def parseString(s: String): JValue = new StringParser(s).parse()
-  def parsePath(s: String): JValue = new PathParser(s).parse()
+  def parsePath(s: java.io.File): JValue = new PathParser(s).parse()
 }
 
 /**
@@ -613,11 +616,7 @@ final class StringParser(s: String) extends Parser {
  * Given a file name this parser opens it, chunks the data 1M at a time, and
  * parses it. 
  */
-final class PathParser(name: String) extends Parser {
-  val d = java.nio.charset.Charset.defaultCharset
-  if (d.displayName != "UTF-8")
-    sys.error("default encoding must be UTF-8, got %s." format d)
-
+final class PathParser(name: java.io.File) extends Parser {
   // TODO: figure out if we wouldn't just be better off decoding to UTF-16 on
   // input, rather than doing the parsing as UTF-8. i'm not sure which works
   // better since we'll save memory this way but add a bit of complexity. so
@@ -706,13 +705,13 @@ final class PathParser(name: String) extends Parser {
     val len = k - i
 
     if (k <= bufsize) {
-      new String(curr, i, len)
+      new String(curr, i, len, utf8)
     } else {
       val arr = new Array[Byte](len)
       val mid = bufsize - i
       System.arraycopy(curr, i, arr, 0, mid)
       System.arraycopy(next, 0, arr, mid, k - bufsize)
-      new String(arr)
+      new String(arr, utf8)
     }
   }
 
@@ -813,10 +812,6 @@ final class PathParser(name: String) extends Parser {
  * Basic ByteBuffer parser.
  */
 final class ByteBufferParser(src: ByteBuffer) extends Parser {
-  val d = java.nio.charset.Charset.defaultCharset
-  if (d.displayName != "UTF-8")
-    sys.error("default encoding must be UTF-8, got %s." format d)
-
   val limit = src.limit
 
   final def reset(i: Int): Int = i
@@ -828,7 +823,7 @@ final class ByteBufferParser(src: ByteBuffer) extends Parser {
     val arr = new Array[Byte](len)
     src.position(i)
     src.get(arr, 0, len)
-    new String(arr)
+    new String(arr, utf8)
   }
 
   final def atEof(i: Int) = i >= limit
@@ -838,7 +833,7 @@ final class ByteBufferParser(src: ByteBuffer) extends Parser {
     val arr = new Array[Byte](len)
     src.position(i)
     src.get(arr, 0, len)
-    new String(arr)
+    new String(arr, utf8)
   }
 
   /**
