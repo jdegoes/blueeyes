@@ -69,7 +69,7 @@ object QueryExamples extends Specification {
     clusters mustEqual List("cluster2")
   }
 
-  val json = parse("""
+  def json = parse("""
     { "data_center": [
       {
         "name": "cluster1",
@@ -88,7 +88,7 @@ object QueryExamples extends Specification {
         "name": "cluster2",
         "servers": [
           {"ip": "192.168.2.125", "uptime": 453423, "specs": {"cpus":  4, "ram": 2048}},
-          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}},
+          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}}
         ],
         "links": [
           {"href": "http://www.example2.com/admin", "name": "admin"},

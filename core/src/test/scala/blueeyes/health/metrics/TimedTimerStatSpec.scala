@@ -2,7 +2,6 @@ package blueeyes.health.metrics
 
 import org.specs2.mutable.Specification
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer
 import java.util.concurrent.TimeUnit
 
 class TimedTimerStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {

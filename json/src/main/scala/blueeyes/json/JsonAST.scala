@@ -30,11 +30,22 @@ import scalaz.syntax.bifunctor._
 import scalaz.syntax.order._
 import scalaz.syntax.semigroup._
 
-import scala.annotation.tailrec
+import scala.annotation.{switch, tailrec}
+import scala.collection.mutable
+
+import java.lang.Character.codePointAt
 
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
+
+  import JValue.{RenderMode, Compact, Pretty, Canonical}
+
+  def buildString(f: StringBuilder => Unit): String = {
+    val sb = new StringBuilder
+    f(sb)
+    sb.toString
+  }
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
@@ -55,6 +66,16 @@ object JsonAST {
     def compare(that: JValue): Int = JValue.order.order(self, that).toInt
 
     def sort: JValue
+
+    def renderCompact: String
+
+    def renderPretty: String = renderCompact
+
+    def renderCanonical: String = renderCompact
+
+    protected[json] def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      sb.append(renderCompact)
+    }
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
@@ -556,12 +577,15 @@ object JsonAST {
       }
     }
 
-    override def toString = self match {
-      case value => Printer.pretty(Printer.renderAll(value))
-    }
+    override def toString = renderCompact
   }
 
   object JValue {
+    sealed trait RenderMode
+    case object Pretty extends RenderMode
+    case object Compact extends RenderMode
+    case object Canonical extends RenderMode
+
     def apply(p: JPath, v: JValue) = JNothing.set(p, v)
 
     private def unflattenArray(elements: Seq[(JPath, JValue)]): JArray = {
@@ -689,86 +713,78 @@ object JsonAST {
     }
   }
 
-  case object JNothing extends JValue {
-    final val values = None
 
-    final val sort: JValue = this
+  case object JNothing extends JValue {
+    final def values = None
+    final def sort: JValue = this
+    final def renderCompact: String = "null"
   }
 
   case object JNull extends JValue {
-    def sort: JValue = this
+    final def sort: JValue = this
+    final def renderCompact: String = "null"
   }
 
-  sealed trait JBool extends JValue { self =>
+  sealed trait JBool extends JValue {
     def value: Boolean
-
-    def sort: JBool = self
+    final def sort: JBool = this
   }
 
   case object JTrue extends JBool {
-    def value = true
+    final def value = true
+    final def renderCompact: String = "true"
   }
 
   case object JFalse extends JBool {
-    def value = false
+    final def value = false
+    final def renderCompact: String = "false"
   }
 
   object JBool {
     def apply(value: Boolean): JBool = if (value) JTrue else JFalse
-
     def unapply(value: JBool): Option[Boolean] = Some(value.value)
   }
 
   sealed trait JNum extends JValue {
+    def isNaN: Boolean
     def toBigDecimal: BigDecimal
-
     def toLong: Long
-
     def toDouble: Double
-
     def toRawString: String
-
+    final def renderCompact = toRawString
     def sort: JNum = this
   }
 
-  final case class JNumStr private[json] (value: String) extends JNum {
-    def toBigDecimal: BigDecimal = BigDecimal(value)
-
-    def toLong: Long = value.toLong
-
-    def toDouble: Double = value.toDouble
-
-    def toRawString: String = value
+  case class JNumStr(value: String) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value
   }
 
-  final case class JNumLong(value: Long) extends JNum {
-    def toBigDecimal: BigDecimal = BigDecimal(value)
-
-    def toLong: Long = value
-
-    def toDouble: Double = value.toDouble
-
-    def toRawString: String = value.toString
+  case class JNumLong(value: Long) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value.toString
   }
 
-  final case class JNumDouble private[json] (value: Double) extends JNum {
-    def toBigDecimal: BigDecimal = BigDecimal(value)
-
-    def toLong: Long = value.toLong
-
-    def toDouble: Double = value
-
-    def toRawString: String = value.toString
+  case class JNumDouble(value: Double) extends JNum {
+    final def isNaN: Boolean = value.isNaN
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value
+    final def toRawString: String = value.toString
   }
 
-  final case class JNumBigDec(value: BigDecimal) extends JNum {
-    def toBigDecimal: BigDecimal = value
-
-    def toLong: Long = value.toLong
-
-    def toDouble: Double = value.toDouble
-
-    def toRawString: String = value.toString
+  case class JNumBigDec(value: BigDecimal) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = value
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value.toString
 
     // SI-6173
     override val hashCode = 0
@@ -790,7 +806,40 @@ object JsonAST {
   }
 
   case class JString(value: String) extends JValue {
-    def sort: JString = this
+    final def sort: JString = this
+    final def renderCompact: String = JString.escape(value)
+    final override def renderPretty: String = JString.escape(value)
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      JString.internalEscape(sb, value)
+    }
+  }
+
+  object JString {
+    final def escape(s: String): String = buildString(internalEscape(_, s))
+
+    protected[json] final def internalEscape(sb: StringBuilder, s: String) {
+      sb.append('"')
+      var i = 0
+      val len = s.length
+      while (i < len) {
+        (s.charAt(i): @switch) match {
+          case '"' => sb.append("\\\"")
+          case '\\' => sb.append("\\\\")
+          case '\b' => sb.append("\\b")
+          case '\f' => sb.append("\\f")
+          case '\n' => sb.append("\\n")
+          case '\r' => sb.append("\\r")
+          case '\t' => sb.append("\\t")
+          case c =>
+            if (c < ' ')
+              sb.append("\\u%04x" format c)
+            else
+              sb.append(c)
+        }
+        i += 1
+      }
+      sb.append('"')
+    }
   }
 
   type JField = (String, JValue)
@@ -861,7 +910,65 @@ object JsonAST {
     def sort: JObject = JObject(fields.filter(_._2 ne JNothing).map(_.map(_.sort)))
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
+
+    def isNested: Boolean = fields.values.exists {
+      case _: JArray => true
+      case _: JObject => true
+      case _ => false
+    }
+
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
+
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
+
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("{")
+          var seen = false
+          fields.foreach {
+            case (k, v) =>
+              if (seen) sb.append(",") else seen = true
+              JString.internalEscape(sb, k)
+              sb.append(":")
+              v.internalRender(sb, Compact, "")
+          }
+          sb.append("}")
+
+        case _ => 
+          val indent2 = indent + "  "
+          val oneLine = fields.size < 4 && !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("{")
+          if (!oneLine) sb.append("\n")
+
+          var seen = false
+          def handlePair(tpl: (String, JValue)) {
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            JString.internalEscape(sb, tpl._1)
+            sb.append(": ")
+            tpl._2.internalRender(sb, mode, indent2)
+          }
+
+          if (mode == Canonical)
+            fields.toSeq.sorted.foreach(handlePair)
+          else
+            fields.foreach(handlePair)
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("}")
+      }
+    }
   }
+
   case object JObject extends (Map[String, JValue] => JObject) {
     final val empty = JObject(Nil)
     final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.toList.sorted.filter(_._2 ne JNothing).sortBy(_._2))
@@ -881,177 +988,57 @@ object JsonAST {
     def sort: JArray = JArray(elements.filter(_ ne JNothing).map(_.sort).sorted)
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
+
+    def isNested: Boolean = elements.exists {
+      case _: JArray => true
+      case _: JObject => true
+      case _ => false
+    }
+
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
+
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
+
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("[")
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(",") else seen = true
+            v.internalRender(sb, mode, "")
+          }
+          sb.append("]")
+
+        case _ =>
+          val indent2 = indent + "  "
+          val oneLine = !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("[")
+          if (!oneLine) sb.append("\n")
+          
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            v.internalRender(sb, mode, indent2)
+          }
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("]")
+      }
+    }
   }
+
   case object JArray extends (List[JValue] => JArray) {
     final val empty = JArray(Nil)
     final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
-  }
-}
-
-/** Printer converts JSON to String.
- * Before printing a <code>JValue</code> needs to be rendered into scala.text.Document.
- * <p>
- * Example:<pre>
- * pretty(render(json))
- * </pre>
- *
- * @see blueeyes.json.JsonAST#render
- */
-object Printer extends Printer
-trait Printer {
-  import java.io._
-  import java.util.IdentityHashMap
-  import scala.text.{Document, DocText, DocCons, DocBreak, DocNest, DocGroup, DocNil}
-  import scala.text.Document._
-  import scala.collection.immutable.Stack
-  import JsonAST._
-
-  def render(value: JValue): Document = {
-    value.minimize.map(renderAll).getOrElse(DocNil)
-  }
-
-  /** Renders JSON.
-   * @see Printer#compact
-   * @see Printer#pretty
-   */
-  def renderAll(value: JValue): Document = value match {
-    case JBool(true)   => text("true")
-    case JBool(false)  => text("false")
-    case JNum(n)       => text(n.toString)
-    case JNull         => text("null")
-    case JNothing      => text("undefined")
-    case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(elems) => text("[") :: series(elems map renderAll) :: text("]")
-    case JObject(fs)   =>
-      val renderedFields = fs.toList.map { field =>
-        text("\"" + quote(field._1) + "\":") :: renderAll(field._2)
-      }
-
-      val nested = break :: fields(renderedFields)
-
-      text("{") :: nest(2, nested) :: break :: text("}")
-  }
-
-  /** Renders as Scala code, which can be copy/pasted into a Scala
-   * application.
-   */
-  def renderScala(value: JValue): Document = {
-    val Quote = "\""
-
-    def scalaQuote(s: String) = Quote + List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\").foldLeft(s) { (str, pair) =>
-      str.replaceAll(pair._1, pair._2)
-    } + Quote
-
-    def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
-
-    value match {
-      case null => text("null")
-
-      case JNothing => text("JNothing")
-      case JNull => text("JNull")
-
-      case _ => text(value.productPrefix + "(") :: (value match {
-        case JNull | JNothing => sys.error("impossible")
-
-        case JBool(value)  => text(value.toString)
-        case JNum(n)       => text(n.toString)
-        case JString(null) => text("null")
-        case JString(s)    => text(scalaQuote(s))
-        case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
-        case JObject(fs)  =>
-          val renderedFields = fs.toList.map { field =>
-            text(scalaQuote(field._1) + ",") :: renderScala(field._2)
-          }
-
-          val nested = break :: fold(intersperse(intersperse(renderedFields ::: List(text("Nil")), text("::")), break))
-
-          nest(2, nested)
-      }) :: text(")")
-    }
-  }
-
-  private def series(docs: List[Document]) = fold(punctuate(text(","), docs))
-  private def fields(docs: List[Document]) = fold(punctuate(text(",") :: break, docs))
-  private def fold(docs: List[Document]) = docs.foldLeft[Document](empty)(_ :: _)
-
-  private def punctuate(p: => Document, docs: List[Document]): List[Document] = {
-    def prepend(d: DocText, ds: List[Document]) = ds match {
-      case DocText(h) :: t => DocText(h + d.txt) :: t
-      case _ => d :: ds
-    }
-
-    def punctuate0(docs: List[Document], acc: List[Document]): List[Document] = docs match {
-      case Nil => acc.reverse
-      case List(d) => punctuate0(Nil, d :: acc)
-      case DocText(d) :: ds => p match {
-        case DocText(punct) => punctuate0(ds, prepend(DocText(d + punct), acc))
-        case _ => punctuate0(ds, (d :: p) :: acc)
-      }
-      case d :: ds => punctuate0(ds, (d :: p) :: acc)
-    }
-    punctuate0(docs, Nil)
-  }
-
-  private[json] def quote(s: String): String = {
-    val buf = new StringBuilder
-    for (i <- 0 until s.length) {
-      val c = s.charAt(i)
-      buf.append(c match {
-        case '"'  => "\\\""
-        case '\\' => "\\\\"
-        case '\b' => "\\b"
-        case '\f' => "\\f"
-        case '\n' => "\\n"
-        case '\r' => "\\r"
-        case '\t' => "\\t"
-        case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
-        case c => c
-      })
-    }
-    buf.toString
-  }
-
-  /** Compact printing (no whitespace etc.)
-   */
-  def compact(d: Document): String = compact(d, new StringWriter).toString
-
-  /** Compact printing (no whitespace etc.)
-   */
-  def compact[A <: Writer](d: Document, out: A): A = {
-    // Non-recursive implementation to support serialization of big structures.
-    var nodes = Stack.empty.push(d)
-    val visited = new IdentityHashMap[Document, Unit]()
-    while (!nodes.isEmpty) {
-      val cur = nodes.top
-      nodes = nodes.pop
-      cur match {
-        case DocText(s)      => out.write(s)
-        case DocCons(d1, d2) =>
-          if (!visited.containsKey(cur)) {
-            visited.put(cur, ())
-            nodes = nodes.push(cur)
-            nodes = nodes.push(d1)
-          } else {
-            nodes = nodes.push(d2)
-          }
-        case DocBreak        =>
-        case DocNest(_, d)   => nodes = nodes.push(d)
-        case DocGroup(d)     => nodes = nodes.push(d)
-        case DocNil          =>
-      }
-    }
-    out.flush
-    out
-  }
-
-  /** Pretty printing.
-   */
-  def pretty(d: Document): String = pretty(d, new StringWriter).toString
-
-  /** Pretty printing.
-   */
-  def pretty[A <: Writer](d: Document, out: A): A = {
-    d.format(0, out)
-    out
   }
 }
