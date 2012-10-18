@@ -120,7 +120,7 @@ sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter 
       case MongoFieldFilter(lhs, e @ $eq, rhs) => false
       case _ => true
     }}
-    JObject(notEqsQuery(notEqs).fields ::: eqsQuery(eqs).fields)
+    notEqsQuery(notEqs) ++ eqsQuery(eqs)
   }
 
   private def notEqsQuery(queries: Seq[MongoFilter]) = {
@@ -209,7 +209,7 @@ trait MongoFilterImplicits {
 
   implicit def jvalueToMongoPrimitive(value: JValue): MongoPrimitive = value match {
     case x: JString => MongoPrimitiveString(x.value)
-    case x: JNum    => MongoPrimitiveDouble(x.value.doubleValue)
+    case x: JNum    => MongoPrimitiveDouble(x.toDouble)
     case x: JBool   => MongoPrimitiveBoolean(x.value)
     case x: JObject => MongoPrimitiveJObject(x)
     case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))

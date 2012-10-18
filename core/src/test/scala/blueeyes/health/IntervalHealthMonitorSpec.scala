@@ -7,10 +7,10 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, Printer, JPath}
+import blueeyes.json.{JsonParser, JPath}
 import java.util.concurrent.TimeUnit
 
-class IntervalHealthMonitorSpec extends Specification with blueeyes.json.Implicits with blueeyes.bkka.AkkaDefaults 
+class IntervalHealthMonitorSpec extends Specification with blueeyes.bkka.AkkaDefaults 
 with FutureMatchers {
   implicit val healthMonitorTimeout = akka.util.Timeout(10000)
 
@@ -45,7 +45,7 @@ with FutureMatchers {
     
     promise.failure(new NullPointerException())
 
-    monitor.errorStats.size must_== (1)
+    monitor.errorStats.size must eventually(be_== (1))
   }
 
   "records sample event" in {
@@ -83,7 +83,7 @@ with FutureMatchers {
     val monitor = new IntervalHealthMonitor(config)
     monitor.increment("requestCount")(2)
     monitor.increment("requestCount")(3)
-    monitor.export("request.export", export)
+    monitor.export("request.export", JNum(export))
 
     val monitorJson = JObject(List(JField("requestCount", JObject(JField(config.toString, JArray(JNum(5) :: Nil)) :: Nil)), JField("request", JObject(List(JField("export", JNum(2)))))))
 

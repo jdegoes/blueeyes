@@ -4,7 +4,6 @@ import MongoFilterOperators._
 
 import blueeyes.json._
 import blueeyes.json.JsonAST._
-import blueeyes.json.JsonDSL._
 
 import org.scalacheck._
 import Gen._
@@ -206,23 +205,23 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       println("--------OBJECT--------")
       values.foreach{value =>
         println("----------------")
-        println(Printer.compact(render(value)))
+        println(value.renderCompact)
       }
       println("--------OBJECT--------")
       println("-REAL-")
       real.foreach{value =>
         println("--")
-        println(Printer.compact(render(value)))
+        println(value.renderCompact)
       }
       println("-REAL-")
       println("-MOCK-")
       mock.foreach{value =>
         println("--")
-        println(Printer.compact(render(value)))
+        println(value.renderCompact)
       }
       println("-MOCK-")
       println("--------QUERY--------")
-      println(Printer.compact(render(selectQuery.filter.get.filter)))
+      selectQuery.filter.get.filter.renderCompact
       println("--------QUERY--------")
       oneQuery(selectQuery, mockDatabase)
     }

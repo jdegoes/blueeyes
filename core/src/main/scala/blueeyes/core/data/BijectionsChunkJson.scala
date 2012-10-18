@@ -1,25 +1,30 @@
 package blueeyes.core.data
 
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 import akka.dispatch.Future
 import akka.dispatch.Await
 import akka.util.Timeout
 
 trait BijectionsChunkJson{
-  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream}
+  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream, PrintStream}
+  import java.nio.ByteBuffer
 
   implicit val JValueToChunk = new Bijection[JValue, ByteChunk] {
+    def unapply(s: ByteChunk) = {
+      val bb = ByteBuffer.wrap(s.data)
+      val r = JsonParser.parseFromByteBuffer(bb)
+      r.valueOr(e => throw e)
+    }
+
     def apply(t: JValue) = {
       val stream = new ByteArrayOutputStream()
-
-      compact(render(t), new OutputStreamWriter(stream))
-
+      val printer = new PrintStream(stream, false, "UTF-8")
+      printer.append(t.renderCompact)
+      printer.close()
       Chunk(stream.toByteArray)
     }
 
-    def unapply(s: ByteChunk) = JsonParser.parse(new InputStreamReader(new ByteArrayInputStream(s.data), "UTF-8"))
   }
 
   implicit val ChunkToJValue    = JValueToChunk.inverse

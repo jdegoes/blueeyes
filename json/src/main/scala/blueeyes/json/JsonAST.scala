@@ -30,11 +30,22 @@ import scalaz.syntax.bifunctor._
 import scalaz.syntax.order._
 import scalaz.syntax.semigroup._
 
-import scala.annotation.tailrec
+import scala.annotation.{switch, tailrec}
+import scala.collection.mutable
+
+import java.lang.Character.codePointAt
 
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
+
+  import JValue.{RenderMode, Compact, Pretty, Canonical}
+
+  def buildString(f: StringBuilder => Unit): String = {
+    val sb = new StringBuilder
+    f(sb)
+    sb.toString
+  }
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
@@ -48,15 +59,23 @@ object JsonAST {
    * Data type for Json AST.
    */
   sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] { self =>
-    type Values
-
     def toOption = if (self == JNothing) None else Some(self)
 
     def getOrElse(that: => JValue) = if (self == JNothing) that else self
 
-    def compare(that: JValue): Int = JValue.order(self, that).toInt
+    def compare(that: JValue): Int = JValue.order.order(self, that).toInt
 
     def sort: JValue
+
+    def renderCompact: String
+
+    def renderPretty: String = renderCompact
+
+    def renderCanonical: String = renderCompact
+
+    protected[json] def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      sb.append(renderCompact)
+    }
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
@@ -67,6 +86,12 @@ object JsonAST {
      */
     def \ (nameToFind: String): JValue = self match {
       case j @ JObject(fields) => j.get(nameToFind)
+      case j @ JArray(elements) => 
+        elements.map(_ \ nameToFind) match {
+          case Nil => JNothing
+          case x :: Nil => x
+          case elements @ x :: xs => JArray(elements)
+        }
       case _ => JNothing
     }
 
@@ -105,7 +130,7 @@ object JsonAST {
           breadthFirst0(head :: cur, 
             head match {
               case JObject(fields) =>
-                nextQueue.enqueue(fields.map(_.value))
+                nextQueue.enqueue(fields.values.toList)
 
               case JArray(elements) =>
                 nextQueue.enqueue(elements)
@@ -119,16 +144,6 @@ object JsonAST {
       breadthFirst0(Nil, Queue.empty.enqueue(self)).reverse
     }
 
-    private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
-      case JObject(l) => l.filter((field: JField) => p(field.value)).map(_.value)
-
-      case JArray(l) => findDirect(l, p)
-
-      case x if p(x) => x :: Nil
-
-      case _ => Nil
-    }
-
     /** XPath-like expression to query JSON fields by name. Returns all matching fields.
      * <p>
      * Example:<pre>
@@ -139,9 +154,9 @@ object JsonAST {
       def find(json: JValue): List[JValue] = json match {
         case JObject(l) => l.foldLeft(List.empty[JValue]) {
           case (acc, field) => 
-            val newAcc = if (field.name == nameToFind) field.value :: acc else acc
+            val newAcc = if (field._1 == nameToFind) field._2 :: acc else acc
 
-            newAcc ::: find(field.value)
+            newAcc ::: find(field._2)
         }
 
         case JArray(l) => l.flatMap(find)
@@ -152,29 +167,6 @@ object JsonAST {
         case x :: Nil => x
         case x => JArray(x)
       }
-    }
-
-    /** XPath-like expression to query JSON fields by type. Matches only fields on
-     * next level.
-     * <p>
-     * Example:<pre>
-     * json \ classOf[JInt]
-     * </pre>
-     */
-    def \[A <: JValue](clazz: Class[A]): List[A#Values] = children.filter(typePredicate(clazz) _ ).asInstanceOf[List[A]] map { _.values }
-
-    /** XPath-like expression to query JSON fields by type. Returns all matching fields.
-     * <p>
-     * Example:<pre>
-     * json \\ classOf[JInt]
-     * </pre>
-     */
-    def \\[A <: JValue](clazz: Class[A]): List[A#Values] =
-      (self filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
-
-    private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
-      case x if x.getClass == clazz => true
-      case _ => false
     }
 
     /** Gets the specified value located at the terminal of the specified path.
@@ -219,7 +211,11 @@ object JsonAST {
 
       self match {
         case obj @ JObject(fields) => path.nodes match {
-          case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
+          case JPathField(name) :: nodes => 
+            val (child, rest) = obj.partitionField(name)
+
+            rest + JField(name, child.set(JPath(nodes), value))
+
           case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
         }
 
@@ -266,24 +262,16 @@ object JsonAST {
      */
     def apply(i: Int): JValue = JNothing
 
-    /** Return unboxed values from JSON
-     * <p>
-     * Example:<pre>
-     * JObject(JField("name", JString("joe")) :: Nil).values == Map("name" -> "joe")
-     * </pre>
-     */
-    def values: Values
-
     /** Return direct child elements.
      * <p>
      * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
      * </pre>
      */
-    def children: List[JValue] = self match {
-      case JObject(l) => l.map(_.value)
+    def children: Iterable[JValue] = self match {
+      case JObject(fields) => fields.values
       case JArray(l) => l
-      case _ => Nil
+      case _ => List.empty
     }
 
     /** Return a combined value by folding over JSON by applying a function <code>f</code>
@@ -303,7 +291,7 @@ object JsonAST {
           case JObject(l)   =>
             l.foldLeft(newAcc) { 
               case(acc, field) =>
-                rec(acc, p \ field.name, field.value) 
+                rec(acc, p \ field._1, field._2) 
             }
 
           case JArray(l) =>
@@ -331,7 +319,7 @@ object JsonAST {
           case JObject(l) =>
             l.foldLeft(acc) { 
               (acc, field) => 
-                rec(acc, p \ field.name, field.value)
+                rec(acc, p \ field._1, field._2)
             }
 
           case JArray(l) =>
@@ -364,9 +352,9 @@ object JsonAST {
       def rec(p: JPath, v: JValue): JValue = v match {
         case JObject(l) => 
           f(p, JObject(l.flatMap { f => 
-            val v2 = rec(p \ f.name, f.value)
+            val v2 = rec(p \ f._1, f._2)
 
-            if (v2 == JNothing) Nil else JField(f.name, v2) :: Nil
+            if (v2 == JNothing) Nil else JField(f._1, v2) :: Nil
             
           }))
 
@@ -401,9 +389,9 @@ object JsonAST {
         f(p, v) match {
           case JObject(l) =>
             JObject(l.flatMap { f =>
-              val v2 = rec(p \ f.name, f.value)
+              val v2 = rec(p \ f._1, f._2)
 
-              if (v2 == JNothing) Nil else JField(f.name, v2) :: Nil
+              if (v2 == JNothing) Nil else JField(f._1, v2) :: Nil
             })
 
           case JArray(l) =>
@@ -493,7 +481,7 @@ object JsonAST {
       def find(json: JValue): Option[JValue] = {
         if (p(json)) return Some(json)
         json match {
-          case JObject(l) => l.map(_.value).flatMap(find).headOption
+          case JObject(l) => l.map(_._2).flatMap(find).headOption
           case JArray(l) => l.flatMap(find).headOption
           case _ => None
         }
@@ -519,25 +507,26 @@ object JsonAST {
      * JArray(JInt(1) :: JInt(2) :: Nil) flattenWithPath
      * </pre>
      */
-    def flattenWithPath: List[(JPath, JValue)] = {
-      def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
-        case JObject(Nil) => (path -> value) :: Nil
+    def flattenWithPath: Vector[(JPath, JValue)] = {
+      def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
+        case JObject.empty => Vector((path -> value))
 
         case JObject(fields) => 
-          fields.flatMap { field =>
-            flatten0(path \ field.name)(field.value)
+          fields.foldLeft(Vector.empty[(JPath, JValue)]) { 
+            case (acc, field) =>
+              acc ++ flatten0(path \ field._1)(field._2)
           }
         
-        case JArray(Nil) => (path -> value) :: Nil
+        case JArray(Nil) => Vector((path -> value))
 
         case JArray(elements) => 
-          elements.zipWithIndex.flatMap { tuple =>
+          Vector(elements: _*).zipWithIndex.flatMap { tuple =>
             val (element, index) = tuple
 
             flatten0(path \ index)(element)
           }
 
-        case _ => (path -> value) :: Nil
+        case _ => Vector((path -> value))
       }
 
       flatten0(JPath.Identity)(self)
@@ -555,7 +544,6 @@ object JsonAST {
       def append(value1: JValue, value2: JValue): JValue = (value1, value2) match {
         case (JNothing, x) => x
         case (x, JNothing) => x
-        case (x: JField, JObject(xs)) => JObject(x :: xs)
         case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
         case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
         case (v: JValue, JArray(xs)) => JArray(v :: xs)
@@ -587,32 +575,42 @@ object JsonAST {
       }
     }
 
-    override def toString = self match {
-      case value => JsonDSL.pretty(JsonDSL.renderAll(value))
-    }
+    override def toString = renderCompact
   }
 
   object JValue {
+    sealed trait RenderMode
+    case object Pretty extends RenderMode
+    case object Compact extends RenderMode
+    case object Canonical extends RenderMode
+
     def apply(p: JPath, v: JValue) = JNothing.set(p, v)
 
-    private def unflattenArray(elements: List[(JPath, JValue)]): JArray = {
+    private def unflattenArray(elements: Seq[(JPath, JValue)]): JArray = {
       elements.foldLeft(JArray(Nil)) { (arr, t) => arr.set(t._1, t._2) --> classOf[JArray] }
     }
 
-    private def unflattenObject(elements: List[(JPath, JValue)]): JObject = {
+    private def unflattenObject(elements: Seq[(JPath, JValue)]): JObject = {
       elements.foldLeft(JObject(Nil)) { (obj, t) => obj.set(t._1, t._2) --> classOf[JObject] }
     }
 
-    def unflatten(elements: List[(JPath, JValue)]): JValue = elements.sortBy( _._1 ) match {
-      case ((JPath.Identity, value) :: Nil) => value
-      case arr @ ((p, _) :: _) if p.path.startsWith("[") => unflattenArray(arr)
-      case obj                                           => unflattenObject(obj)
+    def unflatten(elements: Seq[(JPath, JValue)]): JValue = {
+      if (elements.isEmpty) JNothing
+      else {
+        val sorted = elements.sortBy(_._1)
+
+        val (xp, xv) = sorted.head
+
+        if (xp == JPath.Identity && sorted.size == 1) xv
+        else if (xp.path.startsWith("[")) unflattenArray(sorted)
+        else unflattenObject(sorted)
+      }      
     }    
 
     case class paired(jv1: JValue, jv2: JValue) {
       assert(jv1 != null && jv2 != null)
       final def fold[A](default: => A)(
-        obj:    List[JField] => List[JField] => A,
+        obj:    Map[String, JValue] => Map[String, JValue] => A,
         arr:    List[JValue] => List[JValue] => A,
         str:    String => String => A,
         num:    BigDecimal => BigDecimal => A,
@@ -641,6 +639,16 @@ object JsonAST {
       case JNothing    => -1
     }
 
+    implicit final val jnumOrder: Order[JNum] = new Order[JNum] {
+      def order(v1: JNum, v2: JNum) = (v1, v2) match {
+        case (JNumStr(v1), JNumStr(v2)) => v1 ?|? v2
+        case (JNumLong(v1), JNumLong(v2)) => v1 ?|? v2
+        case (JNumDouble(v1), JNumDouble(v2)) => v1 ?|? v2
+        case (JNumBigDec(v1), JNumBigDec(v2)) => v1 ?|? v2
+        case (_, _) => v1.toBigDecimal ?|? v2.toBigDecimal
+      }
+    }
+
     implicit final val order: Order[JValue] = new Order[JValue] {
       def order(jv1: JValue, jv2: JValue) = {
         (typeIndex(jv1) ?|? typeIndex(jv2)) |+|
@@ -649,7 +657,7 @@ object JsonAST {
           case v: JObject => JObject.order(v, jv2.asInstanceOf[JObject])
           case v: JArray  => JArray.order(v, jv2.asInstanceOf[JArray])
           case v: JString => v.value ?|? jv2.asInstanceOf[JString].value
-          case v: JNum    => v.value ?|? jv2.asInstanceOf[JNum].value
+          case v: JNum    => v ?|? jv2.asInstanceOf[JNum]
           case v: JBool   => v.value ?|? jv2.asInstanceOf[JBool].value
           case _ => EQ
         })
@@ -670,7 +678,11 @@ object JsonAST {
 
           target match {
             case obj @ JObject(fields) => path.nodes match {
-              case JPathField(name)  :: nodes => JObject(JField(name, rec(obj \ name, JPath(nodes), value)) :: fields.filterNot(_.name == name))
+              case JPathField(name) :: nodes => 
+                val (child, rest) = obj.partitionField(name)
+
+                rest + JField(name, rec(child, JPath(nodes), value))
+
               case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
               case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
                                   " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
@@ -699,67 +711,166 @@ object JsonAST {
     }
   }
 
+
   case object JNothing extends JValue {
-    type Values = None.type
-
-    final val values = None
-
-    final val sort: JValue = this
+    final def values = None
+    final def sort: JValue = this
+    final def renderCompact: String = "null"
   }
 
   case object JNull extends JValue {
-    type Values = Null
-    
-    def values = null
-
-    def sort: JValue = this
-  }
- 
-  case class JBool(value: Boolean) extends JValue {
-    type Values = Boolean
-    
-    def values = value
-
-    def sort: JBool = this
+    final def sort: JValue = this
+    final def renderCompact: String = "null"
   }
 
-  case class JNum(value: BigDecimal) extends JValue {
-    type Values = BigDecimal
-    
-    def values = value
-    
-    // SI-6173
-    override val hashCode = 0
-
-    def sort: JNum = this
+  sealed trait JBool extends JValue {
+    def value: Boolean
+    final def sort: JBool = this
   }
-  case object JNum extends (BigDecimal => JNum) {
-    // John's idea...
-    def apply(double: Double): JValue = fromDouble(double)
+
+  case object JTrue extends JBool {
+    final def value = true
+    final def renderCompact: String = "true"
+  }
+
+  case object JFalse extends JBool {
+    final def value = false
+    final def renderCompact: String = "false"
+  }
+
+  object JBool {
+    def apply(value: Boolean): JBool = if (value) JTrue else JFalse
+    def unapply(value: JBool): Option[Boolean] = Some(value.value)
+  }
+
+  /*
+
+  sealed trait JNum {
     
-    def fromDouble(double: Double): JValue = {
-      try {
-        new JNum(BigDecimal(double))
-      } catch {
-        case _: NumberFormatException => JNothing
-      }
+
+    ...
+  }
+
+  object JNum {
+    def apply(value: BigDecimal): JNum = JNumBD
+    
+    def apply(value: Long): JNum = {
+  
+    }
+    
+    def apply(value: Double): JNum
+
+    case class StrNum(value: String) extends JNum {
+      
     }
   }
-  case class JString(value: String) extends JValue {
-    type Values = String
+  */
+  sealed trait JNum extends JValue {
+    def isNaN: Boolean
+    def toBigDecimal: BigDecimal
+    def toLong: Long
+    def toDouble: Double
+    def toRawString: String
+    final def renderCompact = toRawString
+    def sort: JNum = this
+  }
+
+  case class JNumStr(value: String) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value
+  }
+
+  case class JNumLong(value: Long) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value.toString
+  }
+
+  case class JNumDouble(value: Double) extends JNum {
+    final def isNaN: Boolean = value.isNaN
+    final def toBigDecimal: BigDecimal = BigDecimal(value)
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value
+    final def toRawString: String = value.toString
+  }
+
+  case class JNumBigDec(value: BigDecimal) extends JNum {
+    final def isNaN: Boolean = false
+    final def toBigDecimal: BigDecimal = value
+    final def toLong: Long = value.toLong
+    final def toDouble: Double = value.toDouble
+    final def toRawString: String = value.toString
+
+    // SI-6173
+    override val hashCode = 0
+  }
+
+  case object JNum {
+    def apply(value: Double): JValue = if (value.isNaN || value == Double.PositiveInfinity || value == Double.NegativeInfinity) JNothing else JNumDouble(value)
+
+    private[json] def apply(value: String): JNum = JNumStr(value)
+
+    def apply(value: Long): JNum = JNumLong(value)
+
+    def apply(value: BigDecimal): JNum = JNumBigDec(value)
     
-    def values = value
-
-    def sort: JString = this
+    def unapply(value: JNum): Option[BigDecimal] = {
+      try { Some(value.toBigDecimal) }
+      catch { case _ : NumberFormatException => None }
+    }
   }
 
-  case class JField(name: String, value: JValue) {
-    def map(f: JValue => JValue): JField = JField(name, f(value))
+  case class JString(value: String) extends JValue {
+    final def sort: JString = this
+    final def renderCompact: String = JString.escape(value)
+    final override def renderPretty: String = JString.escape(value)
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      JString.internalEscape(sb, value)
+    }
   }
 
-  object JField extends ((String, JValue) => JField) {
+  object JString {
+    final def escape(s: String): String = buildString(internalEscape(_, s))
+
+    protected[json] final def internalEscape(sb: StringBuilder, s: String) {
+      sb.append('"')
+      var i = 0
+      val len = s.length
+      while (i < len) {
+        (s.charAt(i): @switch) match {
+          case '"' => sb.append("\\\"")
+          case '\\' => sb.append("\\\\")
+          case '\b' => sb.append("\\b")
+          case '\f' => sb.append("\\f")
+          case '\n' => sb.append("\\n")
+          case '\r' => sb.append("\\r")
+          case '\t' => sb.append("\\t")
+          case c =>
+            if (c < ' ')
+              sb.append("\\u%04x" format c)
+            else
+              sb.append(c)
+        }
+        i += 1
+      }
+      sb.append('"')
+    }
+  }
+
+  type JField = (String, JValue)
+
+  case object JField extends ((String, JValue) => JField) {
+    def apply(name: String, value: JValue): JField = (name, value)
+
+    def unapply(value: JField): Option[(String, JValue)] = Some(value)
+
     implicit final val order: Order[JField] = new Order[JField] {
-      def order(f1: JField, f2: JField) = (f1.name ?|? f2.name) |+| (f1.value ?|? f2.value)
+      def order(f1: JField, f2: JField) = (f1._1 ?|? f2._1) |+| (f1._2 ?|? f2._2)
     }
 
     implicit final val ordering = order.toScalaOrdering
@@ -799,276 +910,155 @@ object JsonAST {
     }
   }
 
-  case class JObject(fields: List[JField]) extends JValue {
-    type Field = JField
-    type Value = JValue
-    type Values = Map[String, Any]
+  case class JObject(fields: Map[String, JValue]) extends JValue {
+    def get(name: String): JValue = fields.get(name).getOrElse(JNothing)
 
-    def get(name: String): JValue = fields.find(_.name == name).map(_.value).getOrElse(JNothing)
+    def ++ (that: JObject): JObject = JObject(this.fields ++ that.fields)
+
+    def + (field: JField): JObject = copy(fields = fields + field)
+
+    def - (name: String): JObject = copy(fields = fields - name)
+
+    def partitionField(field: String): (JValue, JObject) = {
+      (get(field), JObject(fields - field))
+    }
     
-    def values = Map() ++ fields.map(field => (field.name, field.value.values): (String, Any))
-
     def partition(f: JField => Boolean): (JObject, JObject) = {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
 
-    def sort: JObject = JObject(fields.filter(_.value ne JNothing).map(_.map(_.sort)).sorted)
+    def sort: JObject = JObject(fields.filter(_._2 ne JNothing).map(_.map(_.sort)))
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
 
-    override lazy val hashCode = Set(this.fields: _*).hashCode
-
-    override def equals(that: Any): Boolean = that match {
-      case that: JObject if (this.fields.length == that.fields.length) => Set(this.fields: _*) == Set(that.fields: _*)
+    def isNested: Boolean = fields.values.exists {
+      case _: JArray => true
+      case _: JObject => true
       case _ => false
     }
+
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
+
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
+
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("{")
+          var seen = false
+          fields.foreach {
+            case (k, v) =>
+              if (seen) sb.append(",") else seen = true
+              JString.internalEscape(sb, k)
+              sb.append(":")
+              v.internalRender(sb, Compact, "")
+          }
+          sb.append("}")
+
+        case _ => 
+          val indent2 = indent + "  "
+          val oneLine = fields.size < 4 && !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("{")
+          if (!oneLine) sb.append("\n")
+
+          var seen = false
+          def handlePair(tpl: (String, JValue)) {
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            JString.internalEscape(sb, tpl._1)
+            sb.append(": ")
+            tpl._2.internalRender(sb, mode, indent2)
+          }
+
+          if (mode == Canonical)
+            fields.toSeq.sorted.foreach(handlePair)
+          else
+            fields.foreach(handlePair)
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("}")
+      }
+    }
   }
-  object JObject {
+
+  case object JObject extends (Map[String, JValue] => JObject) {
     final val empty = JObject(Nil)
-    final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.filter(_.value ne JNothing).sortBy(_.name))
+    final implicit val order: Order[JObject] = Order[List[JField]].contramap((_: JObject).fields.toList.sorted.filter(_._2 ne JNothing).sortBy(_._2))
+
+    def apply(fields: Traversable[JField]): JObject = JObject(fields.toMap)
+
+    def apply(fields: JField*): JObject = JObject(fields.toMap)
+
+    def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
+      case JObject(fields) => Some(fields.toSeq)
+
+      case _ => None
+    }
   }
 
   case class JArray(elements: List[JValue]) extends JValue {
-    type Values = List[Any]
-    
-    def values = elements.map(_.values)
-
     def sort: JArray = JArray(elements.filter(_ ne JNothing).map(_.sort).sorted)
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)
+
+    def isNested: Boolean = elements.exists {
+      case _: JArray => true
+      case _: JObject => true
+      case _ => false
+    }
+
+    final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
+
+    final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
+
+    final override def renderCanonical: String = buildString(internalRender(_, Canonical, ""))
+
+    final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
+      mode match {
+        case Compact =>
+          // render as compactly as possible
+          sb.append("[")
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(",") else seen = true
+            v.internalRender(sb, mode, "")
+          }
+          sb.append("]")
+
+        case _ =>
+          val indent2 = indent + "  "
+          val oneLine = !isNested
+          val delimiter = if (oneLine) ", " else ",\n"
+
+          sb.append("[")
+          if (!oneLine) sb.append("\n")
+          
+          var seen = false
+          elements.foreach { v =>
+            if (seen) sb.append(delimiter) else seen = true
+            if (!oneLine) sb.append(indent2)
+            v.internalRender(sb, mode, indent2)
+          }
+
+          if (!oneLine) {
+            sb.append("\n")
+            sb.append(indent)
+          }
+          sb.append("]")
+      }
+    }
   }
-  object JArray {
+
+  case object JArray extends (List[JValue] => JArray) {
     final val empty = JArray(Nil)
     final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
-  }
-}
-
-/** Basic implicit conversions from primitive types into JSON.
- * Example:<pre>
- * import blueeyes.json.Implicits._
- * JObject(JField("name", "joe") :: Nil) == JObject(JField("name", JString("joe")) :: Nil)
- * </pre>
- */
-object Implicits extends Implicits
-trait Implicits {
-  import JsonAST._
-
-  implicit def int2jvalue(x: Int) = JNum(x)
-  implicit def long2jvalue(x: Long) = JNum(x)
-  implicit def bigint2jvalue(x: BigInt) = JNum(BigDecimal(x))
-  implicit def double2jvalue(x: Double) = JNum(x)
-  implicit def float2jvalue(x: Float) = JNum(x)
-  implicit def bigdecimal2jvalue(x: BigDecimal) = JNum(x)
-  implicit def boolean2jvalue(x: Boolean) = JBool(x)
-  implicit def string2jvalue(x: String) = JString(x)
-}
-
-/** A DSL to produce valid JSON.
- * Example:<pre>
- * import blueeyes.json.JsonDSL._
- * ("name", "joe") ~ ("age", 15) == JObject(JField("name",JString("joe")) :: JField("age",JInt(15)) :: Nil)
- * </pre>
- */
-object JsonDSL extends JsonDSL with Printer
-trait JsonDSL extends Implicits {
-  import JsonAST._
-
-  implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => a: JValue })
-  implicit def nel2JValue[A <% JValue](s: NonEmptyList[A]) = JArray(s.list.map { a => a: JValue })
-  implicit def option2jvalue[A <% JValue](opt: Option[A]): JValue = opt match {
-    case Some(x) => x
-    case None => JNothing
-  }
-
-  implicit def symbol2jvalue(x: Symbol) = JString(x.name)
-  implicit def pair2jvalue[A <% JValue](t: (String, A)) = JObject(List(JField(t._1, t._2)))
-  implicit def list2jvalue(l: List[JField]) = JObject(l)
-  implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.fields)
-  implicit def pair2Assoc[A <% JValue](t: (String, A)) = new JsonAssoc(t)
-
-  class JsonAssoc[A <% JValue](left: (String, A)) {
-    def ~[B <% JValue](right: (String, B)) = {
-      val l: JValue = left._2
-      val r: JValue = right._2
-      JObject(JField(left._1, l) :: JField(right._1, r) :: Nil)
-    }
-
-    def ~(right: JObject) = {
-      val l: JValue = left._2
-      JObject(JField(left._1, l) :: right.fields)
-    }
-  }
-
-  class JsonListAssoc(left: List[JField]) {
-    def ~(right: (String, JValue)) = JObject(left ::: List(JField(right._1, right._2)))
-    def ~(right: JObject) = JObject(left ::: right.fields)
-  }
-}
-
-/** Printer converts JSON to String.
- * Before printing a <code>JValue</code> needs to be rendered into scala.text.Document.
- * <p>
- * Example:<pre>
- * pretty(render(json))
- * </pre>
- *
- * @see blueeyes.json.JsonAST#render
- */
-object Printer extends Printer
-trait Printer {
-  import java.io._
-  import java.util.IdentityHashMap
-  import scala.text.{Document, DocText, DocCons, DocBreak, DocNest, DocGroup, DocNil}
-  import scala.text.Document._
-  import scala.collection.immutable.Stack
-  import JsonAST._
-
-  def render(value: JValue): Document = {
-    value.minimize.map(renderAll).getOrElse(DocNil)
-  }
-
-  /** Renders JSON.
-   * @see Printer#compact
-   * @see Printer#pretty
-   */
-  def renderAll(value: JValue): Document = value match {
-    case JBool(true)   => text("true")
-    case JBool(false)  => text("false")
-    case JNum(n)       => text(n.toString)
-    case JNull         => text("null")
-    case JNothing      => text("undefined")
-    case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(elems) => text("[") :: series(elems map renderAll) :: text("]")
-    case JObject(fs)   =>
-      val renderedFields = fs.map { field =>
-        text("\"" + quote(field.name) + "\":") :: renderAll(field.value)
-      }
-
-      val nested = break :: fields(renderedFields)
-
-      text("{") :: nest(2, nested) :: break :: text("}")
-  }
-
-  /** Renders as Scala code, which can be copy/pasted into a Scala
-   * application.
-   */
-  def renderScala(value: JValue): Document = {
-    val Quote = "\""
-
-    def scalaQuote(s: String) = Quote + List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\").foldLeft(s) { (str, pair) =>
-      str.replaceAll(pair._1, pair._2)
-    } + Quote
-
-    def intersperse(l: List[Document], i: Document) = l.zip(List.fill(l.length - 1)({i}) ::: List(text(""))).map(t => t._1 :: t._2)
-
-    value match {
-      case null => text("null")
-
-      case JNothing => text("JNothing")
-      case JNull => text("JNull")
-
-      case _ => text(value.productPrefix + "(") :: (value match {
-        case JNull | JNothing => sys.error("impossible")
-
-        case JBool(value)  => text(value.toString)
-        case JNum(n)       => text(n.toString)
-        case JString(null) => text("null")
-        case JString(s)    => text(scalaQuote(s))
-        case JArray(elements)   => fold(intersperse(elements.map(renderScala) ::: List(text("Nil")), text("::")))
-        case JObject(fs)  =>
-          val renderedFields = fs.map { field =>
-            text(scalaQuote(field.name) + ",") :: renderScala(field.value)
-          }
-
-          val nested = break :: fold(intersperse(intersperse(renderedFields ::: List(text("Nil")), text("::")), break))
-
-          nest(2, nested)
-      }) :: text(")")
-    }
-  }
-
-  private def series(docs: List[Document]) = fold(punctuate(text(","), docs))
-  private def fields(docs: List[Document]) = fold(punctuate(text(",") :: break, docs))
-  private def fold(docs: List[Document]) = docs.foldLeft[Document](empty)(_ :: _)
-
-  private def punctuate(p: => Document, docs: List[Document]): List[Document] = {
-    def prepend(d: DocText, ds: List[Document]) = ds match {
-      case DocText(h) :: t => DocText(h + d.txt) :: t
-      case _ => d :: ds
-    }
-
-    def punctuate0(docs: List[Document], acc: List[Document]): List[Document] = docs match {
-      case Nil => acc.reverse
-      case List(d) => punctuate0(Nil, d :: acc)
-      case DocText(d) :: ds => p match {
-        case DocText(punct) => punctuate0(ds, prepend(DocText(d + punct), acc))
-        case _ => punctuate0(ds, (d :: p) :: acc)
-      }
-      case d :: ds => punctuate0(ds, (d :: p) :: acc)
-    }
-    punctuate0(docs, Nil)
-  }
-
-  private[json] def quote(s: String): String = {
-    val buf = new StringBuilder
-    for (i <- 0 until s.length) {
-      val c = s.charAt(i)
-      buf.append(c match {
-        case '"'  => "\\\""
-        case '\\' => "\\\\"
-        case '\b' => "\\b"
-        case '\f' => "\\f"
-        case '\n' => "\\n"
-        case '\r' => "\\r"
-        case '\t' => "\\t"
-        case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
-        case c => c
-      })
-    }
-    buf.toString
-  }
-
-  /** Compact printing (no whitespace etc.)
-   */
-  def compact(d: Document): String = compact(d, new StringWriter).toString
-
-  /** Compact printing (no whitespace etc.)
-   */
-  def compact[A <: Writer](d: Document, out: A): A = {
-    // Non-recursive implementation to support serialization of big structures.
-    var nodes = Stack.empty.push(d)
-    val visited = new IdentityHashMap[Document, Unit]()
-    while (!nodes.isEmpty) {
-      val cur = nodes.top
-      nodes = nodes.pop
-      cur match {
-        case DocText(s)      => out.write(s)
-        case DocCons(d1, d2) =>
-          if (!visited.containsKey(cur)) {
-            visited.put(cur, ())
-            nodes = nodes.push(cur)
-            nodes = nodes.push(d1)
-          } else {
-            nodes = nodes.push(d2)
-          }
-        case DocBreak        =>
-        case DocNest(_, d)   => nodes = nodes.push(d)
-        case DocGroup(d)     => nodes = nodes.push(d)
-        case DocNil          =>
-      }
-    }
-    out.flush
-    out
-  }
-
-  /** Pretty printing.
-   */
-  def pretty(d: Document): String = pretty(d, new StringWriter).toString
-
-  /** Pretty printing.
-   */
-  def pretty[A <: Writer](d: Document, out: A): A = {
-    d.format(0, out)
-    out
   }
 }

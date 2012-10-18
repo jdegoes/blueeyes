@@ -11,7 +11,6 @@ import blueeyes.core.data.{Chunk, ByteChunk, AggregatedByteChunk, ZLIBByteChunk,
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
 import blueeyes.json.serialization.DefaultSerialization._
 
 import java.net.URLDecoder._
@@ -359,7 +358,7 @@ object JsonpService extends AkkaDefaults {
     }
   }
 
-  private def jsonpMetadata[A](r: HttpResponse[A]) = compact(render(JObject(
+  private def jsonpMetadata[A](r: HttpResponse[A]) = JObject(
     JField("headers", r.headers.raw.serialize) ::
     JField("status",
       JObject(
@@ -369,7 +368,7 @@ object JsonpService extends AkkaDefaults {
       )
     ) ::
     Nil
-  )))
+  ).renderCompact
 
   def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit fromString: String => T): HttpResponse[T] = {
     import Bijection._
@@ -379,7 +378,7 @@ object JsonpService extends AkkaDefaults {
       r.copy(
         status = HttpStatus(OK),
         content = r.content.map { content =>
-                    fromString(callback + "(" + compact(render(content)) + "," + meta + ");")
+                    fromString(callback + "(" + content.renderCompact + "," + meta + ");")
                   } orElse {
                     Some(fromString(callback + "(undefined," + meta + ");"))
                   }, 
@@ -387,7 +386,7 @@ object JsonpService extends AkkaDefaults {
       )
     } getOrElse {
       r.copy(
-        content = r.content.map(jv => fromString(pretty(render(jv)))), 
+        content = r.content.map(jv => fromString(jv.renderPretty)), 
         headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json)
       )
     }
@@ -395,7 +394,6 @@ object JsonpService extends AkkaDefaults {
 
   def jsonpChunkedResponse[T, U](r: HttpResponse[Chunk[U]], callback: Option[String])(implicit u2s: U => String, s2t: String => T): HttpResponse[Chunk[T]] = {
     import blueeyes.json.serialization.DefaultSerialization._
-    import blueeyes.json.Printer._
     import Bijection._
 
     callback map { callback =>

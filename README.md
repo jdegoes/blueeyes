@@ -67,7 +67,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.reportgrid" % "blueeyes_2.9.1" % "0.6" % "compile"
+  "com.reportgrid" % "blueeyes_2.9.2" % "0.6" % "compile"
 )
 ```
 

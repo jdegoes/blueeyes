@@ -36,7 +36,7 @@ object QueryExamples extends Specification {
   "List of IPs in cluster2" in {
     val ips = for { 
       cluster @ JObject(x) <- json \ "data_center"
-      if (x contains JField("name", JString("cluster2")))
+      if (x.get("name") == Some(JString("cluster2")))
       JString(ip) <- cluster \\ "ip" } yield ip
     ips mustEqual List("192.168.2.125", "192.168.2.126")
   }
@@ -69,7 +69,7 @@ object QueryExamples extends Specification {
     clusters mustEqual List("cluster2")
   }
 
-  val json = parse("""
+  def json = parse("""
     { "data_center": [
       {
         "name": "cluster1",
@@ -88,7 +88,7 @@ object QueryExamples extends Specification {
         "name": "cluster2",
         "servers": [
           {"ip": "192.168.2.125", "uptime": 453423, "specs": {"cpus":  4, "ram": 2048}},
-          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}},
+          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}}
         ],
         "links": [
           {"href": "http://www.example2.com/admin", "name": "admin"},

@@ -60,7 +60,7 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val specs2Version = "1.12.2"
+  val specs2Version = "1.12.3-SNAPSHOT"
 
   val commonSettings = Seq(
     crossScalaVersions := Seq("2.9.2"),
@@ -71,7 +71,8 @@ object BlueEyesBuild extends Build {
 
     libraryDependencies ++= Seq(
       "org.specs2"         %%  "specs2"       % specs2Version    % "test" changing(),
-      "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test"
+      "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test",
+      "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT" changing()
     ),
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
