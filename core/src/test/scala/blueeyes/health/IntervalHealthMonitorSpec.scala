@@ -72,7 +72,7 @@ with FutureMatchers {
 
     val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
-    jValue must whenDelivered (be_==(monitorJson))
+    jValue.map(_.renderCanonical) must whenDelivered (be_==(monitorJson.renderCanonical))
   }
 
   "composes into JValue" in{
