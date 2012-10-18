@@ -1,7 +1,6 @@
 package blueeyes.core.service
 
 import blueeyes.json.JsonAST.{JString, JField, JObject}
-import blueeyes.json.Printer
 import blueeyes.parsers.W3ExtendedLogAST._
 
 class HttpRequestLoggerJsonFormatter extends HttpRequestLoggerFormatter{
@@ -23,7 +22,7 @@ class HttpRequestLoggerJsonFormatter extends HttpRequestLoggerFormatter{
     }
 
     val json = JObject(fields(noPrefix) ::: JField("request", JObject(fields(clientPrefix))) :: JField("response", JObject(fields(serverPrefix))) :: Nil)
-    Printer.compact(Printer.render(json))
+    json.renderCompact
   }
 
   def formatHeader(fieldsDirective: FieldsDirective) = ""

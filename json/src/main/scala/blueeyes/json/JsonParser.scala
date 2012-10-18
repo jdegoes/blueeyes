@@ -62,6 +62,12 @@ object JsonParser {
 
   def parseManyFromPath(path: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new PathParser(path).parseMany())
+
+  def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
+    Validation.fromTryCatch(new ByteBufferParser(buf).parse())
+
+  def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
+    Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
 }
 
 // underlying parser code adapted from jawn under MIT license.
@@ -600,6 +606,7 @@ final class StringParser(s: String) extends Parser {
   }
 }
 
+
 /**
  * Basic file parser.
  *
@@ -724,6 +731,114 @@ final class PathParser(name: String) extends Parser {
       }
     }
     sb.toString
+  }
+
+  /**
+   * See if the string has any escape sequences. If not, return the end of the
+   * string. If so, bail out and return -1.
+   *
+   * This method expects the data to be in UTF-8 and accesses it as bytes. Thus
+   * we can just ignore any bytes with the highest bit set.
+   */
+  final def parseStringSimple(i: Int, ctxt: Context): Int = {
+    var j = i
+    var c = byte(j)
+    while (c != 34) {
+      if (c == 92) return -1
+      j += 1
+      c = byte(j)
+    }
+    j + 1
+  }
+
+  /**
+   * Parse the string according to JSON rules, and add to the given context.
+   *
+   * This method expects the data to be in UTF-8 and accesses it as bytes.
+   */
+  final def parseString(i: Int, ctxt: Context): Int = {
+    val k = parseStringSimple(i + 1, ctxt)
+    if (k != -1) {
+      ctxt.add(at(i + 1, k - 1))
+      return k
+    }
+
+    var j = i + 1
+    val sb = new CharBuilder
+      
+    var c = byte(j)
+    while (c != 34) { // "
+      if (c == 92) { // \
+        (byte(j + 1): @switch) match {
+          case 98 => { sb.append('\b'); j += 2 }
+          case 102 => { sb.append('\f'); j += 2 }
+          case 110 => { sb.append('\n'); j += 2 }
+          case 114 => { sb.append('\r'); j += 2 }
+          case 116 => { sb.append('\t'); j += 2 }
+
+          // if there's a problem then descape will explode
+          case 117 => { sb.append(descape(at(j + 2, j + 6))); j += 6 }
+
+          // permissive: let any escaped char through, not just ", / and \
+          case c2 => { sb.append(c2.toChar); j += 2 }
+        }
+      } else if (c < 128) {
+        // 1-byte UTF-8 sequence
+        sb.append(c.toChar)
+        j += 1
+      } else if ((c & 224) == 192) {
+        // 2-byte UTF-8 sequence
+        sb.extend(at(j, j + 2))
+        j += 2
+      } else if ((c & 240) == 224) {
+        // 3-byte UTF-8 sequence
+        sb.extend(at(j, j + 3))
+        j += 3
+      } else if ((c & 248) == 240) {
+        // 4-byte UTF-8 sequence
+        sb.extend(at(j, j + 4))
+        j += 4
+      } else {
+        sys.error("invalid UTF-8 encoding")
+      }
+      j = reset(j)
+      c = byte(j)
+    }
+    ctxt.add(sb.makeString)
+    j + 1
+  }
+}
+
+/**
+ * Basic ByteBuffer parser.
+ */
+final class ByteBufferParser(src: ByteBuffer) extends Parser {
+  val d = java.nio.charset.Charset.defaultCharset
+  if (d.displayName != "UTF-8")
+    sys.error("default encoding must be UTF-8, got %s." format d)
+
+  val limit = src.limit
+
+  final def reset(i: Int): Int = i
+  final def byte(i: Int): Byte = src.get(i)
+  final def at(i: Int): Char = src.get(i).toChar
+
+  final def at(i: Int, k: Int): String = {
+    val len = k - i
+    val arr = new Array[Byte](len)
+    src.position(i)
+    src.get(arr, 0, len)
+    new String(arr)
+  }
+
+  final def atEof(i: Int) = i >= limit
+
+  final def all(i: Int) = {
+    val len = limit - i
+    val arr = new Array[Byte](len)
+    src.position(i)
+    src.get(arr, 0, len)
+    new String(arr)
   }
 
   /**

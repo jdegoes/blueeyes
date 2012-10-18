@@ -20,7 +20,6 @@ import org.specs2.mutable.Specification
 
 object Examples extends Specification {
   import JsonAST._
-  //import Printer._
   import JsonParser._
 
   "Lotto example" in {
