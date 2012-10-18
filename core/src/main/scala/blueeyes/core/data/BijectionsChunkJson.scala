@@ -1,7 +1,7 @@
 package blueeyes.core.data
 
-import blueeyes.json.JsonAST._
-import blueeyes.json.JsonParser
+import blueeyes.json._
+import blueeyes.json.JParser
 import akka.dispatch.Future
 import akka.dispatch.Await
 import akka.util.Timeout
@@ -13,7 +13,7 @@ trait BijectionsChunkJson{
   implicit val JValueToChunk = new Bijection[JValue, ByteChunk] {
     def unapply(s: ByteChunk) = {
       val bb = ByteBuffer.wrap(s.data)
-      val r = JsonParser.parseFromByteBuffer(bb)
+      val r = JParser.parseFromByteBuffer(bb)
       r.valueOr(e => throw e)
     }
 

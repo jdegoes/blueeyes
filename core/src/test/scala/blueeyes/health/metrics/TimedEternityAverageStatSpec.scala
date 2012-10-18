@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
-import blueeyes.json.JsonAST._
-import blueeyes.json.JsonParser.parse
+import blueeyes.json._
+import blueeyes.json.JParser.parse
 import org.specs2.mutable.Specification
 
 class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {

@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo.json
 
 import java.util.ArrayList
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import BijectionsMongoJson._
 import BijectionsMongoJson.MongoToJson._
 import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
@@ -59,7 +59,7 @@ class BijectionsMongoJsonSpec extends Specification {
 //      dbObject.put("_id", "4b7d91799790c34331062bc0")
 //      val jObject: JObject  = MongoToJson(dbObject) valueOr { errors => sys.error(errors.list.mkString("; ")) }
 //
-//      (jObject \ "_id") mustEqual (JNothing)
+//      (jObject \ "_id") mustEqual (JUndefined)
 //    }
   }
   "JValueToMongo" should {
@@ -81,8 +81,8 @@ class BijectionsMongoJsonSpec extends Specification {
     "convert null type" in {
       toMongo("null", JNull) must be (null)
     }
-    "convert JNothing type" in {
-      val jObject = toMongoObject("nothing", JNothing)
+    "convert JUndefined type" in {
+      val jObject = toMongoObject("nothing", JUndefined)
       jObject.containsField("nothing") mustEqual (false)
     }
     "convert nested jObject type" in {

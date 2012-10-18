@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import BijectionsMongoValue._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import org.specs2.mutable.Specification
 import org.joda.time.DateTime
 import java.util.regex.Pattern

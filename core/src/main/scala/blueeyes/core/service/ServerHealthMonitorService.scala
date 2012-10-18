@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import akka.dispatch.Future
 import akka.util.Timeout
 import blueeyes.core.data._

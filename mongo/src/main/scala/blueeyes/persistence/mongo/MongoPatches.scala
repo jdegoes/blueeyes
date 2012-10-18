@@ -4,7 +4,7 @@ package persistence.mongo
 import akka.dispatch.Future
 import akka.dispatch.MessageDispatcher
 import akka.util.Timeout
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import scalaz._
 import Scalaz._
 

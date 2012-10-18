@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package blueeyes
-package json
-
-import JsonAST._
+package blueeyes.json
 
 import scalaz.{Failure,Success,Validation}
 import scalaz.syntax.arrow._
@@ -35,7 +32,9 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-object JsonParser {
+class ParseException(msg: String) extends Exception(msg)
+
+trait JParser {
   import java.io._
 
   // legacy parsing methods
@@ -70,6 +69,7 @@ object JsonParser {
   def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
 }
+object JParser extends JParser
 
 // underlying parser code adapted from jawn under MIT license.
 // (https://github.com/non/jawn)
@@ -77,7 +77,7 @@ object JsonParser {
 /**
  * Parser contains the state machine that does all the work. The only 
  */
-trait Parser {
+private[json] trait Parser {
 
   final val utf8 = Charset.forName("UTF-8")
 
@@ -140,7 +140,7 @@ trait Parser {
    * Used to generate error messages with character info and byte addresses.
    */
   protected[this] def die(i: Int, msg: String) =
-    sys.error("%s got %s (%d)" format (msg, at(i), i))
+    throw new ParseException("%s got %s (%d)" format (msg, at(i), i))
 
   /**
    * Parse the given number, and add it to the given context.
@@ -290,9 +290,10 @@ trait Parser {
         case ' ' => j += 1
         case '\t' => j += 1
         case '\n' => j += 1
+        case _ => die(j, "expected whitespace")
       }
     }
-    if (!atEof(j)) sys.error("expected eof")
+    if (!atEof(j)) die(j, "expected eof")
     value
   }
 
@@ -403,6 +404,9 @@ trait Parser {
           val ctxt = stack.head
           ctxt.add(parseNull(i))
           rparse(if (ctxt.isObj) OBJEND else ARREND, i + 4, stack)
+
+        case _ =>
+          die(i, "expected json value")
       }
 
       // we are in an object expecting to see a key
@@ -515,21 +519,13 @@ trait Parser {
 }
 
 /**
- * Parser companion, with convenience methods.
- */
-object Parser {
-  def parseString(s: String): JValue = new StringParser(s).parse()
-  def parsePath(s: java.io.File): JValue = new PathParser(s).parse()
-}
-
-/**
  * Basic in-memory string parsing.
  *
  * This parser is limited to the maximum string size (~2G). Obviously for large
  * JSON documents it's better to avoid using this parser and go straight from
  * disk, to avoid having to load the whole thing into memory at once.
  */
-final class StringParser(s: String) extends Parser {
+private[json] final class StringParser(s: String) extends Parser {
   final def reset(i: Int): Int = i
   final def at(i: Int): Char = s.charAt(i)
   final def at(i: Int, j: Int): String = s.substring(i, j)
@@ -616,7 +612,7 @@ final class StringParser(s: String) extends Parser {
  * Given a file name this parser opens it, chunks the data 1M at a time, and
  * parses it. 
  */
-final class PathParser(name: java.io.File) extends Parser {
+private[json] final class PathParser(name: java.io.File) extends Parser {
   // TODO: figure out if we wouldn't just be better off decoding to UTF-16 on
   // input, rather than doing the parsing as UTF-8. i'm not sure which works
   // better since we'll save memory this way but add a bit of complexity. so
@@ -798,7 +794,7 @@ final class PathParser(name: java.io.File) extends Parser {
         sb.extend(at(j, j + 4))
         j += 4
       } else {
-        sys.error("invalid UTF-8 encoding")
+        die(j, "invalid UTF-8 encoding")
       }
       j = reset(j)
       c = byte(j)
@@ -811,7 +807,7 @@ final class PathParser(name: java.io.File) extends Parser {
 /**
  * Basic ByteBuffer parser.
  */
-final class ByteBufferParser(src: ByteBuffer) extends Parser {
+private[json] final class ByteBufferParser(src: ByteBuffer) extends Parser {
   val limit = src.limit
 
   final def reset(i: Int): Int = i
@@ -902,7 +898,7 @@ final class ByteBufferParser(src: ByteBuffer) extends Parser {
         sb.extend(at(j, j + 4))
         j += 4
       } else {
-        sys.error("invalid UTF-8 encoding")
+        die(j, "invalid UTF-8 encoding")
       }
       j = reset(j)
       c = byte(j)

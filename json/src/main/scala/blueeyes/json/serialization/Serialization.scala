@@ -1,6 +1,6 @@
 package blueeyes.json.serialization
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli}
 import NonEmptyList._

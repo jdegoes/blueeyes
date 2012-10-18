@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 import collection.mutable.ConcurrentMap
 import blueeyes.health.ConcurrentMaps
 import ConcurrentMaps._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class ErrorStat extends SyncStatistic[Throwable, Map[Class[_], Long]]{
   private val _count = new AtomicLong(0)

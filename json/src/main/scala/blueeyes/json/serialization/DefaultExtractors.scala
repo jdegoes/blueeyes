@@ -1,6 +1,6 @@
 package blueeyes.json.serialization 
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import java.util.{Date => JDate}
 import scala.math.BigDecimal
 import org.joda.time.{DateTime, DateTimeZone}
@@ -93,7 +93,7 @@ trait DefaultExtractors {
   
   implicit def OptionExtractor[T](implicit extractor: Extractor[T]): Extractor[Option[T]] = new Extractor[Option[T]] {
     def extract(jvalue: JValue): Option[T] = jvalue match {
-      case JNothing | JNull => None
+      case JUndefined | JNull => None
       case x: JValue => Some(extractor.extract(x))
     }
   }

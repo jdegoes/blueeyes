@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import blueeyes.core.data.Bijection
 import json.BijectionsMongoJson
 import scalaz.Validation
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JValue
 
 //
 //trait BijectionsMongoValueJson extends BijectionsMongoValue with BijectionsMongoJson{

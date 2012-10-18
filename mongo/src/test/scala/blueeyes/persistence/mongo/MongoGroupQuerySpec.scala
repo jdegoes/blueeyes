@@ -6,7 +6,7 @@ import MongoFilterBuilder._
 import MongoFilterOperators._
 import blueeyes.json.JPath
 import blueeyes.json.JPathImplicits._
-import blueeyes.json.JsonAST.JObject
+import blueeyes.json.JObject
 
 class MongoGroupQuerySpec extends Specification{
   private val query = group(JObject(Nil), "dummy", "foo", "bar").from(MongoCollectionReference("collection"))

@@ -1,6 +1,6 @@
 package blueeyes.core.storeable
 
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JValue
 import org.joda.time.DateTime
 import scalaz.{Validation, Success, Failure}
 

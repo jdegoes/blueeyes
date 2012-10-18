@@ -19,8 +19,7 @@ package blueeyes.json
 import org.specs2.mutable.Specification
 
 object Examples extends Specification {
-  import JsonAST._
-  import JsonParser._
+  import JParser._
 
   "Lotto example" in {
     val json = parse(lotto)
@@ -75,17 +74,15 @@ object Examples extends Specification {
   }
 
   "JSON building example" in {
-    val json = concat(JObject(JField("name", JString("joe")) :: Nil), 
-                      JObject(JField("age", JNum(34)) :: Nil)) ++ 
-               concat(JObject(JField("name", JString("mazy")) :: Nil), 
-                      JObject(JField("age", JNum(31)) :: Nil))
+    val json = JObject(JField("name", JString("joe")) :: Nil) ++ JObject(JField("age", JNum(34)) :: Nil) ++ 
+               JObject(JField("name", JString("mazy")) :: Nil) ++ JObject(JField("age", JNum(31)) :: Nil)
 
     json.renderCompact mustEqual """[{"name":"joe"},{"age":34},{"name":"mazy"},{"age":31}]"""
   }
 
   "Example which collects all integers and forms a new JSON" in {
     val json = parse(person)
-    val ints = json.foldDown(JNothing: JValue) { (a, v) => v match {
+    val ints = json.foldDown(JUndefined: JValue) { (a, v) => v match {
       case x: JNum => a ++ x
       case _ => a
     }}

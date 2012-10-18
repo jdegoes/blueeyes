@@ -10,7 +10,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
 import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 import akka.dispatch.Future
 import akka.util.Timeout
@@ -81,14 +81,14 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "support health monitor statistics" in {
-      import blueeyes.json.JsonParser.parse
+      import blueeyes.json.JParser.parse
       service.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
         (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(parse("[1]"))) and
-        (content \ "requests" \ "GET" \ "timing" mustNotEqual(JNothing)) and
-        (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JNothing)) and
+        (content \ "requests" \ "GET" \ "timing" mustNotEqual(JUndefined)) and
+        (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JUndefined)) and
         (content \ "service" \ "name"    mustEqual(JString("email"))) and
         (content \ "service" \ "version" mustEqual(JString("1.2.3"))) and
-        (content \ "uptimeSeconds"       mustNotEqual(JNothing)) 
+        (content \ "uptimeSeconds"       mustNotEqual(JUndefined)) 
       }
     }
 

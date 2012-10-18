@@ -1,7 +1,7 @@
 package blueeyes.health
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST.JNum
+import blueeyes.json.JNum
 
 class ExportedStatisticSpec extends Specification {
   "ExportedStatistic: gets lazy value" in{

@@ -6,7 +6,7 @@ import blueeyes.core.http.{HttpRequest, HttpResponse, HttpException, HttpStatus}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpMethods._
 import blueeyes.core.http.test.HttpRequestMatchers
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import akka.dispatch.Future
 
 class HttpRequestCombinatorsSpec extends Specification with HttpRequestCombinators with HttpRequestMatchers with blueeyes.bkka.AkkaDefaults {

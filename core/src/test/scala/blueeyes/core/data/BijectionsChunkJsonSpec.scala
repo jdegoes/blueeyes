@@ -1,7 +1,7 @@
 package blueeyes.core.data
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class BijectionsChunkJsonSpec extends Specification with BijectionsChunkJson{
   "BijectionsChunkJson" should{

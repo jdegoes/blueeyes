@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST.{JField, JObject}
+import blueeyes.json.{JField, JObject}
 import MongoImplicits._
 import MongoFilterOperators._
 

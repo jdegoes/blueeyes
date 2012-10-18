@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.parsers.W3ExtendedLogAST._
 
 class HttpRequestLoggerJsonFormatterSpec extends Specification{

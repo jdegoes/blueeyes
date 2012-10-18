@@ -1,9 +1,9 @@
 package blueeyes.demo.xschema
 
 import blueeyes.json.serialization._
-import blueeyes.json.JsonAST.{JInt, JString}
+import blueeyes.json.{JInt, JString}
 import codegen.ScalaCodeGenerator
-import blueeyes.json.JsonParser.{parse => j}
+import blueeyes.json.JParser.{parse => j}
 
 object XSchemaBootstrap{
   val demoPackage = "blueeyes.demo"

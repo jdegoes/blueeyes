@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import MongoQueryBuilder._
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class MongoQueryBuilderSpec  extends Specification{
   private val jObject = JObject(JField("Foo", JString("bar")) :: Nil)

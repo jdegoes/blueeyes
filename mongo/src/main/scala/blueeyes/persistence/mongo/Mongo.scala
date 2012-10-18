@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import scala.collection.IterableView
 import blueeyes.bkka.Stop
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JsonAST
 import akka.dispatch.Future
 import akka.util.Timeout

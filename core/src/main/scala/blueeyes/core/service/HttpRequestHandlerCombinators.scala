@@ -7,7 +7,7 @@ import http.HttpStatusCodes._
 import data.{Chunk, ByteChunk, CompressedByteChunk, Bijection}
 
 import akka.dispatch.Future
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.util.metrics.DataSize
 
 import scala.xml.NodeSeq

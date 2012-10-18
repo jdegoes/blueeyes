@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.json._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import akka.dispatch.Future
 import akka.dispatch.Future._
 

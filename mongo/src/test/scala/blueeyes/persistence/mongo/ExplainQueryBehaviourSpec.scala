@@ -1,12 +1,12 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
-import blueeyes.json.{JPath, JsonParser}
+import blueeyes.json._
+import blueeyes.json.{JPath, JParser}
 import org.specs2.mock._
 
 class ExplainQueryBehaviourSpec extends Specification with Mockito{
-  private val explanation = JsonParser.parse("""{
+  private val explanation = JParser.parse("""{
     "cursor" : "BasicCursor",
     "nscanned" : 3,
     "nscannedObjects" : 3,

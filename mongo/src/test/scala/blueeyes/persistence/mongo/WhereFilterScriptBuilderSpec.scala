@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import org.specs2.mutable.Specification
 import com.mongodb.MongoException
 

@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import scala.collection.IterableView
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JPath
 import QueryBehaviours._
 

@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
 import test.BlueEyesServiceSpecification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.core.http.HttpStatus
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
@@ -14,13 +14,13 @@ class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with S
     "get server health" in {
       service.get[JValue]("/blueeyes/server/health") must succeedWithContent {
         (content: JValue) => {
-          (content \ "runtime" must_!=(JNothing)) and
-          (content \ "memory" must_!=(JNothing)) and
-          (content \ "threads" must_!=(JNothing)) and
-          (content \ "operatingSystem" must_!=(JNothing)) and
-          (content \ "server" \ "hostName" must_!=(JNothing)) and
-          (content \ "server" \ "port" must_!=(JNothing)) and
-          (content \ "server" \ "sslPort" must_!=(JNothing))
+          (content \ "runtime" must_!=(JUndefined)) and
+          (content \ "memory" must_!=(JUndefined)) and
+          (content \ "threads" must_!=(JUndefined)) and
+          (content \ "operatingSystem" must_!=(JUndefined)) and
+          (content \ "server" \ "hostName" must_!=(JUndefined)) and
+          (content \ "server" \ "port" must_!=(JUndefined)) and
+          (content \ "server" \ "sslPort" must_!=(JUndefined))
         }
       }
     }

@@ -1,8 +1,8 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import blueeyes.json.{JsonParser, JPath}
-import blueeyes.json.JsonAST.JObject
+import blueeyes.json.{JParser, JPath}
+import blueeyes.json.JObject
 import MongoUpdateObject._
 
 class MongoUpdateObjectSpec  extends Specification {
@@ -19,5 +19,5 @@ class MongoUpdateObjectSpec  extends Specification {
     decompose(jObject).toSet mustEqual(Set(("id" set 1.0), ("name" set MongoPrimitiveNull)))
   }
 
-  private def parse(value: String) = JsonParser.parse(value).asInstanceOf[JObject]
+  private def parse(value: String) = JParser.parse(value).asInstanceOf[JObject]
 }
