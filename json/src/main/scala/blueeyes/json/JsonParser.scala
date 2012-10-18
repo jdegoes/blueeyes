@@ -57,10 +57,10 @@ object JsonParser {
   def parseManyFromString(str: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new StringParser(str).parseMany())
 
-  def parseFromPath(path: String): R[JValue] =
+  def parseFromPath(path: File): R[JValue] =
     Validation.fromTryCatch(new PathParser(path).parse())
 
-  def parseManyFromPath(path: String): R[Seq[JValue]] =
+  def parseManyFromPath(path: File): R[Seq[JValue]] =
     Validation.fromTryCatch(new PathParser(path).parseMany())
 
   def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
@@ -516,7 +516,7 @@ trait Parser {
  */
 object Parser {
   def parseString(s: String): JValue = new StringParser(s).parse()
-  def parsePath(s: String): JValue = new PathParser(s).parse()
+  def parsePath(s: java.io.File): JValue = new PathParser(s).parse()
 }
 
 /**
@@ -613,7 +613,7 @@ final class StringParser(s: String) extends Parser {
  * Given a file name this parser opens it, chunks the data 1M at a time, and
  * parses it. 
  */
-final class PathParser(name: String) extends Parser {
+final class PathParser(name: java.io.File) extends Parser {
   val d = java.nio.charset.Charset.defaultCharset
   if (d.displayName != "UTF-8")
     sys.error("default encoding must be UTF-8, got %s." format d)

@@ -41,17 +41,13 @@ object JsonAST {
 
   import JValue.{RenderMode, Compact, Pretty, Canonical}
 
-  def buildString(f: StringBuilder => Unit): String = {
+  private[json] def buildString(f: StringBuilder => Unit): String = {
     val sb = new StringBuilder
     f(sb)
     sb.toString
   }
 
   /** Concatenates a sequence of <code>JValue</code>s.
-   * <p>
-   * Example:<pre>
-   * concat(JInt(1), JInt(2)) == JArray(List(JInt(1), JInt(2)))
-   * </pre>
    */
   def concat(xs: JValue*) = xs.foldLeft(JNothing: JValue)(_ ++ _)
 
@@ -79,10 +75,6 @@ object JsonAST {
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
-     * <p>
-     * Example:<pre>
-     * json \ "name"
-     * </pre>
      */
     def \ (nameToFind: String): JValue = self match {
       case j @ JObject(fields) => j.get(nameToFind)
@@ -99,19 +91,11 @@ object JsonAST {
 
     /**
      * Returns the element as a JValue of the specified class.
-     * <p>
-     * Example:<pre>
-     * (json \ "foo" --> classOf[JField]).value
-     * </pre>
      */
     def --> [A <: JValue](clazz: Class[A]): A = (self -->? clazz).getOrElse(sys.error("Expected class " + clazz + ", but found: " + self.getClass))
 
     /**
      * Returns the element as an option of a JValue of the specified class.
-      * <p>
-      * Example:<pre>
-      * (json \ "foo" -->? classOf[JField]).map(_.value).getOrElse(defaultFieldValue)
-      * </pre>
      */
     def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (self.getClass == clazz) Some(self.asInstanceOf[A]) else None
 
@@ -145,10 +129,6 @@ object JsonAST {
     }
 
     /** XPath-like expression to query JSON fields by name. Returns all matching fields.
-     * <p>
-     * Example:<pre>
-     * json \\ "name"
-     * </pre>
      */
     def \\(nameToFind: String): JValue = {
       def find(json: JValue): List[JValue] = json match {
@@ -170,10 +150,6 @@ object JsonAST {
     }
 
     /** Gets the specified value located at the terminal of the specified path.
-     * <p>
-     * Example:<pre>
-     * json(".foo[0].bar.baz[123]")
-     * </pre>
      */
     def apply(path: JPath): JValue = get(path)
 
@@ -255,18 +231,10 @@ object JsonAST {
 
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil)(1) == JInt(2)
-     * </pre>
      */
     def apply(i: Int): JValue = JNothing
 
     /** Return direct child elements.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
-     * </pre>
      */
     def children: Iterable[JValue] = self match {
       case JObject(fields) => fields.values
@@ -334,19 +302,11 @@ object JsonAST {
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
      * to each element, moving from the bottom-up.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) mapUp { case JInt(x) => JInt(x+1); case x => x }
-     * </pre>
      */
     def mapUp(f: JValue => JValue): JValue = mapUpWithPath((p, j) => f(j))
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
      * to each element and its path, moving from the bottom-up.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) mapUpWithPath { (path, jvalue) => jvalue }
-     * </pre>
      */
     def mapUpWithPath(f: (JPath, JValue) => JValue): JValue = {
       def rec(p: JPath, v: JValue): JValue = v match {
@@ -370,19 +330,11 @@ object JsonAST {
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
      * to each element, moving from the top-down.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) mapDown { case JInt(x) => JInt(x+1); case x => x }
-     * </pre>
      */
     def mapDown(f: JValue => JValue): JValue = mapDownWithPath((p, j) => f(j))
 
     /** Return a new JValue resulting from applying the given function <code>f</code>
      * to each element and its path, moving from the top-down.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) mapDownWithPath { (path, jvalue) => jvalue }
-     * </pre>
      */
     def mapDownWithPath(f: (JPath, JValue) => JValue): JValue = {
       def rec(p: JPath, v: JValue): JValue = {
@@ -413,10 +365,6 @@ object JsonAST {
 
     /** Return a new JValue resulting from applying the given partial function <code>f</code>
      * to each element in JSON.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) transform { case JInt(x) => JInt(x+1) }
-     * </pre>
      */
     def transform(f: PartialFunction[JValue, JValue]): JValue = mapUp { x =>
       if (f.isDefinedAt(x)) f(x) else x
@@ -426,10 +374,6 @@ object JsonAST {
      * replacer function on the matches. If the path has no values, the
      * method has no effect -- i.e. it is not an error to specify paths
      * which do not exist.
-     * <p>
-     * Example:<pre>
-     * jvalue.replace(".baz", value => JObject("indent", value))
-     * </pre>
      */
     def replace(target: JPath, replacer: JValue => JValue): JValue = {
       def replace0(target: JPath, j: JValue): JValue = target.nodes match {
@@ -472,10 +416,6 @@ object JsonAST {
     def replace(target: JPath, replacement: JValue): JValue = replace(target, r => replacement)
 
     /** Return the first element from JSON which matches the given predicate.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) find { _ == JInt(2) } == Some(JInt(2))
-     * </pre>
      */
     def find(p: JValue => Boolean): Option[JValue] = {
       def find(json: JValue): Option[JValue] = {
@@ -490,10 +430,6 @@ object JsonAST {
     }
 
     /** Return a List of all elements which matches the given predicate.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) filter { case JInt(x) => x > 1; case _ => false }
-     * </pre>
      */
     def filter(p: JValue => Boolean): List[JValue] =
       foldDown(List.empty[JValue])((acc, e) => if (p(e)) e :: acc else acc).reverse
@@ -502,10 +438,6 @@ object JsonAST {
       foldDown(List.empty[JValue])((acc, e) => e :: acc).reverse
 
     /** Flattens the JValue down to a list of path to simple JValue primitive.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) flattenWithPath
-     * </pre>
      */
     def flattenWithPath: Vector[(JPath, JValue)] = {
       def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
@@ -534,11 +466,6 @@ object JsonAST {
 
     /** Concatenate with another JSON.
      * This is a concatenation monoid: (JValue, ++, JNothing)
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: Nil) ++ JArray(JInt(3) :: Nil) ==
-     * JArray(List(JInt(1), JInt(2), JInt(3)))
-     * </pre>
      */
     def ++(other: JValue) = {
       def append(value1: JValue, value2: JValue): JValue = (value1, value2) match {
@@ -555,10 +482,6 @@ object JsonAST {
     }
 
     /** Return a JSON where all elements matching the given predicate are removed.
-     * <p>
-     * Example:<pre>
-     * JArray(JInt(1) :: JInt(2) :: JNull :: Nil) remove { _ == JNull }
-     * </pre>
      */
     def remove(p: JValue => Boolean): JValue = self mapUp {
       case x if p(x) => JNothing
@@ -715,7 +638,6 @@ object JsonAST {
 
 
   case object JNothing extends JValue {
-    final def values = None
     final def sort: JValue = this
     final def renderCompact: String = "null"
   }
@@ -746,7 +668,6 @@ object JsonAST {
   }
 
   sealed trait JNum extends JValue {
-    def isNaN: Boolean
     def toBigDecimal: BigDecimal
     def toLong: Long
     def toDouble: Double
@@ -755,8 +676,7 @@ object JsonAST {
     def sort: JNum = this
   }
 
-  case class JNumStr(value: String) extends JNum {
-    final def isNaN: Boolean = false
+  case class JNumStr private[json] (value: String) extends JNum {
     final def toBigDecimal: BigDecimal = BigDecimal(value)
     final def toLong: Long = value.toLong
     final def toDouble: Double = value.toDouble
@@ -764,15 +684,13 @@ object JsonAST {
   }
 
   case class JNumLong(value: Long) extends JNum {
-    final def isNaN: Boolean = false
     final def toBigDecimal: BigDecimal = BigDecimal(value)
     final def toLong: Long = value
     final def toDouble: Double = value.toDouble
     final def toRawString: String = value.toString
   }
 
-  case class JNumDouble(value: Double) extends JNum {
-    final def isNaN: Boolean = value.isNaN
+  case class JNumDouble private[json] (value: Double) extends JNum {
     final def toBigDecimal: BigDecimal = BigDecimal(value)
     final def toLong: Long = value.toLong
     final def toDouble: Double = value
@@ -780,7 +698,6 @@ object JsonAST {
   }
 
   case class JNumBigDec(value: BigDecimal) extends JNum {
-    final def isNaN: Boolean = false
     final def toBigDecimal: BigDecimal = value
     final def toLong: Long = value.toLong
     final def toDouble: Double = value.toDouble
