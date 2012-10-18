@@ -7,7 +7,7 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, Printer, JPath}
+import blueeyes.json.{JsonParser, JPath}
 import java.util.concurrent.TimeUnit
 
 class IntervalHealthMonitorSpec extends Specification with blueeyes.bkka.AkkaDefaults 

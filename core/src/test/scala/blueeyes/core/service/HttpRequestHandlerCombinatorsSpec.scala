@@ -1,7 +1,6 @@
 package blueeyes.core.service
 
 import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
 import blueeyes.json.JsonParser
 
 import org.specs2.mutable.Specification
