@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo.json
 
 import blueeyes.core.data.PartialBijection
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.persistence.mongo.MongoBijection
 
 import com.mongodb.{BasicDBObject, DBObject}
@@ -35,7 +35,7 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
 
   def unapply(jobject: JObject): ValidationNEL[String, DBObject] = {
     jobject.fields.foldLeft(success[NonEmptyList[String], BasicDBObject](new BasicDBObject)) {
-      case (success @ Success(obj), JField(name, JNothing)) => success
+      case (success @ Success(obj), JField(name, JUndefined)) => success
       case (Success(obj), JField(name, value)) => toStorageValue(value).map(obj.append(name, _))
       case (failure, _) => failure
     }
@@ -44,7 +44,7 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
   private val ObjectIdPattern = """ObjectId\("([0-9a-f]*)"\)""".r
 
   private def toStorageValue(v: JValue): ValidationNEL[String, Any] = (v: @unchecked) match {
-    case JNull | JNothing => success(null)
+    case JNull | JUndefined => success(null)
     case JString(ObjectIdPattern(id)) => new ObjectId(Hex.decodeHex(id.toCharArray)).success
     case JString(x) => x.success
     case JNum(x)    => x.doubleValue.success

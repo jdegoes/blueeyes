@@ -2,7 +2,7 @@ package blueeyes.demo
 
 import blueeyes.core.service.test.BlueEyesServiceSpecification
 import blueeyes.core.http.{HttpStatus, MimeTypes, HttpResponse}
-import blueeyes.json.JsonAST.{JValue, JObject, JField, JString, JArray}
+import blueeyes.json.{JValue, JObject, JField, JString, JArray}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.persistence.mongo._

@@ -7,7 +7,7 @@ import akka.util.Timeout
 import java.util.concurrent.atomic.AtomicLong
 
 import blueeyes.util.Clock
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import histogram.ValueStrategy._
 
 abstract class TimedNumbersSample(config: interval)(implicit clock: Clock) extends TimedSample[Double](config)

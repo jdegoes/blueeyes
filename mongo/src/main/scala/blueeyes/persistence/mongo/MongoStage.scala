@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import blueeyes.health.HealthMonitor
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.persistence.cache.{ExpirationPolicy, Stage}
 import akka.util.Timeout
 

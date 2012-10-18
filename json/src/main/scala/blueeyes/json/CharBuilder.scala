@@ -3,7 +3,7 @@ package blueeyes.json
 // efficient char-by-char string builder, taken from jawn under MIT license.
 // (https://github.com/non/jawn)
 
-final class CharBuilder {
+private[json] final class CharBuilder {
   @inline final def INITIALSIZE = 16
 
   private var cs = new Array[Char](INITIALSIZE)

@@ -4,7 +4,6 @@ import util.matching.Regex
 
 import serialization._
 import serialization.DefaultSerialization._
-import JsonAST._
 import scalaz.Order
 import scalaz.Ordering
 import scalaz.Ordering._

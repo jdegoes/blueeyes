@@ -7,7 +7,7 @@ import scala.math.sqrt
 import blueeyes.util.metrics.Duration
 import akka.dispatch.Future
 import Duration._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.util.ClockSystem
 
 /**

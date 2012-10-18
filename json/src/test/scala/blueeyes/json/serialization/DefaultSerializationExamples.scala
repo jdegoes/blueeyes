@@ -18,7 +18,7 @@ package blueeyes.json.serialization
 import org.specs2.mutable.Specification
 
 object DefaultSerializationExamples extends Specification {
-  import _root_.blueeyes.json.JsonAST._
+  import _root_.blueeyes.json._
   
   import DefaultSerialization._
   

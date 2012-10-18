@@ -1,7 +1,7 @@
 package blueeyes.health
 
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import metrics.IntervalConfig
 import blueeyes.json.MergeMonoid
 

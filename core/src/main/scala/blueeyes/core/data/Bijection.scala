@@ -1,6 +1,6 @@
 package blueeyes.core.data
 
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JValue
 import scala.xml.NodeSeq
 
 import scalaz.{ Validation, Failure, ValidationNEL }

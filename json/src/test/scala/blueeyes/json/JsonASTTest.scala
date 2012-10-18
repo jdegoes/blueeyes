@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-package blueeyes
-package json
+package blueeyes.json
 
 import org.scalacheck._
 import org.specs2.mutable.Specification
@@ -23,8 +22,6 @@ import org.specs2.ScalaCheck
 import scalaz.Ordering._
 
 object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
-  import JsonAST._
-
   override val defaultPrettyParams = Pretty.Params(2)
 
   "Functor identity" in {
@@ -40,7 +37,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "Monoid identity" in {
-    val identityProp = (json: JValue) => (json ++ JNothing == json) && (JNothing ++ json == json)
+    val identityProp = (json: JValue) => (json ++ JUndefined == json) && (JUndefined ++ json == json)
     check(identityProp)
   }
 
@@ -50,7 +47,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "Merge identity" in {
-    val identityProp = (json: JValue) => (json merge JNothing) == json && (JNothing merge json) == json
+    val identityProp = (json: JValue) => (json merge JUndefined) == json && (JUndefined merge json) == json
     check(identityProp)
   }
 
@@ -61,14 +58,14 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
   "Diff identity" in {
     val identityProp = (json: JValue) =>
-      (json diff JNothing) == Diff(JNothing, JNothing, json) &&
-      (JNothing diff json) == Diff(JNothing, json, JNothing)
+      (json diff JUndefined) == Diff(JUndefined, JUndefined, json) &&
+      (JUndefined diff json) == Diff(JUndefined, json, JUndefined)
 
     check(identityProp)
   }
 
   "Diff with self is empty" in {
-    val emptyProp = (x: JValue) => (x diff x) == Diff(JNothing, JNothing, JNothing)
+    val emptyProp = (x: JValue) => (x diff x) == Diff(JUndefined, JUndefined, JUndefined)
     check(emptyProp)
   }
 
@@ -81,16 +78,16 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "Diff result is same when fields are reordered" in {
-    val reorderProp = (x: JObject) => (x diff reorderFields(x)) == Diff(JNothing, JNothing, JNothing)
+    val reorderProp = (x: JObject) => (x diff reorderFields(x)) == Diff(JUndefined, JUndefined, JUndefined)
     check(reorderProp)
   }
 
   "delete" in {
-    JsonParser.parse("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JsonParser.parse("""{ "foo": { "baz": 2 } }"""))
+    JParser.parse("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JParser.parse("""{ "foo": { "baz": 2 } }"""))
   }
 
   "Remove all" in {
-    val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
+    val removeAllProp = (x: JValue) => (x remove { _ => true }) == JUndefined
     check(removeAllProp)
   }
 
@@ -141,8 +138,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     test.flattenWithPath must_== expected
   }
 
-  "flattenWithPath does not produce JNothing entries" in {
-    val test = JsonParser.parse("""{
+  "flattenWithPath does not produce JUndefined entries" in {
+    val test = JParser.parse("""{
       "c":2,
       "fn":[{
         "fr":-2
@@ -171,8 +168,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     import scalaz.Order
     import scalaz.Ordering._
  
-    val v1 = JsonParser.parse("""[1, 1, 1]""")
-    val v2 = JsonParser.parse("""[1, 1, 1]""")
+    val v1 = JParser.parse("""[1, 1, 1]""")
+    val v2 = JParser.parse("""[1, 1, 1]""")
  
     Order[JValue].order(v1, v2) must_== EQ
   }
@@ -210,7 +207,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
   "sort objects with undefined members" in {
     val v1 = JObject(
-      JField("a", JNothing) ::
+      JField("a", JUndefined) ::
       JField("b", JNum(2)) ::
       JField("c", JNum(3)) :: Nil
     )
@@ -274,9 +271,9 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }
 
     val insertProp = (jv: JValue, p: JPath, toSet: JValue) => {
-      (!badPath(jv, p) && (jv(p) == JNothing)) ==> {
+      (!badPath(jv, p) && (jv(p) == JUndefined)) ==> {
         (jv, p.nodes) match {
-          case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) => 
+          case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JUndefined, _) => 
             ((p == JPath.Identity) && (jv.unsafeInsert(p, toSet) == toSet)) ||
             (jv.unsafeInsert(p, toSet).get(p) == toSet)
 

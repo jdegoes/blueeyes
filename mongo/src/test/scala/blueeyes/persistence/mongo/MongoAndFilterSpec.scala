@@ -5,7 +5,7 @@ import Gen._
 import Arbitrary.arbitrary
 import org.scalacheck.Prop._
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json._
 import MongoFilterImplicits._
 import org.specs2.mutable.Specification
@@ -58,7 +58,7 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
       val exam: MongoFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
       val cfilter: MongoFilter = ((filter1 && filter2 && filter3) || (filter2 && filter3) || (filter1 && filter3)) //|| (filter1 && filter2)
       cfilter.filter mustEqual
-      JsonParser.parse("""
+      JParser.parse("""
          {
         "$or":[{
           "foo":{

@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package blueeyes
-package json
+package blueeyes.json
 
 import org.specs2.mutable.Specification
 
 object MergeExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
+  import JParser._
 
   "Merge example" in {
     (scala1 merge scala2) mustEqual expectedMergeResult

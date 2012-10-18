@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JValue
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.util.Timeout

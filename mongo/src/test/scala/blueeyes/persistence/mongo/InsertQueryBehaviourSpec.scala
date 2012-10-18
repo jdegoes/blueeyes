@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
 import MongoQueryBuilder._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import org.specs2.mock.Mockito
 
 class InsertQueryBehaviourSpec extends Specification with Mockito {

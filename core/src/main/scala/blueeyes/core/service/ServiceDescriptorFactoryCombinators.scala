@@ -2,7 +2,7 @@ package blueeyes.core.service
 
 import com.weiglewilczek.slf4s.Logger
 import blueeyes.bkka._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.{JPathField, JPath, JPathImplicits}
 import blueeyes.parsers.W3ExtendedLogAST.FieldsDirective
 import blueeyes.parsers.W3ExtendedLog

@@ -22,8 +22,7 @@
 //import org.specs2.ScalaCheck
 //
 //object PrintingSpec extends Specification with ArbitraryJValue with ScalaCheck {
-//  import JsonAST._
-//  import scala.text.Document
+//  blueeyes.json.//  import scala.text.Document
 //
 //  "rendering does not change semantics" in {
 //    def rendering = (json: Document) => parse(json.renderPretty) == parse(json.renderCompact)

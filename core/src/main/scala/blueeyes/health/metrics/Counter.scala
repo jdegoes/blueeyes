@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import java.util.concurrent.atomic.AtomicLong
-import blueeyes.json.JsonAST.JNum
+import blueeyes.json.JNum
 
 /**
  * A thread-safe counter which can go up or down from its initial value.

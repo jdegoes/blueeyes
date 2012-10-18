@@ -8,7 +8,7 @@ import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.service.engines.HttpClientXLightWeb
 import blueeyes.demo.{Contact, BlueEyesDemoFacade}
 import blueeyes.health.metrics.Timer
-import blueeyes.json.JsonAST.JValue
+import blueeyes.json.JValue
 
 import java.util.concurrent.{CountDownLatch, ThreadPoolExecutor, SynchronousQueue, TimeUnit}
 

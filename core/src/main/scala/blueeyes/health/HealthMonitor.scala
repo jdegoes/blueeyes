@@ -4,7 +4,7 @@ import akka.dispatch.Future
 import akka.util.Timeout
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST.{JValue, JNothing}
+import blueeyes.json.{JValue, JUndefined}
 
 trait HealthMonitor extends AkkaDefaults { self => 
   def call(path: JPath)
@@ -79,7 +79,7 @@ object HealthMonitor {
     def trap[T](path: JPath)(f: => T): T = f
 
     override def withPrefix(prefix: JPath) = this
-    def toJValue: Future[JValue] = Future(JNothing)
+    def toJValue: Future[JValue] = Future(JUndefined)
     def shutdown(timeout: Timeout) = Future(())
   }
 }

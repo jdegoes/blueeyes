@@ -10,7 +10,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.data.{Chunk, ByteChunk, AggregatedByteChunk, ZLIBByteChunk, GZIPByteChunk, CompressedByteChunk, Bijection}
 import blueeyes.util.metrics.DataSize
 import blueeyes.util.printer._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.serialization.DefaultSerialization._
 
 import java.net.URLDecoder._
@@ -328,7 +328,7 @@ extends DelegatingService[Chunk[T], Future[HttpResponse[Chunk[T]]], Future[JValu
 
 object JsonpService extends AkkaDefaults {
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit toJson: T => Future[JValue]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
-    import blueeyes.json.JsonParser.parse
+    import blueeyes.json.JParser.parse
     import blueeyes.json.serialization.DefaultSerialization._
     import Bijection._
 

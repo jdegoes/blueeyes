@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import Evaluators._
 
 class AllFieldFilterEvaluatorSpec  extends Specification {

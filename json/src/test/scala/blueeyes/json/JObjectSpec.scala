@@ -2,11 +2,9 @@ package blueeyes.json
 
 import org.specs2.mutable.Specification
 
-import JsonAST._
-
 class JObjectSpec extends Specification{
   "JObjects equal even fields order is different" in {
-    JsonParser.parse(j1) mustEqual(JsonParser.parse(j2))
+    JParser.parse(j1) mustEqual(JParser.parse(j2))
   }
 
   val j1 = """{

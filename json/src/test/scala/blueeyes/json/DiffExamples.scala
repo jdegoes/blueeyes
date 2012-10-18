@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package blueeyes
-package json
+package blueeyes.json
 
 import org.specs2.mutable.Specification
 
 object DiffExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
+  import JParser._
   import MergeExamples.{scala1, scala2, lotto1, lotto2, mergedLottoResult}
   
   "Diff example" in {
@@ -55,8 +53,8 @@ object DiffExamples extends Specification {
   
   "Lotto example" in {
     val Diff(changed, added, deleted) = mergedLottoResult diff lotto1
-    changed mustEqual JNothing
-    added mustEqual JNothing
+    changed mustEqual JUndefined
+    added mustEqual JUndefined
     deleted mustEqual lotto2
   }
   

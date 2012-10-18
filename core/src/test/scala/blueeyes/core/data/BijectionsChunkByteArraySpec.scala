@@ -1,7 +1,7 @@
 package blueeyes.core.data
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.concurrent.test.FutureMatchers
 import akka.dispatch.Future
 

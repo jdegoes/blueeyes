@@ -3,7 +3,7 @@
 //import org.specs2.mutable.Specification
 //
 //object PullParserExample extends Specification {
-//  import JsonParser._
+//  import JParser._
 //
 //  "Pull parsing example" in {
 //    val parser = (p: Parser) => {

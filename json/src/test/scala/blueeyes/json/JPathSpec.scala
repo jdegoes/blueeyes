@@ -21,8 +21,6 @@ import org.scalacheck.{Gen, Arbitrary, Prop}
 import Prop.forAll
 import Arbitrary._
 
-import JsonAST._
-
 import org.specs2.ScalaCheck
 import org.scalacheck._
 

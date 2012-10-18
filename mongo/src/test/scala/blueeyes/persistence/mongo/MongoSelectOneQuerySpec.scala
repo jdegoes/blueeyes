@@ -5,7 +5,7 @@ import MongoQueryBuilder._
 import MongoFilterBuilder._
 import MongoFilterOperators._
 import blueeyes.json.JPathImplicits._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JPath
 
 class MongoSelectOneQuerySpec extends Specification{

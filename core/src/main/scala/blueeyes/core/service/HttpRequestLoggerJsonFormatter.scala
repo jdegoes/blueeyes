@@ -1,6 +1,6 @@
 package blueeyes.core.service
 
-import blueeyes.json.JsonAST.{JString, JField, JObject}
+import blueeyes.json.{JString, JField, JObject}
 import blueeyes.parsers.W3ExtendedLogAST._
 
 class HttpRequestLoggerJsonFormatter extends HttpRequestLoggerFormatter{

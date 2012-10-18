@@ -1,7 +1,7 @@
 package blueeyes.core.data
 
-import blueeyes.json.JsonAST._
-import blueeyes.json.JsonParser
+import blueeyes.json._
+import blueeyes.json.JParser
 
 import scala.xml.NodeSeq
 import scala.xml.XML
@@ -13,7 +13,7 @@ trait BijectionsByteArray {
   implicit val JValueToByteArray = new Bijection[JValue, Array[Byte]]{
     def unapply(arr: Array[Byte]) = {
       val bb = ByteBuffer.wrap(arr)
-      val r = JsonParser.parseFromByteBuffer(bb)
+      val r = JParser.parseFromByteBuffer(bb)
       r.valueOr(e => throw e)
     }
     def apply(t: JValue)         = {

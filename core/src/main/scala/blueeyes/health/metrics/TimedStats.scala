@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.util.Clock
 import akka.actor.Actor
 import akka.dispatch.Future
