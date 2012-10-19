@@ -38,35 +38,30 @@ trait JParser {
   import java.io._
 
   // legacy parsing methods
+  @deprecated("Use parseFromString() instead, which returns a Validation", "1.0")
   def parse(str: String): JValue = new StringParser(str).parse()
-
-  def parseOpt(str: String): Option[JValue] = try {
-    Some(parse(str))
-  } catch {
-    case e: Exception => None
-  }
 
   type R[A] = Validation[Throwable, A]
 
   // TODO: parsing from InputStream, ByteBuffer, etc
   // TODO: async parsing
   
-  def parseFromString(str: String): R[JValue] =
+  final def parseFromString(str: String): R[JValue] =
     Validation.fromTryCatch(new StringParser(str).parse())
 
-  def parseManyFromString(str: String): R[Seq[JValue]] =
+  final def parseManyFromString(str: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new StringParser(str).parseMany())
 
-  def parseFromPath(path: File): R[JValue] =
+  final def parseFromPath(path: File): R[JValue] =
     Validation.fromTryCatch(new PathParser(path).parse())
 
-  def parseManyFromPath(path: File): R[Seq[JValue]] =
+  final def parseManyFromPath(path: File): R[Seq[JValue]] =
     Validation.fromTryCatch(new PathParser(path).parseMany())
 
-  def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
+  final def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parse())
 
-  def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
+  final def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
 }
 object JParser extends JParser

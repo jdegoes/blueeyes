@@ -4,7 +4,7 @@ import scala.collection.IterableView
 import blueeyes.bkka.Stop
 import blueeyes.json.JPath
 import blueeyes.json._
-import blueeyes.json.JsonAST
+import blueeyes.json._
 import akka.dispatch.Future
 import akka.util.Timeout
 

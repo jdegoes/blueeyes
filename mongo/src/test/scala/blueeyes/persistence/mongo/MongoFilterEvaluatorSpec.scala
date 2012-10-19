@@ -12,7 +12,7 @@ class MongoFilterEvaluatorSpec extends Specification{
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
 
-  private val jobjectsWithArray = JParser.parse("""{ "foo" : [
+  private val jobjectsWithArray = JParser.parseFromString("""{ "foo" : [
       {
         "shape" : "square",
         "color" : "purple",
@@ -23,7 +23,7 @@ class MongoFilterEvaluatorSpec extends Specification{
         "color" : "red",
         "thick" : true
       }
-] } """) :: JParser.parse("""
+] } """) :: JParser.parseFromString("""
 { "foo" : [
       {
         "shape" : "square",
@@ -65,10 +65,10 @@ class MongoFilterEvaluatorSpec extends Specification{
     }
 
     "select element by complex filter " in {
-       MongoFilterEvaluator(JParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JParser.parse("""{"foo": 1}""") :: Nil)
+       MongoFilterEvaluator(JParser.parseFromString("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JParser.parseFromString("""{"foo": 1}""") :: Nil)
     }
     "select element from array by element match " in {
-       MongoFilterEvaluator(JParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(List(MongoFieldFilter("foo", $eq, 1))).elemMatch("")) mustEqual(JParser.parse("""{"foo": 1}""") :: Nil)
+       MongoFilterEvaluator(JParser.parseFromString("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(List(MongoFieldFilter("foo", $eq, 1))).elemMatch("")) mustEqual(JParser.parseFromString("""{"foo": 1}""") :: Nil)
     }
   }
 }

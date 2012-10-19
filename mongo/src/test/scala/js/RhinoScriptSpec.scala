@@ -9,7 +9,7 @@ class RhinoScriptSpec extends Specification{
     "execute script which return JObject" in{
       val result = RhinoScript("""var f = function(x){x.foo.bar += 1; return x}; f({foo: {bar: 1}, name: "hello"})""")()
 
-      result mustEqual(Some(JParser.parse("""{"name": "hello", "foo": {"bar": 2.0}}""")))
+      result mustEqual(Some(JParser.parseFromString("""{"name": "hello", "foo": {"bar": 2.0}}""")))
     }
     "execute script which return simple value" in{
       val result = RhinoScript("""var f = function(){return true}; f()""")()
