@@ -9,7 +9,7 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   override val defaultPrettyParams = Pretty.Params(2)
 
   def f(v: JValue): JSchema = JSchema.fixed(v)
-  def pf(s: String): JSchema = JSchema.fixed(JParser.parse(s))
+  def parseFixed(s: String): JSchema = JSchema.fixed(JParser.parse(s))
 
   "JSchema.JSON" should {
     "validate all JSON without exploding" in {
@@ -58,22 +58,32 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       }
 
       "convert heterogeneous objects to object value schemas" in {
-        val fixed = pf(""" {"foo0": "bar1"} """) |
-                    pf(""" {"foo1": "bar1"} """) |
-                    pf(""" {"foo2": "bar2"} """) |
-                    pf(""" {"foo3": "bar2"} """)
+        val fixed = parseFixed(""" {"foo0": "bar1"} """) |
+                    parseFixed(""" {"foo1": "bar1"} """) |
+                    parseFixed(""" {"foo2": "bar2"} """) |
+                    parseFixed(""" {"foo3": "bar2"} """)
 
         fixed.minimize(3) mustEqual JObjectValueSchema(JFixedSchema(JString("bar1")) | JFixedSchema(JString("bar2")))
       }
 
 
       "convert heterogeneous objects to object value schemas and convert fields" in {
-        val fixed = pf(""" {"foo0": "bar0"} """) |
-                    pf(""" {"foo1": "bar1"} """) |
-                    pf(""" {"foo2": "bar2"} """) |
-                    pf(""" {"foo3": "bar3"} """)
+        val fixed = parseFixed(""" {"foo0": "bar0"} """) |
+                    parseFixed(""" {"foo1": "bar1"} """) |
+                    parseFixed(""" {"foo2": "bar2"} """) |
+                    parseFixed(""" {"foo3": "bar3"} """)
 
         fixed.minimize(3) mustEqual JObjectValueSchema(JStringSchema)
+      }
+    }
+
+    "never result in a schema which does not validate its original inputs" in {
+      check { (values: List[JValue]) =>
+        val schema = JEitherSchema(Set(values.map(JSchema.fixed))).minimize(2)
+
+        forall(values) { value =>
+          schema.validate(value)
+        }
       }
     }
   }
