@@ -27,8 +27,15 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
       check { (tuple: (JValue, JValue)) =>
         val (v1, v2) = tuple
 
-        (v1 == v2) || !JSchema.fixed(v1).validate(v2)
+        (v1 == v2) | !JSchema.fixed(v1).validate(v2)
       }
+    }
+
+    "not break regression" in {
+      val v1 = JParser.parse("""{"yitAwQemwwsadhpeGj105763":"wfetLyqmpjrkksvnekdqetmx","zykzjslLdcmtHmusqnwwzft202253":-4.611686018427387904E-2147483609,"cyqk382845":1E+1983360066}""")
+      val v2 = JObject.empty
+
+      JSchema.fixed(v1).validate(v2) must beFalse
     }
   }
 
