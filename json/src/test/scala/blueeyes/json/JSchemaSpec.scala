@@ -79,10 +79,10 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
     "never result in a schema which does not validate its original inputs" in {
       check { (values: List[JValue]) =>
-        val schema = JEitherSchema(Set(values.map(JSchema.fixed))).minimize(2)
+        val schema = JEitherSchema(Set(values.map(JSchema.fixed _): _*)).minimize(scala.util.Random.nextInt(values.length + 1))
 
         forall(values) { value =>
-          schema.validate(value)
+          schema.validate(value) must beTrue
         }
       }
     }
