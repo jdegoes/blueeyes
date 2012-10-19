@@ -31,6 +31,8 @@ class Lazy[A] private (f: () => A) extends (() => A) { self =>
   }
 
   override def hashCode() = force.hashCode
+
+  override def toString = force.toString
 }
 object Lazy {
   def apply[A](value: => A): Lazy[A] = new Lazy(() => value)
@@ -280,15 +282,25 @@ case class JEitherSchema(private val left0: Lazy[JSchema], private val right0: L
   }
 
   private[json] def minimize(fixedBound: Option[Long]): JSchema = {
+    val bound = fixedBound.getOrElse(Long.MaxValue)
+
     val disj = flatten.map(_.minimize(fixedBound))
 
     val fixed = disj.collect { case x : JFixedSchema => x }
 
-    val newDisj = if (fixed.size > fixedBound.getOrElse(Long.MaxValue)) {
+    val disj2 = if (fixed.size > bound) {
       (disj -- fixed) union (fixed.map(s => JSchema.unfixed(s.schema)))
     } else disj
 
-    JEitherSchema(newDisj)
+    val objs: Set[JObjectSchema] = disj2.collect { case x : JObjectSchema => x }
+
+    val disj3 = if (objs.size > bound) {
+      val allFields = objs.map(_.schema.values).flatten
+
+      (disj2 -- objs) union Set(JObjectValueSchema(JEitherSchema(allFields).minimize(fixedBound)))
+    } else disj2
+
+    JEitherSchema(disj3)
   }
 }
 

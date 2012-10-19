@@ -9,6 +9,7 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   override val defaultPrettyParams = Pretty.Params(2)
 
   def f(v: JValue): JSchema = JSchema.fixed(v)
+  def pf(s: String): JSchema = JSchema.fixed(JParser.parse(s))
 
   "JSchema.JSON" should {
     "validate all JSON without exploding" in {
@@ -54,6 +55,25 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
         val fixed = f(JNum(1)) | f(JNum(2)) | f(JNum(3)) | f(JString("foo")) | f(JNum(5)) | f(JNum(6))
 
         fixed.minimize(5) mustEqual (JNumSchema | JStringSchema)
+      }
+
+      "convert heterogeneous objects to object value schemas" in {
+        val fixed = pf(""" {"foo0": "bar1"} """) |
+                    pf(""" {"foo1": "bar1"} """) |
+                    pf(""" {"foo2": "bar2"} """) |
+                    pf(""" {"foo3": "bar2"} """)
+
+        fixed.minimize(3) mustEqual JObjectValueSchema(JFixedSchema(JString("bar1")) | JFixedSchema(JString("bar2")))
+      }
+
+
+      "convert heterogeneous objects to object value schemas and convert fields" in {
+        val fixed = pf(""" {"foo0": "bar0"} """) |
+                    pf(""" {"foo1": "bar1"} """) |
+                    pf(""" {"foo2": "bar2"} """) |
+                    pf(""" {"foo3": "bar3"} """)
+
+        fixed.minimize(3) mustEqual JObjectValueSchema(JStringSchema)
       }
     }
   }
