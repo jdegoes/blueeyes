@@ -8,6 +8,8 @@ import scalaz.Ordering._
 object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   override val defaultPrettyParams = Pretty.Params(2)
 
+  def f(v: JValue): JSchema = JSchema.fixed(v)
+
   "JSchema.JSON" should {
     "validate all JSON without exploding" in {
       check { (value: JValue) =>
@@ -33,9 +35,26 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
     "not break regression" in {
       val v1 = JParser.parse("""{"yitAwQemwwsadhpeGj105763":"wfetLyqmpjrkksvnekdqetmx","zykzjslLdcmtHmusqnwwzft202253":-4.611686018427387904E-2147483609,"cyqk382845":1E+1983360066}""")
+
       val v2 = JObject.empty
 
       JSchema.fixed(v1).validate(v2) must beFalse
+    }
+  }
+
+  "JSchema.minimize" should {
+    "when bounded" >> {
+      "convert homogeneous fixed to singleton unfixed" in {
+        val fixed = f(JNum(1)) | f(JNum(2)) | f(JNum(3)) | f(JNum(4)) | f(JNum(5)) | f(JNum(6))
+
+        fixed.minimize(5) mustEqual JNumSchema
+      }
+
+      "convert heterogeneous fixed to heterogeneous unfixed" in {
+        val fixed = f(JNum(1)) | f(JNum(2)) | f(JNum(3)) | f(JString("foo")) | f(JNum(5)) | f(JNum(6))
+
+        fixed.minimize(5) mustEqual (JNumSchema | JStringSchema)
+      }
     }
   }
 
