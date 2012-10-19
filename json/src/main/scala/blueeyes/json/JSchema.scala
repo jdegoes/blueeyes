@@ -149,23 +149,25 @@ case class JObjectSchema(private val schema0: Map[String, Lazy[JSchema]]) extend
   def validate(value: JValue): Boolean = {
      value match {
       case JObject(fields) => 
-        val fieldKeys = fields.keys
+        var ret = true
+        var keyIter = schemaKeysSet.iterator
 
-        if (!fieldKeys.forall(schemaKeysSet.contains)) false
-        else {
-          var ret = true
-          var keyIter = schemaKeysSet.iterator
+        while (keyIter.hasNext && ret) {
+          val key = keyIter.next()
+          val value = schema(key)
 
-          while (keyIter.hasNext && ret) {
-            val key = keyIter.next()
-            val value = schema(key)
-
-            if (!fields.contains(key)) ret = (value == JUndefinedSchema)
-            else ret = value.validate(fields(key))
-          }
-
-          ret
+          if (!fields.contains(key)) ret = (value == JUndefinedSchema)
+          else ret = value.validate(fields(key))
         }
+
+        if (ret) {
+          // Make sure "remaining" not contained in the schema are all undefined:
+          val rem = fields.keys.toSet diff schemaKeysSet
+
+          ret = rem.forall(k => fields(k) == JUndefined)
+        }
+
+        ret
 
       case _ => false
     }
