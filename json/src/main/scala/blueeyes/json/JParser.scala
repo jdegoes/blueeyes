@@ -30,9 +30,10 @@ import java.lang.Long.parseLong
 
 import java.io.FileInputStream
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import java.nio.charset.Charset
 
-class ParseException(msg: String) extends Exception(msg)
+case class ParseException(msg: String, index: Int) extends Exception(msg)
 
 trait JParser {
   import java.io._
@@ -52,11 +53,13 @@ trait JParser {
   final def parseManyFromString(str: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new StringParser(str).parseMany())
 
-  final def parseFromPath(path: File): R[JValue] =
-    Validation.fromTryCatch(new PathParser(path).parse())
+  final def parseFromFile(file: File): R[JValue] = Validation.fromTryCatch {
+    new ChannelParser(new FileInputStream(file).getChannel).parse()
+  }
 
-  final def parseManyFromPath(path: File): R[Seq[JValue]] =
-    Validation.fromTryCatch(new PathParser(path).parseMany())
+  final def parseManyFromFile(file: File): R[Seq[JValue]] = Validation.fromTryCatch {
+    new ChannelParser(new FileInputStream(file).getChannel).parseMany()
+  }
 
   final def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parse())
@@ -75,15 +78,6 @@ object JParser extends JParser
 private[json] trait Parser {
 
   final val utf8 = Charset.forName("UTF-8")
-
-  /**
-   * Read all remaining data from 'i' onwards and return it as a String.
-   *
-   * This is only used in the case where we have a top-level number, so it's
-   * not generally used in the "critical path", since there's an upper-bound
-   * to how long a single number literal can be.
-   */
-  def all(i: Int): String
 
   /**
    * Read the byte/char at 'i' as a Char.
@@ -121,6 +115,11 @@ private[json] trait Parser {
   def reset(i: Int): Int
 
   /**
+   * Should be called when parsing is finished.
+   */
+  def close(): Unit
+
+  /**
    * Valid parser states.
    */
   @inline final val ARRBEG = 6
@@ -135,7 +134,13 @@ private[json] trait Parser {
    * Used to generate error messages with character info and byte addresses.
    */
   protected[this] def die(i: Int, msg: String) =
-    throw new ParseException("%s got %s (%d)" format (msg, at(i), i))
+    throw ParseException("%s got %s (%d)" format (msg, at(i), i), i)
+
+  /**
+   * Used to generate messages for internal errors.
+   */
+  protected[this] def error(msg: String) =
+    sys.error(msg)
 
   /**
    * Parse the given number, and add it to the given context.
@@ -289,6 +294,7 @@ private[json] trait Parser {
       }
     }
     if (!atEof(j)) die(j, "expected eof")
+    close()
     value
   }
 
@@ -348,6 +354,7 @@ private[json] trait Parser {
           i = j
       }
     }
+    close()
     results
   }
 
@@ -430,7 +437,7 @@ private[json] trait Parser {
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
           case _ =>
-            sys.error("invalid stack")
+            error("invalid stack")
         }
 
         case _ => rparse(DATA, i, stack)
@@ -449,7 +456,7 @@ private[json] trait Parser {
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
           case _ =>
-            sys.error("invalid stack")
+            error("invalid stack")
         }
 
         case _ => rparse(KEY, i, stack)
@@ -482,7 +489,7 @@ private[json] trait Parser {
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
           case _ =>
-            sys.error("invalid stack")
+            error("invalid stack")
         }
 
         case _ => die(i, "expected ] or ,")
@@ -504,7 +511,7 @@ private[json] trait Parser {
             ctxt2.add(ctxt1.finish)
             rparse(if (ctxt2.isObj) OBJEND else ARREND, i + 1, ctxt2 :: tail)
           case _ =>
-            sys.error("invalid stack")
+            error("invalid stack")
         }
         
         case _ => die(i, "expected } or ,")
@@ -513,19 +520,11 @@ private[json] trait Parser {
   }
 }
 
+
 /**
- * Basic in-memory string parsing.
- *
- * This parser is limited to the maximum string size (~2G). Obviously for large
- * JSON documents it's better to avoid using this parser and go straight from
- * disk, to avoid having to load the whole thing into memory at once.
+ * Trait used when the data to be parsed is in UTF-16.
  */
-private[json] final class StringParser(s: String) extends Parser {
-  final def reset(i: Int): Int = i
-  final def at(i: Int): Char = s.charAt(i)
-  final def at(i: Int, j: Int): String = s.substring(i, j)
-  final def atEof(i: Int) = i == s.length
-  final def all(i: Int) = s.substring(i)
+trait CharBasedParser extends Parser {
 
   /**
    * See if the string has any escape sequences. If not, return the end of the
@@ -602,126 +601,10 @@ private[json] final class StringParser(s: String) extends Parser {
 
 
 /**
- * Basic file parser.
- *
- * Given a file name this parser opens it, chunks the data 1M at a time, and
- * parses it. 
+ * Trait used when the data to be parsed is in UTF-8.
  */
-private[json] final class PathParser(name: java.io.File) extends Parser {
-  // TODO: figure out if we wouldn't just be better off decoding to UTF-16 on
-  // input, rather than doing the parsing as UTF-8. i'm not sure which works
-  // better since we'll save memory this way but add a bit of complexity. so
-  // far it's working but more resarch is needed.
-  //
-  // on the upside, we avoid a lot of annoying ceremony around Charset,
-  // CharBuffer, array-copying, and so on.
-  //
-  // on the downside, we don't support other encodings, and it's not clear how
-  // much time we actually spend doing any of this relative to the actual
-  // parsing.
-
-  // 256K buffers: arrived at via a bit of testing
-  @inline final def bufsize = 262144
-  @inline final def mask = bufsize - 1
-
-  // fis and channel are the data source
-  val f = new FileInputStream(name)
-  val ch = f.getChannel()
-
-  // these are the actual byte arrays we'll use
-  var curr = new Array[Byte](bufsize)
-  var next = new Array[Byte](bufsize)
-
-  // these are the bytebuffers used to load the data
-  var bcurr = ByteBuffer.wrap(curr)
-  var bnext = ByteBuffer.wrap(next)
-
-  // these are the bytecounts for each array
-  var ncurr = ch.read(bcurr)
-  var nnext = ch.read(bnext)
-
-  /**
-   * Swap the curr and next arrays/buffers/counts.
-   *
-   * We'll call this in response to certain reset() calls. Specifically, when
-   * the index provided to reset is no longer in the 'curr' buffer, we want to
-   * clear that data and swap the buffers.
-   */
-  final def swap() {
-    var tmp = curr; curr = next; next = tmp
-    var btmp = bcurr; bcurr = bnext; bnext = btmp
-    var ntmp = ncurr; ncurr = nnext; nnext = ntmp
-  }
-
-  /**
-   * If the cursor 'i' is past the 'curr' buffer, we want to clear the current
-   * byte buffer, do a swap, load some more data, and continue.
-   */
-  final def reset(i: Int): Int = {
-    if (i >= bufsize) {
-      bcurr.clear()
-      swap()
-      nnext = ch.read(bnext)
-      i - bufsize
-    } else {
-      i
-    }
-  }
-
-  /**
-   * This is a specialized accessor for the case where our underlying data are
-   * bytes not chars.
-   */
-  final def byte(i: Int): Byte = if (i < bufsize)
-    curr(i)
-  else
-    next(i & mask)
-
-  /**
-   * Rads
-   */
-  final def at(i: Int): Char = if (i < bufsize)
-    curr(i).toChar
-  else
-    next(i & mask).toChar
-
-  /**
-   * Access a byte range as a string.
-   *
-   * Since the underlying data are UTF-8 encoded, i and k must occur on unicode
-   * boundaries. Also, the resulting String is not guaranteed to have length
-   * (k - i).
-   */
-  final def at(i: Int, k: Int): String = {
-    val len = k - i
-
-    if (k <= bufsize) {
-      new String(curr, i, len, utf8)
-    } else {
-      val arr = new Array[Byte](len)
-      val mid = bufsize - i
-      System.arraycopy(curr, i, arr, 0, mid)
-      System.arraycopy(next, 0, arr, mid, k - bufsize)
-      new String(arr, utf8)
-    }
-  }
-
-  final def atEof(i: Int) = if (i < bufsize) i >= ncurr else i >= nnext
-
-  final def all(i: Int) = {
-    var j = i
-    val sb = new StringBuilder
-    while (!atEof(j)) {
-      if (ncurr == bufsize) {
-        sb.append(at(j, bufsize))
-        j = reset(bufsize)
-      } else {
-        sb.append(at(j, ncurr))
-        j = reset(ncurr)
-      }
-    }
-    sb.toString
-  }
+trait ByteBasedParser extends Parser {
+  def byte(i: Int): Byte
 
   /**
    * See if the string has any escape sequences. If not, return the end of the
@@ -799,11 +682,30 @@ private[json] final class PathParser(name: java.io.File) extends Parser {
   }
 }
 
+
+/**
+ * Basic in-memory string parsing.
+ *
+ * This parser is limited to the maximum string size (~2G). Obviously for large
+ * JSON documents it's better to avoid using this parser and go straight from
+ * disk, to avoid having to load the whole thing into memory at once.
+ */
+private[json] final class StringParser(s: String) extends CharBasedParser {
+  final def reset(i: Int): Int = i
+  final def at(i: Int): Char = s.charAt(i)
+  final def at(i: Int, j: Int): String = s.substring(i, j)
+  final def atEof(i: Int) = i == s.length
+  final def close() = ()
+}
+
+
 /**
  * Basic ByteBuffer parser.
  */
-private[json] final class ByteBufferParser(src: ByteBuffer) extends Parser {
+private[json] final class ByteBufferParser(src: ByteBuffer) extends ByteBasedParser {
   val limit = src.limit
+
+  final def close() = ()
 
   final def reset(i: Int): Int = i
   final def byte(i: Int): Byte = src.get(i)
@@ -818,87 +720,254 @@ private[json] final class ByteBufferParser(src: ByteBuffer) extends Parser {
   }
 
   final def atEof(i: Int) = i >= limit
+}
 
-  final def all(i: Int) = {
-    val len = limit - i
-    val arr = new Array[Byte](len)
-    src.position(i)
-    src.get(arr, 0, len)
+
+/**
+ * Basic file parser.
+ *
+ * Given a file name this parser opens it, chunks the data 1M at a time, and
+ * parses it. 
+ */
+private[json] final class ChannelParser(ch: ReadableByteChannel) extends ByteBasedParser {
+
+  // 256K buffers: arrived at via a bit of testing
+  @inline final def bufsize = 262144
+  @inline final def mask = bufsize - 1
+
+  // these are the actual byte arrays we'll use
+  var curr = new Array[Byte](bufsize)
+  var next = new Array[Byte](bufsize)
+
+  // these are the bytebuffers used to load the data
+  var bcurr = ByteBuffer.wrap(curr)
+  var bnext = ByteBuffer.wrap(next)
+
+  // these are the bytecounts for each array
+  var ncurr = ch.read(bcurr)
+  var nnext = ch.read(bnext)
+
+  final def close() = ch.close()
+
+  /**
+   * Swap the curr and next arrays/buffers/counts.
+   *
+   * We'll call this in response to certain reset() calls. Specifically, when
+   * the index provided to reset is no longer in the 'curr' buffer, we want to
+   * clear that data and swap the buffers.
+   */
+  final def swap() {
+    var tmp = curr; curr = next; next = tmp
+    var btmp = bcurr; bcurr = bnext; bnext = btmp
+    var ntmp = ncurr; ncurr = nnext; nnext = ntmp
+  }
+
+  /**
+   * If the cursor 'i' is past the 'curr' buffer, we want to clear the current
+   * byte buffer, do a swap, load some more data, and continue.
+   */
+  final def reset(i: Int): Int = {
+    if (i >= bufsize) {
+      bcurr.clear()
+      swap()
+      nnext = ch.read(bnext)
+      i - bufsize
+    } else {
+      i
+    }
+  }
+
+  /**
+   * This is a specialized accessor for the case where our underlying data are
+   * bytes not chars.
+   */
+  final def byte(i: Int): Byte = if (i < bufsize)
+    curr(i)
+  else
+    next(i & mask)
+
+  /**
+   * Rads
+   */
+  final def at(i: Int): Char = if (i < bufsize)
+    curr(i).toChar
+  else
+    next(i & mask).toChar
+
+  /**
+   * Access a byte range as a string.
+   *
+   * Since the underlying data are UTF-8 encoded, i and k must occur on unicode
+   * boundaries. Also, the resulting String is not guaranteed to have length
+   * (k - i).
+   */
+  final def at(i: Int, k: Int): String = {
+    val len = k - i
+
+    if (k <= bufsize) {
+      new String(curr, i, len, utf8)
+    } else {
+      val arr = new Array[Byte](len)
+      val mid = bufsize - i
+      System.arraycopy(curr, i, arr, 0, mid)
+      System.arraycopy(next, 0, arr, mid, k - bufsize)
+      new String(arr, utf8)
+    }
+  }
+
+  final def atEof(i: Int) = if (i < bufsize) i >= ncurr else i >= nnext
+}
+
+
+/**
+ * This class is used internally by AsyncParser to signal that we've reached
+ * the end of the particular input we were given.
+ */
+private[json] class AsyncException extends Exception
+
+
+/**
+ * AsyncParser is a bit different from the others. Rather than explicitly
+ * calling parse methods (which have no effect) you use the feed method to send
+ * data to the parser, and get back intermediate results of the parsing.
+ *
+ * The format is the same as that accepted by parseMany: valid JSON objects
+ * separated by whitespace. Data should be encoded in UTF-8 and supplied via an
+ * instance of Option[ByteBuffer]. Some indicates there is more data to process
+ * while None indicates an EOF.
+ *
+ * Upon encountering a parse error in a particular value, the parser adds the
+ * exception to the sequence of results, then scans forward looking for an
+ * opening { or [ and attempts to resume parsing.
+ *
+ * Note that certain values (e.g. numbers) cannot fully parse when the are the
+ * final bytes of a buffer, since they could potentially be continued on the
+ * next input.
+ */
+final class AsyncParser extends ByteBasedParser {
+
+  // start with 128k
+  var data: Array[Byte] = new Array[Byte](131072)
+  var len = 0
+  var allocated = 131072
+
+  // this is our current position in bcurr
+  var index = 0
+  var done = false
+
+  // consume the next bit of data, and return as many values as possible.
+  final def feed(b: Option[ByteBuffer]): Seq[Validation[Throwable, JValue]] = {
+    // if we don't have enough free space available we'll need to grow our
+    // data array.
+    // TODO: currently we never shrink data, assuming users will call feed
+    // with similarly-sized bufs. this might be a bad assumption.
+    b match {
+      case None =>
+        done = true
+
+      case Some(buf) =>
+        done = false
+        val free = allocated - len
+        val need = len + buf.capacity
+        if (need > allocated) {
+          val newdata = new Array[Byte](need)
+          System.arraycopy(data, 0, newdata, 0, len)
+          data = newdata
+          allocated = need
+        }
+        // absorb the byte buffer's contents into our byte array
+        buf.position(0)
+        buf.get(data, len, buf.capacity)
+        len = need
+    }
+
+    // this accumulates results that we'll eventually return
+    val results = mutable.ArrayBuffer.empty[Validation[Throwable, JValue]]
+
+    // we rely on exceptions to tell us when we run out of data
+    try {
+      while (true) {
+        (at(index): @switch) match {
+          // just pass whitespace by looking for the next value
+          case ' ' | '\t' | '\n' =>
+            index += 1
+
+          // ok, let's try parsing at this point
+          case _ =>
+            try {
+              index = reset(index)
+              val (value, j) = parse(index)
+              results.append(Success(value))
+              index = j
+            } catch {
+              // we'll catch a parsing exception, note the error, and try to
+              // make an effort to find the next value.
+              case e: ParseException =>
+                results.append(Failure(e))
+                index = e.index
+                // TODO: if we had a delimiter to look for we could do better
+                while (at(index) != '{' && at(index) != '[') index += 1
+            }
+        }
+      }
+    } catch {
+      case e: Exception =>
+        // we ran out of data. index is storing the last place we started
+        // parsing (or the last place we tried to start parsing) so we can just
+        // return what we have, and resume later.
+
+        // reset() in case we're done with our current buffer
+        index = reset(index)
+    }
+    results
+  }
+
+  // every 65k bytes we shift our array back by 65k.
+  final def reset(i: Int): Int = {
+    if (i >= 65536) {
+      len -= 65536
+      index -= 65536
+      System.arraycopy(data, 65536, data, 0, len)
+      i - 65536
+    } else {
+      i
+    }
+  }
+
+  /**
+   * This is a specialized accessor for the case where our underlying data are
+   * bytes not chars.
+   */
+  final def byte(i: Int): Byte = if (i >= len)
+    throw new AsyncException
+  else
+    data(i)
+
+  // we need to signal if we got out-of-bounds
+  final def at(i: Int): Char = if (i >= len)
+    throw new AsyncException
+  else
+    data(i).toChar
+
+  /**
+   * Access a byte range as a string.
+   *
+   * Since the underlying data are UTF-8 encoded, i and k must occur on unicode
+   * boundaries. Also, the resulting String is not guaranteed to have length
+   * (k - i).
+   */
+  final def at(i: Int, k: Int): String = {
+    if (k > len) throw new AsyncException
+    val size = k - i
+    val arr = new Array[Byte](size)
+    System.arraycopy(data, i, arr, 0, size)
     new String(arr, utf8)
   }
 
-  /**
-   * See if the string has any escape sequences. If not, return the end of the
-   * string. If so, bail out and return -1.
-   *
-   * This method expects the data to be in UTF-8 and accesses it as bytes. Thus
-   * we can just ignore any bytes with the highest bit set.
-   */
-  final def parseStringSimple(i: Int, ctxt: Context): Int = {
-    var j = i
-    var c = byte(j)
-    while (c != 34) {
-      if (c == 92) return -1
-      j += 1
-      c = byte(j)
-    }
-    j + 1
-  }
+  // the basic idea is that we don't signal EOF until done is true, which means
+  // the client explicitly send us an EOF.
+  final def atEof(i: Int) = if (done) i >= len else false
 
-  /**
-   * Parse the string according to JSON rules, and add to the given context.
-   *
-   * This method expects the data to be in UTF-8 and accesses it as bytes.
-   */
-  final def parseString(i: Int, ctxt: Context): Int = {
-    val k = parseStringSimple(i + 1, ctxt)
-    if (k != -1) {
-      ctxt.add(at(i + 1, k - 1))
-      return k
-    }
-
-    var j = i + 1
-    val sb = new CharBuilder
-      
-    var c = byte(j)
-    while (c != 34) { // "
-      if (c == 92) { // \
-        (byte(j + 1): @switch) match {
-          case 98 => { sb.append('\b'); j += 2 }
-          case 102 => { sb.append('\f'); j += 2 }
-          case 110 => { sb.append('\n'); j += 2 }
-          case 114 => { sb.append('\r'); j += 2 }
-          case 116 => { sb.append('\t'); j += 2 }
-
-          // if there's a problem then descape will explode
-          case 117 => { sb.append(descape(at(j + 2, j + 6))); j += 6 }
-
-          // permissive: let any escaped char through, not just ", / and \
-          case c2 => { sb.append(c2.toChar); j += 2 }
-        }
-      } else if (c < 128) {
-        // 1-byte UTF-8 sequence
-        sb.append(c.toChar)
-        j += 1
-      } else if ((c & 224) == 192) {
-        // 2-byte UTF-8 sequence
-        sb.extend(at(j, j + 2))
-        j += 2
-      } else if ((c & 240) == 224) {
-        // 3-byte UTF-8 sequence
-        sb.extend(at(j, j + 3))
-        j += 3
-      } else if ((c & 248) == 240) {
-        // 4-byte UTF-8 sequence
-        sb.extend(at(j, j + 4))
-        j += 4
-      } else {
-        die(j, "invalid UTF-8 encoding")
-      }
-      j = reset(j)
-      c = byte(j)
-    }
-    ctxt.add(sb.makeString)
-    j + 1
-  }
+  // we don't have to do anything special on close.
+  final def close() = ()
 }
