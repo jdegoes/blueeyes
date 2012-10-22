@@ -868,16 +868,20 @@ final class AsyncParser extends ByteBasedParser {
       case Some(buf) =>
         done = false
         val free = allocated - len
-        val need = len + buf.capacity
+        val buflen = buf.limit - buf.position
+        val need = len + buflen
         if (need > allocated) {
+          //println("realloc: need %s space, have %s" format (need, allocated))
           val newdata = new Array[Byte](need)
           System.arraycopy(data, 0, newdata, 0, len)
           data = newdata
           allocated = need
+        } else {
+          //println("ok: need %s space, have %s" format (need, allocated))
         }
         // absorb the byte buffer's contents into our byte array
-        buf.position(0)
-        buf.get(data, len, buf.capacity)
+        //buf.position(0)
+        buf.get(data, len, buflen)
         len = need
     }
 
@@ -924,7 +928,7 @@ final class AsyncParser extends ByteBasedParser {
 
   // every 65k bytes we shift our array back by 65k.
   final def reset(i: Int): Int = {
-    if (i >= 65536) {
+    if (index >= 65536) {
       len -= 65536
       index -= 65536
       System.arraycopy(data, 65536, data, 0, len)
