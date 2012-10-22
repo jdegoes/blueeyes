@@ -74,21 +74,24 @@ object AsyncParserSpec extends Specification {
 
   val utf8 = java.nio.charset.Charset.forName("UTF-8")
 
-  private def loadBytes(name: String): Array[Byte] =
-    Source.fromFile("json/src/test/resources/z1k_nl.json").mkString.getBytes(utf8)
+  private def loadBytes(path: String): Array[Byte] =
+    Source.fromFile(path).mkString.getBytes(utf8)
 
   private def chunk(data: Array[Byte], i: Int, j: Int) = {
     val len = min(j, data.length) - i
     if (len > 0) Some(ByteBuffer.wrap(data, i, len)) else None
   }
 
-  private def chunkAll(async: AsyncParser, data: Array[Byte], f: () => Int) = {
+  private def chunkAll(async: AsyncState, data: Array[Byte], f: () => Int) = {
     var vs = Seq[Validation[Throwable, JValue]]()
     val n = data.length
     var i = 0
+    var st = async
     while (i < n) {
       val step = f()
-      vs ++= async.feed(chunk(data, i, i + step))
+      val tpl = JParser.parseAsync(st, chunk(data, i, i + step))
+      st = tpl._1
+      vs ++= tpl._2
       i += step
     }
     vs
@@ -96,13 +99,13 @@ object AsyncParserSpec extends Specification {
 
   private def runTest(path: String, step: Int) = {
     val data = loadBytes(path)
-    val async = new AsyncParser
+    val async = AsyncState()
     chunkAll(async, data, () => step)
   }
 
   private def runTestRandomStep(path: String, f: () => Int) = {
     val data = loadBytes(path)
-    val async = new AsyncParser
+    val async = AsyncState()
     chunkAll(async, data, f)
   }
 
@@ -160,5 +163,52 @@ object AsyncParserSpec extends Specification {
     val vs = runTestRandomStep("json/src/test/resources/z1k_nl.json", f)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
+  }
+
+  def run1(chunks: Seq[Option[ByteBuffer]]) = {
+    var st = AsyncState()
+    var t0 = System.nanoTime
+    var count = 0
+    chunks.foreach { chunk =>
+      val (st2, vs) = JParser.parseAsync(st, chunk)
+      count += vs.length
+      st = st2
+    }
+    val t = System.nanoTime - t0
+    if(count != 1000) sys.error("wrong number of records")
+    t
+  }
+
+  def run2(bb: ByteBuffer) = {
+    val tt0 = System.nanoTime
+    val v = JParser.parseManyFromByteBuffer(bb)
+    val tt = System.nanoTime - tt0
+    val seq = v.toOption.getOrElse(sys.error("failed to parse"))
+    if(seq.length != 1000) sys.error("wrong number of records")
+    tt
+  }
+
+  "Test parseAsync performance" in {
+    val data = loadBytes("json/src/test/resources/z1k_nl.json")
+    val step = 10000
+    println("parsing %d bytes with %d-byte chunks" format (data.length, step))
+
+    def chunks = (0 until data.length by step).map(i => chunk(data, i, i + step))
+    def bb = ByteBuffer.wrap(data)
+
+    // warmup
+    run1(chunks); run2(bb)
+    run1(chunks); run2(bb)
+    System.gc()
+
+    val t1 = (0 until 10).foldLeft(0.0) { (t, _) => 
+      val tt = run1(chunks); System.gc(); t + tt
+    }
+    println("async: %.1f us" format (t1 / 10000.0))
+
+    val t2 = (0 until 10).foldLeft(0.0) { (t, _) => 
+      val tt = run2(bb); System.gc(); t + tt
+    }
+    println("byteb: %.1f us" format (t2 / 10000.0))
   }
 }

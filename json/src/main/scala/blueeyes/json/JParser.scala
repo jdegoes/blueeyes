@@ -63,8 +63,17 @@ trait JParser {
 
   def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
+
+  def parseAsync(st: AsyncState, b: Option[ByteBuffer]):
+    (AsyncState, Seq[Validation[Throwable, JValue]]) = {
+    val st2 = st.copy
+    (st2, st2.feed(b))
+  }
 }
+
+
 object JParser extends JParser
+
 
 // underlying parser code adapted from jawn under MIT license.
 // (https://github.com/non/jawn)
@@ -827,38 +836,25 @@ private[json] final class ChannelParser(ch: ReadableByteChannel) extends SyncPar
  */
 private[json] class AsyncException extends Exception
 
+object AsyncState {
+  def apply() = new AsyncState(new Array[Byte](131072), 0, 131072, 0, false)
+}
 
-/**
- * AsyncParser is a bit different from the others. Rather than explicitly
- * calling parse methods (which have no effect) you use the feed method to send
- * data to the parser, and get back intermediate results of the parsing.
- *
- * The format is the same as that accepted by parseMany: valid JSON objects
- * separated by whitespace. Data should be encoded in UTF-8 and supplied via an
- * instance of Option[ByteBuffer]. Some indicates there is more data to process
- * while None indicates an EOF.
- *
- * Upon encountering a parse error in a particular value, the parser adds the
- * exception to the sequence of results, then scans forward looking for an
- * opening { or [ and attempts to resume parsing.
- *
- * Note that certain values (e.g. numbers) cannot fully parse when the are the
- * final bytes of a buffer, since they could potentially be continued on the
- * next input.
- */
-final class AsyncParser extends ByteBasedParser {
 
-  // start with 128k
-  private var data: Array[Byte] = new Array[Byte](131072)
-  private var len = 0
-  private var allocated = 131072
+final class AsyncState protected[json] (
+  protected[json] var data: Array[Byte],
+  protected[json] var len: Int,
+  protected[json] var allocated: Int,
+  protected[json] var index: Int,
+  protected[json] var done: Boolean
+) extends ByteBasedParser {
 
-  // this is our current position in bcurr
-  private var index = 0
-  private var done = false
+  final def copy() = new AsyncState(data.clone, len, allocated, index, done)
 
   // consume the next bit of data, and return as many values as possible.
-  final def feed(b: Option[ByteBuffer]): Seq[Validation[Throwable, JValue]] = {
+  protected[json] final def feed(b: Option[ByteBuffer]):
+    Seq[Validation[Throwable, JValue]] = {
+
     // if we don't have enough free space available we'll need to grow our
     // data array.
 
