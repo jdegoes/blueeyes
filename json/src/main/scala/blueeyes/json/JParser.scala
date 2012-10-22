@@ -44,27 +44,24 @@ trait JParser {
 
   type R[A] = Validation[Throwable, A]
 
-  // TODO: parsing from InputStream, ByteBuffer, etc
-  // TODO: async parsing
-  
-  final def parseFromString(str: String): R[JValue] =
+  def parseFromString(str: String): R[JValue] =
     Validation.fromTryCatch(new StringParser(str).parse())
 
-  final def parseManyFromString(str: String): R[Seq[JValue]] =
+  def parseManyFromString(str: String): R[Seq[JValue]] =
     Validation.fromTryCatch(new StringParser(str).parseMany())
 
-  final def parseFromFile(file: File): R[JValue] = Validation.fromTryCatch {
+  def parseFromFile(file: File): R[JValue] = Validation.fromTryCatch {
     new ChannelParser(new FileInputStream(file).getChannel).parse()
   }
 
-  final def parseManyFromFile(file: File): R[Seq[JValue]] = Validation.fromTryCatch {
+  def parseManyFromFile(file: File): R[Seq[JValue]] = Validation.fromTryCatch {
     new ChannelParser(new FileInputStream(file).getChannel).parseMany()
   }
 
-  final def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
+  def parseFromByteBuffer(buf: ByteBuffer): R[JValue] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parse())
 
-  final def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
+  def parseManyFromByteBuffer(buf: ByteBuffer): R[Seq[JValue]] =
     Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
 }
 object JParser extends JParser
@@ -77,34 +74,34 @@ object JParser extends JParser
  */
 private[json] trait Parser {
 
-  final val utf8 = Charset.forName("UTF-8")
+  protected[this] final val utf8 = Charset.forName("UTF-8")
 
   /**
    * Read the byte/char at 'i' as a Char.
    *
    * Note that this should not be used on potential multi-byte sequences.
    */
-  def at(i: Int): Char
+  protected[this] def at(i: Int): Char
 
   /**
    * Read the bytes/chars from 'i' until 'j' as a String.
    */
-  def at(i: Int, j: Int): String
+  protected[this] def at(i: Int, j: Int): String
 
   /**
    * Return true iff 'i' is at or beyond the end of the input (EOF).
    */
-  def atEof(i: Int): Boolean
+  protected[this] def atEof(i: Int): Boolean
 
   /**
    * Return true iff the byte/char at 'i' is equal to 'c'.
    */
-  final def is(i: Int, c: Char): Boolean = at(i) == c
+  protected[this] final def is(i: Int, c: Char): Boolean = at(i) == c
 
   /**
    * Return true iff the bytes/chars from 'i' until 'j' are equal to 'str'.
    */
-  final def is(i: Int, j: Int, str: String): Boolean = at(i, j) == str
+  protected[this] final def is(i: Int, j: Int, str: String): Boolean = at(i, j) == str
 
   /**
    * The reset() method is used to signal that we're working from the given
@@ -112,23 +109,23 @@ private[json] trait Parser {
    * StringParser) will ignore release, while others (e.g. PathParser) will
    * need to use this information to release and allocate different areas.
    */
-  def reset(i: Int): Int
+  protected[this] def reset(i: Int): Int
 
   /**
    * Should be called when parsing is finished.
    */
-  def close(): Unit
+  protected[this] def close(): Unit
 
   /**
    * Valid parser states.
    */
-  @inline final val ARRBEG = 6
-  @inline final val OBJBEG = 7
-  @inline final val DATA = 1
-  @inline final val KEY = 2
-  @inline final val SEP = 3
-  @inline final val ARREND = 4
-  @inline final val OBJEND = 5
+  @inline protected[this] final val ARRBEG = 6
+  @inline protected[this] final val OBJBEG = 7
+  @inline protected[this] final val DATA = 1
+  @inline protected[this] final val KEY = 2
+  @inline protected[this] final val SEP = 3
+  @inline protected[this] final val ARREND = 4
+  @inline protected[this] final val OBJEND = 5
 
   /**
    * Used to generate error messages with character info and byte addresses.
@@ -152,7 +149,7 @@ private[json] trait Parser {
    * It would probably be possible to keep track of the whether the number is
    * expected to be whole, decimal, etc. but we don't do that at the moment.
    */
-  final def parseNum(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseNum(i: Int, ctxt: Context): Int = {
     var j = i
     var c = at(j)
 
@@ -191,7 +188,7 @@ private[json] trait Parser {
    *
    * This method has all the same caveats as the previous method.
    */
-  final def parseNumSlow(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseNumSlow(i: Int, ctxt: Context): Int = {
     var j = i
     var c = at(j)
 
@@ -250,59 +247,36 @@ private[json] trait Parser {
    * NOTE: This is only capable of generating characters from the basic plane.
    * This is why it can only return Char instead of Int.
    */
-  final def descape(s: String) = parseInt(s, 16).toChar
+  protected[this] final def descape(s: String) = parseInt(s, 16).toChar
 
   /**
    * Parse the JSON string starting at 'i' and save it into 'ctxt'.
    */
-  def parseString(i: Int, ctxt: Context): Int
+  protected[this] def parseString(i: Int, ctxt: Context): Int
 
   /**
    * Parse the JSON constant "true".
    */
-  final def parseTrue(i: Int) =
+  protected[this] final def parseTrue(i: Int) =
     if (is(i, i + 4, "true")) JTrue else die(i, "expected true")
 
   /**
    * Parse the JSON constant "false".
    */
-  final def parseFalse(i: Int) =
+  protected[this] final def parseFalse(i: Int) =
     if (is(i, i + 5, "false")) JFalse else die(i, "expected false")
 
   /**
    * Parse the JSON constant "null".
    */
-  final def parseNull(i: Int) =
+  protected[this] final def parseNull(i: Int) =
     if (is(i, i + 4, "null")) JNull else die(i, "expected null")
-
-  /**
-   * Parse the JSON document into a single JSON value.
-   *
-   * The parser considers documents like '333', 'true', and '"foo"' to be
-   * valid, as well as more traditional documents like [1,2,3,4,5]. However,
-   * multiple top-level objects are not allowed.
-   */
-  final def parse(): JValue = {
-    val (value, i) = parse(0)
-    var j = i
-    while (!atEof(j)) {
-      (at(j): @switch) match {
-        case ' ' => j += 1
-        case '\t' => j += 1
-        case '\n' => j += 1
-        case _ => die(j, "expected whitespace")
-      }
-    }
-    if (!atEof(j)) die(j, "expected eof")
-    close()
-    value
-  }
 
   /**
    * Parse and return the "next" JSON value as well as the position beyond it.
    * This method is used by both parse() as well as parseMany().
    */
-  final def parse(i: Int): (JValue, Int) = (at(i): @switch) match {
+  protected[this] final def parse(i: Int): (JValue, Int) = (at(i): @switch) match {
     // ignore whitespace
     case ' ' => parse(i + 1)
     case '\t' => parse(i + 1)
@@ -335,30 +309,6 @@ private[json] trait Parser {
   }
 
   /**
-   * Parse the given document into a sequence of JSON values. These might be
-   * containers like objects and arrays, or primtitives like numbers and
-   * strings.
-   *
-   * JSON objects may only be separated by whitespace. Thus, "top-level" commas
-   * and other characters will become parse errors.
-   */
-  final def parseMany(): Seq[JValue] = {
-    val results = mutable.ArrayBuffer.empty[JValue]
-    var i = 0
-    while (!atEof(i)) {
-      (at(i): @switch) match {
-        case ' ' | '\t' | '\n' => i += 1
-        case _ =>
-          val (value, j) = parse(i)
-          results.append(value)
-          i = j
-      }
-    }
-    close()
-    results
-  }
-
-  /**
    * Tail-recursive parsing method to do the bulk of JSON parsing.
    *
    * This single method manages parser states, data, etc. Except for parsing
@@ -370,7 +320,7 @@ private[json] trait Parser {
    * constructed if/else statements or something else.
    */
   @tailrec
-  final def rparse(state: Int, j: Int, stack: List[Context]): (JValue, Int) = {
+  protected[this] final def rparse(state: Int, j: Int, stack: List[Context]): (JValue, Int) = {
     val i = reset(j)
     (state: @switch) match {
       // we are inside an object or array expecting to see data
@@ -520,11 +470,63 @@ private[json] trait Parser {
   }
 }
 
+trait SyncParser extends Parser {
+
+  /**
+   * Parse the JSON document into a single JSON value.
+   *
+   * The parser considers documents like '333', 'true', and '"foo"' to be
+   * valid, as well as more traditional documents like [1,2,3,4,5]. However,
+   * multiple top-level objects are not allowed.
+   */
+  final def parse(): JValue = {
+    val (value, i) = parse(0)
+    var j = i
+    while (!atEof(j)) {
+      (at(j): @switch) match {
+        case ' ' => j += 1
+        case '\t' => j += 1
+        case '\n' => j += 1
+        case _ => die(j, "expected whitespace")
+      }
+    }
+    if (!atEof(j)) die(j, "expected eof")
+    close()
+    value
+  }
+
+  /**
+   * Parse the given document into a sequence of JSON values. These might be
+   * containers like objects and arrays, or primtitives like numbers and
+   * strings.
+   *
+   * JSON objects may only be separated by whitespace. Thus, "top-level" commas
+   * and other characters will become parse errors.
+   */
+  final def parseMany(): Seq[JValue] = {
+    val results = mutable.ArrayBuffer.empty[JValue]
+    var i = 0
+    while (!atEof(i)) {
+      (at(i): @switch) match {
+        case ' ' | '\t' | '\n' => i += 1
+        case _ =>
+          val (value, j) = parse(i)
+          results.append(value)
+          i = j
+      }
+    }
+    close()
+    results
+  }
+}
+
+
+
 
 /**
  * Trait used when the data to be parsed is in UTF-16.
  */
-trait CharBasedParser extends Parser {
+private[json] trait CharBasedParser extends Parser {
 
   /**
    * See if the string has any escape sequences. If not, return the end of the
@@ -536,7 +538,7 @@ trait CharBasedParser extends Parser {
    * character would be more expensive. So... in those cases we'll fall back to
    * the slower (correct) UTF-16 parsing.
    */
-  final def parseStringSimple(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseStringSimple(i: Int, ctxt: Context): Int = {
     var j = i
     var c = at(j)
     while (c != '"') {
@@ -554,7 +556,7 @@ trait CharBasedParser extends Parser {
    * performs the correct checks to make sure that we don't interpret a
    * multi-char code point incorrectly.
    */
-  final def parseString(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseString(i: Int, ctxt: Context): Int = {
     val k = parseStringSimple(i + 1, ctxt)
     if (k != -1) {
       ctxt.add(at(i + 1, k - 1))
@@ -603,8 +605,8 @@ trait CharBasedParser extends Parser {
 /**
  * Trait used when the data to be parsed is in UTF-8.
  */
-trait ByteBasedParser extends Parser {
-  def byte(i: Int): Byte
+private[json] trait ByteBasedParser extends Parser {
+  protected[this] def byte(i: Int): Byte
 
   /**
    * See if the string has any escape sequences. If not, return the end of the
@@ -613,7 +615,7 @@ trait ByteBasedParser extends Parser {
    * This method expects the data to be in UTF-8 and accesses it as bytes. Thus
    * we can just ignore any bytes with the highest bit set.
    */
-  final def parseStringSimple(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseStringSimple(i: Int, ctxt: Context): Int = {
     var j = i
     var c = byte(j)
     while (c != 34) {
@@ -629,7 +631,7 @@ trait ByteBasedParser extends Parser {
    *
    * This method expects the data to be in UTF-8 and accesses it as bytes.
    */
-  final def parseString(i: Int, ctxt: Context): Int = {
+  protected[this] final def parseString(i: Int, ctxt: Context): Int = {
     val k = parseStringSimple(i + 1, ctxt)
     if (k != -1) {
       ctxt.add(at(i + 1, k - 1))
@@ -690,20 +692,20 @@ trait ByteBasedParser extends Parser {
  * JSON documents it's better to avoid using this parser and go straight from
  * disk, to avoid having to load the whole thing into memory at once.
  */
-private[json] final class StringParser(s: String) extends CharBasedParser {
-  final def reset(i: Int): Int = i
-  final def at(i: Int): Char = s.charAt(i)
-  final def at(i: Int, j: Int): String = s.substring(i, j)
-  final def atEof(i: Int) = i == s.length
-  final def close() = ()
+private[json] final class StringParser(s: String) extends SyncParser with CharBasedParser {
+  protected[this] final def reset(i: Int): Int = i
+  protected[this] final def at(i: Int): Char = s.charAt(i)
+  protected[this] final def at(i: Int, j: Int): String = s.substring(i, j)
+  protected[this] final def atEof(i: Int) = i == s.length
+  protected[this] final def close() = ()
 }
 
 
 /**
  * Basic ByteBuffer parser.
  */
-private[json] final class ByteBufferParser(src: ByteBuffer) extends ByteBasedParser {
-  val limit = src.limit
+private[json] final class ByteBufferParser(src: ByteBuffer) extends SyncParser with ByteBasedParser {
+  final val limit = src.limit
 
   final def close() = ()
 
@@ -729,7 +731,7 @@ private[json] final class ByteBufferParser(src: ByteBuffer) extends ByteBasedPar
  * Given a file name this parser opens it, chunks the data 1M at a time, and
  * parses it. 
  */
-private[json] final class ChannelParser(ch: ReadableByteChannel) extends ByteBasedParser {
+private[json] final class ChannelParser(ch: ReadableByteChannel) extends SyncParser with ByteBasedParser {
 
   // 256K buffers: arrived at via a bit of testing
   @inline final def bufsize = 262144
@@ -847,19 +849,20 @@ private[json] class AsyncException extends Exception
 final class AsyncParser extends ByteBasedParser {
 
   // start with 128k
-  var data: Array[Byte] = new Array[Byte](131072)
-  var len = 0
-  var allocated = 131072
+  private var data: Array[Byte] = new Array[Byte](131072)
+  private var len = 0
+  private var allocated = 131072
 
   // this is our current position in bcurr
-  var index = 0
-  var done = false
+  private var index = 0
+  private var done = false
 
   // consume the next bit of data, and return as many values as possible.
   final def feed(b: Option[ByteBuffer]): Seq[Validation[Throwable, JValue]] = {
     // if we don't have enough free space available we'll need to grow our
     // data array.
-    // TODO: currently we never shrink data, assuming users will call feed
+
+    // FUTURE: currently we never shrink data, assuming users will call feed
     // with similarly-sized bufs. this might be a bad assumption.
     b match {
       case None =>
@@ -927,7 +930,7 @@ final class AsyncParser extends ByteBasedParser {
   }
 
   // every 65k bytes we shift our array back by 65k.
-  final def reset(i: Int): Int = {
+  protected[this] final def reset(i: Int): Int = {
     if (index >= 65536) {
       len -= 65536
       index -= 65536
@@ -942,13 +945,13 @@ final class AsyncParser extends ByteBasedParser {
    * This is a specialized accessor for the case where our underlying data are
    * bytes not chars.
    */
-  final def byte(i: Int): Byte = if (i >= len)
+  protected[this] final def byte(i: Int): Byte = if (i >= len)
     throw new AsyncException
   else
     data(i)
 
   // we need to signal if we got out-of-bounds
-  final def at(i: Int): Char = if (i >= len)
+  protected[this] final def at(i: Int): Char = if (i >= len)
     throw new AsyncException
   else
     data(i).toChar
@@ -960,7 +963,7 @@ final class AsyncParser extends ByteBasedParser {
    * boundaries. Also, the resulting String is not guaranteed to have length
    * (k - i).
    */
-  final def at(i: Int, k: Int): String = {
+  protected[this] final def at(i: Int, k: Int): String = {
     if (k > len) throw new AsyncException
     val size = k - i
     val arr = new Array[Byte](size)
@@ -970,8 +973,8 @@ final class AsyncParser extends ByteBasedParser {
 
   // the basic idea is that we don't signal EOF until done is true, which means
   // the client explicitly send us an EOF.
-  final def atEof(i: Int) = if (done) i >= len else false
+  protected[this] final def atEof(i: Int) = if (done) i >= len else false
 
   // we don't have to do anything special on close.
-  final def close() = ()
+  protected[this] final def close() = ()
 }
