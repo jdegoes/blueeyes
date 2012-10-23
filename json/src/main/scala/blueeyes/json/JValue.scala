@@ -835,6 +835,8 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
 
   def - (name: String): JObject = copy(fields = fields - name)
 
+  def merge(other: JObject): JObject = JObject(Merge.mergeFields(this.fields, other.fields))
+
   def partitionField(field: String): (JValue, JObject) = {
     (get(field), JObject(fields - field))
   }
@@ -924,6 +926,8 @@ case class JArray(elements: List[JValue]) extends JValue {
   def sort: JArray = JArray(elements.filter(_ ne JUndefined).map(_.sort).sorted)
 
   override def apply(i: Int): JValue = elements.lift(i).getOrElse(JUndefined)
+
+  def merge(other: JArray): JArray = JArray(Merge.mergeVals(this.elements, other.elements))
 
   def isNested: Boolean = elements.exists {
     case _: JArray => true
