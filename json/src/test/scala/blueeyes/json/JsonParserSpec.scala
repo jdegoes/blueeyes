@@ -27,6 +27,7 @@ import scala.io.Source
 import scalaz.Validation
 import scala.math.min
 import scala.util.Random.nextInt
+import scala.collection.mutable
 
 object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck {
   import JParser._
@@ -83,15 +84,18 @@ object AsyncParserSpec extends Specification {
   }
 
   private def chunkAll(async: AsyncState, data: Array[Byte], f: () => Int) = {
-    var vs = Seq[Validation[Throwable, JValue]]()
+    var vs = mutable.ArrayBuffer.empty[JValue]
     val n = data.length
     var i = 0
     var st = async
     while (i < n) {
       val step = f()
-      val tpl = JParser.parseAsync(st, chunk(data, i, i + step))
-      st = tpl._1
-      vs ++= tpl._2
+      val (vs2, result) = JParser.parseAsync(st, chunk(data, i, i + step))
+      st = result match {
+        case AsyncOk(state) => state
+        case e => sys.error("failed %s" format e)
+      }
+      vs ++= vs2
       i += step
     }
     vs
@@ -170,9 +174,9 @@ object AsyncParserSpec extends Specification {
     var t0 = System.nanoTime
     var count = 0
     chunks.foreach { chunk =>
-      val (st2, vs) = JParser.parseAsync(st, chunk)
+      val (vs, result) = JParser.parseAsync(st, chunk)
       count += vs.length
-      st = st2
+      st = result.stateOr(throw _)
     }
     val t = System.nanoTime - t0
     if(count != 1000) sys.error("wrong number of records")
@@ -204,11 +208,11 @@ object AsyncParserSpec extends Specification {
     val t1 = (0 until 10).foldLeft(0.0) { (t, _) => 
       val tt = run1(chunks); System.gc(); t + tt
     }
-    println("async: %.1f us" format (t1 / 10000.0))
+    println("async: %.2f ms" format (t1 / 10000000.0))
 
     val t2 = (0 until 10).foldLeft(0.0) { (t, _) => 
       val tt = run2(bb); System.gc(); t + tt
     }
-    println("byteb: %.1f us" format (t2 / 10000.0))
+    println("byteb: %.2f ms" format (t2 / 10000000.0))
   }
 }

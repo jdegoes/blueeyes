@@ -65,10 +65,7 @@ trait JParser {
     Validation.fromTryCatch(new ByteBufferParser(buf).parseMany())
 
   def parseAsync(st: AsyncState, b: Option[ByteBuffer]):
-    (AsyncState, Seq[Validation[Throwable, JValue]]) = {
-    val st2 = st.copy
-    (st2, st2.feed(b))
-  }
+    (Seq[JValue], AsyncResult) = st.copy.feed(b)
 }
 
 
@@ -829,6 +826,36 @@ private[json] final class ChannelParser(ch: ReadableByteChannel) extends SyncPar
   final def atEof(i: Int) = if (i < bufsize) i >= ncurr else i >= nnext
 }
 
+sealed trait AsyncResult {
+  def fold[A](f: AsyncState => A, g: ParseException => A, h: Throwable => A): A =
+    this match {
+      case AsyncOk(st) => f(st)
+      case ParseError(e) => g(e)
+      case OtherError(e) => h(e)
+    }
+
+  def stateOr(f: Throwable => AsyncState): AsyncState =
+    fold(identity, f, f)
+
+  def flatMap(f: AsyncState => AsyncResult): AsyncResult =
+    fold(f, ParseError(_), OtherError(_))
+
+  def isOk: Boolean =
+    fold(_ => true, _ => false, _ => false)
+
+  def toOption: Option[AsyncState] =
+    fold(Some(_), _ => None, _ => None)
+
+  def toEither: Either[Throwable, AsyncState] =
+    fold(Right(_), Left(_), Left(_))
+
+  def toValidation: Validation[Throwable, AsyncState] =
+    fold(Success(_), Failure(_), Failure(_))
+}
+
+case class AsyncOk(st: AsyncState) extends AsyncResult 
+case class ParseError(e: ParseException) extends AsyncResult
+case class OtherError(e: Throwable) extends AsyncResult
 
 /**
  * This class is used internally by AsyncParser to signal that we've reached
@@ -852,8 +879,7 @@ final class AsyncState protected[json] (
   final def copy() = new AsyncState(data.clone, len, allocated, index, done)
 
   // consume the next bit of data, and return as many values as possible.
-  protected[json] final def feed(b: Option[ByteBuffer]):
-    Seq[Validation[Throwable, JValue]] = {
+  protected[json] final def feed(b: Option[ByteBuffer]): (Seq[JValue], AsyncResult) = {
 
     // if we don't have enough free space available we'll need to grow our
     // data array.
@@ -885,7 +911,7 @@ final class AsyncState protected[json] (
     }
 
     // this accumulates results that we'll eventually return
-    val results = mutable.ArrayBuffer.empty[Validation[Throwable, JValue]]
+    val results = mutable.ArrayBuffer.empty[JValue]
 
     // we rely on exceptions to tell us when we run out of data
     try {
@@ -900,29 +926,34 @@ final class AsyncState protected[json] (
             try {
               index = reset(index)
               val (value, j) = parse(index)
-              results.append(Success(value))
+              results.append(value)
               index = j
             } catch {
               // we'll catch a parsing exception, note the error, and try to
               // make an effort to find the next value.
               case e: ParseException =>
-                results.append(Failure(e))
-                index = e.index
-                // TODO: if we had a delimiter to look for we could do better
-                while (at(index) != '{' && at(index) != '[') index += 1
+                return (results, ParseError(e))
+                //results.append(Failure(e))
+                //index = e.index
+                //// TODO: if we had a delimiter to look for we could do better
+                //while (at(index) != '{' && at(index) != '[') index += 1
             }
         }
       }
     } catch {
-      case e: Exception =>
+      case e: AsyncException =>
         // we ran out of data. index is storing the last place we started
         // parsing (or the last place we tried to start parsing) so we can just
         // return what we have, and resume later.
 
         // reset() in case we're done with our current buffer
         index = reset(index)
+
+      case e: Exception =>
+        // we got some other exception, so return failure
+        return (results, OtherError(e))
     }
-    results
+    (results, AsyncOk(this))
   }
 
   // every 65k bytes we shift our array back by 65k.
