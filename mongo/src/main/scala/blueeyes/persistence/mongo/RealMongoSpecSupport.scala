@@ -31,6 +31,8 @@ trait RealMongoSpecSupport extends Specification {
   def mongo = mongoImpl
   def realMongo = realMongoImpl
 
+  def mongoStartupPause = Some(10000l)
+
   private var mongoProcess: Option[Process] = None
 
   def defaultPort = 37017
@@ -120,6 +122,12 @@ trait RealMongoSpecSupport extends Specification {
             val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, "--dbpath", dataDir.getCanonicalPath))
             proc.run(ProcessLogger(s => mongoLogger.debug(s)))
           })
+
+          mongoStartupPause.foreach { delay =>
+            mongoLogger.info("Pausing %d ms for mongo startup".format(delay))
+            Thread.sleep(delay)
+          }
+
           // Wait for startup, as there's no way to inquire on process activity
           var startupTries = 10
           while (startupTries > 0 && isAvailable(port)) {
