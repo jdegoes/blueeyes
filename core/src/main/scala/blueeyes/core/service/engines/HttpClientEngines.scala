@@ -2,7 +2,7 @@ package blueeyes.core.service.engines
 
 import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.data.{Chunk, ByteChunk}
+import blueeyes.core.data.Chunk
 import blueeyes.core.service.HttpClientByteChunk
 import blueeyes.core.http.HttpStatusCodeImplicits._
 import blueeyes.core.http.HttpFailure
@@ -43,8 +43,8 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     case Some(client) => client
   }
 
-  def apply(request: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
-    val result = Promise[HttpResponse[ByteChunk]]()
+  def apply(request: HttpRequest[Chunk[Array[Byte]]]): Future[HttpResponse[Chunk[Array[Byte]]]] = {
+    val result = Promise[HttpResponse[Chunk[Array[Byte]]]]()
     executeRequest(request, createXLRequest(request), result)
     result
   }
@@ -58,7 +58,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     })
   }
 
-  private def executeRequest(request: HttpRequest[ByteChunk], xlrequest: IHeader, promise: Promise[HttpResponse[ByteChunk]]) = {
+  private def executeRequest(request: HttpRequest[Chunk[Array[Byte]]], xlrequest: IHeader, promise: Promise[HttpResponse[Chunk[Array[Byte]]]]) = {
     val clientInstance = httpClientInstance(request.uri.scheme)
     clientInstance.setAutoHandleCookies(false)
     val handler = new IHttpResponseHandler() {
@@ -104,7 +104,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     }
   }
 
-  private def sendData(chunk: ByteChunk, bodyDataSink: BodyDataSink) {
+  private def sendData(chunk: Chunk[Array[Byte]], bodyDataSink: BodyDataSink) {
     try {
       bodyDataSink.write(chunk.data, 0, chunk.data.length)
 
@@ -119,7 +119,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     }
   }
 
-  private def readNotChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
+  private def readNotChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[Chunk[Array[Byte]]]]){
     val data = try {
       val bytes = response.getBody.readBytes
       if (!bytes.isEmpty) Some(Chunk(bytes)) else None
@@ -130,21 +130,21 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
       }
     }
 
-    promise.success(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
+    promise.success(HttpResponse[Chunk[Array[Byte]]](status = HttpStatus(response.getStatus), content = data, headers = headers))
   }
 
-  private def readChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[ByteChunk]]){
+  private def readChunked(response: IHttpResponse, headers: Map[String, String], promise: Promise[HttpResponse[Chunk[Array[Byte]]]]){
     val dataSource = response.getNonBlockingBody()
     dataSource.setDataHandler(new IBodyDataHandler{
-      var delivery: Either[HttpResponse[ByteChunk], Promise[ByteChunk]] =
-        Left(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = None, headers = headers))
+      var delivery: Either[HttpResponse[Chunk[Array[Byte]]], Promise[Chunk[Array[Byte]]]] =
+        Left(HttpResponse[Chunk[Array[Byte]]](status = HttpStatus(response.getStatus), content = None, headers = headers))
 
       def onData(source: NonBlockingBodyDataSource) = {
         try {
           val available = source.available()
           if (available > 0) {
             val data        = org.xsocket.DataConverter.toBytes(source.readByteBufferByLength(available))
-            val nextPromise  = Promise[ByteChunk]()
+            val nextPromise  = Promise[Chunk[Array[Byte]]]()
             val content     = Chunk(data, Some(nextPromise))
             delivery match {
               case Left(x) =>
@@ -172,7 +172,7 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     })
   }
 
-  private def createXLRequest(request: HttpRequest[ByteChunk]): IHeader =  {
+  private def createXLRequest(request: HttpRequest[Chunk[Array[Byte]]]): IHeader =  {
     import blueeyes.util.QueryParser
     import java.net.URI
 
@@ -193,12 +193,12 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     xlRequest
   }
 
-  def isDefinedAt(request: HttpRequest[ByteChunk]) = request.method match{
+  def isDefinedAt(request: HttpRequest[Chunk[Array[Byte]]]) = request.method match{
     case HttpMethods.DELETE | HttpMethods.GET | HttpMethods.HEAD | HttpMethods.OPTIONS | HttpMethods.POST | HttpMethods.PUT => true
     case _ => false
   }
 
-  private def createXLRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
+  private def createXLRequest(request: HttpRequest[Chunk[Array[Byte]]], url: String): IHeader = {
     request.method match {
       case HttpMethods.DELETE     => new DeleteRequest(url)
       case HttpMethods.GET        => new GetRequest(url)
@@ -213,14 +213,14 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     }
   }
 
-  private def postRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
+  private def postRequest(request: HttpRequest[Chunk[Array[Byte]]], url: String): IHeader = {
     request.content match{
       case None => new PostRequest(url)
       case Some(x) if (x.next == None) => new PostRequest(url, requestContentType(request).value, x.data)
       case Some(x) => new HttpRequestHeader("POST", url, requestContentType(request).value)
     }
   }
-  private def putRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
+  private def putRequest(request: HttpRequest[Chunk[Array[Byte]]], url: String): IHeader = {
     request.content match{
       case None => new PutRequest(url)
       case Some(x) if (x.next == None) => new PutRequest(url, requestContentType(request).value, x.data)
@@ -228,10 +228,10 @@ class HttpClientXLightWeb extends HttpClientByteChunk with Logging with AkkaDefa
     }
   }
 
-  private def requestContentType(request: HttpRequest[ByteChunk]) = `Content-Type`(request.mimeTypes : _*)
-  private def requestContentLength(request: HttpRequest[ByteChunk]) = notChunkedContent(request.content).map(v => `Content-Length`(v.size))
+  private def requestContentType(request: HttpRequest[Chunk[Array[Byte]]]) = `Content-Type`(request.mimeTypes : _*)
+  private def requestContentLength(request: HttpRequest[Chunk[Array[Byte]]]) = notChunkedContent(request.content).map(v => `Content-Length`(v.size))
 
-  private def notChunkedContent(chunk: Option[ByteChunk]): Option[Array[Byte]] = {
+  private def notChunkedContent(chunk: Option[Chunk[Array[Byte]]]): Option[Array[Byte]] = {
     chunk.flatMap{value => value.next match {
         case Some(x) => None
         case None    => Some(value.data)

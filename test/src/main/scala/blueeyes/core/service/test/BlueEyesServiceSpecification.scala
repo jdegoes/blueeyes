@@ -23,7 +23,7 @@ import org.streum.configrity.io.BlockFormat
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Fragment, Fragments, Step}
 
-class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
+class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with ReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
   private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
 
   private val mockSwitch = sys.props.get(Environment.MockSwitch)

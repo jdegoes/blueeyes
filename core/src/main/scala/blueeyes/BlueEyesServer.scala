@@ -1,9 +1,13 @@
 package blueeyes
 
-import blueeyes.core.service._
-import blueeyes.core.service.engines._
 import core.data.ByteChunk
-import netty.NettyEngine
+import core.service._
+import core.service.engines.netty.NettyEngine
+
+import akka.dispatch.ExecutionContext
+
+import org.streum.configrity.Configuration
+import com.weiglewilczek.slf4s.Logging
 
 /** Convenience trait for building a server. This server uses reflection to mix
  * in any services defined as fields.
@@ -18,6 +22,12 @@ import netty.NettyEngine
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServer extends HttpServer with HttpReflectiveServiceList[ByteChunk] with NettyEngine {
+trait BlueEyesServer extends NettyEngine with ReflectiveServiceList[ByteChunk] with Logging { self =>
+  class HttpServer(rootConfig: Configuration, ctx: ExecutionContext) extends NettyHttpServer(rootConfig, ctx) {
+    implicit val executionContext = ctx
+    val services = self.services
+    val logger = self.logger
+  }
 
+  def server(rootConfig: Configuration, ctx: ExecutionContext) = new HttpServer(rootConfig, ctx)
 }

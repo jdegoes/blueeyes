@@ -8,9 +8,9 @@ import akka.util.Timeout
 
 trait BijectionsChunkXML {
   import java.io.{ByteArrayInputStream}
-  implicit val XMLToChunk = new Bijection[NodeSeq, ByteChunk] {
+  implicit val XMLToChunk = new Bijection[NodeSeq, Chunk[Array[Byte]]] {
     def apply(s: NodeSeq)    = Chunk(s.toString.getBytes)
-    def unapply(t: ByteChunk) = try{
+    def unapply(t: Chunk[Array[Byte]]) = try{
       XML.load(new ByteArrayInputStream(t.data))
     } catch {
       case e: org.xml.sax.SAXParseException => sys.error("Data is too big, use big data handler.")
@@ -23,10 +23,10 @@ object BijectionsChunkXML extends BijectionsChunkXML
 
 trait BijectionsChunkFutureXML{
   import BijectionsChunkXML._
-  implicit def futureXMLToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[NodeSeq], ByteChunk]{
+  implicit def futureXMLToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[NodeSeq], Chunk[Array[Byte]]]{
     def apply(t: Future[NodeSeq]) = Await.result(t.map(XMLToChunk(_)), timeout.duration)
 
-    def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToXML(_))
+    def unapply(b: Chunk[Array[Byte]]) = AggregatedByteChunk(b, None).map(ChunkToXML(_))
   }
 
   implicit def chunkToFutureXML(implicit timeout: Timeout = Timeout.zero) = futureXMLToChunk(timeout).inverse

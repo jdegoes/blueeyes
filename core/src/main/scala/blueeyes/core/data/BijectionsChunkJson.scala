@@ -1,47 +1,49 @@
 package blueeyes.core.data
 
+import blueeyes.bkka._
 import blueeyes.json._
 import blueeyes.json.JParser
+
 import akka.dispatch.Future
-import akka.dispatch.Await
-import akka.util.Timeout
+import akka.dispatch.ExecutionContext
 
-trait BijectionsChunkJson{
-  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream, PrintStream}
-  import java.nio.ByteBuffer
+import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream, PrintStream}
+import java.nio.ByteBuffer
+import scalaz._
+import scalaz.StreamT._
+import scalaz.syntax.monad._
 
-  implicit val JValueToChunk = new Bijection[JValue, ByteChunk] {
-    def unapply(s: ByteChunk) = {
-      val bb = ByteBuffer.wrap(s.data)
-      val r = JParser.parseFromByteBuffer(bb)
-      r.valueOr(e => throw e)
-    }
-
-    def apply(t: JValue) = {
-      val stream = new ByteArrayOutputStream()
-      val printer = new PrintStream(stream, false, "UTF-8")
-      printer.append(t.renderCompact)
-      printer.close()
-      Chunk(stream.toByteArray)
-    }
-
+trait BijectionsChunkJson {
+  private def renderBytes(jv: JValue): ByteBuffer = {
+    ByteBuffer.wrap(jv.renderCompact.getBytes("UTF-8"))
   }
 
-  implicit val ChunkToJValue    = JValueToChunk.inverse
+  implicit def jvalueToChunk(jv: JValue) = Left(renderBytes(jv))
+
+  implicit def futureJValueToChunk(implicit context: ExecutionContext) = {
+    new Bijection[Future[JValue], ByteChunk] {
+      private implicit val M: Monad[Future] = new FutureMonad(context)
+
+      def apply(t: Future[JValue]) = {
+        Right(t.map(renderBytes).liftM[StreamT])
+      }
+
+      def unapply(s: ByteChunk) = {
+        ByteChunk.force(s) map {
+          case Left(buffer) =>
+            JParser.parseFromByteBuffer(buffer) | JUndefined
+          
+          case Right((acc, size)) => 
+            val resultArray = new Array[Byte](size)
+            val resultBuf = ByteBuffer.wrap(resultArray)
+            acc foreach { resultBuf put _ }
+            resultBuf.flip()
+            JParser.parseFromByteBuffer(resultBuf) | JUndefined
+        }
+      }
+    }
+  }
 }
 
 object BijectionsChunkJson extends BijectionsChunkJson
 
-
-trait BijectionsChunkFutureJson{
-  import BijectionsChunkJson._
-  implicit def futureJValueToChunk(implicit timeout: Timeout = Timeout.zero) = new Bijection[Future[JValue], ByteChunk] {
-    def apply(t: Future[JValue]) = Await.result(t.map(JValueToChunk(_)), timeout.duration)
-
-    def unapply(b: ByteChunk) = AggregatedByteChunk(b, None).map(ChunkToJValue(_))
-  }
-
-  implicit def chunkToFutureJValue(implicit timeout: Timeout = Timeout.zero) = futureJValueToChunk(timeout).inverse
-}
-
-object BijectionsChunkFutureJson extends BijectionsChunkFutureJson

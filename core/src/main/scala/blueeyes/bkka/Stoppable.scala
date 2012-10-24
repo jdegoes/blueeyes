@@ -10,9 +10,11 @@ import akka.actor.ReceiveTimeout
 import akka.dispatch.Await
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import akka.dispatch.MessageDispatcher
+import akka.dispatch.ExecutionContext
 import akka.util.Timeout
+
 import scala.collection.immutable.Queue
+import scalaz.Semigroup
 import com.weiglewilczek.slf4s.Logging
 
 /**
@@ -29,13 +31,18 @@ trait Stop[-A] {
 /** 
  * A DAG of things that can be stopped. Dependents are traversed in breadth-first order.
  */
-sealed trait Stoppable {
+sealed trait Stoppable { self =>
   protected def stop: Future[Any]
   def dependents: List[Stoppable]
+
+  def append(other: Stoppable) = new Stoppable {
+    protected def stop = self.stop zip other.stop
+    def dependents = self.dependents ++ other.dependents
+  }
 }
 
 object Stoppable extends Logging {
-  def apply[A](a: A, deps: List[Stoppable] = Nil)(implicit stopa: Stop[A], messageDispatcher: MessageDispatcher): Stoppable = new Stoppable {
+  def apply[A](a: A, deps: List[Stoppable] = Nil)(implicit stopa: Stop[A], ctx: ExecutionContext): Stoppable = new Stoppable {
     protected def stop = {
       Future(logger.info("About to stop " + a)) flatMap { _ =>
         stopa.stop(a).onSuccess {
@@ -49,6 +56,15 @@ object Stoppable extends Logging {
     def dependents = deps
   }
 
+  def fromFuture(future: => Future[Any]) = new Stoppable {
+    protected lazy val stop = future
+    val dependents = Nil
+  }
+
+  implicit object semigroup extends Semigroup[Stoppable] {
+    def append(a: Stoppable, b: => Stoppable): Stoppable = a append b
+  }
+
   /**
    * Stops the specified stoppable, returning a future containing a list of the results
    * of the stoppable graph in breadth-first order. When this future is completed, 
@@ -59,7 +75,7 @@ object Stoppable extends Logging {
    * in stopping will stop the stopping process, leaving the system in a potentially 
    * indeterminate state.
    */
-  implicit def stoppableStop(timeout: Timeout)(implicit messageDispatcher: MessageDispatcher): Stop[Stoppable] = new Stop[Stoppable] {
+  implicit def stoppableStop(timeout: Timeout)(implicit ctx: ExecutionContext): Stop[Stoppable] = new Stop[Stoppable] {
     def stop(stoppable: Stoppable) = {
       def _stop(q: Queue[List[Stoppable]]): Future[List[Any]] = {
         if (q.isEmpty) Future(Nil)
@@ -74,10 +90,10 @@ object Stoppable extends Logging {
     }
   }
 
-  implicit def stoppableStop(implicit messageDispatcher: MessageDispatcher): Stop[Stoppable]  = stoppableStop(Timeout.never)
+  implicit def stoppableStop(implicit ctx: ExecutionContext): Stop[Stoppable]  = stoppableStop(Timeout.never)
 
 
-  def stop(stoppable: Stoppable, timeout: Timeout = Timeout.never)(implicit messageDispatcher: MessageDispatcher) = 
+  def stop(stoppable: Stoppable, timeout: Timeout = Timeout.never)(implicit ctx: ExecutionContext) = 
     stoppableStop(timeout).stop(stoppable)
 }
 

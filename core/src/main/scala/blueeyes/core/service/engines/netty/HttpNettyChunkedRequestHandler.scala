@@ -2,68 +2,76 @@ package blueeyes.core.service.engines.netty
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import blueeyes.bkka.AkkaDefaults
+import akka.dispatch.ExecutionContext
+
+import blueeyes.bkka._
+import blueeyes.core.data.ByteChunk
+import blueeyes.core.http.HttpRequest
 
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
-import org.jboss.netty.channel._
-import org.jboss.netty.channel.Channels._
+import org.jboss.netty.channel.ChannelHandlerContext
+import org.jboss.netty.channel.ChannelStateEvent
+import org.jboss.netty.channel.Channels
+import org.jboss.netty.channel.MessageEvent
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler
 import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHeaders, HttpChunk => NettyChunk, HttpRequest => NettyRequest}
 import org.jboss.netty.util.CharsetUtil
 
-import blueeyes.core.data.{ Chunk, ByteChunk }
-import blueeyes.core.http.HttpRequest
+import java.nio.ByteBuffer
+import java.util.concurrent.CountDownLatch
 
+import scalaz._
 import scala.collection.JavaConverters._
 
-private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends SimpleChannelUpstreamHandler with HttpNettyConverters with AkkaDefaults {
+private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit executionContext: ExecutionContext) extends SimpleChannelUpstreamHandler {
+  import HttpNettyConverters._
   import HttpNettyChunkedRequestHandler._
   import NettyHeaders._
 
-  private var delivery: Option[(Either[HttpRequest[ByteChunk], Promise[ByteChunk]], ChannelBuffer)] = None
+  implicit val M: Monad[Future] = new FutureMonad(executionContext)
+  private class Chain(val promise: Promise[Option[(ByteBuffer, Chain)]])
+  private object Chain {
+    def incomplete = new Chain(Promise[Option[(ByteBuffer, Chain)]]())
+    def complete = new Chain(Promise.successful(None))
+  }
 
-  override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
-    def buffer  = ChannelBuffers.dynamicBuffer(e.getChannel.getConfig.getBufferFactory)
-    val current = delivery
+  private var chain: Chain = _
 
-    e.getMessage match {
+  override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
+    event.getMessage match {
       case nettyRequest: NettyRequest => 
-        if (is100ContinueExpected(nettyRequest)) write(ctx, succeededFuture(ctx.getChannel), CONTINUE.duplicate())
+        if (is100ContinueExpected(nettyRequest)) Channels.write(ctx, Channels.succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
-        if (nettyRequest.isChunked) {
-          nettyRequest.setChunked(false)
-          if (nettyRequest.getHeaders(NettyHeaders.Names.TRANSFER_ENCODING).asScala.exists(_ == NettyHeaders.Values.CHUNKED)) {
-            nettyRequest.removeHeader(NettyHeaders.Names.TRANSFER_ENCODING)
+        val httpRequestBuilder = fromNettyRequest(nettyRequest, event.getRemoteAddress)
+        val nettyContent = nettyRequest.getContent
+
+        val content: Option[ByteChunk] = if (nettyRequest.isChunked) {
+          val head = Chain.incomplete
+          if (nettyContent.readable()) {
+            chain = Chain.incomplete
+            head.promise.success(Some((nettyContent.toByteBuffer, chain)))
+          } else {
+            chain = head
           }
 
-          delivery = Some(Left(fromNettyRequest(nettyRequest, e.getRemoteAddress)), buffer)
+          Some(Right(StreamT.unfoldM[Future, ByteBuffer, Chain](head) { _.promise }))
         } else {
-          delivery = None
-          Channels.fireMessageReceived(ctx, fromNettyRequest(nettyRequest, e.getRemoteAddress), e.getRemoteAddress)
+          if (nettyContent.readable()) {
+            Some(Left(nettyContent.toByteBuffer)) 
+          } else {
+            None
+          }
         }
+
+        Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
 
       case chunk: NettyChunk =>  
-        for ((nextDelivery, content) <- current) {
-          content.writeBytes(chunk.getContent)
-          if (chunk.isLast || content.capacity >= chunkSize) {
-            val nextChunkFuture = if (!chunk.isLast) {
-              val future = Promise[ByteChunk]()
-              delivery   = Some(Right(future), buffer)
-              Some(future)
-            } else {
-              delivery = None
-              None
-            }
-
-            val chunkToSend = fromNettyContent(content, nextChunkFuture)
-            nextDelivery match {
-              case Left(x)  => Channels.fireMessageReceived(ctx, x.copy(content = chunkToSend), e.getRemoteAddress)
-              case Right(x) => x.success(chunkToSend.getOrElse(Chunk(Array[Byte]())))
-            }
-          }
-        }
+        val current = chain
+        chain = if (chunk.isLast) Chain.complete else Chain.incomplete
+        current.promise.success(Some((chunk.getContent.toByteBuffer, chain)))
 
       case _ =>
-        write(ctx, succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
+        Channels.write(ctx, Channels.succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
     }
   }
 
@@ -78,13 +86,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int) extends Si
   }
 
   private def killPending(message: String) {
-    delivery.foreach{ value =>
-      value._1 match {
-        case Right(x) => x.failure(new RuntimeException(message))
-        case Left(x)  =>
-      }
-    }
-    delivery = None
+    if (chain != null) chain.promise.failure(new RuntimeException(message))
   }
 }
 

@@ -13,7 +13,7 @@ class FileSource(file: File, private[FileSource] var offset: Long, length: Long,
   private val endOffset  = offset + length
 
   // todo how it can be cancelled (problem is that Future is done and cannot be cancelled)
-  def apply: Option[Future[ByteChunk]] = {
+  def apply: Option[Future[Chunk[Array[Byte]]]] = {
     if (offset < endOffset){
       try {
         val size = chunkSize.toLong min (endOffset - offset)
@@ -42,13 +42,13 @@ object FileSource {
    * Read the given file into a bytechunk. By default, we wait forever
    * for IO, but you can reduce this if desired.
    */
-  def apply(file: File, timeout: akka.util.Timeout = Timeout.never): Option[ByteChunk] = new FileSource(file).apply.map(future => Await.result(future, timeout.duration))
+  def apply(file: File, timeout: akka.util.Timeout = Timeout.never): Option[Chunk[Array[Byte]]] = new FileSource(file).apply.map(future => Await.result(future, timeout.duration))
 }
 
 class FileSink(file: File) extends AkkaDefaults {
   private var output: Option[OutputStream] = None
 
-  private[FileSink] def write(chunk: ByteChunk): Future[Unit] = {
+  private[FileSink] def write(chunk: Chunk[Array[Byte]]): Future[Unit] = {
     val promise  = Promise[Unit]()
     try {
       file.createNewFile()
@@ -61,7 +61,7 @@ class FileSink(file: File) extends AkkaDefaults {
     promise
   }
 
-  private def write(chunk: ByteChunk, promise: Promise[Unit]) {
+  private def write(chunk: Chunk[Array[Byte]], promise: Promise[Unit]) {
     try {
       output.foreach{ stream =>
         stream.write(chunk.data)
@@ -70,9 +70,9 @@ class FileSink(file: File) extends AkkaDefaults {
 
       chunk.next match{
         case Some(future) => {
-          future  foreach   { write(_: ByteChunk, promise) } 
+          future  foreach   { write(_: Chunk[Array[Byte]], promise) } 
           future  onFailure { case th => cancel(promise, th) }
-          promise onFailure { case th => future.asInstanceOf[Promise[ByteChunk]].failure(th) }  
+          promise onFailure { case th => future.asInstanceOf[Promise[Chunk[Array[Byte]]]].failure(th) }  
         }
 
         case None =>
@@ -96,5 +96,5 @@ class FileSink(file: File) extends AkkaDefaults {
 }
 
 object FileSink {
-  def write(file: File, chunk: ByteChunk) = new FileSink(file).write(chunk)
+  def write(file: File, chunk: Chunk[Array[Byte]]) = new FileSink(file).write(chunk)
 }

@@ -1,17 +1,16 @@
 package blueeyes.core.service
 
-import java.net.InetAddress
-
 import blueeyes.bkka._
+import blueeyes.core.data._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
+import blueeyes.parsers.W3ExtendedLogAST.FieldIdentifier
 import blueeyes.util.Clock
+
 import akka.dispatch.Future
 import akka.dispatch.Promise
 
+import java.net.InetAddress
 import org.joda.time.format.DateTimeFormat
-import blueeyes.core.data.{AggregatedByteChunk, Bijection, ByteChunk}
-import blueeyes.parsers.W3ExtendedLogAST.FieldIdentifier
-import scala.Array
 
 /** A request logger is a function from (request/future of response) to future
  * of log line. Request loggers do not have side effects.
@@ -33,6 +32,7 @@ with AkkaDefaults { self =>
   }
 }
 
+//TODO: get rid of AkkaDefaults
 object HttpRequestLogger extends AkkaDefaults {
   import blueeyes.parsers.W3ExtendedLogGrammar._
   import blueeyes.parsers.W3ExtendedLogAST._
@@ -68,9 +68,11 @@ object HttpRequestLogger extends AkkaDefaults {
 
   private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
     def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
-      chunk
-      .map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](aggregated => Right(aggregated.data)))
-      .getOrElse(Promise.successful[Either[String, Array[Byte]]](Right(Array.empty[Byte])))
+      chunk map { c =>
+        BijectionsChunkByteArray.arrayByteToChunk.unapply(c) map { Right(_) }
+      } getOrElse {
+        Future(Right(Array[Byte]()))
+      }
     }
 
     val value: Future[Either[String, Array[Byte]]] = fieldIdentifier match {
