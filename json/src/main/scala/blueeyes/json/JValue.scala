@@ -980,4 +980,5 @@ case class JArray(elements: List[JValue]) extends JValue {
 case object JArray extends (List[JValue] => JArray) {
   final val empty = JArray(Nil)
   final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+  final def apply(vals: JValue*): JArray = JArray(vals.toList)
 }

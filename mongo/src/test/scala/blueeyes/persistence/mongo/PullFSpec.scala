@@ -5,7 +5,7 @@ import UpdateFieldFunctions._
 
 class PullFSpec extends Specification{
   "fuse applies pull to set update" in {
-    PullF("n", "" === "foo").fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar") :: MongoPrimitiveString("foo") :: Nil))) mustEqual(Some(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar") :: Nil))))
+    PullF("n", "" === "foo").fuseWith(SetF("n", MongoPrimitiveArray(MongoPrimitiveString("bar") :: MongoPrimitiveString("foo") :: Nil))) mustEqual(None)
   }
   "fuse with pull (with '' === value filter) composes pull" in {
     PullF("n", "" === "foo").fuseWith(PullF("n", "" === "bar")) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))

@@ -27,6 +27,8 @@ class HttpClientXLightWebSpec extends Specification with BijectionsChunkString w
 with AkkaDefaults with HttpRequestMatchers {
   val duration = 250.milliseconds
   val retries = 30
+  
+  sequential
 
   private val httpClient = new HttpClientXLightWeb
 

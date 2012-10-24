@@ -6,15 +6,17 @@ import blueeyes.json._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json._
 
+import scalaz.Success
+
 class MongoElementsMatchFilterSpec extends Specification{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val andFilter  = filter1 && filter2
 
   "create valid json for or filter" in {
-    (andFilter.elemMatch("name")).filter mustEqual (JParser.parseFromString(""" {"name": {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} }} """))
+    Success((andFilter.elemMatch("name")).filter) mustEqual (JParser.parseFromString(""" {"name": {"$elemMatch" : { "$and" : [{"bar": {"$lt": 5}}, {"foo": {"$gt": 1}}] } }} """))
   }
   "create valid json for or filter when path is empty" in {
-    (andFilter.elemMatch("")).filter mustEqual (JParser.parseFromString(""" {"$elemMatch" : {"foo": {"$gt": 1}, "bar": {"$lt": 5}} } """))
+    Success((andFilter.elemMatch("")).filter) mustEqual (JParser.parseFromString(""" {"$elemMatch" : { "$and": [{"bar": {"$lt": 5}}, {"foo": {"$gt": 1}}] } } """))
   }
 }
