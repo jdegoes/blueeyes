@@ -665,6 +665,8 @@ case class JNumStr private[json] (value: String) extends JNum {
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value
 
+  override val hashCode = 1337
+
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
     case JNumLong(n) => n.toString == value
@@ -679,6 +681,8 @@ case class JNumLong(value: Long) extends JNum {
   final def toLong: Long = value
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value.toString
+
+  override val hashCode = 1337
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => value.toString == s
@@ -698,6 +702,8 @@ case class JNumDouble private[json] (value: Double) extends JNum {
   final def toLong: Long = value.toLong
   final def toDouble: Double = value
   final def toRawString: String = value.toString
+
+  override val hashCode = 1337
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
@@ -719,7 +725,7 @@ case class JNumBigDec(value: BigDecimal) extends JNum {
   final def toRawString: String = value.toString
 
   // SI-6173
-  override val hashCode = 0
+  override val hashCode = 1337
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == value
