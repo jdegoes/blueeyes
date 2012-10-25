@@ -83,36 +83,33 @@ object AsyncParserSpec extends Specification {
     if (len > 0) Some(ByteBuffer.wrap(data, i, len)) else None
   }
 
-  private def chunkAll(async: AsyncState, data: Array[Byte], f: () => Int) = {
+  private def chunkAll(async: AsyncParser, data: Array[Byte], f: () => Int) = {
     var vs = mutable.ArrayBuffer.empty[JValue]
     val n = data.length
     var i = 0
-    var st = async
+    var p = async
     while (i < n) {
       val step = f()
-      val (vs2, result) = JParser.parseAsync(st, chunk(data, i, i + step))
-      st = result match {
-        case AsyncOk(state) => state
-        case e => sys.error("failed %s" format e)
-      }
-      vs ++= vs2
+      val tpl = JParser.parseAsync(p, chunk(data, i, i + step))
+      val (AsyncParse(errors, results), parser) = tpl
+      if (!errors.isEmpty) sys.error("failed %s" format errors)
+      vs ++= results
+      p = parser
       i += step
     }
     vs
   }
-
+  
   private def runTest(path: String, step: Int) = {
     val data = loadBytes(path)
-    val async = AsyncState()
-    chunkAll(async, data, () => step)
+    chunkAll(AsyncParser(), data, () => step)
   }
-
+  
   private def runTestRandomStep(path: String, f: () => Int) = {
     val data = loadBytes(path)
-    val async = AsyncState()
-    chunkAll(async, data, f)
+    chunkAll(AsyncParser(), data, f)
   }
-
+  
   "Async parser works on one 1M chunk" in {
     val vs = runTest("json/src/test/resources/z1k_nl.json", 1024 * 1024)
     vs.length must_== 1000
@@ -136,83 +133,124 @@ object AsyncParserSpec extends Specification {
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
+  
   "Async parser works on chunks of 100B" in {
     val vs = runTest("json/src/test/resources/z1k_nl.json", 100)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
+  
   "Async parser works on chunks of 10B" in {
     val vs = runTest("json/src/test/resources/z1k_nl.json", 10)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
+  
   "Async parser works on chunks of 1B" in {
     val vs = runTest("json/src/test/resources/z1k_nl.json", 1)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
+  
   "Async parser works on chunks of sizes 10B-1K" in {
     val f = () => nextInt(1014) + 10
     val vs = runTestRandomStep("json/src/test/resources/z1k_nl.json", f)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
+  
   "Async parser works on chunks of sizes 1k-10K" in {
     val f = () => nextInt(9 * 1024) + 1024
     val vs = runTestRandomStep("json/src/test/resources/z1k_nl.json", f)
     vs.length must_== 1000
     (0 until 1000).foreach { _.toOption must beSome }
   }
-
-  def run1(chunks: Seq[Option[ByteBuffer]]) = {
-    var st = AsyncState()
+  
+  def run1(chunks: Seq[Option[ByteBuffer]], expected: Int) = {
+    var p: AsyncParser = AsyncParser()
     var t0 = System.nanoTime
     var count = 0
     chunks.foreach { chunk =>
-      val (vs, result) = JParser.parseAsync(st, chunk)
-      count += vs.length
-      st = result.stateOr(throw _)
+      val tpl = JParser.parseAsync(p, chunk)
+      val (AsyncParse(errors, results), parser) = tpl
+      if (!errors.isEmpty) sys.error("errors: %s" format errors)
+      count += results.length
+      p = parser
     }
     val t = System.nanoTime - t0
-    if(count != 1000) sys.error("wrong number of records")
+    if(count != expected) sys.error("wrong number of records")
     t
   }
-
-  def run2(bb: ByteBuffer) = {
+  
+  def run2(bb: ByteBuffer, expected: Int) = {
     val tt0 = System.nanoTime
     val v = JParser.parseManyFromByteBuffer(bb)
     val tt = System.nanoTime - tt0
     val seq = v.toOption.getOrElse(sys.error("failed to parse"))
-    if(seq.length != 1000) sys.error("wrong number of records")
+    if(seq.length != expected) sys.error("wrong number of records")
     tt
   }
-
-  "Test parseAsync performance" in {
+  
+  "Async parser performs adequately" in {
+    val n = 1 * 1000
     val data = loadBytes("json/src/test/resources/z1k_nl.json")
-    val step = 10000
-    println("parsing %d bytes with %d-byte chunks" format (data.length, step))
 
+    val step = 100000
+    println("parsing %d bytes with %d-byte chunks" format (data.length, step))
+  
     def chunks = (0 until data.length by step).map(i => chunk(data, i, i + step))
     def bb = ByteBuffer.wrap(data)
-
+  
     // warmup
-    run1(chunks); run2(bb)
-    run1(chunks); run2(bb)
+    run1(chunks, n); run2(bb, n)
+    run1(chunks, n); run2(bb, n)
     System.gc()
-
+  
     val t1 = (0 until 10).foldLeft(0.0) { (t, _) => 
-      val tt = run1(chunks); System.gc(); t + tt
+      val tt = run1(chunks, n); System.gc(); t + tt
     }
     println("async: %.2f ms" format (t1 / 10000000.0))
-
+  
     val t2 = (0 until 10).foldLeft(0.0) { (t, _) => 
-      val tt = run2(bb); System.gc(); t + tt
+      val tt = run2(bb, n); System.gc(); t + tt
     }
     println("byteb: %.2f ms" format (t2 / 10000000.0))
+  }
+
+  "Async parser recovers from errors" in {
+    val json = """{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999x}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": {"foo": 123, "bar": 999}}
+{"foo": 123, "bar: {"foo": 123, "bar": 999}}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+xyz
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}"""
+
+    val bs = json.getBytes(utf8)
+    val c = chunk(bs, 0, bs.length)
+
+    var p = AsyncParser()
+    val (AsyncParse(es, js), p2) = JParser.parseAsync(p, c)
+
+    // each line should become an error or a jvalue
+    json.split('\n').length must_== 14
+    es.length must_== 4
+    js.length must_== 10
+
+    def confirm(e: ParseException, y: Int, x: Int) {
+      e.line must_== y
+      e.col must_== x
+    }
+    confirm(es(0), 2, 24)
+    confirm(es(1), 6, 1)
+    confirm(es(2), 9, 22)
+    confirm(es(3), 12, 1)
   }
 }
