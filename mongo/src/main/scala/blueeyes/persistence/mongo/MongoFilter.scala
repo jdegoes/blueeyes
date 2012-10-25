@@ -36,6 +36,7 @@ object MongoFilterOperators {
   case object $exists      extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $exists operator does not have a negation"); }
   case object $type        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $type operator does not have a negation"); }
   case object $or          extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $or operator does not have a negation"); }
+  case object $and         extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $and operator does not have a negation"); }
   case object $each        extends MongoFilterOperator { def unary_! : MongoFilterOperator  = sys.error("The $each operator does not have a negation"); }
 
   sealed trait MongoFilterOperatorGeo extends MongoFilterOperator
@@ -115,25 +116,32 @@ sealed case class MongoOrFilter(queries: Seq[MongoFilter]) extends MongoFilter {
 
 sealed case class MongoAndFilter(queries: Seq[MongoFilter]) extends MongoFilter { self =>
   private lazy val normalized = Set(queries: _*)
-  def filter: JValue = {
-    val (notEqs, eqs) = queries.distinct.partition { filter => filter match {
-      case MongoFieldFilter(lhs, e @ $eq, rhs) => false
-      case _ => true
-    }}
-    notEqsQuery(notEqs) ++ eqsQuery(eqs)
+
+  def filter: JValue = queries.length match {
+    case 0 => JObject()
+    case 1 => queries.head.filter
+    case _ => JObject(JField($and.symbol, JArray(queries.distinct.map(_.filter).toList).sort) :: Nil)
   }
 
-  private def notEqsQuery(queries: Seq[MongoFilter]) = {
-    implicit val mergeMonoid = MergeMonoid
-    val objects = queries.map(_.filter)
-    (JObject(Nil) +: objects).toList.suml.asInstanceOf[JObject]
-  }
-
-  private def eqsQuery(queries: Seq[MongoFilter]) = {
-    implicit val concatMonoid = ConcatMonoid
-    val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JObject(JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue) :: Nil))
-    (JObject(Nil) +: fields).toList.suml.asInstanceOf[JObject]
-  }
+  //def filter: JValue = {
+  //  val (notEqs, eqs) = queries.distinct.partition { filter => filter match {
+  //    case MongoFieldFilter(lhs, e @ $eq, rhs) => false
+  //    case _ => true
+  //  }}
+  //  notEqsQuery(notEqs) ++ eqsQuery(eqs)
+  //}
+  //
+  //private def notEqsQuery(queries: Seq[MongoFilter]) = {
+  //  implicit val mergeMonoid = MergeMonoid
+  //  val objects = queries.map(_.filter)
+  //  (JObject(Nil) +: objects).toList.suml.asInstanceOf[JObject]
+  //}
+  //
+  //private def eqsQuery(queries: Seq[MongoFilter]) = {
+  //  implicit val concatMonoid = ConcatMonoid
+  //  val fields = queries.map(_.asInstanceOf[MongoFieldFilter]).map(v => JObject(JField(JPathExtension.toMongoField(v.lhs), v.rhs.toJValue) :: Nil))
+  //  (JObject(Nil) +: fields).toList.suml.asInstanceOf[JObject]
+  //}
 
   def unary_! : MongoFilter = MongoOrFilter(queries.map(!_))
 

@@ -23,6 +23,7 @@ import scalaz.Success
 
 class HttpRequestHandlerCombinatorsSpec extends Specification with HttpRequestHandlerCombinators with RestPathPatternImplicits with HttpRequestHandlerImplicits 
 with blueeyes.bkka.AkkaDefaults with HttpRequestMatchers {
+  sequential
 
   import BijectionsChunkFutureJson._
   import BijectionsChunkString._
