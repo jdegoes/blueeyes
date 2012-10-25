@@ -82,7 +82,7 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
   /**
    * Returns the element as an option of a JValue of the specified class.
    */
-  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (self.getClass == clazz) Some(self.asInstanceOf[A]) else None
+  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (clazz.isAssignableFrom(self.getClass)) Some(self.asInstanceOf[A]) else None
 
   /** 
    * Does a breadth-first traversal of all descendant JValues, beginning
