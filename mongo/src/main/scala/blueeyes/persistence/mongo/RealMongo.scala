@@ -140,7 +140,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
       JField("name", JString(name)),
       JField("background", JBool(true)),
       JField("unique", JBool(unique))
-    ) ++ options
+    ) merge options
 
     def toMongoIndexType(indexType: IndexType) = {
       indexType match{

@@ -11,6 +11,8 @@ import MongoFilterImplicits._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
+import scalaz.Success
+
 class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
   private val filter1    = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2    = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
@@ -39,51 +41,53 @@ class MongoAndFilterSpec extends Specification with ScalaCheck with MongoImplici
     }
 
     "create valid json for or filter" in {
-      (andFilter).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields))
-      (andFilter && filter3).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter3.filter.asInstanceOf[JObject].fields))
-      (filter3 && andFilter).filter mustEqual (JObject(filter3.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter1.filter.asInstanceOf[JObject].fields))
-      (andFilter && (filter3 && filter4)).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++ filter2.filter.asInstanceOf[JObject].fields ++ filter3.filter.asInstanceOf[JObject].fields ++ filter4.filter.asInstanceOf[JObject].fields))
+      (andFilter).filter mustEqual JObject(JField("$and", JArray(filter1.filter, filter2.filter).sort))
+      (andFilter && filter3).filter mustEqual JObject(JField("$and", JArray(filter1.filter, filter2.filter, filter3.filter).sort))
+      (filter3 && andFilter).filter mustEqual JObject(JField("$and", JArray(filter3.filter, filter1.filter, filter2.filter).sort))
+      (andFilter && (filter3 && filter4)).filter mustEqual JObject(JField("$and", JArray(filter1.filter, filter2.filter, filter3.filter, filter4.filter).sort))
     }
     "create valid json for AND filter with $eq filter" in {
-      (("foo" === 1) && ("foo" !== 2)).filter mustEqual(JObject(JField("foo", JNum(1)) :: JField("foo", JObject(JField("$ne", JNum(2)) :: Nil)) :: Nil))
+      val filter = (("foo" === 1) && ("foo" !== 2)).filter
+      val expected = JObject(JField("$and", JArray(JObject(JField("foo", JNum(1))), JObject(JField("foo", JObject(JField("$ne", JNum(2))))))))
+
+      filter mustEqual expected
     }
 
     "combine with filter3 to create a new filter" in {
-      (andFilter && filter3).filter mustEqual (JObject(filter1.filter.asInstanceOf[JObject].fields ++
-        filter2.filter.asInstanceOf[JObject].fields ++
-        filter3.filter.asInstanceOf[JObject].fields))
+      (andFilter && filter3).filter mustEqual (JObject(JField("$and", JArray(filter1.filter, filter2.filter, filter3.filter).sort)))
     }
 
     "combine ANDs with ORs" in {
       val exam: MongoFilter = ("address.city" === "B") ||  ("address.street" === "2") || ("address.code" === 1)
       val cfilter: MongoFilter = ((filter1 && filter2 && filter3) || (filter2 && filter3) || (filter1 && filter3)) //|| (filter1 && filter2)
-      cfilter.filter mustEqual
+      Success(cfilter.filter) mustEqual
       JParser.parseFromString("""
          {
         "$or":[{
-          "foo":{
-            "$gt":1
-          },
+          "$and":[{
           "bar":{
             "$lt":5
-          },
-          "rar":{
-            "$lt":6
-          }
-        },{
-          "bar":{
-            "$lt":5
-          },
-          "rar":{
-            "$lt":6
-          }
-        },{
+          }},{
           "foo":{
             "$gt":1
-          },
+          }},{
           "rar":{
             "$lt":6
-          }
+          }}]
+        },{"$and":[{
+          "bar":{
+            "$lt":5
+          }},{
+          "rar":{
+            "$lt":6
+          }}]
+        },{"$and":[{
+          "foo":{
+            "$gt":1
+          }},{
+          "rar":{
+            "$lt":6
+          }}]
         }]
       }
     """)

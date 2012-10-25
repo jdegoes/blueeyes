@@ -82,7 +82,7 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
   /**
    * Returns the element as an option of a JValue of the specified class.
    */
-  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (self.getClass == clazz) Some(self.asInstanceOf[A]) else None
+  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (clazz.isAssignableFrom(self.getClass)) Some(self.asInstanceOf[A]) else None
 
   /** 
    * Does a breadth-first traversal of all descendant JValues, beginning
@@ -665,6 +665,8 @@ case class JNumStr private[json] (value: String) extends JNum {
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value
 
+  override val hashCode = 6173
+
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
     case JNumLong(n) => n.toString == value
@@ -679,6 +681,8 @@ case class JNumLong(value: Long) extends JNum {
   final def toLong: Long = value
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value.toString
+
+  override val hashCode = 6173
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => value.toString == s
@@ -698,6 +702,8 @@ case class JNumDouble private[json] (value: Double) extends JNum {
   final def toLong: Long = value.toLong
   final def toDouble: Double = value
   final def toRawString: String = value.toString
+
+  override val hashCode = 6173
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
@@ -719,7 +725,7 @@ case class JNumBigDec(value: BigDecimal) extends JNum {
   final def toRawString: String = value.toString
 
   // SI-6173
-  override val hashCode = 0
+  override val hashCode = 6173
 
   override def equals(other: Any) = other match {
     case JNumStr(s) => BigDecimal(s) == value
@@ -835,6 +841,8 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
 
   def - (name: String): JObject = copy(fields = fields - name)
 
+  def merge(other: JObject): JObject = JObject(Merge.mergeFields(this.fields, other.fields))
+
   def partitionField(field: String): (JValue, JObject) = {
     (get(field), JObject(fields - field))
   }
@@ -925,6 +933,8 @@ case class JArray(elements: List[JValue]) extends JValue {
 
   override def apply(i: Int): JValue = elements.lift(i).getOrElse(JUndefined)
 
+  def merge(other: JArray): JArray = JArray(Merge.mergeVals(this.elements, other.elements))
+
   def isNested: Boolean = elements.exists {
     case _: JArray => true
     case _: JObject => true
@@ -976,4 +986,5 @@ case class JArray(elements: List[JValue]) extends JValue {
 case object JArray extends (List[JValue] => JArray) {
   final val empty = JArray(Nil)
   final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+  final def apply(vals: JValue*): JArray = JArray(vals.toList)
 }
