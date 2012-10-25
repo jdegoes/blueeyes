@@ -548,13 +548,7 @@ object JValue {
   }
 
   implicit final val jnumOrder: Order[JNum] = new Order[JNum] {
-    def order(v1: JNum, v2: JNum) = (v1, v2) match {
-      case (JNumStr(v1), JNumStr(v2)) => v1 ?|? v2
-      case (JNumLong(v1), JNumLong(v2)) => v1 ?|? v2
-      case (JNumDouble(v1), JNumDouble(v2)) => v1 ?|? v2
-      case (JNumBigDec(v1), JNumBigDec(v2)) => v1 ?|? v2
-      case (_, _) => v1.toBigDecimal ?|? v2.toBigDecimal
-    }
+    def order(v1: JNum, v2: JNum) = Ordering.fromInt(v1 numCompare v2)
   }
 
   implicit final val order: Order[JValue] = new Order[JValue] {
@@ -657,21 +651,29 @@ sealed trait JNum extends JValue {
   def toRawString: String
   final def renderCompact = toRawString
   def sort: JNum = this
+
+  // SI-6173: to avoid hashCode on BigDecimal, we use a hardcoded hashcode to
+  // ensure JNum("123.45").hashCode == JNum(123.45).hashCode
+  override val hashCode = 6173
+
+  protected[json] def numCompare(other: JNum): Int
 }
 
 case class JNumStr private[json] (value: String) extends JNum {
-  final def toBigDecimal: BigDecimal = BigDecimal(value)
-  final def toLong: Long = value.toLong
+  lazy val dec: BigDecimal = BigDecimal(value)
+
+  final def toBigDecimal: BigDecimal = dec
+  final def toLong: Long = value.toDouble.toLong
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value
 
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
-    case JNumLong(n) => n.toString == value
-    case JNumDouble(n) => BigDecimal(n) == BigDecimal(value)
-    case JNumBigDec(n) => n == BigDecimal(value)
+    case JNumLong(n) => value == n.toString
+    case num: JNum => toBigDecimal == num.toBigDecimal
     case _ => false
   }
+
+  protected[json] def numCompare(other: JNum) = toBigDecimal compare other.toBigDecimal
 }
 
 case class JNumLong(value: Long) extends JNum {
@@ -681,15 +683,18 @@ case class JNumLong(value: Long) extends JNum {
   final def toRawString: String = value.toString
 
   override def equals(other: Any) = other match {
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case JNumBigDec(n) => value == n
     case JNumStr(s) => value.toString == s
-    case JNumLong(n) => n == value
-    case JNumDouble(n) =>
-      if (n % 1.0 == 0.0 && n <= Int.MaxValue && n >= Int.MinValue)
-        n.toLong == value
-      else
-        BigDecimal(n) == BigDecimal(value)
-    case JNumBigDec(n) => n == value
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n
+    case JNumDouble(n) => value.toDouble compare n
+    case JNumBigDec(n) => BigDecimal(value) compare n
+    case _ => toBigDecimal compare other.toBigDecimal
   }
 }
 
@@ -700,15 +705,17 @@ case class JNumDouble private[json] (value: Double) extends JNum {
   final def toRawString: String = value.toString
 
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
-    case JNumLong(n) =>
-      if (value % 1.0 == 0.0 && value <= Int.MaxValue && value >= Int.MinValue)
-        value.toLong == n
-      else
-        BigDecimal(n) == BigDecimal(value)
-    case JNumDouble(n) => n == value
-    case JNumBigDec(n) => n == BigDecimal(value)
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case num: JNum => toBigDecimal == num.toBigDecimal
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n.toDouble
+    case JNumDouble(n) => value compare n
+    case JNumBigDec(n) => BigDecimal(value) compare n
+    case _ => toBigDecimal compare other.toBigDecimal
   }
 }
 
@@ -718,15 +725,19 @@ case class JNumBigDec(value: BigDecimal) extends JNum {
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value.toString
 
-  // SI-6173
-  override val hashCode = 0
-
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == value
-    case JNumLong(n) => n == value
-    case JNumDouble(n) => BigDecimal(n) == value
-    case JNumBigDec(n) => n == value
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case JNumBigDec(n) => value == n
+    case num: JNum => value == num.toBigDecimal
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n
+    case JNumDouble(n) => value compare n
+    case JNumBigDec(n) => value compare n
+    case _ => value compare other.toBigDecimal
   }
 }
 
@@ -739,6 +750,8 @@ case object JNum {
 
   def apply(value: BigDecimal): JNum = JNumBigDec(value)
   
+  def compare(v1: JNum, v2: JNum) = v1.numCompare(v2)
+
   def unapply(value: JNum): Option[BigDecimal] = {
     try { Some(value.toBigDecimal) }
     catch { case _ : NumberFormatException => None }
