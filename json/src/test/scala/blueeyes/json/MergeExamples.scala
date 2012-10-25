@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
 import org.specs2.mutable.Specification
 
 object MergeExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
+  import JParser._
 
   "Merge example" in {
     (scala1 merge scala2) mustEqual expectedMergeResult
   }
 
-  val scala1 = parse("""
+  def scala1 = parse("""
     {
       "lang": "scala",
       "year": 2006,
@@ -38,7 +36,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  val scala2 = parse("""
+  def scala2 = parse("""
     {
       "tags": ["static-typing","fp"],
       "compiled": true,
@@ -49,7 +47,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  val expectedMergeResult = parse("""
+  def expectedMergeResult = parse("""
     {
       "lang": "scala",
       "year": 2006,
@@ -59,18 +57,18 @@ object MergeExamples extends Specification {
         "key2":"newval2",
         "key3":"val3"
       },
-      "compiled": true,
+      "compiled": true
     }""")
-
+  
   "Lotto example" in {
     (lotto1 merge lotto2) mustEqual mergedLottoResult
   }
 
-  val lotto1 = parse("""
+  def lotto1 = parse("""
     {
       "lotto":{
         "lotto-id":5,
-        "winning-numbers":[2,45,34,23,7,5,3]
+        "winning-numbers":[2,45,34,23,7,5,3],
         "winners":[{
           "winner-id":23,
           "numbers":[2,45,34,23,3,5]
@@ -78,7 +76,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  val lotto2 = parse("""
+  def lotto2 = parse("""
     {
       "lotto":{ 
         "winners":[{
@@ -88,7 +86,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  val mergedLottoResult = parse("""
+  def mergedLottoResult = parse("""
     {
       "lotto":{
         "lotto-id":5,
@@ -102,7 +100,4 @@ object MergeExamples extends Specification {
         }]
       }
     }""")
-}
-
-}
 }

@@ -37,7 +37,7 @@ trait HttpRequestCombinators extends blueeyes.bkka.AkkaDefaults {
         Future(HttpResponse(HttpStatus(BadRequest, "Expected " + m.erasure.getClass.getName + " but found nothing")))
 
       case Some(future) => future.flatMap{ value =>
-        if (value.getClass == m.erasure) {
+        if (m.erasure.isAssignableFrom(value.getClass)) {
           val t: T = value.asInstanceOf[T]
 
           f(request.copy(content = Some(Future(t))))

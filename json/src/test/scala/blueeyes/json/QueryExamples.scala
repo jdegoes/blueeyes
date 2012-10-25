@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package blueeyes {
-package json {
+package blueeyes.json
 
 import org.specs2.mutable.Specification
 
 object QueryExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
+  import JParser._
 
   "List of IPs" in {
     val ips = for { JString(ip) <- json \\ "ip" } yield ip
@@ -69,7 +67,7 @@ object QueryExamples extends Specification {
     clusters mustEqual List("cluster2")
   }
 
-  val json = parse("""
+  def json = parse("""
     { "data_center": [
       {
         "name": "cluster1",
@@ -88,7 +86,7 @@ object QueryExamples extends Specification {
         "name": "cluster2",
         "servers": [
           {"ip": "192.168.2.125", "uptime": 453423, "specs": {"cpus":  4, "ram": 2048}},
-          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}},
+          {"ip": "192.168.2.126", "uptime": 214312, "specs": {"cpus":  4, "ram": 2048}}
         ],
         "links": [
           {"href": "http://www.example2.com/admin", "name": "admin"},
@@ -98,7 +96,4 @@ object QueryExamples extends Specification {
       }
    ]}
   """)
-}
-
-}
 }

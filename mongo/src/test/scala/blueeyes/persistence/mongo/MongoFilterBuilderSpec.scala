@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import MongoFilterOperators._
 import blueeyes.json.JPath
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import MongoFilterImplicits._
 
 class MongoFilterBuilderSpec extends Specification{

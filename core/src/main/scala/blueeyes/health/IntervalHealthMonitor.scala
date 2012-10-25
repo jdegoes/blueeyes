@@ -7,7 +7,7 @@ import akka.util.Timeout
 
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.{JPathIndex, JPathNode, JPathField, JPath}
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.MergeMonoid
 
 import java.util.concurrent.ConcurrentHashMap

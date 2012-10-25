@@ -12,7 +12,7 @@ import blueeyes.core.http.{HttpHeaders}
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.persistence.mongo.MongoImplicits._
 import blueeyes.persistence.mongo.{ConfigurableMongo, MongoFilterAll, Mongo, MongoFilter}
 import blueeyes.core.service.ServerHealthMonitorService

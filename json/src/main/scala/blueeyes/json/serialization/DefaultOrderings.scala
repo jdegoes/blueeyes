@@ -1,6 +1,6 @@
 package blueeyes.json.serialization
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import java.util.{Date => JDate}
 
 import scala.math.Ordering

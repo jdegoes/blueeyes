@@ -8,7 +8,7 @@ import org.scalacheck.Prop._
 
 import MongoUpdateOperators._
 import MongoFilterOperators._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.{ArbitraryJValue}
 
 import scalaz._

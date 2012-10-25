@@ -4,13 +4,13 @@ import blueeyes.core.service.engines.HttpClientXLightWeb
 import blueeyes.core.http.MimeTypes._
 import net.lag.configgy.Configgy
 import blueeyes.core.http.HttpResponse
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import java.util.concurrent.CountDownLatch
 import akka.dispatch.Future
 import akka.dispatch.Await
 import Serialization._
 import blueeyes.core.service.HttpClient
-import blueeyes.json.JsonParser.{parse => j}
+import blueeyes.json.JParser.{parse => j}
 import blueeyes.core.data.{BijectionsChunkJson, ByteChunk, Bijection}
 
 object BlueEyesClientDemo extends BlueEyesDemoFacade  with Data{

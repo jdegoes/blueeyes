@@ -1,7 +1,6 @@
 package blueeyes.json
 package serialization
 
-import JsonAST._
 import DefaultSerialization._
 import org.joda.time.{Instant, DateTime, DateTimeZone, Duration}
 

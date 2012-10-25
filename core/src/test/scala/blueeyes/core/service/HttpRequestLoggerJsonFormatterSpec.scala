@@ -1,8 +1,7 @@
 package blueeyes.core.service
 
 import org.specs2.mutable.Specification
-import blueeyes.json.Printer
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.parsers.W3ExtendedLogAST._
 
 class HttpRequestLoggerJsonFormatterSpec extends Specification{
@@ -27,7 +26,7 @@ class HttpRequestLoggerJsonFormatterSpec extends Specification{
   }
   private def format(noPrefix: List[JField], clientPrefix: List[JField], serverPrefix: List[JField]) = {
     val json = JObject(noPrefix ::: JField("request", JObject(clientPrefix)) :: JField("response", JObject(serverPrefix)) :: Nil)
-    Printer.compact(Printer.render(json))
+    json.renderCompact
   }
   private def fields(values: List[(FieldIdentifier, Either[String, Array[Byte]])]) = toStringValue(values).map(v => JField(v._1.toString, JString(v._2)))
   private def  toStringValue(entry: List[(FieldIdentifier, Either[String, Array[Byte]])]) = entry.map{_ match{

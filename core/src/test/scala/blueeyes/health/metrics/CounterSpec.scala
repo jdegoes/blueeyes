@@ -1,6 +1,6 @@
 package blueeyes.health.metrics
 
-import blueeyes.json.JsonAST.JNum
+import blueeyes.json.JNum
 import org.specs2.mutable.Specification
 
 class CounterSpec extends Specification {

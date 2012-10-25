@@ -17,8 +17,7 @@ import akka.dispatch.Await
 import blueeyes.bkka.AkkaDefaults
 
 import collection.mutable.ArrayBuilder.ofByte
-import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
+import blueeyes.json._
 import org.specs2.specification.{Step, Fragments}
 
 import org.streum.configrity.Configuration

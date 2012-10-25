@@ -1,8 +1,7 @@
 package blueeyes.core.service
 
-import blueeyes.json.JsonAST._
-import blueeyes.json.Printer._
-import blueeyes.json.JsonParser
+import blueeyes.json._
+import blueeyes.json.JParser
 
 import org.specs2.mutable.Specification
 
@@ -12,7 +11,7 @@ import blueeyes.core.http._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.test.HttpRequestMatchers
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import akka.dispatch.Future
 import blueeyes.concurrent.test.FutureMatchers
 import blueeyes.util.metrics.DataSize

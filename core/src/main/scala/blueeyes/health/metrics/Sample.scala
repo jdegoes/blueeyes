@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 import blueeyes.health.ConcurrentMaps
 import collection.mutable.ConcurrentMap
 import ConcurrentMaps._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 import histogram.ValueStrategy._
 

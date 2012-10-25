@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JPath
 import blueeyes.concurrent._
 import com.mongodb.MongoException

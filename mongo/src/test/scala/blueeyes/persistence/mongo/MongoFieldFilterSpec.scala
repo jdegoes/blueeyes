@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JPathImplicits._
 import blueeyes.json._
 import MongoFilterOperators._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class MongoFieldFilterSpec extends Specification{
   "creates valid json for $regex operator" in{

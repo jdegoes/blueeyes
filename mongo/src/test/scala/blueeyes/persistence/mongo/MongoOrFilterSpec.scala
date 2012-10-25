@@ -6,7 +6,7 @@ import Arbitrary.arbitrary
 import org.scalacheck.Prop._
 
 import MongoFilterOperators._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json._
 import MongoFilterImplicits._
 import org.specs2.mutable.Specification

@@ -1,9 +1,9 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.persistence.mongo.MongoFilterOperators._
-import blueeyes.json.JsonParser
+import blueeyes.json.JParser
 
 class MongoFilterEvaluatorSpec extends Specification{
   private val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -12,7 +12,7 @@ class MongoFilterEvaluatorSpec extends Specification{
   private val jObject3 = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("4")) ::  Nil)) :: Nil)
   private val jobjects = jObject :: jObject1 :: jObject2 :: jObject3 :: Nil
 
-  private val jobjectsWithArray = JsonParser.parse("""{ "foo" : [
+  private val jobjectsWithArray = JParser.parseFromString("""{ "foo" : [
       {
         "shape" : "square",
         "color" : "purple",
@@ -23,7 +23,7 @@ class MongoFilterEvaluatorSpec extends Specification{
         "color" : "red",
         "thick" : true
       }
-] } """) :: JsonParser.parse("""
+] } """) :: JParser.parseFromString("""
 { "foo" : [
       {
         "shape" : "square",
@@ -61,14 +61,14 @@ class MongoFilterEvaluatorSpec extends Specification{
        MongoFilterEvaluator(jobjectsWithArray).filter(MongoElementsMatchFilter("foo", (MongoFieldFilter("shape", $eq,"square") && MongoFieldFilter("color", $eq,"freen")))) mustEqual(Nil)
     }
     "select element from array" in {
-       MongoFilterEvaluator(JsonParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JNum(1) :: Nil)
+       MongoFilterEvaluator(JParser.parse("[1, 2]").asInstanceOf[JArray].elements).filter(MongoFieldFilter("", $eq, 1)) mustEqual(JNum(1) :: Nil)
     }
 
     "select element by complex filter " in {
-       MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+       MongoFilterEvaluator(JParser.parseFromString("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoFieldFilter("foo", $eq, 1)) mustEqual(JParser.parseFromString("""{"foo": 1}""") :: Nil)
     }
     "select element from array by element match " in {
-       MongoFilterEvaluator(JsonParser.parse("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(List(MongoFieldFilter("foo", $eq, 1))).elemMatch("")) mustEqual(JsonParser.parse("""{"foo": 1}""") :: Nil)
+       MongoFilterEvaluator(JParser.parseFromString("""[{"foo": 1}, {"foo": 2}]""").asInstanceOf[JArray].elements).filter(MongoAndFilter(List(MongoFieldFilter("foo", $eq, 1))).elemMatch("")) mustEqual(JParser.parseFromString("""{"foo": 1}""") :: Nil)
     }
   }
 }

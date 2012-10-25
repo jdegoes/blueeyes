@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class ErrorStatSpec extends Specification{
   "counts errors" in{

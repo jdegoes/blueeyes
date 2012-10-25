@@ -8,7 +8,7 @@ import java.util.regex.Pattern._
 
 import scala.collection.JavaConversions._
 import java.util.{HashMap, Map}
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import json.BijectionsMongoJson._
 
 //class MongoValuesSpec extends Specification{

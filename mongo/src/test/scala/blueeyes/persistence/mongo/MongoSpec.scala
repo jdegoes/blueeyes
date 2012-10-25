@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import MongoFilterOperators._
 
 import blueeyes.json._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 import org.scalacheck._
 import Gen._
@@ -49,9 +49,9 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
 
       val explanation = oneQuery(select().from(collection).where("address.city" === "B").hint("myindex").explain, realDatabase)
 
-      explanation \ "cursor" must_!=(JNothing)
-      explanation \ "nscannedObjects" must_!=(JNothing)
-      explanation \ "nscanned" must_!=(JNothing)
+      explanation \ "cursor" must_!=(JUndefined)
+      explanation \ "nscannedObjects" must_!=(JUndefined)
+      explanation \ "nscanned" must_!=(JUndefined)
     }
     "Select the same value with hints" in{
       val jObject  = JObject(JField("address", JObject( JField("city", JString("A")) :: JField("street", JString("1")) ::  Nil)) :: Nil)
@@ -146,7 +146,7 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
     }
     "Select the same value form Mock and Real Mongo for And operator for every field" in{
       check { vv: List[JObject] =>
-        val values = List(JsonParser.parse("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
+        val values = List(JParser.parseFromString("""{"201693":false,"3959":[-3.5173409829406745E307,{"775417":{"173540":false},"844904":1},false,false],"545266":null,"682503":{"926410":[true,{"468627":1642944353},""]},"162425":{"620617":true,"667941":"","61593":false,"414660":null,"605846":false}}""").asInstanceOf[JObject])
         query(insert(values: _*).into(collection))
 
         val value  = values.head
@@ -205,23 +205,23 @@ class MongoSpec extends Specification with ArbitraryJValue with ScalaCheck with 
       println("--------OBJECT--------")
       values.foreach{value =>
         println("----------------")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("--------OBJECT--------")
       println("-REAL-")
       real.foreach{value =>
         println("--")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("-REAL-")
       println("-MOCK-")
       mock.foreach{value =>
         println("--")
-        println(Printer.compact(Printer.render(value)))
+        println(value.renderCompact)
       }
       println("-MOCK-")
       println("--------QUERY--------")
-      println(Printer.compact(Printer.render(selectQuery.filter.get.filter)))
+      selectQuery.filter.get.filter.renderCompact
       println("--------QUERY--------")
       oneQuery(selectQuery, mockDatabase)
     }

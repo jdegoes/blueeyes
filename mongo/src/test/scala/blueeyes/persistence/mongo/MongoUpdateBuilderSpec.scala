@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import MongoUpdateOperators._
 import MongoFilterOperators._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JPath
 
 class MongoUpdateBuilderSpec extends Specification{

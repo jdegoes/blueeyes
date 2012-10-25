@@ -1,7 +1,7 @@
 package blueeyes.health.metrics
 
 import org.specs2.mutable.Specification
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import akka.dispatch.Future
 import blueeyes.util.Clock
 import java.util.concurrent.TimeUnit
@@ -53,6 +53,6 @@ class TimedSampleSpec extends Specification with TimedStatFixtures with blueeyes
   }
 
   class TimedSampleImpl(intervalConfig: interval)(implicit clock: Clock) extends TimedNumbersSample(intervalConfig) {
-    def toJValue = Future(JNothing)
+    def toJValue = Future(JUndefined)
   }
 }

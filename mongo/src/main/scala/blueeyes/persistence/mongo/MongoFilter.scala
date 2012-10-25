@@ -2,7 +2,7 @@ package blueeyes.persistence.mongo
 
 import scala.math.BigInt
 import blueeyes.json.{JPath, JPathIndex, JPathField, MergeMonoid, ConcatMonoid}
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.util.ProductPrefixUnmangler
 
 import scalaz.Scalaz._
@@ -164,7 +164,7 @@ sealed trait MongoPrimitive {
 }
 
 case class MongoPrimitiveOption(value: Option[MongoPrimitive]) extends MongoPrimitive {
-  def toJValue = value.map(_.toJValue).getOrElse(JNothing)
+  def toJValue = value.map(_.toJValue).getOrElse(JUndefined)
 }
 case class MongoPrimitiveString(value: String) extends MongoPrimitive {
   def toJValue = JString(value)
@@ -213,7 +213,7 @@ trait MongoFilterImplicits {
     case x: JBool   => MongoPrimitiveBoolean(x.value)
     case x: JObject => MongoPrimitiveJObject(x)
     case x: JArray  => MongoPrimitiveArray(x.elements.map(jvalueToMongoPrimitive))
-    case JNull | JNothing => MongoPrimitiveNull
+    case JNull | JUndefined => MongoPrimitiveNull
   }
 
   implicit def optionToMongoPrimitive[T <% MongoPrimitive](value: Option[T]) = MongoPrimitiveOption(value.map(a => a : MongoPrimitive))

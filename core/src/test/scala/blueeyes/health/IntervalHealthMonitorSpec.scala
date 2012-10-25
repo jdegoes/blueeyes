@@ -6,8 +6,8 @@ import blueeyes.json.JPathImplicits._
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import blueeyes.concurrent.test.FutureMatchers
-import blueeyes.json.JsonAST._
-import blueeyes.json.{JsonParser, Printer, JPath}
+import blueeyes.json._
+import blueeyes.json.{JParser, JPath}
 import java.util.concurrent.TimeUnit
 
 class IntervalHealthMonitorSpec extends Specification with blueeyes.bkka.AkkaDefaults 
@@ -70,9 +70,9 @@ with FutureMatchers {
     monitor.error("foo")(new NullPointerException())
     Thread.sleep(900)
 
-    val monitorJson = JsonParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
+    val monitorJson = JParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
-    jValue must whenDelivered (be_==(monitorJson))
+    jValue.map(_.renderCanonical) must whenDelivered (be_==(monitorJson.renderCanonical))
   }
 
   "composes into JValue" in{

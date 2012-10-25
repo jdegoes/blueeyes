@@ -3,7 +3,7 @@ package blueeyes.persistence.mongo
 import blueeyes.bkka.Stop
 import blueeyes.bkka.ActorRefStop
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import blueeyes.json.JPath
 import blueeyes.persistence.mongo.json.BijectionsMongoJson._
 import blueeyes.persistence.mongo.json.BijectionsMongoJson.MongoToJson._

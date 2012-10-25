@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import MongoQueryBuilder._
 import MongoFilterOperators._
 import blueeyes.json.JPathImplicits._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 
 class MongoUpdateQuerySpec extends Specification{
   "'where' method sets new filter" in {

@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import MongoUpdateOperators._
 import MongoFilterOperators._
-import blueeyes.json.JsonAST._
+import blueeyes.json._
 import scalaz._
 import Scalaz._
 

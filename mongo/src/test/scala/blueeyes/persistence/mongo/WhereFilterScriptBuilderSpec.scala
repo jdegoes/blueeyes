@@ -1,14 +1,13 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JsonAST._
-import blueeyes.json.Printer
+import blueeyes.json._
 import org.specs2.mutable.Specification
 import com.mongodb.MongoException
 
 class WhereFilterScriptBuilderSpec extends Specification with Evaluators.WhereFilterScriptBuilder{
   private val scriptPattern = """var obj = %s; obj.evaluate = %s; obj.evaluate()"""
   private val jObject       = JObject(JField("address", JObject( JField("city", JString("C")) :: JField("street", JString("3")) :: JField("code", JNum(1)) :: Nil)) :: Nil)
-  private val json          = Printer.compact(Printer.render(jObject))
+  private val json          = jObject.renderCompact
 
   "WhereFilterScriptBuilder" should{
     "build script when full function is defined" in{

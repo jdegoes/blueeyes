@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import blueeyes.json.JsonAST.JObject
+import blueeyes.json.JObject
 import blueeyes.json.{JPathImplicits, JPath}
 
 trait MongoImplicits extends JPathImplicits with MongoFilterImplicits with MongoQueryBuilder{
