@@ -52,9 +52,6 @@ object JParser {
   def parseManyFromByteBuffer(buf: ByteBuffer): Result[Seq[JValue]] =
     fromTryCatch(new ByteBufferParser(buf).parseMany())
 
-  def parseAsync(b: Option[ByteBuffer]): AsyncResult =
-    AsyncParser().feed(b)
-
-  def parseAsync(p: AsyncParser, b: Option[ByteBuffer]): AsyncResult =
-    p.apply(b)
+  def parseAsync(buf: ByteBuffer): AsyncResult =
+    AsyncParser().feed(Some(buf))
 }

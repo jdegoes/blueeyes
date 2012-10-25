@@ -26,12 +26,13 @@ final class AsyncParser protected[json] (
   protected[json] var done: Boolean
 ) extends ByteBasedParser {
 
-  var line = 0
-  var pos = 0
+  protected[this] var line = 0
+  protected[this] var pos = 0
   protected[this] final def newline(i: Int) { line += 1; pos = i + 1 }
   protected[this] final def column(i: Int) = i - pos
 
-  final def copy() = new AsyncParser(data.clone, len, allocated, index, done)
+  protected[this] final def copy() =
+    new AsyncParser(data.clone, len, allocated, index, done)
 
   final def apply(b: Option[ByteBuffer]): (AsyncParse, AsyncParser) = copy.feed(b)
 
@@ -57,7 +58,7 @@ final class AsyncParser protected[json] (
 
   // if this runs off the end of at() we'll get an AsyncException, which is OK
   // as it will signal the end of the parse.
-  def recoverFromError(e: ParseException) {
+  protected[json] def recoverFromError(e: ParseException) {
     if (e.index > index && at(e.index - 1) == '\n') {
       index = e.index
     } else {

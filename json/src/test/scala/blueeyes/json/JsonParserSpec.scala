@@ -90,7 +90,7 @@ object AsyncParserSpec extends Specification {
     var p = async
     while (i < n) {
       val step = f()
-      val tpl = JParser.parseAsync(p, chunk(data, i, i + step))
+      val tpl = p(chunk(data, i, i + step))
       val (AsyncParse(errors, results), parser) = tpl
       if (!errors.isEmpty) sys.error("failed %s" format errors)
       vs ++= results
@@ -171,7 +171,7 @@ object AsyncParserSpec extends Specification {
     var t0 = System.nanoTime
     var count = 0
     chunks.foreach { chunk =>
-      val tpl = JParser.parseAsync(p, chunk)
+      val tpl = p(chunk)
       val (AsyncParse(errors, results), parser) = tpl
       if (!errors.isEmpty) sys.error("errors: %s" format errors)
       count += results.length
@@ -237,7 +237,7 @@ xyz
     val c = chunk(bs, 0, bs.length)
 
     var p = AsyncParser()
-    val (AsyncParse(es, js), p2) = JParser.parseAsync(p, c)
+    val (AsyncParse(es, js), p2) = p(c)
 
     // each line should become an error or a jvalue
     json.split('\n').length must_== 14
