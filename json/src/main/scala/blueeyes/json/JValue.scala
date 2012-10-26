@@ -894,7 +894,6 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
     keys.foreach { key =>
       val v1 = m1.getOrElse(key, JUndefined)
       val v2 = m2.getOrElse(key, JUndefined)
-      println("%s: comparing %s and %s" format (key, v1, v2))
       val i = (v1 compare v2)
       if (i != 0) return i
     }
