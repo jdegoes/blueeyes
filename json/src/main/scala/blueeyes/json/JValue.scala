@@ -32,7 +32,9 @@ import scalaz.syntax.semigroup._
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.mutable
+import scala.util.Sorting.quickSort
 
+import java.lang.Double.isInfinite
 import java.lang.Character.codePointAt
 import JValue.{RenderMode, Compact, Pretty, Canonical}
 
@@ -44,7 +46,9 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   def getOrElse(that: => JValue) = if (self == JUndefined) that else self
 
-  def compare(that: JValue): Int = JValue.order.order(self, that).toInt
+  protected[json] def typeIndex: Int
+
+  def compare(that: JValue): Int
 
   def sort: JValue
 
@@ -531,40 +535,21 @@ object JValue {
         case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
         case (JNum(d1),     JNum(d2)) => num(d1)(d2)
         case (JNull,        JNull) => nul
-        case (JUndefined,     JUndefined) => nul
+        case (JUndefined,   JUndefined) => nul
         case _ => default
       }
     }
   }
 
-  @inline final def typeIndex(jv: JValue) = jv match {
-    case JObject(_)  => 7
-    case JArray(_)   => 6
-    case JString(_)  => 5
-    case JNum(_)     => 4
-    case JBool(_)    => 1
-    case JNull       => 0
-    case JUndefined    => -1
-  }
+  @inline final def typeIndex(jv: JValue) = jv.typeIndex
 
   implicit final val jnumOrder: Order[JNum] = new Order[JNum] {
     def order(v1: JNum, v2: JNum) = Ordering.fromInt(v1 numCompare v2)
   }
 
   implicit final val order: Order[JValue] = new Order[JValue] {
-    def order(jv1: JValue, jv2: JValue) = {
-      (typeIndex(jv1) ?|? typeIndex(jv2)) |+|
-      //since we can only get equality from values of the same type, we can just cast
-      (jv1 match {
-        case v: JObject => JObject.order(v, jv2.asInstanceOf[JObject])
-        case v: JArray  => JArray.order(v, jv2.asInstanceOf[JArray])
-        case v: JString => v.value ?|? jv2.asInstanceOf[JString].value
-        case v: JNum    => v ?|? jv2.asInstanceOf[JNum]
-        case v: JBool   => v.value ?|? jv2.asInstanceOf[JBool].value
-        case _ => EQ
-      })
-    }
-  } 
+    def order(v1: JValue, v2: JValue) = Ordering.fromInt(v1 compare v2)
+  }
 
   def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
     def rec(target: JValue, path: JPath, value: JValue): JValue = {
@@ -612,31 +597,46 @@ object JValue {
     rec(rootTarget, rootPath, rootValue)
   }
 }
-
+  
 
 case object JUndefined extends JValue {
   final def sort: JValue = this
   final def renderCompact: String = "null"
+  protected[json] final def typeIndex = 10
+  final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
 case object JNull extends JValue {
   final def sort: JValue = this
   final def renderCompact: String = "null"
+  protected[json] final def typeIndex = 0
+  final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
 sealed trait JBool extends JValue {
   def value: Boolean
   final def sort: JBool = this
+  protected[json] final def typeIndex = 0
 }
 
 case object JTrue extends JBool {
   final def value = true
   final def renderCompact: String = "true"
+  final def compare(that: JValue) = that match {
+    case JTrue => 0
+    case JFalse => 1
+    case _ => typeIndex compare that.typeIndex
+  }
 }
 
 case object JFalse extends JBool {
   final def value = false
   final def renderCompact: String = "false"
+  final def compare(that: JValue) = that match {
+    case JTrue => -1
+    case JFalse => 0
+    case _ => typeIndex compare that.typeIndex
+  }
 }
 
 object JBool {
@@ -649,18 +649,27 @@ sealed trait JNum extends JValue {
   def toLong: Long
   def toDouble: Double
   def toRawString: String
+
   final def renderCompact = toRawString
+
   def sort: JNum = this
 
   // SI-6173: to avoid hashCode on BigDecimal, we use a hardcoded hashcode to
   // ensure JNum("123.45").hashCode == JNum(123.45).hashCode
   override val hashCode = 6173
 
+  protected[json] final def typeIndex = 4
+
+  final def compare(that: JValue): Int = that match {
+    case num: JNum => numCompare(num)
+    case _ => typeIndex compare that.typeIndex
+  }
+
   protected[json] def numCompare(other: JNum): Int
 }
 
 case class JNumStr private[json] (value: String) extends JNum {
-  lazy val dec: BigDecimal = BigDecimal(value)
+  private lazy val dec: BigDecimal = BigDecimal(value)
 
   final def toBigDecimal: BigDecimal = dec
   final def toLong: Long = value.toDouble.toLong
@@ -742,14 +751,15 @@ case class JNumBigDec(value: BigDecimal) extends JNum {
 }
 
 case object JNum {
-  def apply(value: Double): JValue = if (value.isNaN || value == Double.PositiveInfinity || value == Double.NegativeInfinity) JUndefined else JNumDouble(value)
+  def apply(value: Double): JValue =
+    if (value.isNaN || isInfinite(value)) JUndefined else JNumDouble(value)
 
   private[json] def apply(value: String): JNum = JNumStr(value)
 
   def apply(value: Long): JNum = JNumLong(value)
 
   def apply(value: BigDecimal): JNum = JNumBigDec(value)
-  
+
   def compare(v1: JNum, v2: JNum) = v1.numCompare(v2)
 
   def unapply(value: JNum): Option[BigDecimal] = {
@@ -760,10 +770,18 @@ case object JNum {
 
 case class JString(value: String) extends JValue {
   final def sort: JString = this
+
   final def renderCompact: String = JString.escape(value)
   final override def renderPretty: String = JString.escape(value)
   final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
     JString.internalEscape(sb, value)
+  }
+
+  protected[json] final def typeIndex = 5
+
+  final def compare(that: JValue): Int = that match {
+    case JString(s) => value compare s
+    case _ => typeIndex compare that.typeIndex
   }
 }
 
@@ -866,6 +884,42 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
     case _ => false
   }
 
+  protected[json] final def typeIndex = 7
+
+  private def fieldsCmp(m1: Map[String, JValue], m2: Map[String, JValue]): Int = {
+    val keys = (m1.keys ++ m2.keys).toArray
+    quickSort(keys)
+    keys.foreach { key =>
+      val v1 = m1.getOrElse(key, JUndefined)
+      val v2 = m2.getOrElse(key, JUndefined)
+      println("%s: comparing %s and %s" format (key, v1, v2))
+      val i = (v1 compare v2)
+      if (i != 0) return i
+    }
+    0
+  }
+
+  override def compare(that: JValue): Int = that match {
+    case o: JObject => fieldsCmp(fields, o.fields)
+    case _ => typeIndex compare that.typeIndex
+  }
+
+  private def fieldsEq(m1: Map[String, JValue], m2: Map[String, JValue]): Boolean = {
+    val keys = (m1.keys ++ m2.keys).toArray
+    quickSort(keys)
+    keys.foreach { key =>
+      val v1 = m1.getOrElse(key, JUndefined)
+      val v2 = m2.getOrElse(key, JUndefined)
+      if (!v1.equals(v2)) return false
+    }
+    true
+  }
+
+  override def equals(other: Any) = other match {
+    case o: JObject => fieldsEq(fields, o.fields)
+    case _ => false
+  }
+
   final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
 
   final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
@@ -944,6 +998,55 @@ case class JArray(elements: List[JValue]) extends JValue {
     case _ => false
   }
 
+  protected[json] final def typeIndex = 6
+
+  @tailrec
+  private def elementsEq(js1: List[JValue], js2: List[JValue]): Boolean = {
+    js1 match {
+      case Nil => js2 match {
+        case Nil => true
+        case JUndefined :: t2 => elementsEq(Nil, t2)
+        case _ => false
+      }
+      case JUndefined :: t1 => elementsEq(t1, js2)
+      case h1 :: t1 => js2 match {
+        case Nil => false
+        case JUndefined :: t2 => elementsEq(js1, t2)
+        case h2 :: t2 =>
+          if (h1 equals h2) elementsEq(t1, t2) else false
+      }
+    }
+  }
+
+  override def equals(other: Any) = other match {
+    case o: JArray => elementsEq(elements, o.elements)
+    case _ => false
+  }
+
+  @tailrec
+  private def elementsCmp(js1: List[JValue], js2: List[JValue]): Int = {
+    js1 match {
+      case Nil => js2 match {
+        case Nil => 0
+        case JUndefined :: t2 => elementsCmp(Nil, t2)
+        case _ => -1
+      }
+      case JUndefined :: t1 => elementsCmp(t1, js2)
+      case h1 :: t1 => js2 match {
+        case Nil => 1
+        case JUndefined :: t2 => elementsCmp(js1, t2)
+        case h2 :: t2 =>
+          val i = (h1 compare h2)
+          if (i == 0) elementsCmp(t1, t2) else i
+      }
+    }
+  }
+
+  override def compare(other: JValue): Int = other match {
+    case o: JArray => elementsCmp(elements, o.elements)
+    case o => JValue.typeIndex(this) compare JValue.typeIndex(o)
+  }
+
   final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
 
   final override def renderPretty: String = buildString(internalRender(_, Pretty, ""))
@@ -988,5 +1091,6 @@ case class JArray(elements: List[JValue]) extends JValue {
 
 case object JArray extends (List[JValue] => JArray) {
   final val empty = JArray(Nil)
-  final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+  final implicit val order: Order[JArray] =
+    Order[List[JValue]].contramap((_: JArray).elements)
 }
