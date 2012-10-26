@@ -8,7 +8,7 @@ import blueeyes.util.ClockMock
 import org.joda.time.format.DateTimeFormat
 import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.data.BijectionsChunkString._
+import blueeyes.core.data.DefaultBijections._
 import org.apache.commons.codec.binary.Base64
 
 import blueeyes.bkka.AkkaDefaults

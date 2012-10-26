@@ -7,12 +7,12 @@ import akka.dispatch.Promise
 
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http._
-import blueeyes.core.data.{FileSink, FileSource, Chunk, ByteChunk, BijectionsChunkString}
+import blueeyes.core.data.{FileSink, FileSource, ByteChunk}
 import blueeyes.core.http.combinators.HttpRequestCombinators
 
 import java.io.File
 
-trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString{
+trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinators {
   import blueeyes.core.http.MimeTypes._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(TestEngineServiceContext.context))
@@ -43,9 +43,8 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
         path("/huge"){
           get { request: HttpRequest[ByteChunk] =>
-            val chunk  = Chunk(TestEngineServiceContext.hugeContext.head, Some(Future(Chunk(TestEngineServiceContext.hugeContext.tail.head))))
-
-            val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+            val chunk = Right(StreamT.fromStream[Future, ByteBuffer](TestEngineServiceContext.hugeContext.toStream.map(ByteBuffer.wrap _)))
+            val response = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
             Future[HttpResponse[ByteChunk]](response)
           }
         } ~
@@ -73,15 +72,14 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
         path("/huge/delayed"){
           get { request: HttpRequest[ByteChunk] =>
 
-            val promise = Promise[ByteChunk]()
+            val promise = Promise[ByteBuffer]()
             import scala.actors.Actor.actor
             actor {
               Thread.sleep(2000)
-              promise.success(Chunk(TestEngineServiceContext.hugeContext.tail.head))
+              promise.success(ByteBuffer.wrap(TestEngineServiceContext.hugeContext.tail.head))
             }
 
-            val chunk  = Chunk(TestEngineServiceContext.hugeContext.head, Some(promise))
-
+            val chunk = Right(TestEngineServiceContext.hugeContext.head :: promise.liftM[StreamT])
             val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
             Future[HttpResponse[ByteChunk]](response)
           }
@@ -90,14 +88,13 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
   }
 }
 
-object TestEngineServiceContext{
+object TestEngineServiceContext {
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
 
   val hugeContext = List[Array[Byte]]("first-".getBytes ++ Array.fill[Byte](2048*1000)('0'), "second-".getBytes ++ Array.fill[Byte](2048*1000)('0'))
-  val context = """<html>
-<head>
-</head>
 
+  val context = """<html>
+<head></head>
 <body>
     <h1>Test</h1>
     <h1>Test</h1>

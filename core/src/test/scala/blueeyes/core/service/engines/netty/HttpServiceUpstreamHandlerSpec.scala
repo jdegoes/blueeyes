@@ -1,46 +1,50 @@
 package blueeyes.core.service.engines.netty
 
-import org.specs2.mutable.Specification
 import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse}
 import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.channel._
 
-import blueeyes.bkka.AkkaDefaults
 import akka.dispatch._
 import akka.util.Duration
 
+import blueeyes.bkka.AkkaDefaults
 import blueeyes.concurrent.test.FutureMatchers
-import blueeyes.core.http.MimeTypes._
-import blueeyes.core.service._
-import blueeyes.core.data.{ByteChunk, Chunk, BijectionsChunkString}
-import com.weiglewilczek.slf4s.Logging
+import blueeyes.core.data._
 import blueeyes.core.http._
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.service._
+
+import com.weiglewilczek.slf4s.Logging
+
 import org.mockito.Mockito.{times, when}
-import scalaz.Scalaz._
-import blueeyes.core.service.NotServed
-import org.specs2.mock._
 import org.mockito.{Matchers, ArgumentMatcher}
+import org.specs2.mock._
+import org.specs2.mutable.Specification
+
+import scalaz.Scalaz._
 import scalaz.{Success, Validation}
 
-class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters with Mockito with BijectionsChunkString with Logging with AkkaDefaults with FutureMatchers {
-  private val handler       = mock[AsyncCustomHttpService[ByteChunk]]
+class HttpServiceUpstreamHandlerSpec extends Specification with Mockito with Logging with AkkaDefaults with FutureMatchers {
+  import HttpNettyConverters._
+
+  private val handler       = mock[AsyncHttpService[ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]
   private val service       = mock[HttpRequest[ByteChunk] => Validation[NotServed, Future[HttpResponse[ByteChunk]]]]
 
   private val request       = HttpRequest[ByteChunk](HttpMethods.GET, URI("/bar/1/adCode.html"), Map[Symbol, String](), HttpHeaders.Empty, None, None, HttpVersions.`HTTP/1.0`)
-  private val response      = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(StringToChunk("12")), HttpVersions.`HTTP/1.1`)
+  private val response      = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.OK), Map("retry-after" -> "1"), Some(ByteChunk("12".getBytes("UTF-8"))), HttpVersions.`HTTP/1.1`)
 
   override def is = args(sequential = true) ^ super.is
   "write OK response service when path is match" in {
-    val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
+    val nettyHandler  = new HttpServiceUpstreamHandler(handler, defaultFutureDispatch)
 
     val event        = mock[MessageEvent]
     val future       = Promise.successful(response)
     val nettyMessage = toNettyResponse(response, true)
-    val nettyContent = new NettyChunkedInput(Chunk(Array[Byte]()), channel)
+    val nettyContent = new StreamChunkedInput(StreamT.empty[Future, ByteBuffer], channel)
 
     when(event.getMessage()).thenReturn(request, request)
     when(handler.service).thenReturn(service)
@@ -57,7 +61,7 @@ class HttpNettyRequestHandlerSpec extends Specification with HttpNettyConverters
   }
 
   "cancel Future when connection closed" in {
-    val nettyHandler  = new HttpNettyRequestHandler(handler, logger)
+    val nettyHandler  = new HttpServiceUpstreamHandler(handler, defaultMessageDispatch)
     val event        = mock[MessageEvent]
     val stateEvent   = mock[ChannelStateEvent]
     val promise      = Promise[HttpResponse[ByteChunk]]()

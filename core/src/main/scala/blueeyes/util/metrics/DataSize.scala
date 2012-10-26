@@ -2,6 +2,7 @@ package blueeyes.util.metrics
 
 case class DataSize(size: Double, unit: DataSizeUnit){
   def bytes = convert(Bytes)
+  def intBytes: Int = bytes.size.toInt
 
   def kilobytes = convert(KiloBytes)
   def kb = kilobytes

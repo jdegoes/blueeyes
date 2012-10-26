@@ -1,26 +1,30 @@
 package blueeyes.core.data
 
-import org.specs2.mutable.Specification
-import java.io.File
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
 import akka.util.Duration
-import blueeyes.bkka.AkkaDefaults
+
+import blueeyes.bkka._
 import blueeyes.concurrent.test.FutureMatchers
-import collection.mutable.ArrayBuilder.ofByte
+
+import java.io.File
+import java.nio.ByteBuffer
+
+import org.specs2.mutable.Specification
 import org.specs2.specification.{AfterExample, BeforeAfterExample}
 
+import scalaz._
+import scalaz.syntax.monad._
+import scala.collection.mutable.ArrayBuilder.ofByte
 
-trait Data extends AkkaDefaults {
+trait Data extends TestAkkaDefaults {
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
   val data     = List.fill(5)(List.fill[Byte](10)('0'))
-  val chunk    = data.tail.foldLeft(Chunk(data.head.toArray)) { (chunk, data) => 
-                   Chunk(data.toArray, Some(Future[ByteChunk](chunk)))
-                 }
+  val chunk    = Right(StreamT.fromStream[Future, ByteBuffer](Future(data.map(lb => ByteBuffer.wrap(lb.toArray)).toStream)))
 }
 
-class FileSinkSpec extends Specification with Data with BeforeAfterExample with AkkaDefaults with FutureMatchers {
+class FileSinkSpec extends Specification with BeforeAfterExample with FutureMatchers with Data {
   override def is = args(sequential = true) ^ super.is
 
   "FileSink" should {
@@ -35,7 +39,7 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write failed" in{
       val error  = new RuntimeException
-      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(Future(throw error))))
+      val result = FileSink.write(dataFile, Right(ByteBuffer.wrap(data.head.toArray) :: Future[ByteBuffer](throw error).liftM[StreamT]))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
@@ -44,22 +48,22 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 
     "cancel result when write getting next chunk failed" in{
       val error  = new RuntimeException
-      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(Promise.failed[ByteChunk](error))))
+      val result = FileSink.write(dataFile, Right(ByteBuffer.wrap(data.head.toArray) :: (Promise.failed(error): Future[ByteBuffer]).liftM[StreamT]))
 
       result.failed must whenDelivered {
         (err: Throwable) => (err must_== error) and (dataFile.exists must_== true) and (dataFile.length must_== data.head.toArray.length)
       }
     }
 
-    "cancel writing when result is canceled" in{
-      val promise = Promise[ByteChunk]()
-      val result = FileSink.write(dataFile, Chunk(data.head.toArray, Some(promise)))
+    "cancel writing when result is canceled" in {
+      val promise = Promise[ByteBuffer]()
+      val result = FileSink.write(dataFile, Right(ByteBuffer.wrap(data.head.toArray) :: (promise: Future[ByteBuffer]).liftM[StreamT]))
 
       val killed = new RuntimeException("killed")
       result.asInstanceOf[Promise[Unit]].failure(killed)
       
       defaultActorSystem.scheduler.scheduleOnce(2000 millis) {
-        promise.success(Chunk(data.head.toArray))
+        promise.success(ByteBuffer.wrap(data.head.toArray))
       }
 
       promise.failed must whenDelivered {
@@ -74,25 +78,15 @@ class FileSinkSpec extends Specification with Data with BeforeAfterExample with 
 }
 
 class FileSourceSpec extends Specification with Data with AfterExample with AkkaDefaults with FutureMatchers {
-
   "FileSource" should {
     "read all data" in{
-      def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
-        buffer ++= chunk.data
+      val writeResult = FileSink.write(dataFile, chunk)
+      writeResult must whenDelivered (be_==(()))
 
-        val next = chunk.next
-        next match{
-          case None =>  buffer
-          case Some(x) => readContent(Await.result(x, Duration.Inf), buffer)
-        }
+      val readResult = new FileSource(dataFile).read
+      ByteChunk.forceByteArray(readResult) must whenDelivered {
+        be_==(data.flatten.toArray)
       }
-
-      val result = FileSink.write(dataFile, chunk)
-      result must whenDelivered (be_==(()))
-
-      val fileChunks = FileSource(dataFile)
-
-      new String(readContent(chunk, new ofByte()).result) mustEqual(new String(data.flatten.toArray))
     }
   }
 

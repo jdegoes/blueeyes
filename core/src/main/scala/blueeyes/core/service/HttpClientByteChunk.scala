@@ -1,24 +1,21 @@
 package blueeyes.core.service
 
 import akka.dispatch.Future
-import akka.dispatch.Promise
+import akka.dispatch.ExecutionContext
 
-import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data._
 import blueeyes.core.http.{HttpResponse, HttpRequest}
 import blueeyes.util.metrics.DataSize
 
-trait HttpClientByteChunk extends HttpClient[Chunk[Array[Byte]]] with AkkaDefaults { self =>
-  def aggregate(chunkSize: Option[DataSize]) = new HttpClient[Chunk[Array[Byte]]] {
-    val chunkSizeInBytes = chunkSize.map(_.bytes)
-    def isDefinedAt(request: HttpRequest[Chunk[Array[Byte]]]) = self.isDefinedAt(request)
+trait HttpClientByteChunk extends HttpClient[ByteChunk] { self =>
+  implicit val executor: ExecutionContext
 
-    def apply(request: HttpRequest[Chunk[Array[Byte]]]) = {
-      self.apply(request) flatMap { response =>
-        response.content match {
-          case Some(chunk) => AggregatedByteChunk(chunk, chunkSize).map(c => response.copy(content = Some(c)))
-          case None        => Promise.successful(response)
-        }
+  def aggregate(chunkSize: DataSize) = new HttpClient[ByteChunk] {
+    def isDefinedAt(request: HttpRequest[ByteChunk]) = self.isDefinedAt(request)
+
+    def apply(request: HttpRequest[ByteChunk]) = {
+      self(request) map { response =>
+        response.copy(content = response.content.map(ByteChunk.aggregate(_, chunkSize.bytes.size.toInt)))
       }
     }
   }

@@ -69,7 +69,7 @@ object HttpRequestLogger extends AkkaDefaults {
   private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
     def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
       chunk map { c =>
-        BijectionsChunkByteArray.arrayByteToChunk.unapply(c) map { Right(_) }
+        DefaultBijections.futureByteArrayToChunk.unapply(c) map { Right(_) }
       } getOrElse {
         Future(Right(Array[Byte]()))
       }

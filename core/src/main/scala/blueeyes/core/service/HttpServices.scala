@@ -4,20 +4,24 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 
-import blueeyes.bkka.AkkaDefaults
+import blueeyes.bkka._
 import blueeyes.core.data._
+import blueeyes.core.data.Chunk._
+import blueeyes.core.http._
 import blueeyes.core.http.HttpHeaders.{`Content-Type`, `Accept-Encoding`}
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.util.metrics.DataSize
-import blueeyes.util.printer._
 import blueeyes.json._
 import blueeyes.json.serialization.DefaultSerialization._
+import blueeyes.util.metrics.DataSize
+import blueeyes.util.printer._
 
 import java.net.URLDecoder._
 
-import scalaz.Scalaz._
-import scalaz.{Validation, Failure}
-import blueeyes.core.http._
+import scalaz.{Validation, Success, Failure, Monad, StreamT}
+import scalaz.syntax.pointed._
+import scalaz.syntax.semigroup._
+import scalaz.syntax.validation._
+import scalaz.syntax.std.option._
 
 sealed trait AnyService {
   def metadata: Option[Metadata]
@@ -239,14 +243,14 @@ extends DelegatingService[T, S, T, RangeHeaderValues => S] {
   lazy val metadata = Some(AndMetadata(RequestHeaderMetadata(Left(HttpHeaders.Range), None), DescriptionMetadata("A numeric range must be specified for the request.")))
 }
 
-case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, Compression[ByteChunk]]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
+case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
   import CompressService._
   def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{compress(r, _)}
 
   val metadata = Some(EncodingMetadata(supportedCompressions.keys.toSeq: _*))
 }
 
-case class CompressService2[E1](delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, Compression[ByteChunk]]) 
+case class CompressService2[E1](delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
     extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
 
   import CompressService._
@@ -256,41 +260,44 @@ case class CompressService2[E1](delegate: HttpService[ByteChunk, E1 => Future[Ht
 }
 
 object CompressService {
-  def compress(r: HttpRequest[ByteChunk], f: Future[HttpResponse[ByteChunk]])(implicit supportedCompressions: Map[Encoding, Compression[ByteChunk]]) = f.map{response =>
-    val encodings = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-    val supported = supportedCompressions find { case (k, _) => encodings.contains(k) } map { _._2 }
-    (supported, response.content) match {
-      case (Some(compression), Some(content)) => response.copy(content = Some(compression(content)))
-      case _ => response
+  def compress(r: HttpRequest[ByteChunk], f: Future[HttpResponse[ByteChunk]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) = {
+    for (response <- f) yield {
+      val encodings = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
+      val supported = supportedCompressions find { case (k, _) => encodings.contains(k) } map { _._2 }
+      (supported, response.content) match {
+        case (Some(compression), Some(content)) => response.copy(content = Some(compression.compress(content)))
+        case _ => response
+      }
     }
   }
 
-  def defaultCompressions(implicit ctx: ExecutionContext) = Map() /*Map[Encoding, Compression[ByteChunk]](
-    Encodings.gzip -> new GZIPChunkCompression, 
-    Encodings.deflate -> new ZLIBChunkCompression
+  def defaultCompressions(implicit ctx: ExecutionContext) = Map[Encoding, ChunkCompression](
+    Encodings.gzip -> ChunkCompression.gzip,
+    Encodings.deflate -> ChunkCompression.zlib()
   )
-  */
 }
 
-/*
-case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]) 
-extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], Future[ByteChunk], Future[HttpResponse[ByteChunk]]]{
+case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
+extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
+  private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
+
   def service = (r: HttpRequest[ByteChunk]) => {
-    delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize))))
+    delegate.service(r.copy(content = r.content.map(ByteChunk.aggregate(_, size))))
   }
 
   lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]) 
-extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]{
+case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
+extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
+  private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
+
   def service = (r: HttpRequest[ByteChunk]) => {
-    delegate.service(r.copy(content = r.content.map(AggregatedByteChunk(_, chunkSize)))).map(f => (e: E1) => f(e))
+    delegate.service(r.copy(content = r.content.map(ByteChunk.aggregate(_, size)))).map(f => (e: E1) => f(e))
   }
 
   lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
-*/
 
 case class JsonpService[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
 extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[HttpResponse[JValue]]]{
@@ -337,6 +344,8 @@ extends DelegatingService[Chunk[T], Future[HttpResponse[Chunk[T]]], Future[JValu
 }
 
 object JsonpService extends AkkaDefaults {
+  private implicit val M: Monad[Future] = new FutureMonad(defaultFutureDispatch)
+
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit toJson: T => Future[JValue]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
     import blueeyes.json.JParser.parse
     import blueeyes.json.serialization.DefaultSerialization._
@@ -411,10 +420,16 @@ object JsonpService extends AkkaDefaults {
       r.copy(
         status = HttpStatus(OK),
         content = r.content.map { 
-                    case Chunk(data, Some(more)) => Chunk(s2t(callback + "(" + u2s(data)), Some(more.map(_ map u2s suffix ("," + meta + ");") map s2t)))
-                    case Chunk(data, None)       => Chunk(s2t(callback + "(" + u2s(data) + "," + meta + ");"))
+                    case Left(data) => 
+                      Left(s2t(callback + "(" + u2s(data) + "," + meta + ");"))
+
+                    case Right(stream) => 
+                      val prefix = s2t(callback + "(")
+                      val suffix = s2t("," + meta + ");")
+                      Right((prefix :: stream.map(u2s andThen s2t)) ++ (suffix :: StreamT.empty[Future, T]))
+
                   } orElse {
-                    Some(Chunk(s2t(callback + "(undefined," + meta + ");")))
+                    Some(Left(s2t(callback + "(undefined," + meta + ");")))
                   }, 
         headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )

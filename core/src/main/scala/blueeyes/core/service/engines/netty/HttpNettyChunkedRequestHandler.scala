@@ -1,12 +1,13 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
+
+import blueeyes.bkka._
+import blueeyes.core.data._
+import blueeyes.core.http.HttpRequest
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
-
-import blueeyes.bkka._
-import blueeyes.core.data.ByteChunk
-import blueeyes.core.http.HttpRequest
 
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.channel.ChannelHandlerContext
@@ -29,12 +30,6 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
   import NettyHeaders._
 
   implicit val M: Monad[Future] = new FutureMonad(executionContext)
-  private class Chain(val promise: Promise[Option[(ByteBuffer, Chain)]])
-  private object Chain {
-    def incomplete = new Chain(Promise[Option[(ByteBuffer, Chain)]]())
-    def complete = new Chain(Promise.successful(None))
-  }
-
   private var chain: Chain = _
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {

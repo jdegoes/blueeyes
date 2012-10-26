@@ -1,13 +1,20 @@
 package blueeyes.core.service
 
 import org.specs2.mutable.Specification
+
+import blueeyes.bkka._
 import blueeyes.core.http._
-import blueeyes.core.data.BijectionsByteArray
+import blueeyes.core.data._
+import DefaultBijections._
+
 import akka.dispatch.Future
+
 import java.net.InetAddress
+import java.nio.ByteBuffer
+
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-class HttpClientSpec extends Specification with BijectionsByteArray with blueeyes.bkka.AkkaDefaults {
+class HttpClientSpec extends Specification with TestAkkaDefaults {
 
   override def is = args(sequential = true) ^ super.is
 
@@ -24,12 +31,23 @@ class HttpClientSpec extends Specification with BijectionsByteArray with blueeye
     def isDefinedAt(x: HttpRequest[String]) = true
   }
 
-  "sets protocol, host, port and path to request" in {  makeTest(HttpRequest[String](HttpMethods.GET, "https://google.com:8080/bar/foo" +  initialRequest.uri))
-  {client => client.host("google.com").path("/bar/foo").protocol("https").port(8080)} }
+  "sets protocol, host, port and path to request" in {  
+    makeTest(HttpRequest[String](HttpMethods.GET, "https://google.com:8080/bar/foo" +  initialRequest.uri)) {
+      client => client.host("google.com").path("/bar/foo").protocol("https").port(8080)
+    }
+  }
 
-  "sets uri and method" in{  makeTest(HttpRequest[String](HttpMethods.DELETE, "foo-foo"), "foo-foo", HttpMethods.DELETE) {client => client} }
+  "sets uri and method" in { 
+    makeTest(HttpRequest[String](HttpMethods.DELETE, "foo-foo"), "foo-foo", HttpMethods.DELETE) {
+      client => client
+    }
+  }
 
-  "sets path" in{  makeTest(HttpRequest[String](HttpMethods.GET, "http://google.com" +  initialRequest.uri)) {client => client.path("http://google.com")} }
+  "sets path" in {  
+    makeTest(HttpRequest[String](HttpMethods.GET, "http://google.com" +  initialRequest.uri)) {
+      client => client.path("http://google.com")
+    } 
+  }
 
   "sets content" in{  makeTest(initialRequest.copy(content = Some("1"))) {client => client.content("1".getBytes)} }
 

@@ -1,77 +1,88 @@
 package blueeyes.core.data
 
+import blueeyes.bkka._
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
-import java.io.{OutputStream, ByteArrayOutputStream}
+
+import java.io._
+import java.nio._
+import java.nio.channels._
 import java.util.zip.{Deflater, DeflaterOutputStream, GZIPOutputStream}
 
-trait ChunkCompression extends Compression[Chunk[Array[Byte]]] {
-  import ChunkCompression._
+import scalaz._
 
-  def apply(dataChunk: Chunk[Array[Byte]]): Chunk[Array[Byte]]
+abstract class ChunkCompression(implicit val executor: ExecutionContext) {
+  protected implicit val M = new FutureMonad(executor)
 
-  protected def create(dataChunk: Chunk[Array[Byte]])(compressStreamFactory: ByteArrayOutputStream => FinishableOutputStream)(implicit ctx: ExecutionContext): Chunk[Array[Byte]] = {
-    val dataStream     = new ByteArrayOutputStream()
-    val compressStream = compressStreamFactory(dataStream)
+  def compress(dataChunk: ByteChunk, chunkSize: Int = 8192): ByteChunk = {
+    dataChunk match {
+      case Left(data) => Left(compress(data))
+      case Right(stream) =>
+        val inPipe = new PipedInputStream()
+        val outStream = new BufferedOutputStream(new PipedOutputStream(inPipe))
 
-    val (compressed, nextChunk) = compressChunk(dataChunk, compressStream, dataStream)
-    dataStream.reset()
+        val inChannel = Channels.newChannel(new BufferedInputStream(inPipe))
+   
+        writeCompressed(stream, outStream)
 
-    buildChunk(compressed, nextChunk, compressStream, dataStream)
+        Right(
+          StreamT.unfoldM[Future, ByteBuffer, Option[ReadableByteChannel]](Some(inChannel)) { 
+            case Some(in) => 
+              Future {
+                val buffer = ByteBuffer.allocate(chunkSize)
+                val read = in.read(buffer) 
+                buffer.flip()
+                if (read == -1) Some((buffer, None)) else Some((buffer, Some(in)))
+              }
+
+            case None =>
+              Promise.successful(None)
+          }
+        )
+    }
   }
 
-  protected def buildChunk(data: Array[Byte], nextChunk: Option[Future[Chunk[Array[Byte]]]], compressStream: FinishableOutputStream, dataStream: ByteArrayOutputStream)(implicit ctx: ExecutionContext) : Chunk[Array[Byte]] = {
-    lazy val next: Option[Future[Chunk[Array[Byte]]]] = nextChunk map { nextDataFuture =>
-      val promise = Promise[Chunk[Array[Byte]]]()
-      scheduleCompressChunk(nextDataFuture, promise)
-      promise
-    }
+  protected def channel(out: OutputStream): WritableByteChannel
 
-    def scheduleCompressChunk(nextDataFuture: Future[Chunk[Array[Byte]]], promise: Promise[Chunk[Array[Byte]]]) {
-      nextDataFuture.foreach(chunk => compress(chunk, promise))
-      nextDataFuture onFailure { case error =>
-        compressStream.close()
-        promise.failure(error)
-      }
-      //promise.ifCanceled(error => nextDataFuture.cancel(error))
-    }
-
-    def compress(chunk: Chunk[Array[Byte]], promise: Promise[Chunk[Array[Byte]]]){
-      val (compressed, nextChunk) = compressChunk(chunk, compressStream, dataStream)
-      if (!compressed.isEmpty){
-        promise.success(buildChunk(compressed, nextChunk, compressStream, dataStream))
-        dataStream.reset()
-      } else {
-        nextChunk.foreach(nextChunkFuture => scheduleCompressChunk(nextChunkFuture, promise))
-      }
-    }
-
-    Chunk(data, next)
+  protected def compress(buf: ByteBuffer): ByteBuffer = {
+    val byteStream = new ByteArrayOutputStream()
+    val c = channel(byteStream)
+    c.write(buf)
+    c.close()
+    ByteBuffer.wrap(byteStream.toByteArray)
   }
 
-  private def compressChunk(chunk: Chunk[Array[Byte]], compressStream: FinishableOutputStream, dataStream: ByteArrayOutputStream) = {
-    compressStream.write(chunk.data, 0, chunk.data.size)
-
-    val nextChunk = chunk.next.orElse {
-      compressStream.finish()
-      compressStream.close()
-      None
+  protected def writeCompressed(stream: StreamT[Future, ByteBuffer], out: OutputStream): Future[Unit] = {
+    def writeChannel(stream: StreamT[Future, ByteBuffer], c: WritableByteChannel): Future[Unit] = {
+      stream.uncons flatMap {
+        case Some((buffer, tail)) =>
+          c.write(buffer)
+          writeChannel(tail, c)
+        case None => 
+          Future(c.close())
+      }
     }
 
-    (dataStream.toByteArray, nextChunk)
+    writeChannel(stream, channel(out))
   }
 }
 
 object ChunkCompression {
-  type FinishableOutputStream = OutputStream { def finish(): Unit }
+  def gzip(implicit ctx: ExecutionContext): ChunkCompression = new GZIPChunkCompression(ctx)
+  def zlib(level: Option[Int] = None)(implicit ctx: ExecutionContext): ChunkCompression = {
+    new ZLIBChunkCompression(level.getOrElse(Deflater.BEST_SPEED), ctx)
+  }
 }
 
-class GZIPChunkCompression(implicit ctx: ExecutionContext) extends ChunkCompression {
-  def apply(dataChunk: Chunk[Array[Byte]]) = create(dataChunk) { new GZIPOutputStream(_) }
+class GZIPChunkCompression(ctx: ExecutionContext) extends ChunkCompression()(ctx) {
+  protected def channel(out: OutputStream): WritableByteChannel = {
+    Channels.newChannel(new GZIPOutputStream(out))
+  }
 }
 
-class ZLIBChunkCompression(implicit ctx: ExecutionContext) extends ChunkCompression {
-  def apply(dataChunk: Chunk[Array[Byte]]): Chunk[Array[Byte]] = apply(dataChunk, Deflater.BEST_SPEED)
-  def apply(dataChunk: Chunk[Array[Byte]], level: Int): Chunk[Array[Byte]] = create(dataChunk) { dataStream => new DeflaterOutputStream(dataStream, new Deflater(level)) }
+class ZLIBChunkCompression(level: Int, ctx: ExecutionContext) extends ChunkCompression()(ctx) {
+  protected def channel(out: OutputStream): WritableByteChannel = {
+    Channels.newChannel(new DeflaterOutputStream(out, new Deflater(level)))
+  }
 }

@@ -1,8 +1,10 @@
 package blueeyes.bkka
 
 import akka.actor.ActorSystem
+import akka.dispatch.Future
 import akka.dispatch.MessageDispatcher
-import akka.util.duration._
+
+import scalaz._
 
 trait AkkaDefaults {
   def defaultActorSystem = AkkaDefaults.actorSystem

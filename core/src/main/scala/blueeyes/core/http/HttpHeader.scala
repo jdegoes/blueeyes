@@ -144,6 +144,7 @@ case class HttpHeaders private (val raw: Map[String, String]) {
   def + (kv: (String, String)): HttpHeaders = this + HttpHeader(kv)
   def + (header: HttpHeader): HttpHeaders = new HttpHeaders(raw + header.tuple)
   def ++ (that: HttpHeaders) = new HttpHeaders(raw ++ that.raw)
+  def ++ (that: Iterable[(HttpHeader)]) = new HttpHeaders(raw ++ that.map(_.tuple))
 
   def - (key: String): HttpHeaders = new HttpHeaders(raw - key)
 

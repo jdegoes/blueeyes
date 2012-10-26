@@ -1,33 +1,33 @@
 package blueeyes.core.data
 
-import org.specs2.mutable.Specification
-import blueeyes.json._
+import blueeyes.bkka._
 import blueeyes.concurrent.test.FutureMatchers
+
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 
-class BijectionsChunkByteArraySpec extends Specification with BijectionsByteArray with BijectionsChunkByteArray with blueeyes.bkka.AkkaDefaults with FutureMatchers {
-  private val jObject1 = JObject(List(JField("foo", JString("bar"))))
-  private val jObject2 = JObject(List(JField("bar", JString("foo"))))
-  private val bijection = chunksToChunksArrayByte[JValue]
+import java.nio.ByteBuffer
 
-  "BijectionsChunkByteArray" should{
-    "convert chunk to bytes chunks" in{
-      val chunks     = Chunk(jObject1, Some(Future[Chunk[JValue]](Chunk(jObject2))))
-      val bytesChunk = bijection(chunks)
+import org.specs2.mutable.Specification
 
-      ByteArrayToJValue(bytesChunk.data) mustEqual(jObject1)
+import scalaz._
 
-      bytesChunk.next.get must whenDelivered {
-        (chunk: ByteChunk) => ByteArrayToJValue(chunk.data) mustEqual(jObject2)
+class BijectionsChunkByteArraySpec extends Specification with TestAkkaDefaults with FutureMatchers {
+  import DefaultBijections._
+
+  val bijection = futureByteArrayToChunk(defaultFutureDispatch)
+
+  "BijectionsChunkByteArray" should {
+    "Convert a stream of chunks to a single byte array" in {
+      val bytes1 = Array[Byte](0x01, 0x02, 0x03)
+      val bytes2 = Array[Byte](0x04, 0x05, 0x06)
+      val expected = Array[Byte](0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
+
+      val result = bijection.unapply(Right(ByteBuffer.wrap(bytes1) :: ByteBuffer.wrap(bytes2) :: StreamT.empty[Future, ByteBuffer]))
+
+      result must whenDelivered {
+        be_==(expected)
       }
-    }
-
-    "convert bytes chunk to chunk" in{
-      val chunks     = Chunk(JValueToByteArray(jObject1), Some(Future[ByteChunk](Chunk(JValueToByteArray(jObject2)))))
-      val bytesChunk = bijection.unapply(chunks)
-
-      bytesChunk.data mustEqual(jObject1)
-      bytesChunk.next.get.map(_.data) must whenDelivered (be_==(jObject2))
     }
   }
 }
