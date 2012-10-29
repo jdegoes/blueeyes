@@ -1,22 +1,25 @@
 package blueeyes.core.service
 
-import blueeyes.BlueEyesServiceBuilder
-import blueeyes.concurrent.test._
 import akka.dispatch.{Await, Future}
 import akka.util.Duration._
+
+import blueeyes.BlueEyesServiceBuilder
+import blueeyes.core.data._
+import blueeyes.core.http._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
-import blueeyes.core.http._
 
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
 
+import blueeyes.concurrent.test._
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Outside, Scope}
 
-class HttpServerSpec extends Specification with BijectionsChunkString with FutureMatchers {
+class HttpServerSpec extends Specification with FutureMatchers {
+  import DefaultBijections._
+
   object server extends Outside[TestServer] with Scope {
     def outside = {
       val config = Configuration.parse("", BlockFormat)
@@ -79,13 +82,14 @@ class HttpServerSpec extends Specification with BijectionsChunkString with Futur
   }  
 }
 
-class TestServer(configOverride: Configuration) extends TestService with HttpReflectiveServiceList[ByteChunk] {
+class TestServer(configOverride: Configuration) extends TestService with ReflectiveServiceList[ByteChunk] {
   override def rootConfig = configOverride
 }
 
-trait TestService extends HttpServer with BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString with blueeyes.bkka.AkkaDefaults {
+class TestService extends BlueEyesServiceBuilder with HttpRequestCombinators {
   var startupCalled   = false
   var shutdownCalled  = false
+
   lazy val testService = service("test", "1.0.7") {
     context => {
       startup {

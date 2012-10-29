@@ -60,13 +60,13 @@ object HttpRequestLogger extends AkkaDefaults {
    *
    * #Fields: time cs-method cs-uri
    */
-  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
+  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, req2c: T => ByteChunk, resp2c: S => ByteChunk): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[List[(FieldIdentifier, Either[String, Array[Byte]])]] = {
       Future.sequence(fieldsDirective.identifiers.map(log(_, request, response)))
     }
   }
 
-  private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
+  private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, req2c: T => ByteChunk, resp2c: S => ByteChunk): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
     def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
       chunk map { c =>
         DefaultBijections.futureByteArrayToChunk.unapply(c) map { Right(_) }
@@ -121,10 +121,10 @@ object HttpRequestLogger extends AkkaDefaults {
         case _   => Promise.successful(Left(""))
       }
       case ContentIdentifier(prefix) => prefix match {
-        case ClientToServerPrefix => aggregate(request.content.map(requestBijection(_)))
+        case ClientToServerPrefix => aggregate(request.content.map(req2c(_)))
         case ServerToClientPrefix => 
           response.flatMap[Either[String, Array[Byte]]] { 
-            response => aggregate(response.content.map(responseBijection(_))) 
+            response => aggregate(response.content.map(resp2c(_))) 
           } recover { 
             case ex => Left(ex.getMessage)
           }
