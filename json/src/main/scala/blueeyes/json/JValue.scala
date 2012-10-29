@@ -178,15 +178,17 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
       case obj @ JObject(fields) => path.nodes match {
         case JPathField(name) :: nodes => 
           val (child, rest) = obj.partitionField(name)
-
           rest + JField(name, child.set(JPath(nodes), value))
 
-        case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
+        case x =>
+          sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
       }
 
       case arr @ JArray(elements) => path.nodes match {
-        case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
-        case x => sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
+        case JPathIndex(index) :: nodes =>
+          JArray(arraySet(elements, index, JPath(nodes), value))
+        case x =>
+          sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
       }
 
       case _ => path.nodes match {
@@ -862,6 +864,25 @@ case object JField extends ((String, JValue) => JField) {
 case class JObject(fields: Map[String, JValue]) extends JValue {
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
+  def items: Map[String, JValue] = fields.filter(_._2 != JUndefined)
+
+  def keys: Iterable[String] = fields.collect {
+    case (k, v) if v != JUndefined => k
+  }.toSeq
+
+  def values: Iterable[JValue] = fields.values.filter(_ != JUndefined).toSeq
+
+  def size: Int = fields.values.foldLeft(0) {
+    (t, v) => if (v != JUndefined) t + 1 else t
+  }
+
+  def isEmpty: Boolean = {
+    fields.values.foreach { v => 
+      if (v != JUndefined) return false
+    }
+    true
+  }
+
   def + (field: JField): JObject = copy(fields = fields + field)
 
   def - (name: String): JObject = copy(fields = fields - name)
@@ -981,14 +1002,31 @@ case object JObject extends (Map[String, JValue] => JObject) {
 
   def apply(fields: JField*): JObject = JObject(fields.toMap)
 
+  //def unapply(value: JValue): Option[Map[String, JValue]] = value match {
+  //  case o: JObject => Some(o.items)
+  //  case _ => None
+  //}
+
   def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
     case JObject(fields) => Some(fields.toSeq)
-
     case _ => None
   }
 }
 
 case class JArray(elements: List[JValue]) extends JValue {
+  def values: List[JValue] = elements.filter(_ != JUndefined)
+
+  def length: Int = elements.foldLeft(0) {
+    (t, v) => if (v != JUndefined) t + 1 else t
+  }
+
+  def isEmpty: Boolean = {
+    elements.foreach { v => 
+      if (v != JUndefined) return false
+    }
+    true
+  }
+
   def sort: JArray = JArray(elements.filter(_ ne JUndefined).map(_.sort).sorted)
 
   override def apply(i: Int): JValue = elements.lift(i).getOrElse(JUndefined)
