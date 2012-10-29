@@ -69,7 +69,7 @@ trait HttpServerConfig {
    */
   def stopTimeout = Timeout(config[Long]("shutdownTimeout", Long.MaxValue))
   
-  def logger: Logger
+  def log: Logger
 }
 
 abstract class HttpServerLike(val rootConfig: Configuration) extends HttpServerConfig { self =>
@@ -108,7 +108,7 @@ abstract class HttpServerLike(val rootConfig: Configuration) extends HttpServerC
     private def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
       case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
       case e => {
-        logger.error("Error handling request", e)
+        log.error("Error handling request", e)
         HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
       }
     }

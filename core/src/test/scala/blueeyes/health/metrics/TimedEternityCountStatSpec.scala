@@ -2,8 +2,9 @@ package blueeyes.health.metrics
 
 import blueeyes.json._
 import org.specs2.mutable.Specification
+import blueeyes.akka_testing.FutureMatchers
 
-class TimedEternityCountStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
+class TimedEternityCountStatSpec extends Specification with TimedStatFixtures with FutureMatchers {
   implicit val healthMonitorTimeout = akka.util.Timeout(10000)
 
   "EternityTimedCountStat" should{

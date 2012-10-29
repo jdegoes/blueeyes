@@ -1,4 +1,4 @@
-package blueeyes.util.logging
+package blueeyes.logging
 
 import RollPolicies._
 import org.specs2.mutable.Specification

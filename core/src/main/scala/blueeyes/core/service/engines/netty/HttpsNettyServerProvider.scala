@@ -24,7 +24,7 @@ private[engines] class HttpsNettyServerProvider(server: HttpServerConfig, servic
 
   def config = server.config
 
-  def log = server.logger
+  def log = server.log
 }
 
 private[engines] class HttpsPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,

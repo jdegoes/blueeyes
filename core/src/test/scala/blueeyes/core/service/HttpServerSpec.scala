@@ -13,7 +13,7 @@ import blueeyes.core.http.HttpStatusCodes._
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
 
-import blueeyes.concurrent.test._
+import blueeyes.akka_testing.FutureMatchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Outside, Scope}
 
@@ -28,6 +28,7 @@ object TestServer extends HttpServerModule with TestAkkaDefaults {
 
     var startupCalled   = false
     var shutdownCalled  = false
+    val log = logger
 
     lazy val testService = service("test", "1.0.7") {
       context => {

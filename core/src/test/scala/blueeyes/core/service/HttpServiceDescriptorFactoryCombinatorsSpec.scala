@@ -3,13 +3,16 @@ package blueeyes.core.service
 import test.BlueEyesServiceSpecification
 
 import blueeyes.BlueEyesServiceBuilder
-import blueeyes.health.metrics.{eternity}
-import blueeyes.health.metrics.IntervalLength._
+import blueeyes.bkka._
+import blueeyes.core.data._
+import blueeyes.core.http._
 import blueeyes.core.http.test._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus}
-import blueeyes.core.data.{ByteChunk, BijectionsChunkJson, BijectionsChunkString}
+import blueeyes.core.service._
+import blueeyes.health.metrics.{eternity}
+import blueeyes.health.metrics.IntervalLength._
 import blueeyes.json._
 
 import akka.dispatch.Future
@@ -21,8 +24,12 @@ import scala.util.Random
 import org.specs2.specification.{Step, Fragments}
 import org.scalacheck.Gen._
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with BijectionsChunkJson with HttpRequestMatchers {
+import DefaultBijections._
+
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with HttpRequestMatchers with TestAkkaDefaults {
   val logFilePrefix = "w3log-" + identifier.sample.get
+  val executionContext = defaultFutureDispatch
+
   override def configuration = """
     services {
       foo {
@@ -53,13 +60,17 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
-      Future(HttpResponse[ByteChunk](content = Some(r.uri.path match {
+      val responseContent = r.uri.path match {
         case Some("/foo/v1/proxy")  => 
-          BijectionsChunkString.StringToChunk("it works!")
+          DefaultBijections.stringToChunk("it works!")
 
-        case _ => BijectionsChunkString.StringToChunk("it does not work!")
-      })))
+        case _ => 
+          DefaultBijections.stringToChunk("it does not work!")
+      }
+
+      Future(HttpResponse[ByteChunk](content = Some(responseContent)))
     }
+
     def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 
@@ -73,7 +84,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
   "service" should {
     "support health monitor service" in {
-      service.get("/foo") must whenDelivered {
+      client.get[ByteChunk]("/foo") must whenDelivered {
         beLike {
           case HttpResponse(HttpStatus(OK, _), _, None, _) => ok
         }
@@ -82,7 +93,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
     "support health monitor statistics" in {
       import blueeyes.json.JParser.parse
-      service.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
+      client.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
         (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(parse("[1]"))) and
         (content \ "requests" \ "GET" \ "timing" mustNotEqual(JUndefined)) and
         (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JUndefined)) and
@@ -93,8 +104,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "add service locator" in {
-      import BijectionsChunkString._
-      service.get[String]("/proxy") must succeedWithContent((_: String) must_== "it works!")
+      client.get[String]("/proxy") must succeedWithContent((_: String) must_== "it works!")
     }
 
     "RequestLogging: Creates logRequest" in{
@@ -103,7 +113,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with BijectionsChunkJson{
+trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators {
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {

@@ -3,7 +3,6 @@ package blueeyes.core.service
 import org.specs2.mutable.Specification
 
 class ReflectiveServiceListSpec extends Specification{
-
   "ReflectiveServiceList: finds service if it is declared as varuable" in{
     val serviceList = new ReflectiveServiceList[Unit]{
       val service = ServiceImpl
@@ -19,10 +18,10 @@ class ReflectiveServiceListSpec extends Specification{
     serviceList.services mustEqual(serviceList.service :: Nil)
   }
 
-  object ServiceImpl extends Service[Unit]{
+  object ServiceImpl extends Service[Unit, Unit]{
     def ioClass = null
 
-    def descriptorFactory = null
+    def lifecycle(context: ServiceContext) = null
 
     def version = ServiceVersion(1, 2, "3")
 

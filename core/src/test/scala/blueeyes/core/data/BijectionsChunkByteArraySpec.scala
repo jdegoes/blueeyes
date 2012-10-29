@@ -1,7 +1,7 @@
 package blueeyes.core.data
 
 import blueeyes.bkka._
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 import akka.dispatch.Future
 import akka.dispatch.ExecutionContext

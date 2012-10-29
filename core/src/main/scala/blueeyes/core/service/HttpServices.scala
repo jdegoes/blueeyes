@@ -358,8 +358,8 @@ object JsonpService extends AkkaDefaults {
             val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
             val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(parseFromString _).map(Future(_))
-            val headers = r.parameters.get('headers).map(parseFromString _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
+            val content = r.parameters.get('content).map(parse _).map(Future(_))
+            val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
             r.copy(method = method, content = content, headers = r.headers ++ headers).success
           } catch {

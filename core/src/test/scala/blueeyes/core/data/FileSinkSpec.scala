@@ -6,7 +6,7 @@ import akka.dispatch.Await
 import akka.util.Duration
 
 import blueeyes.bkka._
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 import java.io.File
 import java.nio.ByteBuffer

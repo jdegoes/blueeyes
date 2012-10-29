@@ -70,7 +70,7 @@ class HttpClientSpec extends Specification with TestAkkaDefaults {
       remoteHost = Some(InetAddress.getLocalHost))) {client => client.remoteHost(InetAddress.getLocalHost)} }
 
   private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]) = {
-    builder(mockClient).custom(method, uri.toString)
+    builder(mockClient).custom[String](method, uri.toString)
 
     mockClient.request.get mustEqual(expectation)
   }

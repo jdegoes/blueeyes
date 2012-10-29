@@ -19,7 +19,7 @@ import java.nio.ByteBuffer
 
 import org.specs2.mutable.Specification
 import blueeyes.core.http.test.HttpRequestMatchers
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 import scalaz._
 import scalaz.syntax.monad._

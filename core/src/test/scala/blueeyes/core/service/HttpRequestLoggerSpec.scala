@@ -12,7 +12,7 @@ import blueeyes.core.data.DefaultBijections._
 import org.apache.commons.codec.binary.Base64
 
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 class HttpRequestLoggerSpec extends Specification with ClockMock with FutureMatchers with AkkaDefaults {
 

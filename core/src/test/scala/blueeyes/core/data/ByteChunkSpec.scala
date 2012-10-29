@@ -5,7 +5,7 @@ import blueeyes.bkka._
 
 import java.nio.ByteBuffer
 
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 import org.specs2.mutable.Specification
 
 

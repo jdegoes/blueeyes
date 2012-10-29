@@ -15,35 +15,6 @@ import scala.xml.NodeSeq
 import scala.xml.XML
 
 trait DefaultBijections {
-  import java.io.{InputStreamReader, ByteArrayInputStream, OutputStreamWriter, ByteArrayOutputStream, PrintStream}
-  import java.nio.ByteBuffer
-
-  implicit val JValueToByteArray = new Bijection[JValue, Array[Byte]]{
-    def apply(jv: JValue) = {
-      jv.renderCompact.getBytes("UTF-8")
-    }
-
-    def unapply(arr: Array[Byte]) = {
-      val bb = ByteBuffer.wrap(arr)
-      val r = JParser.parseFromByteBuffer(bb)
-      r.valueOr(e => throw e)
-    }
-  }
-
-  implicit val XMLToByteArray = new Bijection[NodeSeq, Array[Byte]] {
-    def apply(s: NodeSeq)       = s.toString.getBytes("UTF-8")
-    def unapply(t: Array[Byte]) = XML.loadString(new String(t, "UTF-8"))
-  }
-
-  implicit val ByteArrayToString = new Bijection[Array[Byte], String] {
-    def apply(t: Array[Byte]): String   = new String(t, "UTF-8")
-    def unapply(s: String): Array[Byte] = s.getBytes("UTF-8")
-  }
-
-  implicit val ByteArrayToJValue    = JValueToByteArray.inverse
-  implicit val ByteArrayToXML       = XMLToByteArray.inverse
-  implicit val StringToByteArray    = ByteArrayToString.inverse
-
   implicit def byteArrayToChunk(a: Array[Byte]): ByteChunk = Left(ByteBuffer.wrap(a))
 
   implicit def futureByteArrayToChunk(implicit executor: ExecutionContext): Bijection[Future[Array[Byte]], ByteChunk] = {
@@ -61,6 +32,15 @@ trait DefaultBijections {
   }
 
   implicit def chunkToFutureByteArray(implicit executor: ExecutionContext) = futureByteArrayToChunk.inverse
+
+  /// String Bijections ///
+
+  implicit val StringToByteArray = new Bijection[String, Array[Byte]] {
+    def apply(s: String): Array[Byte] = s.getBytes("UTF-8")
+    def unapply(t: Array[Byte]): String   = new String(t, "UTF-8")
+  }
+
+  implicit val ByteArrayToString = StringToByteArray.inverse
 
   implicit def stringToChunk(s: String): ByteChunk = Left(ByteBuffer.wrap(s.getBytes("UTF-8")))
 
@@ -80,7 +60,23 @@ trait DefaultBijections {
 
   implicit def chunkToFutureString(implicit executor: ExecutionContext) = futureStringToChunk.inverse
 
-  implicit def jvalueToChunk(jv: JValue) = Left(ByteBuffer.wrap(JValueToByteArray(jv)))
+  /// JValue Bijections ///
+
+  implicit val JValueToByteArray = new Bijection[JValue, Array[Byte]]{
+    def apply(jv: JValue) = {
+      jv.renderCompact.getBytes("UTF-8")
+    }
+
+    def unapply(arr: Array[Byte]) = {
+      val bb = ByteBuffer.wrap(arr)
+      val r = JParser.parseFromByteBuffer(bb)
+      r.valueOr(e => throw e)
+    }
+  }
+
+  implicit val ByteArrayToJValue = JValueToByteArray.inverse
+
+  implicit def jvalueToChunk(jv: JValue): ByteChunk = Left(ByteBuffer.wrap(JValueToByteArray(jv)))
 
   implicit def futureJValueToChunk(implicit executor: ExecutionContext): Bijection[Future[JValue], ByteChunk] = {
     new Bijection[Future[JValue], ByteChunk] {
@@ -107,6 +103,15 @@ trait DefaultBijections {
   }
 
   implicit def chunkToFutureJValue(implicit executor: ExecutionContext) = futureJValueToChunk.inverse
+
+  /// XML Bijections ///
+
+  implicit val XMLToByteArray = new Bijection[NodeSeq, Array[Byte]] {
+    def apply(s: NodeSeq)       = s.toString.getBytes("UTF-8")
+    def unapply(t: Array[Byte]) = XML.loadString(new String(t, "UTF-8"))
+  }
+
+  implicit val ByteArrayToXML = XMLToByteArray.inverse
 }
 
 object DefaultBijections extends DefaultBijections

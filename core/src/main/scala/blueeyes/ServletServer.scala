@@ -26,7 +26,7 @@ import com.weiglewilczek.slf4s.Logging
 trait ServletServer extends ServletEngine with ReflectiveServiceList[ByteChunk] with Logging { self =>
   class HttpServer(rootConfig: Configuration, val executionContext: ExecutionContext) extends HttpServerLike(rootConfig) {
     val services = self.services
-    val logger = self.logger
+    val log = self.logger
   }
 
   def server(rootConfig: Configuration, ctx: ExecutionContext) = new HttpServer(rootConfig, ctx)

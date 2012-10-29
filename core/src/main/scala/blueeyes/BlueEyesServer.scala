@@ -26,7 +26,7 @@ trait BlueEyesServer extends NettyEngine with ReflectiveServiceList[ByteChunk] w
   class HttpServer(rootConfig: Configuration, ctx: ExecutionContext) extends NettyHttpServer(rootConfig, ctx) {
     implicit val executionContext = ctx
     val services = self.services
-    val logger = self.logger
+    val log = self.logger
   }
 
   def server(rootConfig: Configuration, ctx: ExecutionContext) = new HttpServer(rootConfig, ctx)

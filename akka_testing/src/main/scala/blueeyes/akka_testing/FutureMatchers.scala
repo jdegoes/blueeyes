@@ -1,6 +1,4 @@
-import scala.annotation.tailrec  
-import org.specs2.execute.FailureException
-import java.util.concurrent.{TimeoutException,  CountDownLatch}
+package blueeyes.akka_testing
 
 import akka.dispatch.Future
 import akka.dispatch.Await
@@ -11,8 +9,10 @@ import akka.util.duration._
 import blueeyes.util.RichThrowableImplicits._
 
 import org.specs2.matcher._
+import org.specs2.execute.FailureException
 
-package blueeyes.concurrent.test {
+import scala.annotation.tailrec  
+import java.util.concurrent.{TimeoutException,  CountDownLatch}
 
 trait AkkaConversions {
   implicit def specsDuration2Akka(duration: org.specs2.time.Duration): akka.util.Duration = new DurationLong(duration.inMillis).millis
@@ -48,7 +48,7 @@ trait FutureMatchers extends AkkaConversions {
 
         if (protoResult.isSuccess || retries <= 0) Done(protoResult)
         else protoResult match{
-          case f @ MatchFailure(ok, ko, _, _) => Retry(ko())
+          case f @ MatchFailure(ok, ko, _, _) => Retry(ko)
           case f @ MatchSkip(m, _)            => Retry(m)
           case _ => Retry(protoResult.message)
         }
@@ -71,4 +71,4 @@ trait FutureMatchers extends AkkaConversions {
       }
     }
   }
-}}
+}

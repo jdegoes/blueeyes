@@ -3,7 +3,7 @@ package blueeyes.core.data
 import akka.dispatch.Future
 
 import blueeyes.bkka._
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 import org.specs2.mutable.Specification
 

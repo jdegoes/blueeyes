@@ -1,15 +1,16 @@
 package blueeyes.core.service
 package engines.netty
 
-import blueeyes.BlueEyesServer
+import blueeyes._
 import blueeyes.bkka._
-import blueeyes.core.data.{FileSink, FileSource, ByteChunk, DefaultBijections}
+import blueeyes.core.data._
 import blueeyes.core.http._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import engines.security.BlueEyesKeyStoreFactory
 import engines.{TestEngineService, TestEngineServiceContext, HttpClientXLightWeb}
+import DefaultBijections._
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
@@ -18,13 +19,13 @@ import akka.dispatch.Await
 import akka.util._
 
 import java.io.File
-import java.util.concurrent.CountDownLatch
+import java.nio.ByteBuffer
 import javax.net.ssl.TrustManagerFactory
 
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
 
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Step, Fragments}
@@ -32,27 +33,24 @@ import org.specs2.time.TimeConversions._
 
 import scalaz._
 import scalaz.syntax.monad._
-import scala.collection.mutable.ArrayBuilder.ofByte
 
-class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMatchers {
-  import DefaultBijections._
+class HttpServerNettySpec extends Specification with TestAkkaDefaults with FutureMatchers {
 
-  implicit val M: Monad[Future] = new FutureMonad(defaultFutureDispatch)
   private val configPattern = """server { port = %d sslPort = %d }"""
 
   val duration: org.specs2.time.Duration = 1000.milliseconds
   implicit val testTimeouts = FutureTimeouts(50, duration)
 
   private val port = 8585
-  private var stop: Stoppable = null
+  private var stop: Option[Stoppable] = None
   private var config: Configuration = null
 
   override def is = args(sequential = true) ^ super.is
 
   override def map(fs: => Fragments) = {
     def startStep = Step {
-      val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
-      val sampleServer = (new SampleServer).server(config, defaultFutureDispatch)
+      val conf = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val sampleServer = (new SampleServer).server(conf, defaultFutureDispatch)
       config = sampleServer.config
 
       sampleServer.start map { startFuture =>
@@ -64,7 +62,7 @@ class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMat
     
     def stopStep = Step {
       TestEngineServiceContext.dataFile.delete
-      Stoppable.stop(stop, testTimeouts)
+      stop.foreach(Stoppable.stop(_, duration))
     }
 
     startStep ^ fs ^ stopStep
@@ -144,7 +142,7 @@ class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMat
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -154,7 +152,7 @@ class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMat
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -171,7 +169,7 @@ class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMat
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContext.map(v => new String(v).mkString("")).mkString("")))
+            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
         }
       }
     }
@@ -186,9 +184,11 @@ class HttpServerNettySpec extends Specification with AkkaDefaults with FutureMat
   private def sslClient = new LocalHttpsClient(config).protocol("https").host("localhost").port(port + 1)
 }
 
-class SampleServer extends BlueEyesServer with TestEngineService
+class SampleServer extends BlueEyesServer with TestEngineService with TestAkkaDefaults {
+  val executionContext = defaultFutureDispatch
+}
 
-class LocalHttpsClient(config: Configuration) extends HttpClientXLightWeb {
+class LocalHttpsClient(config: Configuration)(implicit executor: ExecutionContext) extends HttpClientXLightWeb {
   override protected def createSSLContext = {
     val keyStore            = BlueEyesKeyStoreFactory(config)
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
@@ -198,14 +198,14 @@ class LocalHttpsClient(config: Configuration) extends HttpClientXLightWeb {
   }
 }
 
-trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with BijectionsChunkString{
+trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with TestAkkaDefaults {
   import blueeyes.core.http.MimeTypes._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
 
-  val sampleService: Service[ByteChunk] = service("sample", "1.32") { context =>
+  val sampleService = service("sample", "1.32") { context =>
     request {
-      produce(text/html) {
+      produce[ByteChunk, String, ByteChunk](text/html) {
         path("/bar/'adId/adCode.html") {
           get { request: HttpRequest[ByteChunk] =>
             Future[HttpResponse[String]](response)
@@ -229,10 +229,8 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk  = Chunk(Context.hugeContext.head, Some(Future(Chunk(Context.hugeContext.tail.head))))
-
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future[HttpResponse[ByteChunk]](response)
+          val chunk: ByteChunk  = Right(StreamT.fromStream(Future(Context.hugeContent.toStream.map(ByteBuffer.wrap))))
+          Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk)))
         }
       } ~
       path("/empty/response"){
@@ -253,7 +251,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
       } ~
       path("/file/read"){
         get { request: HttpRequest[ByteChunk] =>
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = FileSource(Context.dataFile))
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(new FileSource(Context.dataFile).read))
           Future[HttpResponse[ByteChunk]](response)
         }
       } ~
@@ -264,7 +262,7 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            promise.success(ByteBuffer.wrap(Context.hugeContext.tail.head))
+            promise.success(ByteBuffer.wrap(Context.hugeContent.tail.head))
           }
 
           val chunk = Right(ByteBuffer.wrap(Context.hugeContent.head) :: (promise: Future[ByteBuffer]).liftM[StreamT])
@@ -280,7 +278,9 @@ trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators w
 object Context{
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
 
-  val hugeContext = List[Array[Byte]]("first-".getBytes ++ Array.fill[Byte](2048*1000)('0'), "second-".getBytes ++ Array.fill[Byte](2048*1000)('0'))
+  val first = Array.concat("first-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
+  val second = Array.concat("second-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
+  val hugeContent = List[Array[Byte]](first, second)
   val context = """<html>
 <head>
 </head>

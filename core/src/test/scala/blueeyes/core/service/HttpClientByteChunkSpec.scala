@@ -6,6 +6,7 @@ import blueeyes.bkka._
 import blueeyes.core.http._
 import blueeyes.core.data._
 import blueeyes.util.metrics.DataSize
+import DefaultBijections._
 import DataSize._
 
 import java.nio.ByteBuffer
@@ -21,20 +22,18 @@ class HttpClientByteChunkSpec extends Specification with TestAkkaDefaults with H
 
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
-      val future = client(Right(stream)).aggregate(8192.bytes).get("foo")
+      val future = client(Right(stream)).aggregate(8192.bytes).get[String]("foo")
 
-      future must succeedWithContent { (chunk: ByteChunk) => 
-          val Left(buf) = chunk
-          new String(buf.array) must_== "1234"
+      future must succeedWithContent { 
+        be_==("1234")
       }
     }
 
     "aggregate content up to the specified size" in {
-      val future = client(Right(stream)).aggregate(2.bytes).get("foo")
+      val future = client(Right(stream)).aggregate(2.bytes).get[String]("foo")
 
-      future must succeedWithContent { (chunk: ByteChunk) => 
-          val Left(buf) = chunk
-          new String(buf.array) must_== "12"
+      future must succeedWithContent { 
+        be_==("12")
       }
     }
   }

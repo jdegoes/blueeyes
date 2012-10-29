@@ -1,23 +1,32 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
-import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
 
-import org.specs2.mutable.Specification
-import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpChunk, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion}
-import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
-import java.net.{SocketAddress, InetSocketAddress}
+import blueeyes.bkka._
+import blueeyes.core.data._
 import blueeyes.core.http.HttpRequest
+
+import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
 import org.jboss.netty.channel._
-import blueeyes.core.data.{Chunk, ByteChunk}
-import collection.mutable.ArrayBuilder.ofByte
+import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpChunk, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion}
+
+import java.net.{SocketAddress, InetSocketAddress}
+import java.nio.ByteBuffer
+
+import scalaz.StreamT
+import scalaz.syntax.monad._
+
+import blueeyes.akka_testing.FutureMatchers
+
 import org.specs2.mock._
+import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeExample
 
-class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with HttpNettyConverters with BeforeExample with AkkaDefaults with FutureMatchers {
+class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with BeforeExample with TestAkkaDefaults with FutureMatchers {
+  import HttpNettyConverters._
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]
@@ -37,7 +46,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       nettyRequest.setChunked(false)
       handler.messageReceived(context, event)
 
-      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress), remoteAddress))
+      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress)(None), remoteAddress))
     }
 
     "sends request and chunk when request is chunked and there is only one chunk" in {
@@ -47,7 +56,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData)))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(Left(ByteBuffer.wrap(chunkData))))
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
 
@@ -63,8 +72,8 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Promise.successful[ByteChunk](Chunk(chunkData))
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData, Some(nextChunk))))
+      val chunk: ByteChunk = Right(ByteBuffer.wrap(chunkData) :: Future(ByteBuffer.wrap(chunkData)).liftM[StreamT])
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
@@ -91,21 +100,10 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       val b = anotherEvent.getChannel == channel
       val b1 = anotherMessage.copy(content = None) == message.copy(content = None)
-      val b2 = message.content.map(readContent(_)) == anotherMessage.content.map(readContent(_))
+      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds)) == anotherMessage.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds))
       val b3 = anotherEvent.getRemoteAddress == remoteAddress
       b && b1 &&
       b2 && b3
-    }
-
-    private def readContent(chunk: ByteChunk): String = new String(readContent(chunk, new ofByte()).result)
-    private def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
-      buffer ++= chunk.data
-
-      val next = chunk.next
-      next match{
-        case None =>  buffer
-        case Some(x) => readContent(Await.result(x, 10 seconds), buffer)
-      }
     }
   }
 }

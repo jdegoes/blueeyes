@@ -11,7 +11,7 @@ class BijectionSpec extends Specification {
 
   object itof extends Bijection[Int, Double] {
     def apply(i: Int) = i.toDouble
-    def apply(d: Double) = d.toInt
+    def unapply(d: Double) = d.toInt
   }
 
   "Bijection.identity: creates Bijection which does not change data" in {

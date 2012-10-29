@@ -1,4 +1,4 @@
-package blueeyes.util.logging
+package blueeyes.logging
 
 import akka.dispatch.Future
 import akka.util.Timeout
