@@ -70,9 +70,9 @@ trait ShutdownConverter[S, T] {
 }
 
 object ShutdownConverter {
-  implicit def unitConverter[S] = new ShutdownConverter[S, Unit] {
-    def convert(f : S => Future[Unit]) = { (s: S) => Some(Stoppable.fromFuture(f(s))) }
-    def convert(f : => Future[Unit])   = { (_: S) => Some(Stoppable.fromFuture(f)) }
+  implicit def unitConverter[S] = new ShutdownConverter[S, Any] {
+    def convert(f : S => Future[Any]) = { (s: S) => Some(Stoppable.fromFuture(f(s))) }
+    def convert(f : => Future[Any])   = { (_: S) => Some(Stoppable.fromFuture(f)) }
   }
 
 /*

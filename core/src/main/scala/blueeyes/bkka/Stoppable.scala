@@ -12,6 +12,7 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 import akka.util.Timeout
+import akka.util.Duration
 
 import scala.collection.immutable.Queue
 import scalaz.Semigroup
@@ -93,8 +94,8 @@ object Stoppable extends Logging {
   implicit def stoppableStop(implicit ctx: ExecutionContext): Stop[Stoppable]  = stoppableStop(Timeout.never)
 
 
-  def stop(stoppable: Stoppable, timeout: Timeout = Timeout.never)(implicit ctx: ExecutionContext) = 
-    stoppableStop(timeout).stop(stoppable)
+  def stop(stoppable: Stoppable, duration: Duration = Duration.Inf)(implicit ctx: ExecutionContext) = 
+    stoppableStop(duration).stop(stoppable)
 }
 
 case class ActorRefStop(actorSystem: ActorSystem, timeout: Timeout) extends Stop[ActorRef] {
