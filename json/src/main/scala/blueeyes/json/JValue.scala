@@ -48,6 +48,8 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   protected[json] def typeIndex: Int
 
+  def normalize: JValue
+
   def compare(that: JValue): Int
 
   def sort: JValue
@@ -599,9 +601,11 @@ object JValue {
     rec(rootTarget, rootPath, rootValue)
   }
 }
-  
+
+case class UndefinedNormalizeError(msg: String) extends Exception(msg)
 
 case object JUndefined extends JValue {
+  final def normalize = throw UndefinedNormalizeError("Can't normalize JUndefined")
   final def sort: JValue = this
   final def renderCompact: String = "null"
   protected[json] final def typeIndex = 10
@@ -609,6 +613,7 @@ case object JUndefined extends JValue {
 }
 
 case object JNull extends JValue {
+  final def normalize: JNull.type = JNull
   final def sort: JValue = this
   final def renderCompact: String = "null"
   protected[json] final def typeIndex = 0
@@ -616,9 +621,10 @@ case object JNull extends JValue {
 }
 
 sealed trait JBool extends JValue {
-  def value: Boolean
+  final def normalize: JBool = this
   final def sort: JBool = this
   protected[json] final def typeIndex = 0
+  def value: Boolean
 }
 
 case object JTrue extends JBool {
@@ -651,6 +657,8 @@ sealed trait JNum extends JValue {
   def toLong: Long
   def toDouble: Double
   def toRawString: String
+
+  final def normalize: JNum = this
 
   final def renderCompact = toRawString
 
@@ -771,6 +779,8 @@ case object JNum {
 }
 
 case class JString(value: String) extends JValue {
+  final def normalize: JString = this
+
   final def sort: JString = this
 
   final def renderCompact: String = JString.escape(value)
@@ -873,9 +883,7 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
     fields flatMap {
       case (k, v) => v match {
         case JUndefined => None
-        case jarr: JArray => Some((k, jarr.normalize))
-        case jobj: JObject => Some((k, jobj.normalize))
-        case jval => Some((k, jval))
+        case jv => Some((k, jv.normalize))
       }
     }
   )
@@ -1015,9 +1023,7 @@ case class JArray(elements: List[JValue]) extends JValue {
     elements flatMap {
       _ match {
         case JUndefined => None
-        case jarr: JArray => Some(jarr.normalize)
-        case jobj: JObject => Some(jobj.normalize)
-        case jval => Some(jval)
+        case v => Some(v.normalize)
       }
     }
   )
