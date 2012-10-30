@@ -864,24 +864,21 @@ case object JField extends ((String, JValue) => JField) {
 case class JObject(fields: Map[String, JValue]) extends JValue {
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
-  def items: Map[String, JValue] = fields.filter(_._2 != JUndefined)
-
-  def keys: Iterable[String] = fields.collect {
-    case (k, v) if v != JUndefined => k
-  }.toSeq
-
-  def values: Iterable[JValue] = fields.values.filter(_ != JUndefined).toSeq
-
-  def size: Int = fields.values.foldLeft(0) {
-    (t, v) => if (v != JUndefined) t + 1 else t
+  def hasDefinedChild: Boolean = {
+    fields.values.foreach(v => if (v != JUndefined) return true)
+    false
   }
 
-  def isEmpty: Boolean = {
-    fields.values.foreach { v => 
-      if (v != JUndefined) return false
+  def normalize: JObject = JObject(
+    fields flatMap {
+      case (k, v) => v match {
+        case JUndefined => None
+        case jarr: JArray => Some((k, jarr.normalize))
+        case jobj: JObject => Some((k, jobj.normalize))
+        case jval => Some((k, jval))
+      }
     }
-    true
-  }
+  )
 
   def + (field: JField): JObject = copy(fields = fields + field)
 
@@ -1002,11 +999,6 @@ case object JObject extends (Map[String, JValue] => JObject) {
 
   def apply(fields: JField*): JObject = JObject(fields.toMap)
 
-  //def unapply(value: JValue): Option[Map[String, JValue]] = value match {
-  //  case o: JObject => Some(o.items)
-  //  case _ => None
-  //}
-
   def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
     case JObject(fields) => Some(fields.toSeq)
     case _ => None
@@ -1014,18 +1006,21 @@ case object JObject extends (Map[String, JValue] => JObject) {
 }
 
 case class JArray(elements: List[JValue]) extends JValue {
-  def values: List[JValue] = elements.filter(_ != JUndefined)
-
-  def length: Int = elements.foldLeft(0) {
-    (t, v) => if (v != JUndefined) t + 1 else t
+  def hasDefinedChild: Boolean = {
+    elements.foreach(v => if (v != JUndefined) return true)
+    false
   }
 
-  def isEmpty: Boolean = {
-    elements.foreach { v => 
-      if (v != JUndefined) return false
+  def normalize: JArray = JArray(
+    elements flatMap {
+      _ match {
+        case JUndefined => None
+        case jarr: JArray => Some(jarr.normalize)
+        case jobj: JObject => Some(jobj.normalize)
+        case jval => Some(jval)
+      }
     }
-    true
-  }
+  )
 
   def sort: JArray = JArray(elements.filter(_ ne JUndefined).map(_.sort).sorted)
 
