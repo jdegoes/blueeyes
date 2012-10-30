@@ -48,7 +48,7 @@ trait FutureMatchers extends AkkaConversions {
 
         if (protoResult.isSuccess || retries <= 0) Done(protoResult)
         else protoResult match{
-          case f @ MatchFailure(ok, ko, _, _) => Retry(ko)
+          case f @ MatchFailure(ok, ko, _, _) => Retry(ko())
           case f @ MatchSkip(m, _)            => Retry(m)
           case _ => Retry(protoResult.message)
         }
