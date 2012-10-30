@@ -48,6 +48,8 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   protected[json] def typeIndex: Int
 
+  def normalize: JValue
+
   def compare(that: JValue): Int
 
   def sort: JValue
@@ -178,15 +180,17 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
       case obj @ JObject(fields) => path.nodes match {
         case JPathField(name) :: nodes => 
           val (child, rest) = obj.partitionField(name)
-
           rest + JField(name, child.set(JPath(nodes), value))
 
-        case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
+        case x =>
+          sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
       }
 
       case arr @ JArray(elements) => path.nodes match {
-        case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
-        case x => sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
+        case JPathIndex(index) :: nodes =>
+          JArray(arraySet(elements, index, JPath(nodes), value))
+        case x =>
+          sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
       }
 
       case _ => path.nodes match {
@@ -597,9 +601,11 @@ object JValue {
     rec(rootTarget, rootPath, rootValue)
   }
 }
-  
+
+case class UndefinedNormalizeError(msg: String) extends Exception(msg)
 
 case object JUndefined extends JValue {
+  final def normalize = throw UndefinedNormalizeError("Can't normalize JUndefined")
   final def sort: JValue = this
   final def renderCompact: String = "null"
   protected[json] final def typeIndex = 10
@@ -607,6 +613,7 @@ case object JUndefined extends JValue {
 }
 
 case object JNull extends JValue {
+  final def normalize: JNull.type = JNull
   final def sort: JValue = this
   final def renderCompact: String = "null"
   protected[json] final def typeIndex = 0
@@ -614,9 +621,10 @@ case object JNull extends JValue {
 }
 
 sealed trait JBool extends JValue {
-  def value: Boolean
+  final def normalize: JBool = this
   final def sort: JBool = this
   protected[json] final def typeIndex = 0
+  def value: Boolean
 }
 
 case object JTrue extends JBool {
@@ -649,6 +657,8 @@ sealed trait JNum extends JValue {
   def toLong: Long
   def toDouble: Double
   def toRawString: String
+
+  final def normalize: JNum = this
 
   final def renderCompact = toRawString
 
@@ -769,6 +779,8 @@ case object JNum {
 }
 
 case class JString(value: String) extends JValue {
+  final def normalize: JString = this
+
   final def sort: JString = this
 
   final def renderCompact: String = JString.escape(value)
@@ -861,6 +873,20 @@ case object JField extends ((String, JValue) => JField) {
 
 case class JObject(fields: Map[String, JValue]) extends JValue {
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
+
+  def hasDefinedChild: Boolean = {
+    fields.values.foreach(v => if (v != JUndefined) return true)
+    false
+  }
+
+  def normalize: JObject = JObject(
+    fields flatMap {
+      case (k, v) => v match {
+        case JUndefined => None
+        case jv => Some((k, jv.normalize))
+      }
+    }
+  )
 
   def + (field: JField): JObject = copy(fields = fields + field)
 
@@ -983,12 +1009,25 @@ case object JObject extends (Map[String, JValue] => JObject) {
 
   def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
     case JObject(fields) => Some(fields.toSeq)
-
     case _ => None
   }
 }
 
 case class JArray(elements: List[JValue]) extends JValue {
+  def hasDefinedChild: Boolean = {
+    elements.foreach(v => if (v != JUndefined) return true)
+    false
+  }
+
+  def normalize: JArray = JArray(
+    elements flatMap {
+      _ match {
+        case JUndefined => None
+        case v => Some(v.normalize)
+      }
+    }
+  )
+
   def sort: JArray = JArray(elements.filter(_ ne JUndefined).map(_.sort).sorted)
 
   override def apply(i: Int): JValue = elements.lift(i).getOrElse(JUndefined)
