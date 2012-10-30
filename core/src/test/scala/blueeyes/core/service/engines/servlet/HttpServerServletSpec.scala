@@ -1,7 +1,7 @@
 package blueeyes.core.service
 package engines.servlet
 
-import engines.{HttpClientXLightWeb, TestEngineService, TestEngineServiceContext}
+import engines.{HttpClientXLightWeb, TestEngineService}
 
 import blueeyes._
 import blueeyes.bkka._
@@ -39,7 +39,7 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     }
 
     val stopStep = Step {
-      TestEngineServiceContext.dataFile.delete
+      TestEngineService.dataFile.delete
       server.foreach(_.stop)
     }
 
@@ -58,20 +58,20 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     }
 
     "write file" in {
-      TestEngineServiceContext.dataFile.delete
+      TestEngineService.dataFile.delete
 
       client.post("/file/write")("foo") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-              (TestEngineServiceContext.dataFile.exists must be_==(true)) and
-              (TestEngineServiceContext.dataFile.length mustEqual("foo".length))
+              (TestEngineService.dataFile.exists must be_==(true)) and
+              (TestEngineService.dataFile.length mustEqual("foo".length))
         }
       }
     }
 
     "read file" in {
-      TestEngineServiceContext.dataFile.delete
+      TestEngineService.dataFile.delete
 
       akka.dispatch.Await.result(client.post("/file/write")("foo"), duration)
       client.get("/file/read") must whenDelivered {
@@ -88,7 +88,7 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-              (content must beSome(TestEngineServiceContext.context))
+              (content must beSome(TestEngineService.content))
         }
       }
     }
@@ -111,7 +111,7 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-              (content must beSome(TestEngineServiceContext.context))
+              (content must beSome(TestEngineService.content))
         }
       }
     }
@@ -119,7 +119,7 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     "return huge content" in {
       client.get[ByteChunk]("/huge") must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
-          (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")
+          (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineService.hugeContent.map(v => new String(v).mkString("")).mkString("")
         }
       }
     }
@@ -127,7 +127,7 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     "return huge delayed content" in {
       client.get[ByteChunk]("/huge/delayed") must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
-          (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")
+          (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineService.hugeContent.map(v => new String(v).mkString("")).mkString("")
         }
       }
     }

@@ -9,6 +9,7 @@ import blueeyes.bkka._
 import blueeyes.concurrent.ReadWriteLock
 import blueeyes.core.http._
 import blueeyes.core.data._
+import blueeyes.util._
 
 import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
@@ -42,10 +43,13 @@ import org.jboss.netty.handler.stream.ChunkedInput
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 
 import java.nio.ByteBuffer
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable.{HashSet, SynchronizedSet}
 import scalaz._
+import scalaz.syntax.monad._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{HashSet, SynchronizedSet}
 
 /** This handler is not thread safe, it's assumed a new one will be created
  * for each client connection.
@@ -107,7 +111,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
         case Some(Right(stream)) =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked")
           channel.write(nettyResponse)
-          channel.write(new StreamChunkedInput(stream, channel))
+          channel.write(StreamChunkedInput(stream, channel, 2))
 
         case None =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, "0")
@@ -136,63 +140,53 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   }
 }
 
-private[engines] class StreamChunkedInput(stream: StreamT[Future, ByteBuffer], channel: Channel)(implicit M: Monad[Future]) 
-    extends ChunkedInput with Logging with AkkaDefaults {
-
-  private val lock = new ReadWriteLock
-
-  private var data: HttpChunk = null
-  @volatile private var isEOF: Boolean = false
-  @volatile private var awaitingRead: Boolean = false
-  private var remaining: StreamT[Future, ByteBuffer] = null
-
-  advance(stream)
-
-  private def advance(stream: StreamT[Future, ByteBuffer]): Future[Unit] = {
-    stream.uncons map { 
-      case Some((buffer, tail)) =>
-        //
-        lock.writeLock { 
-          data = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(buffer))      
-          remaining = stream
-          awaitingRead = true
-          isEOF = false
-        }
-
-      case None =>
-        lock.writeLock {
-          data = new DefaultHttpChunkTrailer
-          remaining = null
-          awaitingRead = true
-          isEOF = true
-        }
-    } onFailure { 
-      case ex =>
-        logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
-        lock.writeLock {
-          data = null
-          remaining = null
-          awaitingRead = false
-          isEOF = true
-        }
-    }
+private[engines] class StreamChunkedInput(queue: BlockingQueue[Option[HttpChunk]], channel: Channel) extends ChunkedInput {
+  override def hasNextChunk() = {
+    val head = queue.peek 
+    (head != None && head != null)
   }
-
-  override def close() {
-    // FIXME
-  }
-
-  override def isEndOfInput() = isEOF
-
-  override def hasNextChunk() = awaitingRead && !isEOF
 
   override def nextChunk() = {
-    lock.writeLock {
-      if (!awaitingRead) throw new IllegalStateException("No data available; nextChunk called when not awaiting read.")
-      val result = data
-      awaitingRead = false
-      if (!isEOF) advance(remaining)
-      result
+    queue.poll() match {
+      case None | null => null 
+      case Some(data) => data
     }
+  }
+
+  override def isEndOfInput() = {
+    queue.peek == None
+  }
+
+  override def close() = ()
+}
+
+object StreamChunkedInput extends Logging {
+  def apply(stream: StreamT[Future, ByteBuffer], channel: Channel, maxQueueSize: Int = 1)(implicit M: Monad[Future]): ChunkedInput = {
+    def advance(queue: BlockingQueue[Option[HttpChunk]], stream: StreamT[Future, ByteBuffer]): Future[Unit] = {
+      stream.uncons flatMap { 
+        case Some((buffer, tail)) => 
+          queue.put(Some(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(buffer))))
+          channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
+          advance(queue, tail)
+
+        case None =>
+          { 
+            queue.put(Some(new DefaultHttpChunkTrailer))
+            queue.put(None) 
+            channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
+          }.point[Future]
+      } onFailure { 
+        case ex =>
+          logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
+          queue.put(None)
+      }
+    }
+
+    val queue = new LinkedBlockingQueue[Option[HttpChunk]](maxQueueSize)
+    advance(queue, stream).onSuccess { 
+      case _ => logger.debug("Response stream fully consumed by Netty.")
+    }
+
+    new StreamChunkedInput(queue, channel)
   }
 }

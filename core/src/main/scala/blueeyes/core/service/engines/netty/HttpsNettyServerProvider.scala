@@ -2,7 +2,7 @@ package blueeyes.core.service
 package engines.netty
 
 import blueeyes.core.data._
-import engines.security.BlueEyesKeyStoreFactory
+import engines.security._
 import engines.security.BlueEyesKeyStoreFactory._
 
 import akka.dispatch.ExecutionContext

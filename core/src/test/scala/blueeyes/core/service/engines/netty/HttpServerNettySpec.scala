@@ -1,15 +1,18 @@
 package blueeyes.core.service
 package engines.netty
 
+import engines._
 import blueeyes._
+import blueeyes.util._
 import blueeyes.bkka._
 import blueeyes.core.data._
 import blueeyes.core.http._
+import blueeyes.core.http.test._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.http.HttpStatusCodes._
 import engines.security.BlueEyesKeyStoreFactory
-import engines.{TestEngineService, TestEngineServiceContext, HttpClientXLightWeb}
+import engines.{TestEngineService, HttpClientXLightWeb}
 import DefaultBijections._
 
 import akka.dispatch.Future
@@ -20,7 +23,6 @@ import akka.util._
 
 import java.io.File
 import java.nio.ByteBuffer
-import javax.net.ssl.TrustManagerFactory
 
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
@@ -34,12 +36,11 @@ import org.specs2.time.TimeConversions._
 import scalaz._
 import scalaz.syntax.monad._
 
-class HttpServerNettySpec extends Specification with TestAkkaDefaults with FutureMatchers {
-
+class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpRequestMatchers with FutureMatchers {
   private val configPattern = """server { port = %d sslPort = %d }"""
 
   val duration: org.specs2.time.Duration = 1000.milliseconds
-  implicit val testTimeouts = FutureTimeouts(50, duration)
+  //implicit val testTimeouts = FutureTimeouts(50, duration)
 
   private val port = 8585
   private var stop: Option[Stoppable] = None
@@ -61,7 +62,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with Futur
     } 
     
     def stopStep = Step {
-      TestEngineServiceContext.dataFile.delete
+      TestEngineService.dataFile.delete
       stop.foreach(Stoppable.stop(_, duration))
     }
 
@@ -69,7 +70,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with Futur
   }
 
   "HttpServer" should {
-    "return empty response"in{
+    "return empty response" in {
       client.post("/empty/response")("") must whenDelivered {
         beLike {
           case HttpResponse(status, _, content, _) =>
@@ -79,47 +80,40 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with Futur
       }
     }
 
-    "write file"in{
-      TestEngineServiceContext.dataFile.delete
+    "write file" in {
+      TestEngineService.dataFile.delete
 
       client.post("/file/write")("foo") must whenDelivered {
+      //Await.result(client.post("/file/write")("foo"), duration) must
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
-            (TestEngineServiceContext.dataFile.exists must be_==(true)) and
-            (TestEngineServiceContext.dataFile.length mustEqual("foo".length))
+            (TestEngineService.dataFile.exists must be_==(true)) and
+            (TestEngineService.dataFile.length mustEqual("foo".length))
         }
       }
     }
 
-    "read file"in{
-      TestEngineServiceContext.dataFile.delete
+    "read file" in {
+      TestEngineService.dataFile.delete
 
       akka.dispatch.Await.result(client.post("/file/write")("foo"), duration)
-      client.get("/file/read") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content must beSome("foo"))
-        }
+      client.get[String]("/file/read") must succeedWithContent {
+        be_==("foo")
       }
     }
 
-    "return html by correct URI" in{
-      client.get("/bar/foo/adCode.html") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content must beSome(TestEngineServiceContext.context))
-        }
+    "return html by correct URI" in {
+      client.get[String]("/bar/foo/adCode.html") must succeedWithContent {
+        be_==(TestEngineService.content)
       }
     }
 
-    "return NotFound when accessing a nonexistent URI" in{
+    "return NotFound when accessing a nonexistent URI" in {
       val response = Await.result(client.post("/foo/foo/adCode.html")("foo").failed, duration)
       response must beLike { case HttpException(failure, _) => failure must_== NotFound }
     }
-    "return InternalServerError when handling request crashes" in{
+    "return InternalServerError when handling request crashes" in {
       val response = Await.result(client.get("/error").failed, duration)
       response must beLike { case HttpException(failure, _) => failure must_== InternalServerError }
     }
@@ -128,166 +122,58 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with Futur
       response must beLike { case HttpException(failure, _) => failure must_== BadRequest }
     }
 
-    "return html by correct URI with parameters" in{
-      client.parameters('bar -> "zar").get("/foo") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content must beSome(TestEngineServiceContext.context))
-        }
+    "return html by correct URI with parameters" in {
+      client.parameters('bar -> "zar").get[String]("/foo") must succeedWithContent {
+        be_==(TestEngineService.content)
       }
     }
-    "return huge content"in{
-      client.get[ByteChunk]("/huge") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
-        }
+    
+    "return huge content" in {
+      Await.result(client.get[ByteChunk]("/huge"), 10.seconds) must beLike {
+        case HttpResponse(status, _, Some(content), _) =>
+          (status.code must_== HttpStatusCodes.OK) and
+          (readContent(content) must haveSize(TestEngineService.hugeContent.map(v => v.length).sum))
       }
     }
-    "return huge delayed content"in{
-      val content = client.get[ByteChunk]("/huge/delayed")
-      content must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
-        }
+
+    "return huge delayed content" in {
+      implicit val testTimeouts = FutureTimeouts(50, duration)
+
+      Await.result(client.get[ByteChunk]("/huge/delayed"), 10.seconds) must beLike {
+        case HttpResponse(status, _, Some(content), _) =>
+          (status.code must_== HttpStatusCodes.OK) and
+          (readContent(content) must haveSize(TestEngineService.hugeContent.map(v => v.length).sum))
       }
     }
-    "return html by correct URI by https" in{
-      sslClient.get("/bar/foo/adCode.html") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            content.get mustEqual(TestEngineServiceContext.context)
-        }
+
+    "return html by correct URI by https" in {
+      sslClient.get[String]("/bar/foo/adCode.html") must succeedWithContent {
+        be_==(TestEngineService.content)
       }
     }
-    "return huge content by https"in{
-      sslClient.get[ByteChunk]("/huge") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content.map(v => readContent(v)) must beSome(TestEngineServiceContext.hugeContent.map(v => new String(v).mkString("")).mkString("")))
-        }
+
+    "return huge content by https" in {
+      Await.result(sslClient.get[ByteChunk]("/huge"), 10.seconds) must beLike {
+        case HttpResponse(status, _, Some(content), _) =>
+          (status.code must_== HttpStatusCodes.OK) and
+          (readContent(content) must haveSize(TestEngineService.hugeContent.map(v => v.length).sum))
       }
     }
   }
 
-  private def readContent(chunk: ByteChunk): String = {
-    Await.result(ByteChunk.forceByteArray(chunk).map(new String(_, "UTF-8")), duration)
+  private def readContent(chunk: ByteChunk): Array[Byte] = {
+    Await.result(ByteChunk.forceByteArray(chunk), 10.seconds)
   }
 
-  private def client    = new LocalHttpsClient(config).protocol("http").host("localhost").port(port)
+  private def readStringContent(chunk: ByteChunk): String = {
+    Await.result(ByteChunk.forceByteArray(chunk).map(new String(_, "UTF-8")), 10.seconds)
+  }
 
-  private def sslClient = new LocalHttpsClient(config).protocol("https").host("localhost").port(port + 1)
+  private def client    = new LocalClient(config).protocol("http").host("localhost").port(port)
+
+  private def sslClient = new LocalClient(config).protocol("https").host("localhost").port(port + 1)
 }
 
 class SampleServer extends BlueEyesServer with TestEngineService with TestAkkaDefaults {
   val executionContext = defaultFutureDispatch
-}
-
-class LocalHttpsClient(config: Configuration)(implicit executor: ExecutionContext) extends HttpClientXLightWeb {
-  override protected def createSSLContext = {
-    val keyStore            = BlueEyesKeyStoreFactory(config)
-    val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-    trustManagerFactory.init(keyStore)
-
-    SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
-  }
-}
-
-trait SampleService extends BlueEyesServiceBuilder with HttpRequestCombinators with TestAkkaDefaults {
-  import blueeyes.core.http.MimeTypes._
-
-  private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(Context.context))
-
-  val sampleService = service("sample", "1.32") { context =>
-    request {
-      produce[ByteChunk, String, ByteChunk](text/html) {
-        path("/bar/'adId/adCode.html") {
-          get { request: HttpRequest[ByteChunk] =>
-            Future[HttpResponse[String]](response)
-          }
-        } ~
-        path("/foo") {
-          get { request: HttpRequest[ByteChunk] =>
-            Future[HttpResponse[String]](response)
-          }
-        } ~
-        path("/error") {
-          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
-            throw new RuntimeException("Unexpected error (GET /error)")
-          }
-        } ~
-        path("/http/error") {
-          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
-            throw HttpException(HttpStatusCodes.BadRequest)
-          }
-        }
-      } ~
-      path("/huge"){
-        get { request: HttpRequest[ByteChunk] =>
-          val chunk: ByteChunk  = Right(StreamT.fromStream(Future(Context.hugeContent.toStream.map(ByteBuffer.wrap))))
-          Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk)))
-        }
-      } ~
-      path("/empty/response"){
-        post { request: HttpRequest[ByteChunk] =>
-          Future[HttpResponse[ByteChunk]](HttpResponse[ByteChunk]())
-        }
-      } ~
-      path("/file/write"){
-        post { request: HttpRequest[ByteChunk] =>
-          val promise = Promise[HttpResponse[ByteChunk]]()
-          for (value <- request.content) {
-            FileSink.write(Context.dataFile, value).onSuccess { 
-              case _ => promise.success(HttpResponse[ByteChunk]()) 
-            } 
-          }
-          promise
-        }
-      } ~
-      path("/file/read"){
-        get { request: HttpRequest[ByteChunk] =>
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(new FileSource(Context.dataFile).read))
-          Future[HttpResponse[ByteChunk]](response)
-        }
-      } ~
-      path("/huge/delayed"){
-        get { request: HttpRequest[ByteChunk] =>
-
-          val promise = Promise[ByteBuffer]()
-          import scala.actors.Actor.actor
-          actor {
-            Thread.sleep(2000)
-            promise.success(ByteBuffer.wrap(Context.hugeContent.tail.head))
-          }
-
-          val chunk = Right(ByteBuffer.wrap(Context.hugeContent.head) :: (promise: Future[ByteBuffer]).liftM[StreamT])
-
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
-          Future[HttpResponse[ByteChunk]](response)
-        }
-      }
-    }
-  }
-}
-
-object Context{
-  val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
-
-  val first = Array.concat("first-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
-  val second = Array.concat("second-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
-  val hugeContent = List[Array[Byte]](first, second)
-  val context = """<html>
-<head>
-</head>
-
-<body>
-    <h1>Test</h1>
-    <h1>Test</h1>
-</body>
-</html>"""
 }

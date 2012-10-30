@@ -2,9 +2,11 @@ package blueeyes.core.service.engines
 
 import blueeyes.bkka._
 import blueeyes.core.service._
+import security._
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
+import akka.dispatch.ExecutionContext
 
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data._
@@ -13,8 +15,11 @@ import blueeyes.core.http.combinators.HttpRequestCombinators
 import blueeyes.core.service._
 import DefaultBijections._
 
+import org.streum.configrity.Configuration
+
 import java.io.File
 import java.nio.ByteBuffer
+import javax.net.ssl.TrustManagerFactory
 
 import scalaz.StreamT
 import scalaz.syntax.monad._
@@ -22,9 +27,9 @@ import scalaz.syntax.monad._
 trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinators with TestAkkaDefaults {
   import blueeyes.core.http.MimeTypes._
 
-  private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(TestEngineServiceContext.context))
+  private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(TestEngineService.content))
 
-  val sampleService = service("sample", "1.32") { context =>
+  val sampleService = service("sample", "1.32") { _ =>
     request {
       produce[ByteChunk, String, ByteChunk](text/html) {
         path("/bar/'adId/adCode.html") {
@@ -50,7 +55,7 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk = Right(StreamT.fromStream[Future, ByteBuffer](Future(TestEngineServiceContext.hugeContent.toStream.map(ByteBuffer.wrap _))))
+          val chunk = Right(StreamT.fromStream[Future, ByteBuffer](Future(TestEngineService.hugeContent.toStream.map(ByteBuffer.wrap _))))
           val response = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)
         }
@@ -63,7 +68,7 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       path("/file/write"){
         post { request: HttpRequest[ByteChunk] =>
           request.content map { value =>
-            FileSink.write(TestEngineServiceContext.dataFile, value) map {
+            FileSink.write(TestEngineService.dataFile, value) map {
               _ => HttpResponse[ByteChunk]()
             }
           } getOrElse {
@@ -73,7 +78,7 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
       path("/file/read"){
         get { request: HttpRequest[ByteChunk] =>
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(new FileSource(TestEngineServiceContext.dataFile).read))
+          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(new FileSource(TestEngineService.dataFile).read))
           Future[HttpResponse[ByteChunk]](response)
         }
       } ~
@@ -84,10 +89,10 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            promise.success(ByteBuffer.wrap(TestEngineServiceContext.hugeContent.tail.head))
+            promise.success(ByteBuffer.wrap(TestEngineService.hugeContent.tail.head))
           }
 
-          val chunk = Right(ByteBuffer.wrap(TestEngineServiceContext.hugeContent.head) :: (promise: Future[ByteBuffer]).liftM[StreamT])
+          val chunk = Right(ByteBuffer.wrap(TestEngineService.hugeContent.head) :: (promise: Future[ByteBuffer]).liftM[StreamT])
           val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)
         }
@@ -96,18 +101,28 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
   }
 }
 
-object TestEngineServiceContext {
+object TestEngineService {
   val dataFile = new File(System.getProperty("java.io.tmpdir") + File.separator + System.currentTimeMillis)
 
   val first: Array[Byte] = Array.concat("first-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
   val second: Array[Byte] = Array.concat("second-".getBytes("UTF-8"), Array.fill[Byte](2048*1000)('0'))
   val hugeContent = List[Array[Byte]](first, second)
 
-  val context = """<html>
+  val content = """<html>
 <head></head>
 <body>
     <h1>Test</h1>
     <h1>Test</h1>
 </body>
 </html>"""
+}
+
+class LocalClient(config: Configuration)(implicit executor: ExecutionContext) extends HttpClientXLightWeb {
+  override protected def createSSLContext = {
+    val keyStore            = BlueEyesKeyStoreFactory(config)
+    val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+    trustManagerFactory.init(keyStore)
+
+    SslContextFactory(keyStore, BlueEyesKeyStoreFactory.password, Some(trustManagerFactory.getTrustManagers))
+  }
 }

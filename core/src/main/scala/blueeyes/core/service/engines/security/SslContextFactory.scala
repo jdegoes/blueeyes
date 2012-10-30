@@ -1,4 +1,4 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service.engines.security
 
 import java.security.KeyStore
 import javax.net.ssl.{TrustManager, KeyManagerFactory, SSLContext};

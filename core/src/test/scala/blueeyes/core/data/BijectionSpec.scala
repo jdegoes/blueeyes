@@ -19,12 +19,13 @@ class BijectionSpec extends Specification {
     Bijection.identity[String].unapply("foo") mustEqual ("foo")
   }
   "Bijection.inverse: creates inverse Bijection" in {
-    val inversed = ByteArrayToString.inverse
-    inversed.unapply(Array[Byte]('f', 'o', 'o'))  mustEqual("foo")
-    inversed("foo").toList                        mustEqual(List[Byte]('f', 'o', 'o'))
+    val b = ByteArrayToString
+    b(Array[Byte]('f', 'o', 'o')) must_== "foo"
+    b.inverse.unapply(Array[Byte]('f','o','o')) must_== "foo"
+    b.inverse("foo").toList must_== List[Byte]('f', 'o', 'o')
   }
   "Bijection.compose: creates composed Bijection" in {
     val composed = atoi.andThen(itof)
-    composed("1.23") must_== 1.23d
+    composed("2") must_== 2.0d
   }
 }

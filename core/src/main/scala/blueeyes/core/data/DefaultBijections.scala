@@ -21,8 +21,8 @@ trait DefaultBijections {
     new Bijection[Future[Array[Byte]], ByteChunk] {
       private implicit val M: Monad[Future] = new FutureMonad(executor)
 
-      def apply(t: Future[Array[Byte]]): ByteChunk = {
-        Right(t.map(ByteBuffer.wrap _).liftM[StreamT])
+      def apply(f: Future[Array[Byte]]): ByteChunk = {
+        Right(f.map(ByteBuffer.wrap _).liftM[StreamT])
       }
 
       def unapply(s: ByteChunk): Future[Array[Byte]] = {
@@ -105,13 +105,14 @@ trait DefaultBijections {
   implicit def chunkToFutureJValue(implicit executor: ExecutionContext) = futureJValueToChunk.inverse
 
   /// XML Bijections ///
-
+  /*
   implicit val XMLToByteArray = new Bijection[NodeSeq, Array[Byte]] {
     def apply(s: NodeSeq)       = s.toString.getBytes("UTF-8")
     def unapply(t: Array[Byte]) = XML.loadString(new String(t, "UTF-8"))
   }
 
   implicit val ByteArrayToXML = XMLToByteArray.inverse
+  */
 }
 
 object DefaultBijections extends DefaultBijections

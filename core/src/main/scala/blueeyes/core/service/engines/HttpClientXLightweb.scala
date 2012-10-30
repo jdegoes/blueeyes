@@ -42,7 +42,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
 
 import scalaz._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpClientByteChunk with Logging {
   implicit val M: Monad[Future] = new FutureMonad(executor)
@@ -99,7 +99,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
             case _ => promise.failure(HttpException(HttpStatusCodes.BadRequest, reason))
           }
         } else {
-          val headers = response.getHeaderNameSet.toList.asInstanceOf[List[String]].foldLeft(Map[String, String]()) { 
+          val headers = response.getHeaderNameSet.asScala.foldLeft(Map[String, String]()) { 
             (acc, name) => acc + (name -> response.getHeader(name))
           }
 
@@ -125,7 +125,9 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
     }
 
     xlrequest match {
-      case e: IHttpRequest => clientInstance.send(e, handler)
+      case e: IHttpRequest => 
+        clientInstance.send(e, handler)
+
       case e: IHttpRequestHeader =>
         val bodyDataSink = clientInstance.send(e, handler)
         request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
@@ -146,7 +148,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
     }
 
     chunk match {
-      case Left(data) => Future(bodyDataSink.write(data))
+      case Left(data) => Future(bodyDataSink.write(data)).map(_ => bodyDataSink.close())
       case Right(stream) => writeStream(stream)
     }
   }
@@ -168,6 +170,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
           if (available > 0) {
             val buffer = ByteBuffer.allocate(available)
             source.read(buffer)
+            buffer.flip()
 
             val current = chain
             chain = Chain.incomplete
@@ -197,7 +200,18 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
                       origURI.getFragment).toString
 
     val newHeaders  = request.headers ++ requestContentLength(request)
-    val xlRequest   = createXLRequest(request, uri)
+    val xlRequest   = request.method match {
+      case HttpMethods.DELETE     => new DeleteRequest(uri)
+      case HttpMethods.GET        => new GetRequest(uri)
+      case HttpMethods.HEAD       => new HeadRequest(uri)
+      case HttpMethods.OPTIONS    => new OptionsRequest(uri)
+      case HttpMethods.POST       => postRequest(request, uri)
+      case HttpMethods.PUT        => putRequest(request, uri)
+      case HttpMethods.CONNECT    => sys.error("CONNECT is not implemented.")
+      case HttpMethods.TRACE      => sys.error("TRACE is not implemented.")
+      case HttpMethods.PATCH      => sys.error("PATCH is not implemented.")
+      case HttpMethods.CUSTOM(x)  => sys.error("CUSTOM is not implemented.")
+    }
 
     for ((key, value) <- newHeaders.raw) xlRequest.addHeader(key, value)
 
@@ -209,21 +223,6 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
     request.method match {
       case DELETE | GET | HEAD | OPTIONS | POST | PUT => true
       case _ => false
-    }
-  }
-
-  private def createXLRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
-    request.method match {
-      case HttpMethods.DELETE     => new DeleteRequest(url)
-      case HttpMethods.GET        => new GetRequest(url)
-      case HttpMethods.HEAD       => new HeadRequest(url)
-      case HttpMethods.OPTIONS    => new OptionsRequest(url)
-      case HttpMethods.POST       => postRequest(request, url)
-      case HttpMethods.PUT        => putRequest(request, url)
-      case HttpMethods.CONNECT    => sys.error("CONNECT is not implemented.")
-      case HttpMethods.TRACE      => sys.error("TRACE is not implemented.")
-      case HttpMethods.PATCH      => sys.error("PATCH is not implemented.")
-      case HttpMethods.CUSTOM(x)  => sys.error("CUSTOM is not implemented.")
     }
   }
 
@@ -244,6 +243,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
   }
 
   private def requestContentType(request: HttpRequest[ByteChunk]) = `Content-Type`(request.mimeTypes : _*)
+
   private def requestContentLength(request: HttpRequest[ByteChunk]): Option[HttpHeader] = {
     for (content <- request.content; v <- content.left.toOption) yield {
       `Content-Length`(v.remaining)
