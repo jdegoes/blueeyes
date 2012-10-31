@@ -32,7 +32,7 @@ class HttpClientSpec extends Specification with TestAkkaDefaults {
   }
 
   "sets protocol, host, port and path to request" in {  
-    makeTest(HttpRequest[String](HttpMethods.GET, "https://google.com:8080/bar/foo" +  initialRequest.uri)) {
+    makeTest(HttpRequest[String](HttpMethods.GET, "https://google.com:8080/bar/foo" + initialRequest.uri)) {
       client => client.host("google.com").path("/bar/foo").protocol("https").port(8080)
     }
   }

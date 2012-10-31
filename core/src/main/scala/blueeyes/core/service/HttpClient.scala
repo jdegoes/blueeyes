@@ -40,7 +40,9 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
   }
 
   def path(path: String) = buildClient { request =>
-    request.copy(uri = request.uri.copy(path = request.uri.path.map(path + _).orElse(Some(path))))
+    val subpath0 = request.uri.path.map(p => path + p).getOrElse(path)
+    val uri0 = URI(request.uri.copy(path = Some(subpath0)).toString) // round trip through string to get the subpath
+    request.copy(uri = uri0, subpath = uri0.path.getOrElse(""))
   }
 
   def parameters(parameters: (Symbol, String)*) = buildClient { request => 
