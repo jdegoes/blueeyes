@@ -12,14 +12,14 @@ import org.specs2.mutable.Specification
 import scalaz._
 
 class ByteChunkSpec extends Specification with TestAkkaDefaults with FutureMatchers {
-  "AggregatedByteChunk" should {
+  "aggregation" should {
     "aggregate full content when size is not specified" in{
       val stream = ByteBuffer.wrap(Array[Byte]('1', '2')) :: 
                    ByteBuffer.wrap(Array[Byte]('3', '4')) :: 
                    StreamT.empty[Future, ByteBuffer]
 
-      ByteChunk.aggregate(Right(stream), 1024).right.get.head.map(v => new String(v.array)) must whenDelivered {
-        be_==("1234")
+      ByteChunk.aggregate(Right(stream), 1024).right.get.head.map(buf => buf.array.toList.take(buf.remaining)) must whenDelivered {
+        be_==(List[Byte]('1','2','3','4'))
       }
     }
 
@@ -28,7 +28,9 @@ class ByteChunkSpec extends Specification with TestAkkaDefaults with FutureMatch
                    ByteBuffer.wrap(Array[Byte]('3', '4')) :: 
                    StreamT.empty[Future, ByteBuffer]
 
-      ByteChunk.aggregate(Right(stream), 2).right.get.head.map(v => new String(v.array)) must whenDelivered (be_==("12"))
+      ByteChunk.aggregate(Right(stream), 2).right.get.head.map(buf => buf.array.toList.take(buf.remaining)) must whenDelivered {
+        be_==(List[Byte]('1','2'))
+      }
     }
   }
 }

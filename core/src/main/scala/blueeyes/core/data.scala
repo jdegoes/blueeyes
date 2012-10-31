@@ -39,7 +39,8 @@ package object data {
           Future {
             val limit = head.limit
             // set the limit to the max that can be read into the current buffer
-            head.limit(head.position + buffer.remaining)
+            val newLimit = head.position + buffer.remaining
+            head.limit(newLimit)
             buffer.put(head)
             // reset the limit to its original position
             head.limit(limit)
@@ -48,8 +49,12 @@ package object data {
           }
         } else {
           tail.uncons flatMap {
-            case Some((head0, tail0)) => fill(buffer.put(head), head0, tail0)
-            case None => Promise.successful((buffer, StreamT.empty[Future, ByteBuffer]))
+            case Some((head0, tail0)) => 
+              fill(buffer.put(head), head0, tail0)
+
+            case None => 
+              buffer.put(head)
+              Promise.successful((buffer, StreamT.empty[Future, ByteBuffer]))
           }
         }
       }
