@@ -26,7 +26,7 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
   private var service: AsyncHttpService[ByteChunk] = null
   private var stopTimeout: Timeout = null
   private var stoppable: Option[Stoppable] = null
-  private var _executionContext = null
+  private var _executionContext: ExecutionContext = null
 
   private implicit def executionContext: ExecutionContext = _executionContext
 
@@ -102,7 +102,7 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
       BlockFormat
     )
 
-    _executionContext = sys.error("todo")
+    _executionContext = AkkaDefaults.defaultFutureDispatch
     val run = server(rootConfiguration, executionContext)
     run.start map { startFuture => 
       val startupTimeout = Timeout(rootConfiguration[Long]("server.startup.timeout.seconds", 30L))

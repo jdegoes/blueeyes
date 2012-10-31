@@ -48,48 +48,39 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
 
   "HttpServer" should {
     "return empty response" in {
-      client.post("/empty/response")("") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-              (content must beNone)
-        }
+      Await.result(client.post("/empty/response")(""), duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (content must beNone)
       }
     }
 
     "write file" in {
       TestEngineService.dataFile.delete
 
-      client.post("/file/write")("foo") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-              (TestEngineService.dataFile.exists must be_==(true)) and
-              (TestEngineService.dataFile.length mustEqual("foo".length))
-        }
+      Await.result(client.post("/file/write")("foo"), duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (TestEngineService.dataFile.exists must be_==(true)) and
+          (TestEngineService.dataFile.length mustEqual("foo".length))
       }
     }
 
     "read file" in {
       TestEngineService.dataFile.delete
 
-      akka.dispatch.Await.result(client.post("/file/write")("foo"), duration)
-      client.get("/file/read") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-              (content must beSome("foo"))
-        }
+      Await.result(client.post("/file/write")("foo") flatMap { _ => client.get[String]("/file/read") }, duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (content must beSome("foo"))
       }
     }
 
     "return html by correct URI" in {
-      client.get("/bar/foo/adCode.html") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-              (content must beSome(TestEngineService.content))
-        }
+      Await.result(client.get("/bar/foo/adCode.html"), duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (content must beSome(TestEngineService.content))
       }
     }
 
@@ -107,17 +98,16 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     }
 
     "return html by correct URI with parameters" in{
-      client.parameters('bar -> "zar").get("/foo") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-              (content must beSome(TestEngineService.content))
-        }
+      Await.result(client.parameters('bar -> "zar").get("/foo"), duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (content must beSome(TestEngineService.content))
       }
     }
 
     "return huge content" in {
-      client.get[ByteChunk]("/huge") must succeedWithContent {
+      val result = client.get[ByteChunk]("/huge") 
+      result must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
           (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineService.hugeContent.map(v => new String(v).mkString("")).mkString("")
         }
@@ -125,7 +115,8 @@ class HttpServerServletSpec extends Specification with TestAkkaDefaults with Htt
     }
 
     "return huge delayed content" in {
-      client.get[ByteChunk]("/huge/delayed") must succeedWithContent {
+      val result = client.get[ByteChunk]("/huge/delayed") 
+      result must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
           (arr: Array[Byte]) => new String(arr, "UTF-8") must_== TestEngineService.hugeContent.map(v => new String(v).mkString("")).mkString("")
         }
