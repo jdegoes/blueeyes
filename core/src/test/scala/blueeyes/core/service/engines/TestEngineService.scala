@@ -68,9 +68,8 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       path("/file/write"){
         post { request: HttpRequest[ByteChunk] =>
           request.content map { value =>
-            FileSink.write(TestEngineService.dataFile, value) map {
-              _ => HttpResponse[ByteChunk]()
-            }
+            val (_, written) = FileSink.write(TestEngineService.dataFile, value) 
+            written map { _ => HttpResponse[ByteChunk]() }
           } getOrElse {
             Promise.successful(HttpResponse[ByteChunk]())
           }

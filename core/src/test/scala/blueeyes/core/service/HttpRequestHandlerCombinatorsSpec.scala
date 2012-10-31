@@ -2,6 +2,8 @@ package blueeyes.core.service
 
 
 import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util._
 
 import blueeyes.bkka._
 import blueeyes.core.data._
@@ -374,7 +376,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
-            case Left(data) => new String(data.array, "UTF-8") must_== "1234"
+            case Right(data) => Await.result(data.head.map(buf => buf.array.toList.take(buf.remaining)), Duration(2, "seconds")) must_== List[Byte]('1','2','3','4')
           }
         }
       }
@@ -392,7 +394,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
-            case Left(data) => new String(data.array, "UTF-8") must_== "12"
+            case Right(data) => Await.result(data.head.map(buf => buf.array.toList.take(buf.remaining)), Duration(2, "seconds")) must_== List[Byte]('1','2')
+              
           }
         }
       }

@@ -27,17 +27,15 @@ class BijectionsChunkJsonSpec extends Specification with AkkaDefaults with Futur
       val b2 = ByteBuffer.wrap(""""bar"}""".getBytes("UTF-8"))
 
       val stream = Right(b1 :: b2 :: StreamT.empty[Future, ByteBuffer]) 
-      bijection.unapply(stream) must whenDelivered {
-        be_==(JObject(JField("foo", JString("bar")) :: Nil))
-      }
+      Await.result(bijection.unapply(stream), Duration(500, "milliseconds")) must_== JObject(JField("foo", JString("bar")) :: Nil)
     }
 
-    "throw error when JSON is incomplete" in{
+    "return JUndefined when JSON is incomplete" in {
       val b1 = ByteBuffer.wrap("""{"foo":""".getBytes("UTF-8"))
-      val b2 = ByteBuffer.wrap(""""bar"}""".getBytes("UTF-8"))
+      val b2 = ByteBuffer.wrap(""""bar""".getBytes("UTF-8"))
 
       val stream = Right(b1 :: b2 :: StreamT.empty[Future, ByteBuffer]) 
-      Await.result(bijection.unapply(stream), Duration(500, "milliseconds")) must throwA[Exception]
+      Await.result(bijection.unapply(stream), Duration(500, "milliseconds")) must_== JUndefined
     }
   }
 }

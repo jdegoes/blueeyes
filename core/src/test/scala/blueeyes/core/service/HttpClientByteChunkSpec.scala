@@ -1,6 +1,8 @@
 package blueeyes.core.service
 
 import akka.dispatch.Future
+import akka.dispatch.Await
+import akka.util._
 
 import blueeyes.bkka._
 import blueeyes.core.http._
@@ -29,11 +31,13 @@ class HttpClientByteChunkSpec extends Specification with TestAkkaDefaults with H
       }
     }
 
-    "aggregate content up to the specified size" in {
-      val future = client(Right(stream)).aggregate(2.bytes).get[String]("foo")
+    "aggregate full content up to the specified size" in {
+      val firstBuffer = client(Right(stream)).aggregate(2.bytes).get[ByteChunk]("foo").flatMap { 
+        _.content match { case Some(Right(stream)) => stream.head }  
+      }
 
-      future must succeedWithContent { 
-        be_==("12")
+      Await.result(firstBuffer, Duration(2L, "seconds")) must beLike {
+        case buffer => buffer.array.toList.take(buffer.remaining) must_== List[Byte]('1','2')
       }
     }
   }

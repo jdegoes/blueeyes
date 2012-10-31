@@ -87,16 +87,8 @@ trait DefaultBijections {
       }
 
       def unapply(s: ByteChunk) = {
-        ByteChunk.force(s) map {
-          case Left(buffer) =>
-            JParser.parseFromByteBuffer(buffer) | JUndefined
-          
-          case Right((acc, size)) => 
-            val resultArray = new Array[Byte](size)
-            val resultBuf = ByteBuffer.wrap(resultArray)
-            acc foreach { resultBuf put _ }
-            resultBuf.flip()
-            JParser.parseFromByteBuffer(resultBuf) | JUndefined
+        ByteChunk.forceByteArray(s) map { bytes =>
+          JParser.parseFromByteBuffer(ByteBuffer.wrap(bytes)) | JUndefined
         }
       }
     }

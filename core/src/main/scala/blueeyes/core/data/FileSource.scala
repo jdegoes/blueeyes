@@ -54,13 +54,24 @@ class FileSource(file: File, offset: Long, length: Long, chunkSize: Int = 8192) 
 }
 
 class FileSink(file: File) {
-  def write(chunk: ByteChunk)(implicit executor: ExecutionContext): Future[Unit] = {
+  import FileSink.KillSwitch
+
+  def write(chunk: ByteChunk)(implicit executor: ExecutionContext): (Option[KillSwitch], Future[Unit]) = {
     implicit val M = new FutureMonad(executor)
+
+    val killed = new java.util.concurrent.atomic.AtomicReference[Option[Throwable]](None)
     def writeStream(stream: StreamT[Future, ByteBuffer], out: FileChannel): Future[Unit] = {
       stream.uncons flatMap {
         case Some((head, tail)) =>
-          out.write(head)
-          writeStream(tail, out)
+          killed.get() match {
+            case Some(error) =>
+              out.close()
+              throw error
+
+            case None =>
+              out.write(head)
+              writeStream(tail, out)
+          }
 
         case None =>
           Future(out.close())
@@ -70,7 +81,7 @@ class FileSink(file: File) {
     file.createNewFile()
     chunk match {
       case Left(buffer) =>
-        Future {
+        None -> Future {
           val out = new FileOutputStream(file)
           try {
             out.getChannel.write(buffer)
@@ -80,11 +91,19 @@ class FileSink(file: File) {
         }
 
       case Right(stream) =>
-        writeStream(stream, new FileOutputStream(file).getChannel())
+        val killSwitch = new KillSwitch {
+          def kill(killWith: Throwable) = killed.compareAndSet(None, Some(killWith))
+        }
+
+        Some(killSwitch) -> writeStream(stream, new FileOutputStream(file).getChannel())
     }
   }
 }
 
 object FileSink {
+  trait KillSwitch {
+    def kill(killWith: Throwable): Unit
+  }
+
   def write(file: File, chunk: ByteChunk)(implicit executor: ExecutionContext) = new FileSink(file).write(chunk)
 }

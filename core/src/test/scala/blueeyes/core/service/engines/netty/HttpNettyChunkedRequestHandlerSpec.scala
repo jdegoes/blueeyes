@@ -30,7 +30,6 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]
-  private val context       = mock[ChannelHandlerContext]
   private val event         = mock[MessageEvent]
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
   private val handler       = new HttpNettyChunkedRequestHandler(2)
@@ -41,8 +40,11 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
   private val chunkData     = Array[Byte]('1', '2')
 
   override def is = args(sequential = true) ^ super.is
+
   "NettyChunkedRequestHandler" should {
     "sends requests as it is when it is not chunked" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(false)
       handler.messageReceived(context, event)
 
@@ -50,17 +52,21 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
     }
 
     "sends request and chunk when request is chunked and there is only one chunk" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(true)
       httpChunk.isLast() returns true
 
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(Left(ByteBuffer.wrap(chunkData))))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(Right(ByteBuffer.wrap(chunkData) :: StreamT.empty[Future, ByteBuffer])))
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
 
     "sends request and chunk when request is chunked and there is only more ther one chunk" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(true)
 
       httpChunk.isLast() returns false
@@ -84,7 +90,6 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
     channelConfig.getBufferFactory() returns HeapChannelBufferFactory.getInstance()
     event.getRemoteAddress() returns remoteAddress
     event.getChannel() returns channel
-    context.getChannel() returns channel
     event.getMessage() returns nettyRequest
 
     chunkEvent.getMessage() returns httpChunk
@@ -99,11 +104,15 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val anotherMessage  = anotherEvent.getMessage.asInstanceOf[HttpRequest[ByteChunk]]
 
       val b = anotherEvent.getChannel == channel
+
       val b1 = anotherMessage.copy(content = None) == message.copy(content = None)
-      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds)) == anotherMessage.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds))
+
+      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList) == 
+               anotherMessage.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList)
+
       val b3 = anotherEvent.getRemoteAddress == remoteAddress
-      b && b1 &&
-      b2 && b3
+
+      b && b1 && b2 && b3
     }
   }
 }
