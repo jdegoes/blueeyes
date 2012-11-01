@@ -608,7 +608,7 @@ case object JUndefined extends JValue {
   final def normalize = throw UndefinedNormalizeError("Can't normalize JUndefined")
   final def sort: JValue = this
   final def renderCompact: String = "null"
-  protected[json] final def typeIndex = 10
+  protected[json] final def typeIndex = -1
   final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
@@ -623,7 +623,7 @@ case object JNull extends JValue {
 sealed trait JBool extends JValue {
   final def normalize: JBool = this
   final def sort: JBool = this
-  protected[json] final def typeIndex = 0
+  protected[json] final def typeIndex = 1
   def value: Boolean
 }
 
@@ -920,8 +920,15 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
     keys.foreach { key =>
       val v1 = m1.getOrElse(key, JUndefined)
       val v2 = m2.getOrElse(key, JUndefined)
-      val i = (v1 compare v2)
-      if (i != 0) return i
+      if (v1 == JUndefined && v2 == JUndefined) {
+      } else if (v1 == JUndefined) {
+        return 1
+      } else if (v2 == JUndefined) {
+        return -1
+      } else {
+        val i = (v1 compare v2)
+        if (i != 0) return i
+      }
     }
     0
   }
