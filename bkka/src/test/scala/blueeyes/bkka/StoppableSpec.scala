@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 class StoppableSpec extends Specification with AkkaDefaults {
   val actorSystem = ActorSystem("stoppable-spec")
-  implicit val timeout = Timeout(1000)
+  implicit val timeout = Timeout(5000)
   val random = new scala.util.Random
 
   case class TestStopTarget(position: String) {

@@ -71,27 +71,25 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
 
   "HttpServer" should {
     "return empty response" in {
-      client.post("/empty/response")("") must whenDelivered {
-        beLike {
-          case HttpResponse(status, _, content, _) =>
-            (status.code must be (OK)) and
-            (content must beNone)
-        }
+      Await.result(client.post("/empty/response")(""), duration) must beLike {
+        case HttpResponse(status, _, content, _) =>
+          (status.code must be (OK)) and
+          (content must beNone)
       }
     }
 
     "write file" in {
       TestEngineService.dataFile.delete
 
-      client.post("/file/write")("foo") must whenDelivered {
-      //Await.result(client.post("/file/write")("foo"), duration) must
+      //client.post("/file/write")("foo") must whenDelivered {
+      Await.result(client.post("/file/write")("foo"), duration) must
         beLike {
           case HttpResponse(status, _, content, _) =>
             (status.code must be (OK)) and
             (TestEngineService.dataFile.exists must be_==(true)) and
             (TestEngineService.dataFile.length mustEqual("foo".length))
         }
-      }
+      //}
     }
 
     "read file" in {
@@ -110,16 +108,21 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
     }
 
     "return NotFound when accessing a nonexistent URI" in {
-      val response = Await.result(client.post("/foo/foo/adCode.html")("foo").failed, duration)
-      response must beLike { case HttpException(failure, _) => failure must_== NotFound }
+      Await.result(client.post("/foo/foo/adCode.html")("foo").failed, duration) must beLike { 
+        case HttpException(failure, _) => failure must_== NotFound 
+      }
     }
+
     "return InternalServerError when handling request crashes" in {
-      val response = Await.result(client.get("/error").failed, duration)
-      response must beLike { case HttpException(failure, _) => failure must_== InternalServerError }
+      Await.result(client.get("/error").failed, duration) must beLike { 
+        case HttpException(failure, _) => failure must_== InternalServerError 
+      }
     }
+
     "return Http error when handling request throws HttpException" in {
-      val response = Await.result(client.get("/http/error").failed, duration)
-      response must beLike { case HttpException(failure, _) => failure must_== BadRequest }
+      Await.result(client.get("/http/error").failed, duration) must beLike { 
+        case HttpException(failure, _) => failure must_== BadRequest 
+      }
     }
 
     "return html by correct URI with parameters" in {
