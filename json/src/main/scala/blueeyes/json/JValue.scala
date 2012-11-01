@@ -69,12 +69,6 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
    */
   def \ (nameToFind: String): JValue = self match {
     case j @ JObject(fields) => j.get(nameToFind)
-    case j @ JArray(elements) => 
-      elements.map(_ \ nameToFind) match {
-        case Nil => JUndefined
-        case x :: Nil => x
-        case elements @ x :: xs => JArray(elements)
-      }
     case _ => JUndefined
   }
 
