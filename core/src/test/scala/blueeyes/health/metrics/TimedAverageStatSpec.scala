@@ -3,12 +3,13 @@ package blueeyes.health.metrics
 import org.specs2.mutable.Specification
 import blueeyes.json._
 import java.util.concurrent.TimeUnit
+import blueeyes.akka_testing.FutureMatchers
 
-class TimedAverageStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
+class TimedAverageStatSpec extends Specification with TimedStatFixtures with FutureMatchers {
   implicit val healthMonitorTimeout = akka.util.Timeout(10000)
 
   "TimedAverageStat" should{
-    "creates JValue" in{
+    "creates JValue" in {
       val config = interval(IntervalLength(3, TimeUnit.SECONDS), 3)
       val timedSample = TimedAverageStat(config)
       fill(timedSample)

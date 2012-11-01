@@ -57,7 +57,6 @@ import blueeyes.bkka.AkkaDefaults
  * </pre>
  */
 trait BlueEyesServiceBuilderBase[T] extends ServiceBuilder[T] with 
-  AkkaDefaults with 
   HttpHeaderImplicits with 
   HttpStatusImplicits with
   HttpStatusCodeImplicits with 

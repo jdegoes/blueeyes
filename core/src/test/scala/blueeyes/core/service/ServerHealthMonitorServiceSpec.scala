@@ -1,18 +1,22 @@
 package blueeyes.core.service
 
 import test.BlueEyesServiceSpecification
+import blueeyes.bkka._
 import blueeyes.json._
-import blueeyes.core.http.HttpStatus
+import blueeyes.core.data._
+import blueeyes.core.http._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.test.HttpRequestMatchers 
+import DefaultBijections._
 
-class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService with HttpRequestMatchers {
+class ServerHealthMonitorServiceSpec extends BlueEyesServiceSpecification with ServerHealthMonitorService with HttpRequestMatchers with TestAkkaDefaults {
   val healthMonitorQueryTimeout = akka.util.Timeout(10000)
+  val executionContext = defaultFutureDispatch
 
    "Server Health Monitor Service" should{
     "get server health" in {
-      service.get[JValue]("/blueeyes/server/health") must succeedWithContent {
+      client.get[JValue]("/blueeyes/server/health") must succeedWithContent {
         (content: JValue) => {
           (content \ "runtime" must_!=(JUndefined)) and
           (content \ "memory" must_!=(JUndefined)) and

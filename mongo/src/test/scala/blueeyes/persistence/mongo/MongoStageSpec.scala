@@ -11,7 +11,7 @@ import scalaz.Semigroup
 import scala.util.Random
 
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 import akka.actor.{Actor, Props}
 import akka.dispatch.Future
 import akka.pattern.ask

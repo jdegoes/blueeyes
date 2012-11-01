@@ -2,13 +2,13 @@ package blueeyes.core.service
 
 import org.specs2.mutable.Specification
 import blueeyes.core.http._
-import blueeyes.core.http.test._
+import blueeyes.akka_testing.FutureMatchers
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.util.RichThrowableImplicits._
 import akka.dispatch.Future
 import akka.dispatch.Promise
 
-class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers with HttpRequestMatchers {
+class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers with FutureMatchers {
   
   "HttpResponseHelpers respond: creates Future with the specified parameters" in {
     val statusCode  = InternalServerError
@@ -38,7 +38,11 @@ class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers wit
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled with error)" in {
     val error   = new NullPointerException()
     val promise = Promise.failed[String](error)
-    respondLater[String](promise) must respondWithCode(InternalServerError)
+    respondLater[String](promise) must whenDelivered {
+      beLike {
+        case HttpResponse(HttpStatus(code, _), _, c, _) =>  code must_== InternalServerError
+      }
+    }
   }
 
   "HttpResponseHelpers respondLater: creates Future when response is error (Future is cancelled without error)" in {
@@ -46,6 +50,10 @@ class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers wit
     val promise = Promise[String]
     promise.failure(new RuntimeException())
 
-    respondLater[String](promise) must respondWithCode(InternalServerError)
+    respondLater[String](promise) must whenDelivered {
+      beLike {
+        case HttpResponse(HttpStatus(code, _), _, c, _) =>  code must_== InternalServerError
+      }
+    }
   }
 }

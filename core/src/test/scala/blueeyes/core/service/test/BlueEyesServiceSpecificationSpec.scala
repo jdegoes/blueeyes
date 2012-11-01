@@ -1,40 +1,47 @@
 package blueeyes.core.service.test
 
-import org.specs2.mutable.Specification
-import blueeyes.core.service._
 import akka.dispatch.Future
 import akka.dispatch.Promise
+
+import blueeyes.BlueEyesServiceBuilder
+import blueeyes.bkka._
+import blueeyes.core.data._
+import blueeyes.core.http._
 import blueeyes.core.http.HttpResponse
 import blueeyes.core.http.MimeTypes._
-import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.MimeTypes._
-import blueeyes.core.http._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
+import blueeyes.core.service._
+import DefaultBijections._
 import TestService._
+
+import blueeyes.akka_testing.FutureMatchers
+import org.specs2.mutable.Specification
 import org.specs2.time.TimeConversions._
-import blueeyes.concurrent.test.FutureMatchers
 
+import scalaz._
+import scalaz.syntax.monad._
 
-class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with BijectionsChunkString with FutureMatchers{
+class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with TestService with FutureMatchers with TestAkkaDefaults {
   implicit val futureTimeouts = FutureTimeouts(6, 1 second)
+  val executionContext = defaultFutureDispatch
 
   "Service Specification" should {
     "support get by valid URL" in {
-      service.get[String]("/bar/id/bar.html") must whenDelivered { be_==(serviceResponse) }
+      client.get[String]("/bar/id/bar.html") must whenDelivered { be_==(serviceResponse) }
     }
 
     "support asynch get by valid URL" in {
-      val result = service.get[String]("/asynch/future") 
+      val result = client.get[String]("/asynch/future") 
       result must whenDelivered { be_==(serviceResponse) }
     }
 
     "support eventually asynch get by valid URL" in {
-      service.get[String]("/asynch/eventually") must eventually { whenDelivered { be_==(serviceResponse) } }
+      client.get[String]("/asynch/eventually") must eventually { whenDelivered { be_==(serviceResponse) } }
     }
   }
 }
 
-trait TestService extends BlueEyesServiceBuilder with BijectionsChunkString {
+trait TestService extends BlueEyesServiceBuilder {
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {
