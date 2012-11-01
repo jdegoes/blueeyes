@@ -608,7 +608,7 @@ case object JUndefined extends JValue {
   final def normalize = throw UndefinedNormalizeError("Can't normalize JUndefined")
   final def sort: JValue = this
   final def renderCompact: String = "null"
-  protected[json] final def typeIndex = 10
+  protected[json] final def typeIndex = -1
   final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
@@ -623,7 +623,7 @@ case object JNull extends JValue {
 sealed trait JBool extends JValue {
   final def normalize: JBool = this
   final def sort: JBool = this
-  protected[json] final def typeIndex = 0
+  protected[json] final def typeIndex = 1
   def value: Boolean
 }
 
@@ -920,8 +920,15 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
     keys.foreach { key =>
       val v1 = m1.getOrElse(key, JUndefined)
       val v2 = m2.getOrElse(key, JUndefined)
-      val i = (v1 compare v2)
-      if (i != 0) return i
+      if (v1 == JUndefined && v2 == JUndefined) {
+      } else if (v1 == JUndefined) {
+        return 1
+      } else if (v2 == JUndefined) {
+        return -1
+      } else {
+        val i = (v1 compare v2)
+        if (i != 0) return i
+      }
     }
     0
   }
@@ -1047,15 +1054,11 @@ case class JArray(elements: List[JValue]) extends JValue {
     js1 match {
       case Nil => js2 match {
         case Nil => true
-        case JUndefined :: t2 => elementsEq(Nil, t2)
         case _ => false
       }
-      case JUndefined :: t1 => elementsEq(t1, js2)
       case h1 :: t1 => js2 match {
         case Nil => false
-        case JUndefined :: t2 => elementsEq(js1, t2)
-        case h2 :: t2 =>
-          if (h1 equals h2) elementsEq(t1, t2) else false
+        case h2 :: t2 => if (h1 equals h2) elementsEq(t1, t2) else false
       }
     }
   }
@@ -1070,13 +1073,11 @@ case class JArray(elements: List[JValue]) extends JValue {
     js1 match {
       case Nil => js2 match {
         case Nil => 0
-        case JUndefined :: t2 => elementsCmp(Nil, t2)
         case _ => -1
       }
-      case JUndefined :: t1 => elementsCmp(t1, js2)
+
       case h1 :: t1 => js2 match {
         case Nil => 1
-        case JUndefined :: t2 => elementsCmp(js1, t2)
         case h2 :: t2 =>
           val i = (h1 compare h2)
           if (i == 0) elementsCmp(t1, t2) else i
