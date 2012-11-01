@@ -1,10 +1,11 @@
 package blueeyes.core.http
 package test
 
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 import org.specs2.mutable.Specification
 import org.specs2.matcher._
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 
 trait HttpRequestMatchers extends Specification with FutureMatchers {
   case class succeedWithContent[A](matcher: Matcher[A]) extends Matcher[Future[HttpResponse[A]]] {
@@ -18,6 +19,17 @@ trait HttpRequestMatchers extends Specification with FutureMatchers {
       }
 
       nested(expectable)
+    }
+  }
+
+  def succeedWithFutureContent[A](matcher: Matcher[A])(implicit executor: ExecutionContext): Matcher[Future[HttpResponse[Future[A]]]] = {
+    succeedWithContent(matcher) ^^ { 
+      (_: Future[HttpResponse[Future[A]]]).flatMap { response =>
+        response.content match {
+          case Some(content) => content map { c => response.copy(content = Some(c)) }
+          case None => Future(response.copy(content = None))
+        }
+      }
     }
   }
 

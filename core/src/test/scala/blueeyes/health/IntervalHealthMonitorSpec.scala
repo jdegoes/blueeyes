@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import blueeyes.json.JPathImplicits._
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 import blueeyes.json._
 import blueeyes.json.{JParser, JPath}
 import java.util.concurrent.TimeUnit

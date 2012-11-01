@@ -3,8 +3,9 @@ package blueeyes.health.metrics
 import blueeyes.json._
 import blueeyes.json.JParser.parse
 import org.specs2.mutable.Specification
+import blueeyes.akka_testing.FutureMatchers
 
-class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
+class TimedEternityAverageStatSpec extends Specification with TimedStatFixtures with FutureMatchers {
   "TimedEternityAverageStat" should{
     "creates JValue" in{
       val timedSample = TimedAverageStat(eternity)

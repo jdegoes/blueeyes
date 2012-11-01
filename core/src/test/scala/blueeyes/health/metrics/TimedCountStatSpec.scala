@@ -3,8 +3,9 @@ package blueeyes.health.metrics
 import org.specs2.mutable.Specification
 import blueeyes.json._
 import java.util.concurrent.TimeUnit
+import blueeyes.akka_testing.FutureMatchers
 
-class TimedCountStatSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
+class TimedCountStatSpec extends Specification with TimedStatFixtures with FutureMatchers {
   "TimedCountStat" should{
     "creates JValue" in{
       val config      = interval(IntervalLength(3, TimeUnit.SECONDS), 3)

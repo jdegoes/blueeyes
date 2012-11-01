@@ -5,8 +5,9 @@ import blueeyes.json._
 import akka.dispatch.Future
 import blueeyes.util.Clock
 import java.util.concurrent.TimeUnit
+import blueeyes.akka_testing.FutureMatchers
 
-class TimedSampleSpec extends Specification with TimedStatFixtures with blueeyes.concurrent.test.FutureMatchers {
+class TimedSampleSpec extends Specification with TimedStatFixtures with FutureMatchers {
   "TimedSample" should{
     "create histogram" in{
       val timedSample = new TimedSampleImpl(interval(IntervalLength(3, TimeUnit.SECONDS), 7))

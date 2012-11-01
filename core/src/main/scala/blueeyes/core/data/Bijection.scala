@@ -29,8 +29,8 @@ trait Bijection[A, B] extends Function1[A, B] with Unapply[A, B] { self =>
   def apply(t: A): B
   
   def inverse: Bijection[B, A] = new Bijection[B, A] {
-    def apply(s: B): A   = self.unapply(s)
-    def unapply(t: A): B = self.apply(t)
+    def apply(b: B): A   = self.unapply(b)
+    def unapply(a: A): B = self.apply(a)
   }
   
   def compose[R](that: Bijection[R, A]): Bijection[R, B] = new Bijection[R, B] {
