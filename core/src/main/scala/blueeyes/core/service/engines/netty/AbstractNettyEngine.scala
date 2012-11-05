@@ -1,37 +1,36 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
 
-import blueeyes.core.service.{HttpServer, HttpServerEngine}
-import com.weiglewilczek.slf4s.Logging
+import blueeyes.bkka._
+import blueeyes.core.data._
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 
-trait AbstractNettyEngine extends HttpServerEngine with HttpServer with Logging {
-  private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
-  private var servers: List[NettyServer]  = Nil
+import org.streum.configrity.Configuration
 
-  override def start: Future[Unit] = {
-    super.start.map { _ =>
-      startStopLock.writeLock.lock()
-      try {
-        servers = nettyServers
-        servers.foreach(_.start)
-      } finally {
-        startStopLock.writeLock.unlock()
+
+trait AbstractNettyEngine extends HttpServerModule {
+  type HttpServer <: AbstractNettyHttpServer
+
+  abstract class AbstractNettyHttpServer(rootConfig: Configuration) extends HttpServerLike(rootConfig) {
+    override def start = {
+      implicit val stop: Stop[List[NettyServer]] = new Stop[List[NettyServer]] {
+        def stop(servers: List[NettyServer]) = Future {
+          servers.foreach(_.stop)
+        }
+      }
+
+      super.start.map { service =>
+        for {
+          (service, stoppable) <- service
+          servers = nettyServers(service)
+          _ <- Future(servers.foreach(_.start)) 
+        } yield {
+          (service, Some(Stoppable(servers, stoppable.toList)))
+        }
       }
     }
-  }
 
-  override def stop: Future[Unit] = {
-    super.stop map { _ =>
-      startStopLock.writeLock.lock()
-      try {
-        servers.foreach(_.stop)
-        servers = Nil
-        logger.info("Netty engine has stopped.")
-      } finally{
-        startStopLock.writeLock.unlock()
-      }
-    }
+    protected def nettyServers(service: AsyncHttpService[ByteChunk]): List[NettyServer]
   }
-
-  protected def nettyServers: List[NettyServer]
 }

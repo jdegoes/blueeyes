@@ -1,19 +1,19 @@
 package blueeyes.core.service.test
 
-
 import akka.dispatch.Future
 import akka.dispatch.Await
+import akka.dispatch.ExecutionContext
 import akka.util.duration._
 import akka.util.DurationLong
 
-import blueeyes.bkka.AkkaDefaults
+import blueeyes.bkka._
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpStatus, HttpStatusCodes, HttpException}
 import blueeyes.core.service._
 import blueeyes.Environment
-
-//import blueeyes.persistence.mongo.ConfigurableMongo
 import blueeyes.util.RichThrowableImplicits._
+
+import com.weiglewilczek.slf4s.Logging
 
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 
@@ -23,61 +23,78 @@ import org.streum.configrity.io.BlockFormat
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Fragment, Fragments, Step}
 
-class BlueEyesServiceSpecification extends Specification with blueeyes.concurrent.test.FutureMatchers with HttpReflectiveServiceList[ByteChunk] with AkkaDefaults { self =>
-  private lazy val NotFound    = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
+import blueeyes.akka_testing.FutureMatchers
 
+abstract class BlueEyesServiceSpecification extends Specification with FutureMatchers with HttpServerModule with ReflectiveServiceList[ByteChunk] with Logging { self =>
+  private val NotFound = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private val mockSwitch = sys.props.get(Environment.MockSwitch)
 
-  override def is = args(sequential = true) ^ super.is
+  private var _service: AsyncHttpService[ByteChunk] = _
+  private var _stoppable: Option[Stoppable] = None
+
   private val specBefore = Step {
     setMockCongiguration
-    startServer
+
+    val config = Configuration.parse(configuration, BlockFormat)
+    server(config, executionContext).start map { startFuture =>
+      val started = startFuture map { 
+        case (service, stoppable) => 
+          _service = service
+          _stoppable = stoppable
+      }
+
+      Await.result(started, new DurationLong(startTimeOut) millis)
+    }
   }
 
   private val specAfter = Step {
     resetMockCongiguration
-    stopServer
+    stoppable.foreach(Stoppable.stop(_, new DurationLong(stopTimeOut) millis))
   }
 
-  override def map(fs: =>Fragments) = specBefore ^ beforeSpec ^ fs ^ afterSpec ^ specAfter
+  override def is = args(sequential = true) ^ super.is
+  override def map(fs: => Fragments) = specBefore ^ beforeSpec ^ fs ^ afterSpec ^ specAfter
 
   def startTimeOut   = 60000
   def stopTimeOut    = 60000
   def httpServerStopTimeout = stopTimeOut
   def configuration  = ""
+  implicit def executionContext: ExecutionContext
 
-  protected def beforeSpec(): Step = Step{}
-  protected def afterSpec(): Step = Step{}
+  protected def beforeSpec: Step = Step()
+  protected def afterSpec: Step = Step()
 
-  private val httpServer = new HttpServer{
+  final def service = _service
+  final def stoppable = _stoppable
+
+  class HttpServer(config: Configuration, executor: ExecutionContext) extends HttpServerLike(config) {
+    override implicit val executionContext = executor
+
     // For the purposes of tests, kill the server early since we don't care about losing data in a spec
     override val stopTimeout = akka.util.Timeout(httpServerStopTimeout - 5000)
 
-    def services = self.services
-
-    override def rootConfig: Configuration = self.rootConfig
+    override val services = self.services
+    override val log = self.logger
   }
+
+  def server(config: Configuration, executor: ExecutionContext) = new HttpServer(config, executor)
 
   def setMockCongiguration = {
     sys.props.getOrElseUpdate (Environment.MockSwitch, "true")
   }
 
   def resetMockCongiguration = {
-    def setProp(key: String, value: Option[String]) = value match{
+    def setProp(key: String, value: Option[String]) = value match {
       case Some(x) => sys.props.put(key, x)
       case None => sys.props.remove(key)
     }
+
     setProp(Environment.MockSwitch, mockSwitch)
   }
 
-  def service: HttpClient[ByteChunk] = new SpecClient()
+  object client extends HttpClient[ByteChunk] {
+    def isDefinedAt(x: HttpRequest[ByteChunk]) = true
 
-  private def startServer = Await.result(httpServer.start, new DurationLong(startTimeOut) millis)
-  private def stopServer  = Await.result(httpServer.stop,  new DurationLong(stopTimeOut) millis)
-
-  lazy val rootConfig = Configuration.parse(configuration, BlockFormat)
-
-  private class SpecClient extends HttpClient[ByteChunk]{
     def apply(request: HttpRequest[ByteChunk]) = {
       def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
         case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
@@ -89,13 +106,11 @@ class BlueEyesServiceSpecification extends Specification with blueeyes.concurren
       }
 
       try {
-        val response = httpServer.service(request)
+        val response = service.service(request)
         response.toOption.getOrElse(Future(NotFound))
       } catch {
         case t: Throwable => Future(convertErrorToResponse(t))
       }
     }
-
-    def isDefinedAt(x: HttpRequest[ByteChunk]) = true
   }
 }

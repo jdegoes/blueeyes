@@ -9,13 +9,14 @@ import org.jboss.netty.channel._
 import blueeyes.core.service.engines.InetInterfaceLookup
 import org.streum.configrity.Configuration
 
-class NettyServer(provider: NettyServerProvider){
+
+class NettyServer(provider: NettyServerProvider) {
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private val channelGroup = new DefaultChannelGroup()
 
   private var server: Option[Bootstrap]  = None
 
-  def start{
+  def start {
     startStopLock.writeLock.lock()
     try {
       val (bootstrap, channel) = provider.startEngine(channelGroup)
@@ -24,15 +25,13 @@ class NettyServer(provider: NettyServerProvider){
       server = Some(bootstrap)
 
       provider.log.info("%s netty engine is started using port: %d".format(provider.engineType, provider.enginePort))
-    }
-    catch {
+    } catch {
       case e: Throwable => {
         provider.log.error("Error on server startup", e)
         stop
         throw e
       }
-    }
-    finally{
+    } finally{
       startStopLock.writeLock.unlock()
     }
   }
@@ -52,7 +51,7 @@ class NettyServer(provider: NettyServerProvider){
   }
 }
 
-trait NettyServerProvider{
+trait NettyServerProvider {
   def engineType: String
 
   def enginePort: Int
@@ -62,7 +61,7 @@ trait NettyServerProvider{
   def startEngine(channelGroup: ChannelGroup): (Bootstrap, Channel)
 }
 
-trait AbstractNettyServerProvider extends NettyServerProvider{
+trait AbstractNettyServerProvider extends NettyServerProvider {
   def startEngine(channelGroup: ChannelGroup) = {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
@@ -77,7 +76,7 @@ trait AbstractNettyServerProvider extends NettyServerProvider{
 
   def config: Configuration 
 
-  private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler{
+  private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler {
     override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
       e.getChannel.getConfig.setOption("backlog", backlog)
       super.channelOpen(ctx, e)

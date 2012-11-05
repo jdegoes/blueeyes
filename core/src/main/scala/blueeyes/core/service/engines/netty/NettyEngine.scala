@@ -1,19 +1,26 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
 
-import blueeyes.core.service._
-import akka.dispatch.Future
+import blueeyes.core.data._
 
-trait NettyEngine extends AbstractNettyEngine{ self =>
-  protected def nettyServers = {
-    val httpEngine = new HttpNettyServer(self)
-    httpEngine :: (if (sslEnable) List(new HttpsNettyServer(self)) else Nil)
+import akka.dispatch.ExecutionContext
+import org.streum.configrity.Configuration
+
+trait NettyEngine extends AbstractNettyEngine { self =>
+  type HttpServer <: NettyHttpServer
+
+  abstract class NettyHttpServer(rootConfig: Configuration, executionContext: ExecutionContext) extends AbstractNettyHttpServer(rootConfig) { server =>
+    protected def nettyServers(service: AsyncHttpService[ByteChunk]) = {
+      val httpProvider = new HttpNettyServerProvider(server, service, executionContext)
+      val httpServer = new NettyServer(httpProvider)
+      if (server.sslEnable) {
+        val httpsProvider = new HttpsNettyServerProvider(server, service, executionContext)
+        val httpsServer = new NettyServer(httpsProvider)
+
+        httpServer :: httpsServer :: Nil
+      } else {
+        httpServer :: Nil
+      }
+    }
   }
-}
-
-trait HttpNettyEngine extends AbstractNettyEngine{ self =>
-  def nettyServers = List(new HttpNettyServer(self))
-}
-
-trait HttpsNettyEngine extends AbstractNettyEngine{ self =>
-  def nettyServers = List(new HttpsNettyServer(self))
 }

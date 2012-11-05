@@ -1,11 +1,14 @@
 package blueeyes.core.service
 
-import org.specs2.mutable.Specification
+import blueeyes.bkka._
+
 import akka.dispatch.Future
 import akka.dispatch.Future._
-import org.specs2.mock._
 
-class HttpServiceBuilderSpec extends Specification with Mockito{
+import org.specs2.mock._
+import org.specs2.mutable.Specification
+
+class HttpServiceBuilderSpec extends Specification with Mockito with TestAkkaDefaults {
   "ServiceBuilder startup: creates StartupDescriptor with specified startup function" in{
     var executed = false
     val builder  = new ServiceBuilder[Unit]{
@@ -23,23 +26,21 @@ class HttpServiceBuilderSpec extends Specification with Mockito{
       val descriptor = request(function)
     }
 
-    builder.descriptor.request()
-
-    there was one(builder.descriptor.request).apply(())
+    builder.descriptor.serviceBuilder()
+    there was one(builder.descriptor.serviceBuilder).apply(())
   }
 
-  "ServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in{
+  "ServiceBuilder shutdown: creates StartupDescriptor with specified shutdown function" in {
     var shutdownCalled = false
 
     // We need "real" behavior here to allow the Stoppable hooks to run properly
     val builder  = new ServiceBuilder[Unit]{
       val descriptor = shutdown {
-        shutdownCalled = true; Future(())
+        Future(shutdownCalled = true)
       }
     }
 
-    builder.descriptor.shutdown()
-
+    Stoppable.stop(builder.descriptor.shutdownBuilder(()).get)
     shutdownCalled must eventually(be_==(true))
   }
 }
