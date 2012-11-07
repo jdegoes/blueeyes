@@ -4,9 +4,10 @@ package service
 import http._
 import http.HttpHeaders._
 import http.HttpStatusCodes._
-import data.{Chunk, ByteChunk, CompressedByteChunk, Bijection}
+import data._
 
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 import blueeyes.json._
 import blueeyes.util.metrics.DataSize
 
@@ -199,16 +200,16 @@ trait HttpRequestHandlerCombinators {
   def accept2[T, S, U, E1](mimeType: MimeType)(h: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]): HttpService[U, E1 => Future[HttpResponse[S]]] = new Accept2Service[T, S, U, E1](mimeType, h)
 
   /** The produce combinator creates a handler that is produces responses
-   * that have the specified content type. Requires an implicit bijection
+   * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
-  def produce[T, S, V](mimeType: MimeType)(h: HttpService[T, Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): HttpService[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h)
+  def produce[T, S, V](mimeType: MimeType)(h: HttpService[T, Future[HttpResponse[S]]])(implicit f: S => V): HttpService[T, Future[HttpResponse[V]]] = new ProduceService(mimeType, h, f)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit bijection
    * used for transcoding.
    */
-  def produce2[T, S, V, E1](mimeType: MimeType)(h: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit b: Bijection[S, V]): HttpService[T, E1 => Future[HttpResponse[V]]] = new Produce2Service(mimeType, h)
+  def produce2[T, S, V, E1](mimeType: MimeType)(h: HttpService[T, E1 => Future[HttpResponse[S]]])(implicit f: S => V): HttpService[T, E1 => Future[HttpResponse[V]]] = new Produce2Service(mimeType, h, f)
   /** The content type combinator creates a handler that accepts and produces
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
@@ -236,16 +237,16 @@ trait HttpRequestHandlerCombinators {
    *  The compress combinator creates a handler that compresses content by encoding supported by client
    *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
    */
-  def compress(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
+  def compress(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new CompressService(h)
 
-  def compress2[E1](h: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, CompressedByteChunk] = CompressService.supportedCompressions): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new CompressService2[E1](h)
+  def compress2[E1](h: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new CompressService2[E1](h)
 
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
-  def aggregate(chunkSize: Option[DataSize])(h: HttpService[Future[ByteChunk], Future[HttpResponse[ByteChunk]]]): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
+  def aggregate(chunkSize: Option[DataSize])(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext): HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] = new AggregateService(chunkSize, h)
 
-  def aggregate2[E1](chunkSize: Option[DataSize])(h: HttpService[Future[ByteChunk], E1 => Future[HttpResponse[ByteChunk]]]): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new Aggregate2Service[E1](chunkSize, h)
+  def aggregate2[E1](chunkSize: Option[DataSize])(h: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext): HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]] = new Aggregate2Service[E1](chunkSize, h)
 
   /** The jsonp combinator creates a handler that accepts and produces JSON.
    * The handler also transparently works with JSONP, if the client specifies

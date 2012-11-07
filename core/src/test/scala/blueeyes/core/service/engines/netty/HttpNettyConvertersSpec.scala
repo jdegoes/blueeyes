@@ -1,21 +1,26 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
 
-import org.specs2.mutable.Specification
+import blueeyes.core.data.{ByteChunk, DefaultBijections}
+import blueeyes.core.http._
+import blueeyes.core.http.HttpVersions._
+import blueeyes.core.http.MimeTypes._
 
 import org.jboss.netty.handler.codec.http.{HttpResponseStatus, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion, DefaultHttpRequest}
 import org.jboss.netty.buffer.{ChannelBuffers, ChannelBuffer}
 import org.jboss.netty.util.CharsetUtil
-import java.net.InetSocketAddress
-import blueeyes.core.http._
-;
-import scala.collection.JavaConversions._
 
-import blueeyes.core.http.HttpVersions._
-import blueeyes.core.data.{ByteChunk, BijectionsChunkString}
-import blueeyes.core.http.MimeTypes._
 import org.specs2.execute.PendingUntilFixed
+import org.specs2.mutable.Specification
 
-class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with HttpNettyConverters with BijectionsChunkString{
+import java.net.InetSocketAddress
+
+import scala.collection.JavaConverters._
+
+
+class HttpNettyConvertersSpec extends Specification with PendingUntilFixed {
+  import HttpNettyConverters._
+
   "convert netty method to service method" in {
     fromNettyMethod(NettyHttpMethod.GET) mustEqual(HttpMethods.GET)
   }
@@ -28,6 +33,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
   "convert service HttpStatus to netty HttpStatus" in {
     toNettyStatus(HttpStatus(HttpStatusCodes.NotFound, "missing")) mustEqual(new HttpResponseStatus(HttpStatusCodes.NotFound.value, "missing"))
   }
+  /* TODO: toNettyResponse is replaced by HttpServiceUpstreamHandler#writeResponse
   "convert service HttpResponse to netty HttpResponse" in {
     val response = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound), Map("Retry-After" -> "1"), Some(StringToChunk("12")), `HTTP/1.0`)
     val message  = toNettyResponse(response, true)
@@ -45,6 +51,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
     message.getProtocolVersion                      mustEqual(NettyHttpVersion.HTTP_1_0)
     Map(message.getHeaders.map(header => (header.getKey, header.getValue)): _*)  mustEqual(Map("Content-Length" -> "0"))
   }
+  */
 
   "convert netty NettyHttpRequest to service NettyHttpRequest" in {
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar%20foo?param1=foo%20bar")
@@ -52,7 +59,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
     nettyRequest.setHeader("Retry-After", "1")
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
-    val request = fromNettyRequest(nettyRequest, address)
+    val request = fromNettyRequest(nettyRequest, address)(None)
 
     request.method       mustEqual(HttpMethods.GET)
     request.parameters   mustEqual(Map('param1 -> "foo bar"))
@@ -70,7 +77,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
     val forwardedAddress = new InetSocketAddress("111.11.11.1", 8080)
-    val request = fromNettyRequest(nettyRequest, address)
+    val request = fromNettyRequest(nettyRequest, address)(None)
 
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual(URI("http://foo/bar?param1=value1"))
@@ -85,7 +92,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
 
     val address = new InetSocketAddress("127.0.0.0", 8080)
     val forwardedAddress = new InetSocketAddress("111.11.11.1", 8080)
-    val request = fromNettyRequest(nettyRequest, address)
+    val request = fromNettyRequest(nettyRequest, address)(None)
 
     request.method      mustEqual(HttpMethods.GET)
     request.uri         mustEqual(URI("http://foo/bar?param1=value1"))
@@ -97,7 +104,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
     val nettyRequest  = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "http://foo/bar?param1=value1")
     nettyRequest.addHeader("Host", "google.com")
 
-    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
+    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))(None)
 
     request.uri mustEqual(URI("http://foo/bar?param1=value1"))
   }
@@ -107,7 +114,7 @@ class HttpNettyConvertersSpec extends Specification with PendingUntilFixed with 
     nettyRequest.addHeader("TCodings", "1")
     nettyRequest.addHeader("TCodings", "2")
 
-    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))
+    val request = fromNettyRequest(nettyRequest, new InetSocketAddress("127.0.0.0", 8080))(None)
 
     request.headers.raw mustEqual(Map("TCodings" -> "1,2"))
   }

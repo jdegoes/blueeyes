@@ -8,11 +8,11 @@ import blueeyes.util.ClockMock
 import org.joda.time.format.DateTimeFormat
 import java.net.InetAddress
 import blueeyes.core.http.HttpStatusCodes._
-import blueeyes.core.data.BijectionsChunkString._
+import blueeyes.core.data.DefaultBijections._
 import org.apache.commons.codec.binary.Base64
 
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 
 class HttpRequestLoggerSpec extends Specification with ClockMock with FutureMatchers with AkkaDefaults {
 

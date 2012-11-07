@@ -1,7 +1,7 @@
 package blueeyes.concurrent
 
 
-trait ReadWriteLock{
+class ReadWriteLock {
   private val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
   def writeLock[S](f: => S): S = {
