@@ -8,7 +8,7 @@ import org.apache.commons.io.FileUtils
 import com.google.common.io.Files
 
 import java.io.File
-import java.net.{ServerSocket, URL}
+import java.net.{InetSocketAddress, ServerSocket, URL}
 
 import scalaz.effect.IO
 
@@ -51,8 +51,9 @@ trait RealMongoSpecSupport extends Specification {
   private def isAvailable(port: Int): Boolean = {
     var ss: ServerSocket = null
     try {
-      var ss = new ServerSocket(port);
+      ss = new ServerSocket();
       ss.setReuseAddress(true);
+      ss.bind(new InetSocketAddress(port))
       return true;
     } catch {
       case t => // NOOP
@@ -117,7 +118,6 @@ trait RealMongoSpecSupport extends Specification {
       mongoLogger.debug("Searching for unused port")
       findUnusedPort(defaultPort) match {
         case Some(port) =>
-          Thread.sleep(1000) // Wait to let the socket close down
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({
             val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
