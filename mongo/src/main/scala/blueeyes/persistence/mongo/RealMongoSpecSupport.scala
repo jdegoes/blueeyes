@@ -119,7 +119,12 @@ trait RealMongoSpecSupport extends Specification {
         case Some(port) =>
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({
-            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, "--dbpath", dataDir.getCanonicalPath))
+            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
+                                                                                      "--dbpath", dataDir.getCanonicalPath,
+                                                                                      "--nojournal", 
+                                                                                      "--nounixsocket", 
+                                                                                      "--noauth",
+                                                                                      "--noprealloc"))
             proc.run(ProcessLogger(s => mongoLogger.debug(s)))
           })
 
