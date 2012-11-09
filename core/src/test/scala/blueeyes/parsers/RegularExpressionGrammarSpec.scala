@@ -103,6 +103,8 @@ class RegularExpressionGrammarSpec extends Specification with ScalaCheck{
     }
   }
 
+  override def defaultValues = super.defaultValues + (minTestsOk -> 1000)
+
   private def passTest(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)) mustEqual  n)
   private def passTestCaseInsensitive(gen: Gen[String]) = forAllNoShrink(gen)(n => >>(RegularExpressionPatten(n)).toLowerCase mustEqual n.toLowerCase)
 

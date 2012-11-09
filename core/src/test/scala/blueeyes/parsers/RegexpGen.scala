@@ -105,7 +105,7 @@ object RegexpGen{
       withSquareBracketEnd <- arbitrary[Boolean]
       size                 <- choose(1, 10)
       generateSize         <- if (withSquareBracketEnd) size - 1 else size
-      values               <- listOfN(generateSize, characterClassAtom)
+      values               <- listOfN(generateSize, characterClassAtom).filter(_ != List("^") || withCaret) // A single caret is invalid (e.g. "[^]")
     } yield {
       val caret             = if (withCaret) "^" else ""
       val squareBracketEnd  = if (withSquareBracketEnd) "]" else ""
