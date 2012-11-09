@@ -117,6 +117,7 @@ trait RealMongoSpecSupport extends Specification {
       mongoLogger.debug("Searching for unused port")
       findUnusedPort(defaultPort) match {
         case Some(port) =>
+          Thread.sleep(1000) // Wait to let the socket close down
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({
             val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
