@@ -6,6 +6,8 @@ import blueeyes.json._
 import blueeyes.json.JParser
 import UpdateFieldFunctions._
 
+import scalaz.Success
+
 class MongoUpdateFieldSpec  extends Specification{
   "build valid json" in {
     IncF("n", 1).toJValue mustEqual  (JObject(JField("$inc", JObject(JField("n", JNum(1)) :: Nil)) :: Nil))
@@ -14,6 +16,6 @@ class MongoUpdateFieldSpec  extends Specification{
     PullF("foo", "bar" === 1).toJValue mustEqual  (JObject(JField("$pull", JObject(JField("foo", JObject(JField("bar", JNum(1)) :: Nil)) :: Nil)) :: Nil))
   }
   "build valid json for pull and for elemMatch" in {
-    PullF("foo", MongoAndFilter(List("bar" === 1)).elemMatch("")).toJValue mustEqual  (JParser.parseFromString(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
+    Success(PullF("foo", MongoAndFilter(List("bar" === 1)).elemMatch("")).toJValue) mustEqual  (JParser.parseFromString(""" {"$pull": {"foo": {"$elemMatch" : {"bar": 1} }}} """))
   }
 }

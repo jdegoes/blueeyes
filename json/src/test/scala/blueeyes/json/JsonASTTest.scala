@@ -221,6 +221,12 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     JValue.order(v1, v2) must_== GT
   }
 
+  "Properly --> subclasses of JValue" in {
+    val a = JNumStr("1.234")
+
+    (a --> classOf[JNum]).isInstanceOf[JNum] mustEqual true
+  }
+
   def runArbitraryPathSpec = {
     import org.scalacheck.Prop._
 

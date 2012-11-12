@@ -9,7 +9,7 @@ sealed trait HttpHeaderField[T <: HttpHeader] extends ProductPrefixUnmangler {
   lazy val name: String = unmangledName
 
   def parse(s: String): Option[T]
-  def parse(t: (String, String)): Option[T] = 
+  def parse(t: (String, String)): Option[T] =
     if (t._1.equalsIgnoreCase(name)) parse(t._2) else None
 
   override def toString = name
@@ -49,7 +49,7 @@ object HttpHeaderField {
     Via,
     Warning,
 
-    /** Responses **/
+    // Responses
     Age,
     Allow,
     `Cache-Control`,
@@ -98,7 +98,7 @@ object HttpHeaderField {
       case _ => false
     } else fields.filterNot {
       case NullHeader => true
-      case _ => false 
+      case _ => false
     }
   }
 }
@@ -141,9 +141,10 @@ sealed trait HttpHeaderRequest extends HttpHeader
 sealed trait HttpHeaderResponse extends HttpHeader
 
 case class HttpHeaders private (val raw: Map[String, String]) {
-  def + (kv: (String, String)): HttpHeaders = new HttpHeaders(raw + kv)
+  def + (kv: (String, String)): HttpHeaders = this + HttpHeader(kv)
   def + (header: HttpHeader): HttpHeaders = new HttpHeaders(raw + header.tuple)
   def ++ (that: HttpHeaders) = new HttpHeaders(raw ++ that.raw)
+  def ++ (that: Iterable[(HttpHeader)]) = new HttpHeaders(raw ++ that.map(_.tuple))
 
   def - (key: String): HttpHeaders = new HttpHeaders(raw - key)
 
@@ -170,7 +171,7 @@ object HttpHeaders {
 
   val Empty: HttpHeaders = new HttpHeaders(Map.empty[String, String])
 
-  /************ Requests ************/
+  // Requests
 
   case class Accept(mimeTypes: MimeType*) extends HttpHeaderRequest {
     def value = mimeTypes.map(_.value).mkString(", ")
@@ -414,7 +415,7 @@ object HttpHeaders {
     def unapply(t: (String, String)) = parse(t).map(_.warnings)
   }
 
-  /*********** Responses ************/
+  // Responses
 
   case class Age(age: Double) extends HttpHeaderResponse {
     def value = age.toString
@@ -474,7 +475,7 @@ object HttpHeaders {
     def unapply(t: (String, String)) = parse(t).map(_.disposition)
   }
 
-  case class `Content-MD5`(value: String) extends HttpHeaderRequest with HttpHeaderResponse 
+  case class `Content-MD5`(value: String) extends HttpHeaderRequest with HttpHeaderResponse
   implicit case object `Content-MD5` extends HttpHeaderField[`Content-MD5`] {
     override def parse(s: String) = Some(apply(s))
     def unapply(t: (String, String)) = parse(t).map(_.value)
@@ -581,7 +582,7 @@ object HttpHeaders {
   }
 
   /* There are problems with using Vary in IE.  */
-  case class Vary(value: String) extends HttpHeaderResponse 
+  case class Vary(value: String) extends HttpHeaderResponse
   implicit case object Vary extends HttpHeaderField[Vary] {
     override def parse(s: String) = Some(apply(s))
     def unapply(t: (String, String)) = parse(t).map(_.value)
@@ -685,7 +686,7 @@ object HttpHeaders {
     def unapply(t: (String, String)) = parse(t).map(_.fields)
   }
 
-  case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse 
+  case class CustomHeader(override val name: String, val value: String) extends HttpHeaderRequest with HttpHeaderResponse
 
   class NullHeader extends HttpHeader {
     def value = ""

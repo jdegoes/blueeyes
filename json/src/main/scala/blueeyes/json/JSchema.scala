@@ -31,6 +31,8 @@ class Lazy[A] private (f: () => A) extends (() => A) { self =>
   }
 
   override def hashCode() = force.hashCode
+
+  override def toString = force.toString
 }
 object Lazy {
   def apply[A](value: => A): Lazy[A] = new Lazy(() => value)
@@ -149,25 +151,18 @@ case class JObjectSchema(private val schema0: Map[String, Lazy[JSchema]]) extend
   def validate(value: JValue): Boolean = {
      value match {
       case JObject(fields) => 
-        var ret = true
-        var keyIter = schemaKeysSet.iterator
-
-        while (keyIter.hasNext && ret) {
-          val key = keyIter.next()
+        
+        schemaKeysSet.foreach { key =>
           val value = schema(key)
 
-          if (!fields.contains(key)) ret = (value == JUndefinedSchema)
-          else ret = value.validate(fields(key))
+          if (!fields.contains(key) && value != JUndefinedSchema) return false
+          else if (!value.validate(fields(key))) return false
         }
 
-        if (ret) {
-          // Make sure "remaining" not contained in the schema are all undefined:
-          val rem = fields.keys.toSet diff schemaKeysSet
+        // Make sure "remaining" not contained in the schema are all undefined:
+        val rem = fields.keys.toSet diff schemaKeysSet
 
-          ret = rem.forall(k => fields(k) == JUndefined)
-        }
-
-        ret
+        rem.forall(k => fields(k) == JUndefined)
 
       case _ => false
     }
@@ -198,16 +193,16 @@ case class JArraySchema(private val schemas0: Array[Lazy[JSchema]]) extends JSch
     case JArray(elements) => 
       if (elements.length != schemas.length) false
       else {
-        val iter = elements.iterator
-        var ret = true
         var i = 0
 
-        while (ret && iter.hasNext) {
-          ret = schemas(i).validate(iter.next())
+        elements.foreach { e =>
+          if (!schemas(i).validate(e))
+            return false
+
           i = i + 1
         }
 
-        ret
+        return true
       }
 
     case _ => false
@@ -287,15 +282,25 @@ case class JEitherSchema(private val left0: Lazy[JSchema], private val right0: L
   }
 
   private[json] def minimize(fixedBound: Option[Long]): JSchema = {
+    val bound = fixedBound.getOrElse(Long.MaxValue)
+
     val disj = flatten.map(_.minimize(fixedBound))
 
     val fixed = disj.collect { case x : JFixedSchema => x }
 
-    val newDisj = if (fixed.size > fixedBound.getOrElse(Long.MaxValue)) {
+    val disj2 = if (fixed.size > bound) {
       (disj -- fixed) union (fixed.map(s => JSchema.unfixed(s.schema)))
     } else disj
 
-    JEitherSchema(newDisj)
+    val objs: Set[JObjectSchema] = disj2.collect { case x : JObjectSchema => x }
+
+    val disj3 = if (objs.size > bound) {
+      val allFields = objs.map(_.schema.values).flatten
+
+      (disj2 -- objs) union Set(JObjectValueSchema(JEitherSchema(allFields).minimize(fixedBound)))
+    } else disj2
+
+    JEitherSchema(disj3)
   }
 }
 

@@ -2,12 +2,11 @@ package blueeyes.core.service
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import akka.dispatch.Future._
+import akka.dispatch.ExecutionContext
 
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.bkka.Stoppable
 import blueeyes.core.http._
-import scala.reflect.Manifest
 
 /**
 val emailService = {
@@ -36,43 +35,51 @@ trait ServiceBuilder[T] extends AkkaDefaults {
   
   protected def request(request: => AsyncHttpService[T]): RequestDescriptor[T, Unit] = RequestDescriptor[T, Unit]((u) => request)
   
-  trait ShutdownConverter[S,T] {
-    def convert(f : S => Future[T]) : S => Future[Option[Stoppable]]
-    def convert(f : => Future[T])   : S => Future[Option[Stoppable]]
+  def service[S](sname: String, sversion: ServiceVersion, sdesc: Option[String] = None)(slifecycle: ServiceContext => ServiceLifecycle[T, S]): Service[T, S] = {
+    new Service[T, S] {
+      val name = sname
+      val version = sversion
+      val desc = sdesc
+      def lifecycle(context: ServiceContext) = slifecycle(context)
+    }
   }
-
-  implicit def unitConverter[S] = new ShutdownConverter[S,Unit] {
-    def convert(f : S => Future[Unit]) = { (s : S) => f(s).flatMap(_ => Promise.successful(None)) }
-    def convert(f : => Future[Unit]) = { _ => f.flatMap(_ => Promise.successful(None)) }
-  }
-
-  implicit def optStopConverter[S] = new ShutdownConverter[S,Option[Stoppable]] {
-    def convert(f : S => Future[Option[Stoppable]]) = f
-    def convert(f : => Future[Option[Stoppable]]) = { _ => f }
-  }
-
-  protected def shutdown[S,T](shutdown: S => Future[T])(implicit c : ShutdownConverter[S,T]): ShutdownDescriptor[S] = 
+  
+  def shutdown[S](shutdown: S => Future[Any])(implicit c : ShutdownConverter[S, Any]): ShutdownDescriptor[S] = 
     ShutdownDescriptor[S](c.convert(shutdown))
 
-  protected def shutdown[T](shutdown: => Future[T])(implicit c : ShutdownConverter[Unit,T]): ShutdownDescriptor[Unit] = 
+  def shutdown(shutdown: => Future[Any])(implicit c : ShutdownConverter[Unit, Any]): ShutdownDescriptor[Unit] = 
     ShutdownDescriptor[Unit](c.convert(shutdown))
   
-  protected implicit def statelessRequestDescriptorToServiceDescriptor(rd: RequestDescriptor[T, Unit]): ServiceDescriptor[T, Unit] =
-    ServiceDescriptor[T, Unit](() => Promise.successful(()), rd.request, _ => Promise.successful(None))
-
-  def service(name: String, version: String, desc: Option[String] = None)(descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]): Service[T] = new ServiceImpl[T](name, version, desc, descriptorFactory)
-
-  private class ServiceImpl[T](val name: String, val version: ServiceVersion, val desc: Option[String] = None, val descriptorFactory: ServiceContext => ServiceDescriptor[T, _])(implicit m: Manifest[T]) extends Service[T]{
-    def ioClass: Class[T] = m.erasure.asInstanceOf[Class[T]]
-  }
+  protected implicit def statelessRequestDescriptorToServiceLifecycle(rd: RequestDescriptor[T, Unit])(implicit ctx: ExecutionContext): ServiceLifecycle[T, Unit] =
+    ServiceLifecycle[T, Unit](() => Promise.successful(()), (_: Unit) => (rd.serviceBuilder(()), None))
 }
 
 case class StartupDescriptor[T, S](startup: () => Future[S]) {
   def -> (request: RequestDescriptor[T, S]) = new StartupAndShutdownDescriptor(request)
   class StartupAndShutdownDescriptor(request: RequestDescriptor[T, S]){
-    def -> (shutdown: ShutdownDescriptor[S]) = ServiceDescriptor[T, S](startup, request.request, shutdown.shutdown)
+    def -> (shutdown: ShutdownDescriptor[S]) = ServiceLifecycle[T, S](startup, s => (request.serviceBuilder(s), shutdown.shutdownBuilder(s)))
   }
 }
-case class RequestDescriptor[T, S](request: S => AsyncHttpService[T])
-case class ShutdownDescriptor[S](shutdown: S => Future[Option[Stoppable]])
+
+case class RequestDescriptor[T, S](serviceBuilder: S => AsyncHttpService[T])
+case class ShutdownDescriptor[S](shutdownBuilder: S => Option[Stoppable])
+
+trait ShutdownConverter[S, T] {
+  def convert(f : S => Future[T]) : S => Option[Stoppable]
+  def convert(f : => Future[T])   : S => Option[Stoppable]
+}
+
+object ShutdownConverter {
+  implicit def unitConverter[S] = new ShutdownConverter[S, Any] {
+    def convert(f : S => Future[Any]) = { (s: S) => Some(Stoppable.fromFuture(f(s))) }
+    def convert(f : => Future[Any])   = { (_: S) => Some(Stoppable.fromFuture(f)) }
+  }
+
+/*
+  implicit def optStopConverter[S] = new ShutdownConverter[S, Option[Stoppable]] {
+    def convert(f : S => Future[Option[Stoppable]]) = f
+    def convert(f : => Future[Option[Stoppable]]) = { _ => f }
+  }
+*/
+}
 

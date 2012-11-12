@@ -28,10 +28,10 @@ class TimerTest extends Specification with blueeyes.bkka.AkkaDefaults {
 
       timer.time(promise)
 
-      Thread.sleep(10)
+      Thread.sleep(100)
       promise.success(())
 
-      timer.mean.ms.time must_!=(0.0)
+      timer.mean.ms.time must not (beCloseTo(0.0, precision))
     }
 
     "records the existence of the event" in {

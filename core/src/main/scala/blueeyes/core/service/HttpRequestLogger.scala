@@ -1,17 +1,16 @@
 package blueeyes.core.service
 
-import java.net.InetAddress
-
 import blueeyes.bkka._
+import blueeyes.core.data._
 import blueeyes.core.http.{HttpRequest, HttpResponse, HttpHeaders}
+import blueeyes.parsers.W3ExtendedLogAST.FieldIdentifier
 import blueeyes.util.Clock
+
 import akka.dispatch.Future
 import akka.dispatch.Promise
 
+import java.net.InetAddress
 import org.joda.time.format.DateTimeFormat
-import blueeyes.core.data.{AggregatedByteChunk, Bijection, ByteChunk}
-import blueeyes.parsers.W3ExtendedLogAST.FieldIdentifier
-import scala.Array
 
 /** A request logger is a function from (request/future of response) to future
  * of log line. Request loggers do not have side effects.
@@ -33,6 +32,7 @@ with AkkaDefaults { self =>
   }
 }
 
+//TODO: get rid of AkkaDefaults
 object HttpRequestLogger extends AkkaDefaults {
   import blueeyes.parsers.W3ExtendedLogGrammar._
   import blueeyes.parsers.W3ExtendedLogAST._
@@ -60,17 +60,19 @@ object HttpRequestLogger extends AkkaDefaults {
    *
    * #Fields: time cs-method cs-uri
    */
-  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
+  def apply[T, S](fieldsDirective: FieldsDirective)(implicit clock: Clock, req2c: T => ByteChunk, resp2c: S => ByteChunk): HttpRequestLogger[T, S] = new HttpRequestLogger[T, S] {
     def apply(request: HttpRequest[T], response: Future[HttpResponse[S]]): Future[List[(FieldIdentifier, Either[String, Array[Byte]])]] = {
       Future.sequence(fieldsDirective.identifiers.map(log(_, request, response)))
     }
   }
 
-  private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, requestBijection: Bijection[T, ByteChunk], responseBijection: Bijection[S, ByteChunk]): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
+  private def log[T, S](fieldIdentifier: FieldIdentifier, request: HttpRequest[T], response: Future[HttpResponse[S]])(implicit clock: Clock, req2c: T => ByteChunk, resp2c: S => ByteChunk): Future[(FieldIdentifier, Either[String, Array[Byte]])] = {
     def aggregate(chunk: Option[ByteChunk]): Future[Either[String, Array[Byte]]] = {
-      chunk
-      .map(AggregatedByteChunk(_).map[Either[String, Array[Byte]]](aggregated => Right(aggregated.data)))
-      .getOrElse(Promise.successful[Either[String, Array[Byte]]](Right(Array.empty[Byte])))
+      chunk map { c =>
+        DefaultBijections.futureByteArrayToChunk.unapply(c) map { Right(_) }
+      } getOrElse {
+        Future(Right(Array[Byte]()))
+      }
     }
 
     val value: Future[Either[String, Array[Byte]]] = fieldIdentifier match {
@@ -119,10 +121,10 @@ object HttpRequestLogger extends AkkaDefaults {
         case _   => Promise.successful(Left(""))
       }
       case ContentIdentifier(prefix) => prefix match {
-        case ClientToServerPrefix => aggregate(request.content.map(requestBijection(_)))
+        case ClientToServerPrefix => aggregate(request.content.map(req2c(_)))
         case ServerToClientPrefix => 
           response.flatMap[Either[String, Array[Byte]]] { 
-            response => aggregate(response.content.map(responseBijection(_))) 
+            response => aggregate(response.content.map(resp2c(_))) 
           } recover { 
             case ex => Left(ex.getMessage)
           }

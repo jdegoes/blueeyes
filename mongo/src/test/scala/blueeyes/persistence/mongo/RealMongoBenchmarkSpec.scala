@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
+import blueeyes.akka_testing.FutureMatchers
 import blueeyes.json._
 import blueeyes.json._
 import akka.dispatch.Future

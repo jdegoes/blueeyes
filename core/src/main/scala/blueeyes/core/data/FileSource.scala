@@ -1,100 +1,109 @@
 package blueeyes.core.data
 
-import blueeyes.bkka.AkkaDefaults
+import blueeyes.bkka._
+
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import akka.util.Timeout
+import akka.dispatch.ExecutionContext
+
+import java.nio.ByteBuffer
+import java.nio.channels._
 import java.io.{OutputStream, FileOutputStream, RandomAccessFile, File}
 
-class FileSource(file: File, private[FileSource] var offset: Long, length: Long, chunkSize: Int = 8192) extends AkkaDefaults {
+import scalaz._
+
+class FileSource(file: File, offset: Long, length: Long, chunkSize: Int = 8192) {
   def this(file: File) = this(file, 0, file.length())
 
-  private val accessFile = new RandomAccessFile(file, "r")
-  private val endOffset  = offset + length
+  def read(implicit executor: ExecutionContext): ByteChunk = {
+    implicit val M = new FutureMonad(executor)
 
-  // todo how it can be cancelled (problem is that Future is done and cannot be cancelled)
-  def apply: Option[Future[ByteChunk]] = {
-    if (offset < endOffset){
+    if (length < chunkSize) {
+      val raf = new RandomAccessFile(file, "r")
       try {
-        val size = chunkSize.toLong min (endOffset - offset)
-        val chunk = new Array[Byte](size.toInt)
-
-        accessFile.readFully(chunk)
-
-        offset = offset + size
-
-        Some(Future(Chunk(chunk, apply)))
-      } catch {
-        case th: Throwable =>
-          accessFile.close()
-          throw th
+        raf.seek(offset)
+        val buffer = ByteBuffer.allocate(length.toInt)
+        raf.getChannel().read(buffer)
+        buffer.flip()
+        Left(buffer)
+      } finally {
+        raf.close()
       }
     } else {
-      accessFile.close()
-      None
-    }
-  }
-}
+      val raf = new RandomAccessFile(file, "r")
+      Right(
+        StreamT.unfoldM[Future, ByteBuffer, Option[(Long, FileChannel)]](Some((0L, raf.getChannel()))) { 
+          case Some((consumed, channel)) => 
+            Future {
+              val buffer = ByteBuffer.allocate(chunkSize)
+              val read = channel.read(buffer) 
+              if (read == -1) {
+                None
+              } else {
+                buffer.flip()
+                Some((buffer, Some((consumed + read, channel))))
+              }
+            }
 
-object FileSource {
-  import akka.dispatch.Await
-  /**
-   * Read the given file into a bytechunk. By default, we wait forever
-   * for IO, but you can reduce this if desired.
-   */
-  def apply(file: File, timeout: akka.util.Timeout = Timeout.never): Option[ByteChunk] = new FileSource(file).apply.map(future => Await.result(future, timeout.duration))
-}
-
-class FileSink(file: File) extends AkkaDefaults {
-  private var output: Option[OutputStream] = None
-
-  private[FileSink] def write(chunk: ByteChunk): Future[Unit] = {
-    val promise  = Promise[Unit]()
-    try {
-      file.createNewFile()
-      output = Some(new FileOutputStream(file))
-      write(chunk, promise)
-    } catch {
-      case th: Throwable => cancel(promise, th)
-    }
-
-    promise
-  }
-
-  private def write(chunk: ByteChunk, promise: Promise[Unit]) {
-    try {
-      output.foreach{ stream =>
-        stream.write(chunk.data)
-        stream.flush()
-      }
-
-      chunk.next match{
-        case Some(future) => {
-          future  foreach   { write(_: ByteChunk, promise) } 
-          future  onFailure { case th => cancel(promise, th) }
-          promise onFailure { case th => future.asInstanceOf[Promise[ByteChunk]].failure(th) }  
+          case None =>
+            Future { raf.close(); None }
         }
+      )
+    }
+  }
+}
+
+class FileSink(file: File) {
+  import FileSink.KillSwitch
+
+  def write(chunk: ByteChunk)(implicit executor: ExecutionContext): (Option[KillSwitch], Future[Unit]) = {
+    implicit val M = new FutureMonad(executor)
+
+    val killed = new java.util.concurrent.atomic.AtomicReference[Option[Throwable]](None)
+    def writeStream(stream: StreamT[Future, ByteBuffer], out: FileChannel): Future[Unit] = {
+      stream.uncons flatMap {
+        case Some((head, tail)) =>
+          killed.get() match {
+            case Some(error) =>
+              out.close()
+              throw error
+
+            case None =>
+              out.write(head)
+              writeStream(tail, out)
+          }
 
         case None =>
-          close
-          promise.success(())
+          Future(out.close())
       }
-    } catch {
-      case th: Throwable => cancel(promise, th)
     }
-  }
 
-  private def cancel(promise: Promise[Unit], error: Throwable){
-    promise.failure(error)
-    close
-  }
+    file.createNewFile()
+    chunk match {
+      case Left(buffer) =>
+        None -> Future {
+          val out = new FileOutputStream(file)
+          try {
+            out.getChannel.write(buffer)
+          } finally {
+            out.close()
+          }
+        }
 
-  private def close() = {
-    output.foreach(_.close)
-    output = None
+      case Right(stream) =>
+        val killSwitch = new KillSwitch {
+          def kill(killWith: Throwable) = killed.compareAndSet(None, Some(killWith))
+        }
+
+        Some(killSwitch) -> writeStream(stream, new FileOutputStream(file).getChannel())
+    }
   }
 }
 
 object FileSink {
-  def write(file: File, chunk: ByteChunk) = new FileSink(file).write(chunk)
+  trait KillSwitch {
+    def kill(killWith: Throwable): Unit
+  }
+
+  def write(file: File, chunk: ByteChunk)(implicit executor: ExecutionContext) = new FileSink(file).write(chunk)
 }
