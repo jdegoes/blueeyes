@@ -72,28 +72,29 @@ object BlueEyesBuild extends Build {
     organization := "com.reportgrid",
 
     libraryDependencies ++= Seq(
-      "org.specs2"         %%  "specs2"       % specs2Version    % "test" changing(),
-      "org.scalacheck"     %%  "scalacheck"   % "1.10.0"         % "test",
-      "org.scalaz"                  %% "scalaz-core"        % "7.0-SNAPSHOT" changing()
+      "org.scalaz"         %% "scalaz-core"  % "7.0-SNAPSHOT" changing(),
+      "org.specs2"         %% "specs2"       % specs2Version    % "test" changing(),
+      "org.scalacheck"     %% "scalacheck"   % "1.10.0"         % "test"
     ),
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
   )
 
-  lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings((nexusSettings ++ commonSettings): _*) aggregate(core, json, mongo)
+  lazy val blueeyes = Project(id = "blueeyes", base = file(".")).settings((nexusSettings ++ commonSettings): _*) aggregate(util, json, akka_testing, bkka, core, test, mongo)
   
+  lazy val util  = Project(id = "util", base = file("util")).settings((nexusSettings ++ commonSettings): _*)
+
   lazy val json  = Project(id = "json", base = file("json")).settings((nexusSettings ++ commonSettings): _*)
 
-  // Core exposes some specs2 helpers, so we need a "provided" scope
-  val coreSettings = Seq(
-    libraryDependencies ++= Seq(
-      "org.specs2"         %%  "specs2"       % specs2Version    % "provided"
-    )
-  )
+  lazy val akka_testing  = Project(id = "akka_testing", base = file("akka_testing")).settings((nexusSettings ++ commonSettings): _*) dependsOn util
 
-  lazy val core  = Project(id = "core", base = file("core")).settings((nexusSettings ++ commonSettings ++ coreSettings): _*) dependsOn json
+  lazy val bkka  = Project(id = "bkka", base = file("bkka")).settings((nexusSettings ++ commonSettings): _*) dependsOn util
 
-  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings(nexusSettings ++ commonSettings : _*) dependsOn (core, json % "test->test")
+  lazy val core  = Project(id = "core", base = file("core")).settings((nexusSettings ++ commonSettings): _*) dependsOn (util, json, bkka, akka_testing)
+
+  lazy val test  = Project(id = "test", base = file("test")).settings((nexusSettings ++ commonSettings): _*) dependsOn core
+
+  lazy val mongo = Project(id = "mongo", base = file("mongo")).settings((nexusSettings ++ commonSettings): _*) dependsOn (core, json % "test->test")
 
   //lazy val actor = Project(id = "actor", base = file("actor")).settings(nexusSettings : _*)
 }

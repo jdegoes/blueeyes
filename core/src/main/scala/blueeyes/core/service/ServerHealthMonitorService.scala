@@ -7,18 +7,22 @@ import blueeyes.core.data._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.http.HttpRequest
 import blueeyes.core.http.HttpResponse
-import blueeyes.core.data.BijectionsChunkJson
+import blueeyes.core.data.DefaultBijections._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.health.IntervalHealthMonitor
 import blueeyes.health.metrics.eternity
 
-trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor with BijectionsChunkJson{
+import DefaultBijections._
+
+trait ServerHealthMonitorService extends BlueEyesServiceBuilder with ServerHealthMonitor {
   def createService = service("serverhealth", "1.0.0"){ context =>
     request {
       path("/blueeyes/server/health") {
-        produce(application/json) {
+        produce[ByteChunk, JValue, ByteChunk](application/json) {
           get { 
-            (request: HttpRequest[ByteChunk]) => toJValue(context) map (content => HttpResponse[JValue](content=Some(content)))
+            (request: HttpRequest[ByteChunk]) => toJValue(context) map { jv => 
+              HttpResponse[JValue](content = Some(jv))
+            }
           }
         }
       }

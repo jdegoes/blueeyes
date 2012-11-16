@@ -1,27 +1,35 @@
-package blueeyes.core.service.engines.netty
+package blueeyes.core.service
+package engines.netty
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.Await
-import blueeyes.bkka.AkkaDefaults
-import blueeyes.concurrent.test.FutureMatchers
 
-import org.specs2.mutable.Specification
-import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpChunk, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion}
-import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
-import java.net.{SocketAddress, InetSocketAddress}
+import blueeyes.bkka._
+import blueeyes.core.data._
 import blueeyes.core.http.HttpRequest
+
+import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
 import org.jboss.netty.channel._
-import blueeyes.core.data.{Chunk, ByteChunk}
-import collection.mutable.ArrayBuilder.ofByte
+import org.jboss.netty.handler.codec.http.{DefaultHttpRequest, HttpChunk, HttpMethod => NettyHttpMethod, HttpVersion => NettyHttpVersion}
+
+import java.net.{SocketAddress, InetSocketAddress}
+import java.nio.ByteBuffer
+
+import scalaz.StreamT
+import scalaz.syntax.monad._
+
+import blueeyes.akka_testing.FutureMatchers
+
 import org.specs2.mock._
+import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeExample
 
-class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with HttpNettyConverters with BeforeExample with AkkaDefaults with FutureMatchers {
+class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with BeforeExample with TestAkkaDefaults with FutureMatchers {
+  import HttpNettyConverters._
 
   private val channel       = mock[Channel]
   private val channelConfig = mock[ChannelConfig]
-  private val context       = mock[ChannelHandlerContext]
   private val event         = mock[MessageEvent]
   private val remoteAddress = new InetSocketAddress("127.0.0.0", 8080)
   private val handler       = new HttpNettyChunkedRequestHandler(2)
@@ -32,26 +40,33 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
   private val chunkData     = Array[Byte]('1', '2')
 
   override def is = args(sequential = true) ^ super.is
+
   "NettyChunkedRequestHandler" should {
     "sends requests as it is when it is not chunked" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(false)
       handler.messageReceived(context, event)
 
-      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress), remoteAddress))
+      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress)(None), remoteAddress))
     }
 
     "sends request and chunk when request is chunked and there is only one chunk" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(true)
       httpChunk.isLast() returns true
 
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData)))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(Right(ByteBuffer.wrap(chunkData) :: StreamT.empty[Future, ByteBuffer])))
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
 
     "sends request and chunk when request is chunked and there is only more ther one chunk" in {
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
       nettyRequest.setChunked(true)
 
       httpChunk.isLast() returns false
@@ -63,8 +78,8 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       handler.messageReceived(context, chunkEvent)
 
-      val nextChunk = Promise.successful[ByteChunk](Chunk(chunkData))
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress).copy(content = Some(Chunk(chunkData, Some(nextChunk))))
+      val chunk: ByteChunk = Right(ByteBuffer.wrap(chunkData) :: Future(ByteBuffer.wrap(chunkData)).liftM[StreamT])
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
@@ -75,7 +90,6 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
     channelConfig.getBufferFactory() returns HeapChannelBufferFactory.getInstance()
     event.getRemoteAddress() returns remoteAddress
     event.getChannel() returns channel
-    context.getChannel() returns channel
     event.getMessage() returns nettyRequest
 
     chunkEvent.getMessage() returns httpChunk
@@ -90,22 +104,15 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val anotherMessage  = anotherEvent.getMessage.asInstanceOf[HttpRequest[ByteChunk]]
 
       val b = anotherEvent.getChannel == channel
+
       val b1 = anotherMessage.copy(content = None) == message.copy(content = None)
-      val b2 = message.content.map(readContent(_)) == anotherMessage.content.map(readContent(_))
+
+      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList) == 
+               anotherMessage.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList)
+
       val b3 = anotherEvent.getRemoteAddress == remoteAddress
-      b && b1 &&
-      b2 && b3
-    }
 
-    private def readContent(chunk: ByteChunk): String = new String(readContent(chunk, new ofByte()).result)
-    private def readContent(chunk: ByteChunk, buffer: ofByte): ofByte = {
-      buffer ++= chunk.data
-
-      val next = chunk.next
-      next match{
-        case None =>  buffer
-        case Some(x) => readContent(Await.result(x, 10 seconds), buffer)
-      }
+      b && b1 && b2 && b3
     }
   }
 }

@@ -21,7 +21,7 @@ import java.net.{SocketAddress, InetSocketAddress}
 import blueeyes.core.data.{ Chunk, ByteChunk }
 import akka.dispatch.Future
 
-trait HttpNettyConverters{
+object HttpNettyConverters {
   def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
     case "HTTP/1.0" => `HTTP/1.0`
     case "HTTP/1.1" => `HTTP/1.1`
@@ -47,38 +47,17 @@ trait HttpNettyConverters{
     case _ => HttpMethods.CUSTOM(method.getName)
   }
 
-  def toNettyResponse(response: HttpResponse[ByteChunk], chunked: Boolean): NettyHttpResponse = {
-    val nettyResponse = new DefaultHttpResponse(toNettyVersion(response.version), toNettyStatus(response.status))
+  def fromNettyRequest(request: NettyHttpRequest, remoteAddress: SocketAddress): Option[ByteChunk] => HttpRequest[ByteChunk] = {
+    (content: Option[ByteChunk]) => {
+      val parameters          = getParameters(request.getUri)
+      val headers             = buildHeaders(request.getHeaders)
 
-    response.headers.raw.foreach(header => nettyResponse.setHeader(header._1, header._2))
-    val (header, value) = if (chunked) (NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked") else (NettyHttpHeaders.Names.CONTENT_LENGTH, response.content.map(_.data.length.toString).getOrElse("0"))
-    nettyResponse.setHeader(header, value)
+      val xforwarded  = headers.header(`X-Forwarded-For`).flatMap(_.ips.toList.headOption.map(_.ip))
+      val remoteIp    = xforwarded.orElse(headers.header(`X-Cluster-Client-Ip`).flatMap(_.ips.toList.headOption.map(_.ip)))
+      val remoteHost  = remoteIp.orElse(Some(remoteAddress).collect { case x: InetSocketAddress => x.getAddress })
+      val version     = fromNettyVersion(request.getProtocolVersion)
 
-    nettyResponse
-  }
-
-  def fromNettyRequest(request: NettyHttpRequest, remoteAddres: SocketAddress): HttpRequest[ByteChunk] = {
-    val parameters          = getParameters(request.getUri)
-    val headers             = buildHeaders(request.getHeaders)
-    val content             = fromNettyContent(request.getContent, None)
-
-    val xforwarded  = headers.header(`X-Forwarded-For`).flatMap(_.ips.toList.headOption.map(_.ip))
-    val remoteIp    = xforwarded.orElse(headers.header(`X-Cluster-Client-Ip`).flatMap(_.ips.toList.headOption.map(_.ip)))
-    val remoteHost  = remoteIp.orElse(Some(remoteAddres).collect { case x: InetSocketAddress => x.getAddress })
-
-    HttpRequest(fromNettyMethod(request.getMethod), URI(request.getUri), parameters, headers, content, remoteHost, fromNettyVersion(request.getProtocolVersion))
-  }
-
-  def fromNettyContent(nettyContent: ChannelBuffer, f: Option[Future[ByteChunk]]): Option[ByteChunk] = 
-    if (nettyContent.readable()) Some(Chunk(extractContent(nettyContent), f)) else None
-
-  private def extractContent(content: ChannelBuffer): Array[Byte] = {
-    val stream = new ByteArrayOutputStream()
-    try {
-      content.readBytes(stream, content.readableBytes)
-      stream.toByteArray
-    } finally {
-      stream.close()
+      HttpRequest(fromNettyMethod(request.getMethod), URI(request.getUri), parameters, headers, content, remoteHost, version)
     }
   }
 

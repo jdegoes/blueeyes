@@ -21,9 +21,10 @@ trait ConfigurableHttpClient extends AkkaDefaults {
     if (isMock) mockClient(mockServer) else realClient
   }
 
-  protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb{}
+  protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb()(defaultFutureDispatch)
 
   private def mockClient(h: AsyncHttpService[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
+    val executor = defaultFutureDispatch
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
       case Success(rawFuture) => rawFuture recover { case throwable => convertErrorToResponse(throwable) }
@@ -37,7 +38,7 @@ trait ConfigurableHttpClient extends AkkaDefaults {
     case e => HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
   }
 
-  protected def mockServer: AsyncHttpService[ByteChunk] = new AsyncCustomHttpService[ByteChunk]{
+  protected def mockServer: AsyncHttpService[ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
     def service = (request: HttpRequest[ByteChunk]) => success(Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
     val metadata = None
   }

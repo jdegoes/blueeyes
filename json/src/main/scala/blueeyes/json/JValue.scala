@@ -32,7 +32,9 @@ import scalaz.syntax.semigroup._
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.mutable
+import scala.util.Sorting.quickSort
 
+import java.lang.Double.isInfinite
 import java.lang.Character.codePointAt
 import JValue.{RenderMode, Compact, Pretty, Canonical}
 
@@ -44,7 +46,11 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   def getOrElse(that: => JValue) = if (self == JUndefined) that else self
 
-  def compare(that: JValue): Int = JValue.order.order(self, that).toInt
+  protected[json] def typeIndex: Int
+
+  def normalize: JValue
+
+  def compare(that: JValue): Int
 
   def sort: JValue
 
@@ -82,7 +88,7 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
   /**
    * Returns the element as an option of a JValue of the specified class.
    */
-  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (self.getClass == clazz) Some(self.asInstanceOf[A]) else None
+  def -->? [A <: JValue](clazz: Class[A]): Option[A] = if (clazz.isAssignableFrom(self.getClass)) Some(self.asInstanceOf[A]) else None
 
   /** 
    * Does a breadth-first traversal of all descendant JValues, beginning
@@ -174,15 +180,17 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
       case obj @ JObject(fields) => path.nodes match {
         case JPathField(name) :: nodes => 
           val (child, rest) = obj.partitionField(name)
-
           rest + JField(name, child.set(JPath(nodes), value))
 
-        case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
+        case x =>
+          sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
       }
 
       case arr @ JArray(elements) => path.nodes match {
-        case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
-        case x => sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
+        case JPathIndex(index) :: nodes =>
+          JArray(arraySet(elements, index, JPath(nodes), value))
+        case x =>
+          sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
       }
 
       case _ => path.nodes match {
@@ -531,46 +539,21 @@ object JValue {
         case (JBool(b1),    JBool(b2)) => bool(b1)(b2)
         case (JNum(d1),     JNum(d2)) => num(d1)(d2)
         case (JNull,        JNull) => nul
-        case (JUndefined,     JUndefined) => nul
+        case (JUndefined,   JUndefined) => nul
         case _ => default
       }
     }
   }
 
-  @inline final def typeIndex(jv: JValue) = jv match {
-    case JObject(_)  => 7
-    case JArray(_)   => 6
-    case JString(_)  => 5
-    case JNum(_)     => 4
-    case JBool(_)    => 1
-    case JNull       => 0
-    case JUndefined    => -1
-  }
+  @inline final def typeIndex(jv: JValue) = jv.typeIndex
 
   implicit final val jnumOrder: Order[JNum] = new Order[JNum] {
-    def order(v1: JNum, v2: JNum) = (v1, v2) match {
-      case (JNumStr(v1), JNumStr(v2)) => v1 ?|? v2
-      case (JNumLong(v1), JNumLong(v2)) => v1 ?|? v2
-      case (JNumDouble(v1), JNumDouble(v2)) => v1 ?|? v2
-      case (JNumBigDec(v1), JNumBigDec(v2)) => v1 ?|? v2
-      case (_, _) => v1.toBigDecimal ?|? v2.toBigDecimal
-    }
+    def order(v1: JNum, v2: JNum) = Ordering.fromInt(v1 numCompare v2)
   }
 
   implicit final val order: Order[JValue] = new Order[JValue] {
-    def order(jv1: JValue, jv2: JValue) = {
-      (typeIndex(jv1) ?|? typeIndex(jv2)) |+|
-      //since we can only get equality from values of the same type, we can just cast
-      (jv1 match {
-        case v: JObject => JObject.order(v, jv2.asInstanceOf[JObject])
-        case v: JArray  => JArray.order(v, jv2.asInstanceOf[JArray])
-        case v: JString => v.value ?|? jv2.asInstanceOf[JString].value
-        case v: JNum    => v ?|? jv2.asInstanceOf[JNum]
-        case v: JBool   => v.value ?|? jv2.asInstanceOf[JBool].value
-        case _ => EQ
-      })
-    }
-  } 
+    def order(v1: JValue, v2: JValue) = Ordering.fromInt(v1 compare v2)
+  }
 
   def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
     def rec(target: JValue, path: JPath, value: JValue): JValue = {
@@ -619,30 +602,49 @@ object JValue {
   }
 }
 
+case class UndefinedNormalizeError(msg: String) extends Exception(msg)
 
 case object JUndefined extends JValue {
+  final def normalize = throw UndefinedNormalizeError("Can't normalize JUndefined")
   final def sort: JValue = this
   final def renderCompact: String = "null"
+  protected[json] final def typeIndex = -1
+  final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
 case object JNull extends JValue {
+  final def normalize: JNull.type = JNull
   final def sort: JValue = this
   final def renderCompact: String = "null"
+  protected[json] final def typeIndex = 0
+  final def compare(that: JValue) = typeIndex compare that.typeIndex
 }
 
 sealed trait JBool extends JValue {
-  def value: Boolean
+  final def normalize: JBool = this
   final def sort: JBool = this
+  protected[json] final def typeIndex = 1
+  def value: Boolean
 }
 
 case object JTrue extends JBool {
   final def value = true
   final def renderCompact: String = "true"
+  final def compare(that: JValue) = that match {
+    case JTrue => 0
+    case JFalse => 1
+    case _ => typeIndex compare that.typeIndex
+  }
 }
 
 case object JFalse extends JBool {
   final def value = false
   final def renderCompact: String = "false"
+  final def compare(that: JValue) = that match {
+    case JTrue => -1
+    case JFalse => 0
+    case _ => typeIndex compare that.typeIndex
+  }
 }
 
 object JBool {
@@ -655,23 +657,42 @@ sealed trait JNum extends JValue {
   def toLong: Long
   def toDouble: Double
   def toRawString: String
+
+  final def normalize: JNum = this
+
   final def renderCompact = toRawString
+
   def sort: JNum = this
+
+  // SI-6173: to avoid hashCode on BigDecimal, we use a hardcoded hashcode to
+  // ensure JNum("123.45").hashCode == JNum(123.45).hashCode
+  override val hashCode = 6173
+
+  protected[json] final def typeIndex = 4
+
+  final def compare(that: JValue): Int = that match {
+    case num: JNum => numCompare(num)
+    case _ => typeIndex compare that.typeIndex
+  }
+
+  protected[json] def numCompare(other: JNum): Int
 }
 
 case class JNumStr private[json] (value: String) extends JNum {
-  final def toBigDecimal: BigDecimal = BigDecimal(value)
-  final def toLong: Long = value.toLong
+  private lazy val dec: BigDecimal = BigDecimal(value)
+
+  final def toBigDecimal: BigDecimal = dec
+  final def toLong: Long = value.toDouble.toLong
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value
 
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
-    case JNumLong(n) => n.toString == value
-    case JNumDouble(n) => BigDecimal(n) == BigDecimal(value)
-    case JNumBigDec(n) => n == BigDecimal(value)
+    case JNumLong(n) => value == n.toString
+    case num: JNum => toBigDecimal == num.toBigDecimal
     case _ => false
   }
+
+  protected[json] def numCompare(other: JNum) = toBigDecimal compare other.toBigDecimal
 }
 
 case class JNumLong(value: Long) extends JNum {
@@ -681,15 +702,18 @@ case class JNumLong(value: Long) extends JNum {
   final def toRawString: String = value.toString
 
   override def equals(other: Any) = other match {
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case JNumBigDec(n) => value == n
     case JNumStr(s) => value.toString == s
-    case JNumLong(n) => n == value
-    case JNumDouble(n) =>
-      if (n % 1.0 == 0.0 && n <= Int.MaxValue && n >= Int.MinValue)
-        n.toLong == value
-      else
-        BigDecimal(n) == BigDecimal(value)
-    case JNumBigDec(n) => n == value
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n
+    case JNumDouble(n) => value.toDouble compare n
+    case JNumBigDec(n) => BigDecimal(value) compare n
+    case _ => toBigDecimal compare other.toBigDecimal
   }
 }
 
@@ -700,15 +724,17 @@ case class JNumDouble private[json] (value: Double) extends JNum {
   final def toRawString: String = value.toString
 
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == BigDecimal(value)
-    case JNumLong(n) =>
-      if (value % 1.0 == 0.0 && value <= Int.MaxValue && value >= Int.MinValue)
-        value.toLong == n
-      else
-        BigDecimal(n) == BigDecimal(value)
-    case JNumDouble(n) => n == value
-    case JNumBigDec(n) => n == BigDecimal(value)
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case num: JNum => toBigDecimal == num.toBigDecimal
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n.toDouble
+    case JNumDouble(n) => value compare n
+    case JNumBigDec(n) => BigDecimal(value) compare n
+    case _ => toBigDecimal compare other.toBigDecimal
   }
 }
 
@@ -718,27 +744,34 @@ case class JNumBigDec(value: BigDecimal) extends JNum {
   final def toDouble: Double = value.toDouble
   final def toRawString: String = value.toString
 
-  // SI-6173
-  override val hashCode = 0
-
   override def equals(other: Any) = other match {
-    case JNumStr(s) => BigDecimal(s) == value
-    case JNumLong(n) => n == value
-    case JNumDouble(n) => BigDecimal(n) == value
-    case JNumBigDec(n) => n == value
+    case JNumLong(n) => value == n
+    case JNumDouble(n) => value == n
+    case JNumBigDec(n) => value == n
+    case num: JNum => value == num.toBigDecimal
     case _ => false
+  }
+
+  protected[json] def numCompare(other: JNum) = other match {
+    case JNumLong(n) => value compare n
+    case JNumDouble(n) => value compare n
+    case JNumBigDec(n) => value compare n
+    case _ => value compare other.toBigDecimal
   }
 }
 
 case object JNum {
-  def apply(value: Double): JValue = if (value.isNaN || value == Double.PositiveInfinity || value == Double.NegativeInfinity) JUndefined else JNumDouble(value)
+  def apply(value: Double): JValue =
+    if (value.isNaN || isInfinite(value)) JUndefined else JNumDouble(value)
 
   private[json] def apply(value: String): JNum = JNumStr(value)
 
   def apply(value: Long): JNum = JNumLong(value)
 
   def apply(value: BigDecimal): JNum = JNumBigDec(value)
-  
+
+  def compare(v1: JNum, v2: JNum) = v1.numCompare(v2)
+
   def unapply(value: JNum): Option[BigDecimal] = {
     try { Some(value.toBigDecimal) }
     catch { case _ : NumberFormatException => None }
@@ -746,11 +779,21 @@ case object JNum {
 }
 
 case class JString(value: String) extends JValue {
+  final def normalize: JString = this
+
   final def sort: JString = this
+
   final def renderCompact: String = JString.escape(value)
   final override def renderPretty: String = JString.escape(value)
   final override def internalRender(sb: StringBuilder, mode: RenderMode, indent: String) {
     JString.internalEscape(sb, value)
+  }
+
+  protected[json] final def typeIndex = 5
+
+  final def compare(that: JValue): Int = that match {
+    case JString(s) => value compare s
+    case _ => typeIndex compare that.typeIndex
   }
 }
 
@@ -831,9 +874,25 @@ case object JField extends ((String, JValue) => JField) {
 case class JObject(fields: Map[String, JValue]) extends JValue {
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
+  def hasDefinedChild: Boolean = {
+    fields.values.foreach(v => if (v != JUndefined) return true)
+    false
+  }
+
+  def normalize: JObject = JObject(
+    fields flatMap {
+      case (k, v) => v match {
+        case JUndefined => None
+        case jv => Some((k, jv.normalize))
+      }
+    }
+  )
+
   def + (field: JField): JObject = copy(fields = fields + field)
 
   def - (name: String): JObject = copy(fields = fields - name)
+
+  def merge(other: JObject): JObject = JObject(Merge.mergeFields(this.fields, other.fields))
 
   def partitionField(field: String): (JValue, JObject) = {
     (get(field), JObject(fields - field))
@@ -850,6 +909,48 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   def isNested: Boolean = fields.values.exists {
     case _: JArray => true
     case _: JObject => true
+    case _ => false
+  }
+
+  protected[json] final def typeIndex = 7
+
+  private def fieldsCmp(m1: Map[String, JValue], m2: Map[String, JValue]): Int = {
+    val keys = (m1.keys ++ m2.keys).toArray
+    quickSort(keys)
+    keys.foreach { key =>
+      val v1 = m1.getOrElse(key, JUndefined)
+      val v2 = m2.getOrElse(key, JUndefined)
+      if (v1 == JUndefined && v2 == JUndefined) {
+      } else if (v1 == JUndefined) {
+        return 1
+      } else if (v2 == JUndefined) {
+        return -1
+      } else {
+        val i = (v1 compare v2)
+        if (i != 0) return i
+      }
+    }
+    0
+  }
+
+  override def compare(that: JValue): Int = that match {
+    case o: JObject => fieldsCmp(fields, o.fields)
+    case _ => typeIndex compare that.typeIndex
+  }
+
+  private def fieldsEq(m1: Map[String, JValue], m2: Map[String, JValue]): Boolean = {
+    val keys = (m1.keys ++ m2.keys).toArray
+    quickSort(keys)
+    keys.foreach { key =>
+      val v1 = m1.getOrElse(key, JUndefined)
+      val v2 = m2.getOrElse(key, JUndefined)
+      if (!v1.equals(v2)) return false
+    }
+    true
+  }
+
+  override def equals(other: Any) = other match {
+    case o: JObject => fieldsEq(fields, o.fields)
     case _ => false
   }
 
@@ -915,20 +1016,84 @@ case object JObject extends (Map[String, JValue] => JObject) {
 
   def unapplySeq(value: JValue): Option[Seq[JField]] = value match {
     case JObject(fields) => Some(fields.toSeq)
-
     case _ => None
   }
 }
 
 case class JArray(elements: List[JValue]) extends JValue {
+  def hasDefinedChild: Boolean = {
+    elements.foreach(v => if (v != JUndefined) return true)
+    false
+  }
+
+  def normalize: JArray = JArray(
+    elements flatMap {
+      _ match {
+        case JUndefined => None
+        case v => Some(v.normalize)
+      }
+    }
+  )
+
   def sort: JArray = JArray(elements.filter(_ ne JUndefined).map(_.sort).sorted)
 
   override def apply(i: Int): JValue = elements.lift(i).getOrElse(JUndefined)
+
+  def merge(other: JArray): JArray = JArray(Merge.mergeVals(this.elements, other.elements))
 
   def isNested: Boolean = elements.exists {
     case _: JArray => true
     case _: JObject => true
     case _ => false
+  }
+
+  protected[json] final def typeIndex = 6
+
+  @tailrec
+  private def elementsEq(js1: List[JValue], js2: List[JValue]): Boolean = {
+    js1 match {
+      case Nil => js2 match {
+        case Nil => true
+        case JUndefined :: t2 => elementsEq(Nil, t2)
+        case _ => false
+      }
+      case JUndefined :: t1 => elementsEq(t1, js2)
+      case h1 :: t1 => js2 match {
+        case Nil => false
+        case JUndefined :: t2 => elementsEq(js1, t2)
+        case h2 :: t2 =>
+          if (h1 equals h2) elementsEq(t1, t2) else false
+      }
+    }
+  }
+
+  override def equals(other: Any) = other match {
+    case o: JArray => elementsEq(elements, o.elements)
+    case _ => false
+  }
+
+  @tailrec
+  private def elementsCmp(js1: List[JValue], js2: List[JValue]): Int = {
+    js1 match {
+      case Nil => js2 match {
+        case Nil => 0
+        case JUndefined :: t2 => elementsCmp(Nil, t2)
+        case _ => -1
+      }
+      case JUndefined :: t1 => elementsCmp(t1, js2)
+      case h1 :: t1 => js2 match {
+        case Nil => 1
+        case JUndefined :: t2 => elementsCmp(js1, t2)
+        case h2 :: t2 =>
+          val i = (h1 compare h2)
+          if (i == 0) elementsCmp(t1, t2) else i
+      }
+    }
+  }
+
+  override def compare(other: JValue): Int = other match {
+    case o: JArray => elementsCmp(elements, o.elements)
+    case o => JValue.typeIndex(this) compare JValue.typeIndex(o)
   }
 
   final override def renderCompact: String = buildString(internalRender(_, Compact, ""))
@@ -975,5 +1140,7 @@ case class JArray(elements: List[JValue]) extends JValue {
 
 case object JArray extends (List[JValue] => JArray) {
   final val empty = JArray(Nil)
+
   final implicit val order: Order[JArray] = Order[List[JValue]].contramap((_: JArray).elements)
+  final def apply(vals: JValue*): JArray = JArray(vals.toList)
 }

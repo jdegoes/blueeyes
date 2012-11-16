@@ -5,8 +5,10 @@ import blueeyes.json._
 import blueeyes.json.{JPath, JParser}
 import org.specs2.mock._
 
+import scalaz.{Success, Validation}
+
 class ExplainQueryBehaviourSpec extends Specification with Mockito{
-  private val explanation = JParser.parseFromString("""{
+  private val explanation: JObject = JParser.parseFromString("""{
     "cursor" : "BasicCursor",
     "nscanned" : 3,
     "nscannedObjects" : 3,
@@ -19,7 +21,7 @@ class ExplainQueryBehaviourSpec extends Specification with Mockito{
     "indexBounds" : {
 
     }
-}""").asInstanceOf[JObject]
+}""").map(_.asInstanceOf[JObject]).valueOr { e => throw e }
 
   private val keys     = MongoSelection(Set(JPath("foo"), JPath("bar")))
 
