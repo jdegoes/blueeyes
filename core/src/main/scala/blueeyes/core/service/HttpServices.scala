@@ -146,7 +146,7 @@ case class CommitService[A, B](delegate: HttpService[A, B]) extends DelegatingSe
   val metadata = None
 }
 
-case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
+case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: U => Future[T]) extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
   import AcceptService._
   def service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] => 
     delegate.service(newRequest).map{checkConvert(newRequest, _)} 
@@ -155,7 +155,7 @@ case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Futu
   lazy val metadata = Some(RequestHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
-case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
+case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: U => Future[T]) extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
   import AcceptService._
   def service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
     delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
@@ -165,7 +165,7 @@ case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService
 }
 
 object AcceptService extends blueeyes.bkka.AkkaDefaults {
-  def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit b: Bijection[U, Future[T]]) = {
+  def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit b: U => Future[T]) = {
     r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(b)).success).getOrElse(inapplicable.failure)
   }
 
