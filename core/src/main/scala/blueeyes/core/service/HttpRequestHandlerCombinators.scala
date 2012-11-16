@@ -214,7 +214,7 @@ trait HttpRequestHandlerCombinators {
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
    */
-  def contentType[T, S](mimeType: MimeType)(h: HttpService[Future[T], Future[HttpResponse[T]]])(implicit b1: Bijection[S, Future[T]], b2: Bijection[T, S]): HttpService[S, Future[HttpResponse[S]]] = {
+  def contentType[T, S](mimeType: MimeType)(h: HttpService[Future[T], Future[HttpResponse[T]]])(implicit b1: S => Future[T], b2: T => S): HttpService[S, Future[HttpResponse[S]]] = {
     implicit val b3 = b2.inverse
 
     accept(mimeType) {
