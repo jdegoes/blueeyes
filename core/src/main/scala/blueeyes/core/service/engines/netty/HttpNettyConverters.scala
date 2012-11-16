@@ -1,6 +1,15 @@
 package blueeyes.core.service.engines.netty
 
-import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHttpHeaders, QueryStringDecoder, HttpResponseStatus, DefaultHttpResponse, HttpMethod => NettyHttpMethod, HttpResponse => NettyHttpResponse, HttpVersion => NettyHttpVersion, HttpRequest => NettyHttpRequest}
+import org.jboss.netty.handler.codec.http.{
+  QueryStringDecoder, 
+  HttpResponseStatus, 
+  DefaultHttpResponse, 
+  HttpVersion => NettyHttpVersion, 
+  HttpMethod  => NettyHttpMethod, 
+  HttpHeaders => NettyHttpHeaders, 
+  HttpRequest => NettyHttpRequest,
+  HttpResponse => NettyHttpResponse
+}
 
 import blueeyes.core.http._
 import scala.collection.JavaConversions._
