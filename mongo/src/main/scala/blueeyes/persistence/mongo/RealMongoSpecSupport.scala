@@ -142,10 +142,6 @@ trait RealMongoSpecSupport extends Specification {
             startupTries -= 1
           }
 
-          if (isAvailable(port)) {
-            throw new Exception("Mongo startup failed!")
-          }
-
           realMongoImpl = new TGMongo("localhost", port)
           mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS))
 
