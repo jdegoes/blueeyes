@@ -22,7 +22,7 @@ import com.weiglewilczek.slf4s.Logging
  * object EmailServer extends BlueEyesServer with EmailServices
  * </pre>
  */
-trait BlueEyesServer extends NettyEngine with ReflectiveServiceList[ByteChunk] with Logging { self =>
+trait BlueEyesServer extends NettyEngine with ReflectiveServiceList[ByteChunk] with Logging with HttpServerMain { self =>
   class HttpServer(rootConfig: Configuration, ctx: ExecutionContext) extends NettyHttpServer(rootConfig, ctx) {
     implicit val executionContext = ctx
     val services = self.services
