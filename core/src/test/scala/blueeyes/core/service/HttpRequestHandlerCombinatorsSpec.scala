@@ -15,6 +15,7 @@ import blueeyes.json._
 import blueeyes.json.JParser
 import blueeyes.util.metrics.DataSize
 import DataSize._
+import ByteChunk._
 
 import java.net.URLEncoder.{ encode => encodeUrl }
 import java.nio.ByteBuffer
@@ -58,13 +59,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
   "jsonp combinator" should {
     "detect jsonp by callback & method parameters" in {
       val handler: AsyncHttpService[ByteChunk] = {
-        jsonp[ByteChunk] {
+        jsonp { transcode {
           path("/") {
-            get { request: HttpRequest[Future[JValue]] =>
+            get { (request: HttpRequest[Future[JValue]]) => 
               Future(HttpResponse[JValue](content = Some(JString("foo"))))
             }
           }
-        }
+        }}
       }
 
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")) must beLike {
@@ -77,16 +78,16 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "retrieve POST content from query string parameter" in {
       val handler: AsyncHttpService[ByteChunk] = {
-        jsonp {
+        jsonp { transcode {
           path("/") {
-            post { request: HttpRequest[Future[JValue]] =>
-              request.content match {
+            post { 
+              (_: HttpRequest[Future[JValue]]).content match {
                 case Some(future) => future.map(c => HttpResponse[JValue](content = Some(c)))
                 case None => Future(HttpResponse[JValue](content = None))
               }
             }
           }
-        }
+        }}
       }
 
       val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
@@ -102,13 +103,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "retrieve headers from query string parameter" in {
       val handler: AsyncHttpService[ByteChunk] = {
-        jsonp {
+        jsonp { transcode {
           path("/") {
-            get { request: HttpRequest[Future[JValue]] =>
+            get { (request: HttpRequest[Future[JValue]]) =>
               Future(HttpResponse[JValue](content = Some(JString("foo")), headers = request.headers))
             }
           }
-        }
+        }}
       }
 
       val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
@@ -124,13 +125,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "pass undefined to callback when there is no content" in {
       val handler: AsyncHttpService[ByteChunk] = {
-        jsonp {
+        jsonp { transcode {
           path("/") {
-            get { request: HttpRequest[Future[JValue]] =>
+            get { (request: HttpRequest[Future[JValue]]) => 
               Future(HttpResponse[JValue]())
             }
           }
-        }
+        }}
       }
 
       val request = HttpRequest[ByteChunk](method = HttpMethods.GET,
@@ -146,13 +147,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "return headers in 2nd argument to callback function" in {
       val handler: AsyncHttpService[ByteChunk] = {
-        jsonp {
+        jsonp { transcode[ByteChunk, JValue] {
           path("/") {
-            get { request: HttpRequest[Future[JValue]] =>
+            get { (request: HttpRequest[Future[JValue]]) => 
               Future(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
             }
           }
-        }
+        }}
       }
 
       val request = HttpRequest[ByteChunk]( method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")
@@ -168,13 +169,13 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "return 200 and propigate status to callback under failure scenarios" in {
       val errorHandler: AsyncHttpService[ByteChunk] = {
-        jsonp[ByteChunk] {
+        jsonp { transcode {
           path("/") {
-            get { request: HttpRequest[Future[JValue]] =>
+            get { (request: HttpRequest[Future[JValue]]) =>
               Future(HttpResponse[JValue](status = HttpStatus(400, "Funky request."), content = Some(JString("bang"))))
             }
           }
-        }
+        }}
       }
 
       val request = HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET") 
@@ -195,9 +196,11 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val defaultValue = "defaultValue"
       val handler = path("/foo/bar") {
         cookie('someCookie, Some(defaultValue)) {
-          get { (request: HttpRequest[String]) =>
-            {
-              cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
+          get { 
+            service {
+              (request: HttpRequest[String]) => {
+                cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
+              }
             }
           }
         }
@@ -213,9 +216,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     "extract parameter" in {
       val handler = path("/foo/'bar") {
         parameter('bar) {
-          get { (request: HttpRequest[String]) =>
-            (bar: String) =>
-              Future(HttpResponse[String](content = Some(bar)))
+          get { 
+            service {
+              (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[String](content = Some(bar)))
+            }
           }
         }
       }
@@ -228,10 +232,12 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
         parameter[String, Future[HttpResponse[String]]]('bar, Some("bebe")) {
-          get { (request: HttpRequest[String]) =>
-            (bar: String) => {
-              request.parameters mustEqual Map('bar -> "bebe")
-              Future(HttpResponse[String](content = request.parameters.get('bar)))
+          get { 
+            service {
+              (request: HttpRequest[String]) => (bar: String) => {
+                request.parameters mustEqual Map('bar -> "bebe")
+                Future(HttpResponse[String](content = request.parameters.get('bar)))
+              }
             }
           }
         }
@@ -246,9 +252,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/'bar") {
         produce[String, JValue, JValue](application / json) {
           parameter('bar) {
-            get { (request: HttpRequest[String]) =>
-              (bar: String) =>
-                Future(HttpResponse[JValue](content = Some(JString(bar))))
+            get { 
+              service {
+                (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
+              }
             }
           }
         }
@@ -263,9 +270,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/'bar") {
         produce[String, JValue, JValue](application / json) {
           parameter('bar) {
-            get { (request: HttpRequest[String]) =>
-              bar: String =>
-                Future(HttpResponse[JValue](content = Some(JString(bar))))
+            get { 
+              service {
+                (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
+              }
             }
           }
         }
@@ -301,9 +309,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
         path('bar / "entries") {
           produce[String, JValue, JValue](application / json) {
             parameter('bar) {
-              get { (request: HttpRequest[String]) =>
-                bar: String =>
-                  Future(HttpResponse[JValue](content = Some(JString(bar))))
+              get { 
+                service {
+                  (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
+                }
               }
             }
           }
