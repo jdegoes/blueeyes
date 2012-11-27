@@ -18,13 +18,15 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler
 import org.jboss.netty.handler.codec.http.{HttpHeaders => NettyHeaders, HttpChunk => NettyChunk, HttpRequest => NettyRequest}
 import org.jboss.netty.util.CharsetUtil
 
+import com.weiglewilczek.slf4s.Logging
+
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
 import scalaz._
 import scala.collection.JavaConverters._
 
-private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit executionContext: ExecutionContext) extends SimpleChannelUpstreamHandler {
+private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit executionContext: ExecutionContext) extends SimpleChannelUpstreamHandler with Logging {
   import HttpNettyConverters._
   import HttpNettyChunkedRequestHandler._
   import NettyHeaders._
@@ -81,7 +83,9 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
   }
 
   private def killPending(message: String) {
-    if (chain != null) chain.promise.failure(new RuntimeException(message))
+    if (chain != null && ! chain.promise.isCompleted) {
+      chain.promise.failure(new RuntimeException(message))
+    }
   }
 }
 
