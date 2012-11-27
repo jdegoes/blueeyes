@@ -9,7 +9,9 @@ sealed case class HttpResponse[+T](
   headers: HttpHeaders = HttpHeaders.Empty, 
   content: Option[T] = None, 
   version: HttpVersion = `HTTP/1.1`
-)
+) {
+  def map[B](f: T => B): HttpResponse[B] = copy(content = content.map(f))
+}
 
 object HttpResponse {
   def empty[T] = HttpResponse[T](content = None)
