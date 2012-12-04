@@ -249,9 +249,6 @@ trait W3ExtendedLogGrammar extends JavaTokenParsers {
     ("s"  ^^^ ServerPrefix)         |
     ("r"  ^^^ RemotePrefix)
   }
-  
-  //lazy val fields = 
-  
-  
 }
+
 object W3ExtendedLogGrammar extends W3ExtendedLogGrammar

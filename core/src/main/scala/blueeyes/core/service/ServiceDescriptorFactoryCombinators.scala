@@ -113,11 +113,12 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/docs/api") {
               get {
                 produce(text/html){
-                  HttpHandlerService{
-                    request: HttpRequest[T] => {
+                  new HttpHandlerService(
+                    (request: HttpRequest[T]) => {
                       Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
-                    }
-                  }
+                    },
+                    identity[T]
+                  )
                 }
               }
             }

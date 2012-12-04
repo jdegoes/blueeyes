@@ -37,37 +37,37 @@ For more extensive documentation on BlueEyes, see the [in-progress book](http://
 
 Repositories:
 
- * http://nexus.scala-tools.org/content/repositories/
- * http://scala-tools.org/repo-snapshots/
- * http://repository.jboss.org/nexus/content/groups/public/
- * http://repo.akka.io/releases/
- * http://guiceyfruit.googlecode.com/svn/repo/release/
+ * http://oss.sonatype.org/content/repositories/public
+ * http://repo.typesafe.com/typesafe/releases/
 
 Library dependency:
 
 ```xml
 <dependency>
-  <groupId>com.reportgrid</groupId>
-  <artifactId>blueeyes</artifactId>
-  <version>0.4.24</version>
+  <groupId>com.github.jdegoes</groupId>
+  <artifactId>blueeyes-core</artifactId>
+  <version>0.6.0</version>
   <type>jar</type>
   <scope>compile</scope>
 </dependency>
 ```
 
-### SBT 0.10+
+Also consider `blueeyes-mongo` and `blueeyes-json` artifacts.
+
+### SBT
+
 
 ```scala
 resolvers ++= Seq(
-  "Sonatype"    at "http://nexus.scala-tools.org/content/repositories/public",
-  "Scala Tools" at "http://scala-tools.org/repo-snapshots/",
-  "JBoss"       at "http://repository.jboss.org/nexus/content/groups/public/",
-  "Akka"        at "http://repo.akka.io/releases/",
-  "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
+  "Sonatype" at "http://oss.sonatype.org/content/repositories/public",
+  "Typesafe" at "http://repo.typesafe.com/typesafe/releases/"
 )
 
 libraryDependencies ++= Seq(
-  "com.reportgrid" % "blueeyes_2.9.2" % "0.6" % "compile"
+  "com.github.jdegoes" %% "blueeyes-core"  % "0.6.0",
+  "com.github.jdegoes" %% "blueeyes-mongo" % "0.6.0",
+  "com.github.jdegoes" %% "blueeyes-json"  % "0.6.0",
+  "ch.qos.logback" % "logback-classic" % "1.0.0" % "runtime"
 )
 ```
 

@@ -115,5 +115,19 @@ package object data {
     def forceEagerChunk(s: ByteChunk)(implicit executor: ExecutionContext): Future[ByteChunk] = {
       forceByteArray(s) map { bytes => Left(ByteBuffer.wrap(bytes)) }
     }
+
+    implicit def semigroup(implicit m: Monad[Future]): Semigroup[ByteChunk] = new Semigroup[ByteChunk] {
+      def append(c0: ByteChunk, c1: => ByteChunk) = (c0, c1) match {
+        case (Left(buf0), Left(buf1)) => 
+          val buf = ByteBuffer.allocate(buf0.remaining + buf1.remaining)
+          buf.put(buf0).put(buf1)
+          buf.flip()
+          Left(buf)
+
+        case (Right(stream), Left(buf1)) => Right(stream ++ (buf1 :: StreamT.empty[Future, ByteBuffer]))
+        case (Left(buf1), Right(stream)) => Right(buf1 :: stream)
+        case (Right(stream1), Right(stream2)) => Right(stream1 ++ stream2)
+      }
+    }
   }
 }

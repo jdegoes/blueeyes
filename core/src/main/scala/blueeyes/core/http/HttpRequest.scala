@@ -16,6 +16,8 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameter
 
     copy(uri = newUri)
   }
+
+  def map[U](f: T => U): HttpRequest[U] = copy(content = content map f)
 }
 
 object HttpRequest{

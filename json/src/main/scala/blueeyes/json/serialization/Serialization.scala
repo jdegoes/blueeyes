@@ -2,7 +2,7 @@ package blueeyes.json.serialization
 
 import blueeyes.json._
 
-import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli}
+import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus}
 import NonEmptyList._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.
@@ -61,6 +61,14 @@ object Extractor {
   case class Errors(errors: NonEmptyList[Error]) extends Error {
     def die = sys.error(message)
     def message = "Multiple extraction errors occurred: " + errors.map(_.message).list.mkString(": ")
+  }
+
+  implicit val plus: Plus[Extractor] = new Plus[Extractor] {
+    def plus[A](f1: Extractor[A], f2: => Extractor[A]) = new Extractor[A] with ValidatedExtraction[A] {
+      override def validated(jvalue: JValue) = {
+        f1.validated(jvalue) orElse f2.validated(jvalue)
+      }
+    }
   }
 
   def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] with ValidatedExtraction[A] {
