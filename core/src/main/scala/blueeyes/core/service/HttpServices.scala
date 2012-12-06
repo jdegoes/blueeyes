@@ -373,8 +373,8 @@ object JsonpService extends AkkaDefaults {
     JField("headers", r.headers.raw.serialize) ::
     JField("status",
       JObject(
-        JField("code",    JString(int2HttpStatusCode(r.status.code.value).toString)) ::
-        JField("reason",  r.status.reason) ::
+        JField("code",    r.status.code.value.jv) ::
+        JField("reason",  r.status.reason.jv) ::
         Nil
       )
     ) ::
