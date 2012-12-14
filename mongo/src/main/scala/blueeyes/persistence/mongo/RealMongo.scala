@@ -62,9 +62,9 @@ object RealMongo {
   }
 }
 
-class RealMongo(mongo: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
-  def database(databaseName: String) = new RealDatabase(defaultActorSystem, this, mongo.getDB(databaseName), disconnectTimeout)
-  lazy val close = Future(mongo.close)
+class RealMongo(val underlying: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
+  def database(databaseName: String) = new RealDatabase(defaultActorSystem, this, underlying.getDB(databaseName), disconnectTimeout)
+  lazy val close = Future(underlying.close)
 }
 
 object RealDatabase {
