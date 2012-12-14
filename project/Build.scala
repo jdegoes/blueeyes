@@ -67,12 +67,12 @@ object BlueEyesBuild extends Build {
 
     crossScalaVersions := Seq("2.9.2"),
 
-    version := "1.0.0-M7",
+    version := "1.0.0-SNAPSHOT",
 
     organization := "com.reportgrid",
 
     libraryDependencies ++= Seq(
-      "org.scalaz"         %% "scalaz-core"  % "7.0-SNAPSHOT" changing(),
+      "org.scalaz"         %% "scalaz-core"  % "7.0-precog-M1",
       "org.specs2"         %% "specs2"       % specs2Version    % "test" changing(),
       "org.scalacheck"     %% "scalacheck"   % "1.10.0"         % "test"
     ),
