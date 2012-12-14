@@ -17,7 +17,7 @@ import blueeyes.util.printer._
 
 import java.net.URLDecoder._
 
-import scalaz.{Validation, Success, Failure, Monad, StreamT}
+import scalaz.{Validation, Success, Failure, Monad, StreamT, Semigroup}
 import scalaz.syntax.pointed._
 import scalaz.syntax.semigroup._
 import scalaz.syntax.validation._
@@ -55,8 +55,8 @@ sealed trait HttpService[A, B] extends AnyService { self =>
  */
 trait CustomHttpService[A, B] extends HttpService[A, B] 
 
-trait DelegatingService[A, B, C, D] extends HttpService[A, B] {
-  val delegate: HttpService[C, D]
+trait DelegatingService[A, B, A0, B0] extends HttpService[A, B] {
+  val delegate: HttpService[A0, B0]
 }
 
 case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, B] {
@@ -83,19 +83,19 @@ object DelegatingService {
   def unapply[A, B, C, D](s: DelegatingService[A, B, C, D]): Option[HttpService[C, D]] = Some(s.delegate)
 }
 
-case class HttpHandlerService[A, B](h: HttpServiceHandler[A, B]) extends CustomHttpService[A, B] {
-  val service = (r: HttpRequest[A]) => h(r).success
+class HttpHandlerService[A, B, C](h: HttpServiceHandler[B, C], f: A => B) extends CustomHttpService[A, C] {
+  val service = (r: HttpRequest[A]) => h(r.map(f)).success
 
   val metadata = None
 }
 
-case class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends CustomHttpService[A, B] {
+class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends CustomHttpService[A, B] {
   val service = (r: HttpRequest[A]) => DispatchError(onFailure(r)).failure[B]
 
   val metadata = None
 }
 
-case class PathService[A, B](path: RestPathPattern, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+class PathService[A, B](path: RestPathPattern, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   val service = PathService.shift(path, _: HttpRequest[A]).toSuccess(inapplicable).flatMap(delegate.service)
 
   lazy val metadata = Some(PathPatternMetadata(path))
@@ -113,13 +113,13 @@ object PathService {
   }
 }
 
-case class HttpMethodService[A, B](method: HttpMethod, delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+class HttpMethodService[A, B](method: HttpMethod, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   val service = (r: HttpRequest[A]) => if (r.method == method) delegate.service(r) else inapplicable.failure[B]
 
   lazy val metadata = Some(HttpMethodMetadata(method))
 }
 
-case class CommitService[A, B](delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+class CommitService[A, B](val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   def pathMetadata(service: AnyService, services: Set[AnyService], path: Vector[Metadata]): Vector[Vector[Metadata]] = {
     if (services.contains(service)) Vector(path)
     else service match {
@@ -146,18 +146,26 @@ case class CommitService[A, B](delegate: HttpService[A, B]) extends DelegatingSe
   val metadata = None
 }
 
-case class AcceptService[T, S, U](mimeType: MimeType, delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
+class TranscodeService[A, B](val delegate: HttpService[Future[B], Future[HttpResponse[B]]])(implicit inj: A => Future[B], surj: B => A) 
+extends DelegatingService[A, Future[HttpResponse[A]], Future[B], Future[HttpResponse[B]]] {
+  val service = (request: HttpRequest[A]) => delegate.service(request.map(inj)).map(_.map(_.map(surj)))
+  val metadata = None
+}
+
+class AcceptService[T, S, U](mimeType: MimeType, val delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
+extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
   import AcceptService._
-  def service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] => 
-    delegate.service(newRequest).map{checkConvert(newRequest, _)} 
+  val service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] => 
+    delegate.service(newRequest) map { checkConvert(newRequest, _) } 
   }
 
   lazy val metadata = Some(RequestHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
-case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit b: Bijection[U, Future[T]]) extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
+class Accept2Service[T, S, U, E1](mimeType: MimeType, val delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
+extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
   import AcceptService._
-  def service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
+  val service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
     delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
   }
 
@@ -165,8 +173,8 @@ case class Accept2Service[T, S, U, E1](mimeType: MimeType, delegate: HttpService
 }
 
 object AcceptService extends blueeyes.bkka.AkkaDefaults {
-  def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit b: Bijection[U, Future[T]]) = {
-    r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(b)).success).getOrElse(inapplicable.failure)
+  def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit f: U => Future[T]) = {
+    r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(f)).success).getOrElse(inapplicable.failure)
   }
 
   def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
@@ -180,7 +188,7 @@ object AcceptService extends blueeyes.bkka.AkkaDefaults {
   }
 }
 
-case class ProduceService[T, S, V](mimeType: MimeType, delegate: HttpService[T, Future[HttpResponse[S]]], transcoder: S => V) 
+class ProduceService[T, S, V](mimeType: MimeType, val delegate: HttpService[T, Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]] {
   def service = (r: HttpRequest[T]) => delegate.service(r).map { 
     _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
@@ -189,7 +197,7 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
   lazy val metadata = Some(ResponseHeaderMetadata(Right(`Content-Type`(mimeType))))
 }
 
-case class Produce2Service[T, S, V, E1](mimeType: MimeType, delegate: HttpService[T, E1 => Future[HttpResponse[S]]], transcoder: S => V) 
+class Produce2Service[T, S, V, E1](mimeType: MimeType, val delegate: HttpService[T, E1 => Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]] {
   def service = (r: HttpRequest[T]) => delegate.service(r).map {
     f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
@@ -200,7 +208,7 @@ extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[Http
 
 case class RangeHeaderValues(units: String, bounds: List[(Long, Long)])
 
-case class GetRangeService[T, S](delegate: HttpService[T, RangeHeaderValues => S]) 
+class GetRangeService[T, S](val delegate: HttpService[T, RangeHeaderValues => S]) 
 extends DelegatingService[T, S, T, RangeHeaderValues => S] {
   val service = (req: HttpRequest[T]) => extractRange(req.headers.raw) flatMap { t => 
     delegate.service(req).map(_.apply(t))
@@ -243,15 +251,16 @@ extends DelegatingService[T, S, T, RangeHeaderValues => S] {
   lazy val metadata = Some(AndMetadata(RequestHeaderMetadata(Left(HttpHeaders.Range), None), DescriptionMetadata("A numeric range must be specified for the request.")))
 }
 
-case class CompressService(delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
+class CompressService(val delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
+extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
   import CompressService._
   def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{compress(r, _)}
 
   val metadata = Some(EncodingMetadata(supportedCompressions.keys.toSeq: _*))
 }
 
-case class CompressService2[E1](delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
-    extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
+class CompressService2[E1](val delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
+extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
 
   import CompressService._
   def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{function => (e: E1) => compress(r, function.apply(e))}
@@ -277,7 +286,7 @@ object CompressService {
   )
 }
 
-case class AggregateService(chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
+class AggregateService(chunkSize: Option[DataSize], val delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
 extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
   private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
 
@@ -288,7 +297,7 @@ extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk,
   lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class Aggregate2Service[E1](chunkSize: Option[DataSize], delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
+class Aggregate2Service[E1](chunkSize: Option[DataSize], val delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
 extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
   private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
 
@@ -299,8 +308,8 @@ extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Byte
   lazy val metadata = chunkSize.map(DataSizeMetadata)
 }
 
-case class JsonpService[T](delegate: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
-extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[HttpResponse[JValue]]]{
+class JsonpService[T](val delegate: HttpService[T, Future[HttpResponse[T]]])(implicit fromString: String => T, semigroup: Semigroup[T]) 
+extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
@@ -316,8 +325,8 @@ extends DelegatingService[T, Future[HttpResponse[T]], Future[JValue], Future[Htt
   ))
 }
 
-case class Jsonp2Service[T, E1](delegate: HttpService[Future[JValue], E1 => Future[HttpResponse[JValue]]])(implicit toJson: T => Future[JValue], fromString: String => T) 
-extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 => Future[HttpResponse[JValue]]]{
+class Jsonp2Service[T, E1](val delegate: HttpService[T, E1 => Future[HttpResponse[T]]])(implicit fromString: String => T, semigroup: Semigroup[T]) 
+extends DelegatingService[T, E1 => Future[HttpResponse[T]], T, E1 => Future[HttpResponse[T]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => {
     jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
@@ -326,27 +335,10 @@ extends DelegatingService[T, E1 => Future[HttpResponse[T]], Future[JValue], E1 =
   def metadata = None
 }
 
-case class JsonpChunkedService[T, U](delegate: HttpService[Future[JValue], Future[HttpResponse[Chunk[U]]]])(implicit toJson: Chunk[T] => Future[JValue],  u2s: U => String, s2t: String => T)
-extends DelegatingService[Chunk[T], Future[HttpResponse[Chunk[T]]], Future[JValue], Future[HttpResponse[Chunk[U]]]]{
-  import JsonpService._
-  def service = (r: HttpRequest[Chunk[T]]) => jsonpConvertRequest(r).flatMap(delegate.service).map(_.map(jsonpChunkedResponse(_, r.parameters.get('callback))))
-
-  val metadata = Some(OrMetadata(
-    AndMetadata(
-      HttpMethodMetadata(HttpMethods.GET),
-      DescriptionMetadata("A callback method identifier is required when using JsonP with a \"GET\" request."),
-      ParameterMetadata('callback, None)
-    ),
-    HttpMethodMetadata(HttpMethods.POST),
-    HttpMethodMetadata(HttpMethods.PUT),
-    HttpMethodMetadata(HttpMethods.DELETE)
-  ))
-}
-
 object JsonpService extends AkkaDefaults {
   private implicit val M: Monad[Future] = new FutureMonad(defaultFutureDispatch)
 
-  def jsonpConvertRequest[T](r: HttpRequest[T])(implicit toJson: T => Future[JValue]): Validation[NotServed, HttpRequest[Future[JValue]]] = {
+  def jsonpConvertRequest[T](r: HttpRequest[T])(implicit fromString: String => T): Validation[NotServed, HttpRequest[T]] = {
     import blueeyes.json.JParser.parse
     import blueeyes.json.serialization.DefaultSerialization._
     import Bijection._
@@ -358,7 +350,7 @@ object JsonpService extends AkkaDefaults {
             val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
             val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(parse _).map(Future(_))
+            val content = r.parameters.get('content).map(fromString)
             val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
 
             r.copy(method = method, content = content, headers = r.headers ++ headers).success
@@ -372,8 +364,8 @@ object JsonpService extends AkkaDefaults {
       case Some(callback) =>
         DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")).failure
 
-      case None =>
-        r.copy(content = r.content.map(toJson)).success
+      case None => 
+        r.success
     }
   }
 
@@ -389,25 +381,22 @@ object JsonpService extends AkkaDefaults {
     Nil
   ).renderCompact
 
-  def jsonpConvertResponse[T](r: HttpResponse[JValue], callback: Option[String])(implicit fromString: String => T): HttpResponse[T] = {
+  def jsonpConvertResponse[T](response: HttpResponse[T], callback: Option[String])(implicit fromString: String => T, semigroup: Semigroup[T]): HttpResponse[T] = {
     import Bijection._
 
     callback map { callback =>
-      val meta = jsonpMetadata(r)
-      r.copy(
+      val meta = jsonpMetadata(response)
+      response.copy(
         status = HttpStatus(OK),
-        content = r.content.map { content =>
-                    fromString(callback + "(" + content.renderCompact + "," + meta + ");")
+        content = response.content map { content =>
+                    fromString(callback + "(") |+| content |+| fromString("," + meta + ");")
                   } orElse {
                     Some(fromString(callback + "(undefined," + meta + ");"))
                   }, 
-        headers = r.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
+        headers = response.headers + `Content-Type`(MimeTypes.text/MimeTypes.javascript)
       )
     } getOrElse {
-      r.copy(
-        content = r.content.map(jv => fromString(jv.renderPretty)), 
-        headers = r.headers + `Content-Type`(MimeTypes.application/MimeTypes.json)
-      )
+      response
     }
   }
 
@@ -443,7 +432,7 @@ object JsonpService extends AkkaDefaults {
 }
 
 
-case class ForwardingService[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U], delegate: HttpService[T, HttpResponse[T]]) 
+class ForwardingService[T, U](f: HttpRequest[T] => Option[HttpRequest[U]], httpClient: HttpClient[U], val delegate: HttpService[T, HttpResponse[T]]) 
 extends DelegatingService[T, HttpResponse[T], T, HttpResponse[T]] with AkkaDefaults {
   def service = { r: HttpRequest[T] =>
     Future(f(r).foreach(httpClient))
@@ -469,7 +458,7 @@ object ParameterService {
     new ParameterService(parameter, default, delegate)
 }
 
-case class PathParameterService[A, B](path: RestPathPattern, sym: Symbol, delegate: HttpService[A, String => B])
+class PathParameterService[A, B](path: RestPathPattern, sym: Symbol, val delegate: HttpService[A, String => B])
 extends DelegatingService[A, B, A, String => B]{
   val service = (req: HttpRequest[A]) => {
     for { 
@@ -484,7 +473,7 @@ extends DelegatingService[A, B, A, String => B]{
   lazy val metadata = Some(PathPatternMetadata(path))
 }
 
-case class PathDataService[A, B, X](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, X], delegate: HttpService[A, X => B])
+class PathDataService[A, B, X](path: RestPathPattern, sym: Symbol, f: String => Validation[NotServed, X], val delegate: HttpService[A, X => B])
 extends DelegatingService[A, B, A, X => B]{
   val service = (req: HttpRequest[A]) => {
     for { 
@@ -500,7 +489,7 @@ extends DelegatingService[A, B, A, X => B]{
   lazy val metadata = Some(PathPatternMetadata(path))
 }
 
-case class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
+class ExtractService[T, S, P](extractor: HttpRequest[T] => P, val delegate: HttpService[T, P => S]) extends DelegatingService[T, S, T, P => S]{
   def service = (r: HttpRequest[T]) => delegate.service(r).map(_.apply(extractor(r)))
 
   val metadata = None
@@ -526,11 +515,11 @@ object CookieService {
     new CookieService(ident, default, delegate)
 }
 
-case class MetadataService[T, S](metadata: Option[Metadata], delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
+class MetadataService[T, S](val metadata: Option[Metadata], val delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
   def service = delegate.service
 }
 
-case class DecodeUrlService[T, S](delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
+class DecodeUrlService[T, S](val delegate: HttpService[T, S]) extends DelegatingService[T, S, T, S]{
   def service = (r: HttpRequest[T]) => delegate.service(r.copy(uri = r.uri.decode))
 
   val metadata = None
