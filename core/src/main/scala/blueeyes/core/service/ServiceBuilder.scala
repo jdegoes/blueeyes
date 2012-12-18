@@ -43,13 +43,19 @@ trait ServiceBuilder[T] extends AkkaDefaults {
       def lifecycle(context: ServiceContext) = slifecycle(context)
     }
   }
-  
-  def shutdown[S](shutdown: S => Future[Any])(implicit c : ShutdownConverter[S, Any]): ShutdownDescriptor[S] = 
-    ShutdownDescriptor[S](c.convert(shutdown))
 
-  def shutdown(shutdown: => Future[Any])(implicit c : ShutdownConverter[Unit, Any]): ShutdownDescriptor[Unit] = 
-    ShutdownDescriptor[Unit](c.convert(shutdown))
+  def shutdown[S](shutdown: S => Future[Any]): ShutdownDescriptor[S] = 
+    ShutdownDescriptor(s => Some(Stoppable.fromFuture(shutdown(s))))
+
+  def shutdown(shutdown: => Future[Any]): ShutdownDescriptor[Any] = 
+    ShutdownDescriptor(_ => Some(Stoppable.fromFuture(shutdown)))
   
+  def stop[S](stop: S => Stoppable): ShutdownDescriptor[S] = 
+    ShutdownDescriptor(s => Some(stop(s)))
+
+  def stop(stop: Stoppable): ShutdownDescriptor[Any] = 
+    ShutdownDescriptor(_ => Some(stop))
+
   protected implicit def statelessRequestDescriptorToServiceLifecycle(rd: RequestDescriptor[T, Unit])(implicit ctx: ExecutionContext): ServiceLifecycle[T, Unit] =
     ServiceLifecycle[T, Unit](() => Promise.successful(()), (_: Unit) => (rd.serviceBuilder(()), None))
 }
@@ -62,24 +68,4 @@ case class StartupDescriptor[T, S](startup: () => Future[S]) {
 }
 
 case class RequestDescriptor[T, S](serviceBuilder: S => AsyncHttpService[T])
-case class ShutdownDescriptor[S](shutdownBuilder: S => Option[Stoppable])
-
-trait ShutdownConverter[S, T] {
-  def convert(f : S => Future[T]) : S => Option[Stoppable]
-  def convert(f : => Future[T])   : S => Option[Stoppable]
-}
-
-object ShutdownConverter {
-  implicit def unitConverter[S] = new ShutdownConverter[S, Any] {
-    def convert(f : S => Future[Any]) = { (s: S) => Some(Stoppable.fromFuture(f(s))) }
-    def convert(f : => Future[Any])   = { (_: S) => Some(Stoppable.fromFuture(f)) }
-  }
-
-/*
-  implicit def optStopConverter[S] = new ShutdownConverter[S, Option[Stoppable]] {
-    def convert(f : S => Future[Option[Stoppable]]) = f
-    def convert(f : => Future[Option[Stoppable]]) = { _ => f }
-  }
-*/
-}
-
+case class ShutdownDescriptor[-S](shutdownBuilder: S => Option[Stoppable])
