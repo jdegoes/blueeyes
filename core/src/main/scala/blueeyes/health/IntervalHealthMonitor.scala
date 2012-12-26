@@ -3,9 +3,9 @@ package blueeyes.health
 import metrics._
 
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 import akka.util.Timeout
 
-import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.{JPathIndex, JPathNode, JPathField, JPath}
 import blueeyes.json._
 import blueeyes.json.MergeMonoid
@@ -20,7 +20,7 @@ import ConcurrentMaps._
 import scalaz._
 import Scalaz._
 
-class IntervalHealthMonitor(val intervalConfig: IntervalConfig) extends HealthMonitor with FunctionsMonitor {
+class IntervalHealthMonitor(val intervalConfig: IntervalConfig)(implicit executor: ExecutionContext) extends HealthMonitor with FunctionsMonitor {
   private val _countsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]
   private val _timersStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]       = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Timer]]]
   private val _errorsStats:   ConcurrentMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]      = new ConcurrentHashMap[JPath, AsyncStatistic[Long, Map[Long, Double]]]

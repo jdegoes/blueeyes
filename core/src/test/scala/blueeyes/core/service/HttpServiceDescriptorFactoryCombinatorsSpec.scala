@@ -113,7 +113,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators {
+trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with TestAkkaDefaults {
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {

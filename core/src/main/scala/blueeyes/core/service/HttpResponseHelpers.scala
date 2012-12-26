@@ -6,14 +6,15 @@ import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.core.http.HttpVersions._
 import akka.dispatch.Future
 import akka.dispatch.Promise
+import akka.dispatch.ExecutionContext
 
-trait HttpResponseHelpers extends blueeyes.bkka.AkkaDefaults {
+trait HttpResponseHelpers {
   /** Shorthand function to create a future of an HttpResponse from the given parameters.
    * {{{
    * respond(content = Some(<html></html>))
    * }}}
    */
-  def respond[T](status: HttpStatus = HttpStatus(OK), headers: Map[String, String] = Map(), content: Option[T] = None): Future[HttpResponse[T]] = {
+  def respond[T](status: HttpStatus = HttpStatus(OK), headers: Map[String, String] = Map(), content: Option[T] = None)(implicit executor: ExecutionContext): Future[HttpResponse[T]] = {
     Promise.successful(HttpResponse[T](status, headers, content))
   }
   

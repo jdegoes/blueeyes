@@ -6,7 +6,7 @@ import blueeyes.bkka.AkkaDefaults
 import blueeyes.json.JPath
 import blueeyes.json.{JValue, JUndefined}
 
-trait HealthMonitor extends AkkaDefaults { self => 
+trait HealthMonitor { self => 
   def call(path: JPath)
 
   def increment(path: JPath)(c: Long)
@@ -57,7 +57,7 @@ trait HealthMonitor extends AkkaDefaults { self =>
   def shutdown(timeout: Timeout): Future[Any]
 }
 
-object HealthMonitor {
+object HealthMonitor extends AkkaDefaults {
   import blueeyes.bkka.Stop
   def stop[T <: HealthMonitor](timeout: Timeout): Stop[T] = new Stop[T] {
     def stop(m: T) = m.shutdown(timeout)
