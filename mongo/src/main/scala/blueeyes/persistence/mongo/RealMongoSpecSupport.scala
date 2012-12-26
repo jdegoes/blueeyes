@@ -143,7 +143,7 @@ trait RealMongoSpecSupport extends Specification {
           }
 
           realMongoImpl = new TGMongo("localhost", port)
-          mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS))
+          mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS), None)
 
           mongoLogger.debug("Mongo started, commencing specs")
         case None => throw new IllegalStateException("Could not find an unused port for test mongo!")

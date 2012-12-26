@@ -57,13 +57,21 @@ object RealMongo {
     }
 
     val disconnectTimeout = config.get[Long]("disconnect_timeout").getOrElse(300000L)
+    val writeConcern      = {
+      val concernConfig = config.detach("writeConcern")
+      if (!concernConfig.data.isEmpty){
+        Some(new WriteConcern(concernConfig[Int]("w", 1), concernConfig[Int]("wtimeout", 0), concernConfig("fsync", false),
+            concernConfig[Boolean]("j", false), concernConfig[Boolean]("continueOnInsertError", false)))
+       }
+      else None
+     }
 
-    new RealMongo(mongo, disconnectTimeout)
+    new RealMongo(mongo, disconnectTimeout, writeConcern)
   }
 }
 
-class RealMongo(val underlying: com.mongodb.Mongo, disconnectTimeout: Timeout) extends Mongo with AkkaDefaults {
-  def database(databaseName: String) = new RealDatabase(defaultActorSystem, this, underlying.getDB(databaseName), disconnectTimeout)
+class RealMongo(val underlying: com.mongodb.Mongo, disconnectTimeout: Timeout, writeConcern: Option[WriteConcern]) extends Mongo with AkkaDefaults {
+  def database(databaseName: String) = new RealDatabase(defaultActorSystem, this, underlying.getDB(databaseName), disconnectTimeout, writeConcern)
   lazy val close = Future(underlying.close)
 }
 
@@ -81,7 +89,7 @@ object RealDatabase {
   }
 }
 
-private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, val database: DB, disconnectTimeout: Timeout, poolSize: Int = 10) extends Database with Logging {
+private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, val database: DB, disconnectTimeout: Timeout, writeConcern: Option[WriteConcern], poolSize: Int = 10) extends Database with Logging {
   import RealDatabase._
 
   private implicit val dispatcher: MessageDispatcher = actorSystem.dispatchers.lookup("blueeyes_mongo-" + database.getName)
@@ -90,7 +98,11 @@ private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, va
     actorSystem.actorOf(Props[RealMongoActor].withRouter(RoundRobinRouter(nrOfInstances = poolSize)), "blueeyes_mongo_router-" + database.getName)
   }
 
-  protected def collection(collectionName: String) = new RealDatabaseCollection(database.getCollection(collectionName), this)
+  protected def collection(collectionName: String) = {
+    val collection = database.getCollection(collectionName)
+    collection.setWriteConcern(writeConcern.orNull)
+    new RealDatabaseCollection(collection, this)
+  }
 
   def collections = database.getCollectionNames.map(collection).map(mc => MongoCollectionHolder(mc, mc.collection.getName, this)).toSet
 
