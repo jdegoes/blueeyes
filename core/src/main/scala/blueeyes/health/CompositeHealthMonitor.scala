@@ -2,15 +2,18 @@ package blueeyes.health
 
 import blueeyes.json.JPath
 import blueeyes.json._
-import metrics.IntervalConfig
 import blueeyes.json.MergeMonoid
+import metrics.IntervalConfig
 
-import scalaz._
-import Scalaz._
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 import akka.util.Timeout
 
-class CompositeHealthMonitor(configs: List[IntervalConfig]) extends HealthMonitor with FunctionsMonitor{
+import scalaz._
+import scalaz.std.list._
+import scalaz.syntax.foldable._
+
+class CompositeHealthMonitor(configs: List[IntervalConfig])(implicit executor: ExecutionContext) extends HealthMonitor with FunctionsMonitor {
   private implicit val mergeMonoid = MergeMonoid
   private val healthMonitors = configs.map(new IntervalHealthMonitor(_))
 

@@ -4,7 +4,6 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 
-import blueeyes.bkka.AkkaDefaults
 import blueeyes.bkka.Stoppable
 import blueeyes.core.http._
 
@@ -24,7 +23,7 @@ val emailService = {
   }
 }
 */
-trait ServiceBuilder[T] extends AkkaDefaults {
+trait ServiceBuilder[T] {
   protected def startup[S](startup: => Future[S]): StartupDescriptor[T, S] = {
     val thunk = () => startup
     
