@@ -1,23 +1,26 @@
 package blueeyes.persistence.mongo
 
-import org.scalacheck._
-import Gen._
-import Arbitrary.arbitrary
-import org.scalacheck.Prop._
-
+import dsl._
 import MongoFilterOperators._
 import blueeyes.json._
-import blueeyes.json._
-import MongoFilterImplicits._
+
 import akka.dispatch.Future
-import scalaz._
-import Scalaz._
-import org.specs2.mutable.Specification
-import org.specs2.ScalaCheck
-import org.specs2.matcher.ThrownMessages
 import akka.util.Timeout
 
-class MongoPatchesSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo with blueeyes.bkka.AkkaDefaults with ThrownMessages {
+import scalaz._
+import Scalaz._
+
+import org.specs2.ScalaCheck
+import org.specs2.mutable.Specification
+import org.specs2.matcher.ThrownMessages
+
+import org.scalacheck._
+import org.scalacheck.Prop._
+import Gen._
+import Arbitrary.arbitrary
+
+
+class MongoPatchesSpec extends Specification with ScalaCheck with ArbitraryJValue with ArbitraryMongo with blueeyes.bkka.AkkaDefaults with ThrownMessages {
   implicit val queryTimeout = Timeout(10 * 60 * 1000)
 
   def getPatch = for{

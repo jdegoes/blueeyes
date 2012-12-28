@@ -16,7 +16,9 @@ import Scalaz._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 
-class MongoUpdateSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
+import dsl._
+
+class MongoUpdateSpec extends Specification with ScalaCheck with ArbitraryJValue with ArbitraryMongo{
 
   def getDifferentOrdersUpdates: Gen[(MongoUpdate, MongoUpdate)] = getListMongoUpdate.map{updates =>
     def andUpdate(values: List[MongoUpdate]) = {values.foldLeft(MongoUpdateNothing.asInstanceOf[MongoUpdate]){(andUpdate, update) => (andUpdate |+| update)}    }

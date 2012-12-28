@@ -1,11 +1,11 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json._
 import blueeyes.json.JPath
 import org.specs2.mock._
+import dsl._
 
 class SelectOneQueryBehaviourSpec extends Specification with Mockito{
 

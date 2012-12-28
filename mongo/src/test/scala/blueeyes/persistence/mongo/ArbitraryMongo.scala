@@ -3,6 +3,8 @@ package blueeyes.persistence.mongo
 import org.scalacheck.Gen
 
 import MongoFilterOperators._
+import dsl._
+
 import blueeyes.json.{ArbitraryJValue, JPath}
 
 trait ArbitraryMongo extends ArbitraryJValue{

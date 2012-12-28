@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import dsl._
 import org.specs2.mutable.Specification
 import UpdateFieldFunctions._
 

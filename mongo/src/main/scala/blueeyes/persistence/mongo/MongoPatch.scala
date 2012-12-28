@@ -10,16 +10,10 @@ private[mongo] object Changes {
     def flatten: Seq[Change1]
 
     /**
-     * Coalesces this change with that change, to produce a new change that
-     * achieves the effect of both changes applied sequentially.
-     */
-    def *>(that: Change) = Changes.compose(flatten, that.flatten)
-
-    /**
      * Coalesces this change with the list of changes, to produce a new
      * change that achieves the effect of both changes applied sequentially.
      */
-    def *>(list: Seq[Change]) = Changes.compose(flatten, Changelist(list).flatten)
+    def *>(that: Change*) = Changes.compose(flatten, Changelist(that).flatten)
   }
 
   trait Change1 extends Change {

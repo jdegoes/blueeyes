@@ -1,11 +1,11 @@
 package blueeyes.persistence.mongo
 
-import org.specs2.mutable.Specification
-import MongoQueryBuilder._
-import MongoFilterBuilder._
+import dsl._
 import MongoFilterOperators._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
+
+import org.specs2.mutable.Specification
 
 class MongoMapReduceQuerySpec extends Specification{
   private val query = mapReduce("foo", "bar").from(MongoCollectionReference("collection"))

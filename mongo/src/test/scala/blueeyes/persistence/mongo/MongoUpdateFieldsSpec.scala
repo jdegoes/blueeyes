@@ -2,9 +2,11 @@ package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
 
+import dsl._
 import MongoUpdateOperators._
 import MongoFilterOperators._
 import blueeyes.json._
+
 import scalaz._
 import Scalaz._
 

@@ -3,6 +3,7 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import blueeyes.json.JPath
 import UpdateFieldFunctions._
+import dsl._
 
 class AddToSetFSpec extends Specification{
   "fuse applies addtoSet to set update" in {

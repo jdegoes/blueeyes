@@ -1,11 +1,12 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
+import dsl._
 import MongoFilterOperators._
 import blueeyes.json.JPath
 import blueeyes.json.JPathImplicits._
 
-class MongoEnsureIndexQuerySpec extends Specification with MongoImplicits{
+class MongoEnsureIndexQuerySpec extends Specification {
   private val query = ensureIndex("foo").on("bar").in("collection")
 
   "'geospatial' method sets geospatial index type" in {

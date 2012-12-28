@@ -1,18 +1,18 @@
 package blueeyes.persistence.mongo
 
+import dsl._
+import MongoFilterOperators._
+import blueeyes.json._
+
+import org.specs2.mutable.Specification
+import org.specs2.ScalaCheck
+
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
 import org.scalacheck.Prop._
 
-import MongoFilterOperators._
-import blueeyes.json._
-import blueeyes.json._
-import MongoFilterImplicits._
-import org.specs2.mutable.Specification
-import org.specs2.ScalaCheck
-
-class MongoOrFilterSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryJValue with ArbitraryMongo{
+class MongoOrFilterSpec extends Specification with ScalaCheck with ArbitraryJValue with ArbitraryMongo{
   private val filter1  = MongoFilterBuilder(JPath("foo")).>(MongoPrimitiveInt(1))
   private val filter2  = MongoFilterBuilder(JPath("bar")).<(MongoPrimitiveInt(5))
   private val filter3  = MongoFilterBuilder(JPath("baz")).>(MongoPrimitiveInt(1))

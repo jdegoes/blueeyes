@@ -1,10 +1,10 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
 import org.mockito.Matchers._
 import blueeyes.json._
 import org.specs2.mock.Mockito
+import dsl._
 
 class RemoveQueryBehaviourSpec extends Specification with Mockito {
 
