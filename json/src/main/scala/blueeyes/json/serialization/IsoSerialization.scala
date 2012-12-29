@@ -203,8 +203,8 @@ object IsoSerialization {
     }
 
   class IsoExtractor[T, F <: HList, L <: HList](fields: F, iso: Iso[T, L], extractor: ExtractorAux[F, L])
-    extends Extractor[T] with ValidatedExtraction[T] {
-      override def validated(source: JValue) =
+    extends Extractor[T] {
+      def validated(source: JValue) =
         for {
           l <- extractor.extract(source, fields)
         } yield iso.from(l)

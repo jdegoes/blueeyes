@@ -45,6 +45,8 @@ package blueeyes.demo {
           extractField[Option[String]](jvalue, "address", JString(""), blueeyes.json.serialization.DefaultExtractors.OptionExtractor(blueeyes.json.serialization.DefaultExtractors.StringExtractor))
         )
       }
+
+      def validated(jvalue: JValue) = Success(extract(jvalue))
     }
   }
   object Extractors extends Extractors
@@ -62,6 +64,7 @@ package blueeyes.demo {
       }
     }
   }
+
   object Decomposers extends Decomposers
   
   object Serialization extends Decomposers with Extractors with SerializationImplicits {

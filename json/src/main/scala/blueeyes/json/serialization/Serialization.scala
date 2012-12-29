@@ -3,6 +3,8 @@ package blueeyes.json.serialization
 import blueeyes.json._
 
 import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus, Functor}
+import scalaz.syntax.bifunctor._
+import Validation._
 import NonEmptyList._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.
@@ -10,20 +12,21 @@ import NonEmptyList._
 trait Extractor[A] { self =>
   import Extractor._
 
-  def extract(jvalue: JValue): A 
-
-  def validated(jvalue: JValue): Validation[Error, A] = try {
-    Success(extract(jvalue))
-  } catch { 
-    case ex => Failure(Thrown(ex))
+  def extract(jvalue: JValue): A = validated(jvalue) valueOr { 
+    case Thrown(ex) => throw new IllegalArgumentException("Unable to deserialize " + jvalue, ex)
+    case other => throw new IllegalArgumentException("Unable to deserialize " + jvalue + ": " + other.message)
   }
+
+  def validated(jvalue: JValue): Validation[Error, A] 
 
   def project(jpath: JPath): Extractor[A] = new Extractor[A] {
     override def extract(jvalue: JValue) = self.extract(jvalue(jpath))
+    def validated(jvalue: JValue) = self.validated(jvalue(jpath))
   }
 
   def map[B](f: A => B): Extractor[B] = new Extractor[B] {
     override def extract(jvalue: JValue): B = f(self.extract(jvalue))
+    def validated(jvalue: JValue) = self.validated(jvalue) map f
   }
 
   def kleisli = Kleisli[({type λ[+α] = Validation[Error, α]})#λ, JValue, A](validated _)
@@ -31,13 +34,11 @@ trait Extractor[A] { self =>
   def apply(jvalue: JValue): A = extract(jvalue)
 }
 
-trait ValidatedExtraction[A] { this: Extractor[A] =>
-  def extract(jvalue: JValue): A = validated(jvalue).fold[A](_.die, identity[A])
-}
-
 object Extractor {
+  def invalidv[A](message: String) = failure[Error, A](Invalid(message))
+  def tryv[A](a: => A) = (Thrown.apply _) <-: Validation.fromTryCatch(a)
+
   sealed trait Error {
-    def die: Nothing 
     def message: String
   }
 
@@ -57,34 +58,29 @@ object Extractor {
     }
   }
 
+  case class Invalid(message: String) extends Error
+
   case class Thrown(exception: Throwable) extends Error {
-    def die = throw exception
     def message: String = exception.getMessage
   }
 
-  case class Invalid(message: String) extends Error {
-    def die = sys.error("JSON Extraction failure: " + message)
-  }
-
   case class Errors(errors: NonEmptyList[Error]) extends Error {
-    def die = sys.error(message)
     def message = "Multiple extraction errors occurred: " + errors.map(_.message).list.mkString(": ")
   }
 
   implicit val typeclass: Plus[Extractor] with Functor[Extractor] = new Plus[Extractor] with Functor[Extractor] {
-    def plus[A](f1: Extractor[A], f2: => Extractor[A]) = new Extractor[A] with ValidatedExtraction[A] {
-      override def validated(jvalue: JValue) = {
-        f1.validated(jvalue) orElse f2.validated(jvalue)
-      }
+    def plus[A](f1: Extractor[A], f2: => Extractor[A]) = new Extractor[A] {
+      def validated(jvalue: JValue) = f1.validated(jvalue) orElse f2.validated(jvalue)
     }
 
     def map[A, B](e: Extractor[A])(f: A => B): Extractor[B] = e map f
   }
 
-  def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] with ValidatedExtraction[A] {
-    override def validated(jvalue: JValue) = 
+  def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] {
+    def validated(jvalue: JValue) = {
       if (f.isDefinedAt(jvalue)) Success(f(jvalue)) 
       else Failure(Invalid("Extraction not defined from value " + jvalue + " to type " + implicitly[Manifest[A]].erasure.getName))
+    }
   }
 }
 
