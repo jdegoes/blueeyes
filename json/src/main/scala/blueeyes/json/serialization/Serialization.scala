@@ -18,6 +18,8 @@ trait Extractor[A] { self =>
   }
 
   def validated(jvalue: JValue): Validation[Error, A] 
+  def validated(jvalue: JValue, jpath: JPath): Validation[Error, A] =
+    ((cause: Extractor.Error) => Extractor.Invalid("Unable to deserialize property or child " + jpath, Some(cause))) <-: validated(jvalue.get(jpath)) 
 
   def project(jpath: JPath): Extractor[A] = new Extractor[A] {
     override def extract(jvalue: JValue) = self.extract(jvalue(jpath))
@@ -58,7 +60,9 @@ object Extractor {
     }
   }
 
-  case class Invalid(message: String) extends Error
+  case class Invalid(msg: String, cause: Option[Error] = None) extends Error {
+    def message = cause map { c => "%s (caused by %s)".format(msg, c.message) } getOrElse msg
+  }
 
   case class Thrown(exception: Throwable) extends Error {
     def message: String = exception.getMessage
@@ -111,6 +115,7 @@ trait SerializationImplicits {
   case class DeserializableJValue(jvalue: JValue) {
     def deserialize[T](implicit e: Extractor[T]): T = e.extract(jvalue)
     def validated[T](implicit e: Extractor[T]): Validation[Extractor.Error, T] = e.validated(jvalue)
+    def validated[T](jpath: JPath)(implicit e: Extractor[T]) = e.validated(jvalue, jpath)
   }
 
   case class SerializableTValue[T](tvalue: T) {
@@ -122,6 +127,7 @@ trait SerializationImplicits {
   
   implicit def TValueToJValue[T](tvalue: T): SerializableTValue[T] = SerializableTValue[T](tvalue)
 }
+
 object SerializationImplicits extends SerializationImplicits
 
 /** Bundles default extractors, default decomposers, and serialization 

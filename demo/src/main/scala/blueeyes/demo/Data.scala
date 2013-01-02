@@ -49,6 +49,7 @@ package blueeyes.demo {
       def validated(jvalue: JValue) = Success(extract(jvalue))
     }
   }
+
   object Extractors extends Extractors
   
   trait Decomposers {
