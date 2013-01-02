@@ -108,5 +108,5 @@ extends SyncParser with ByteBasedParser {
     }
   }
 
-  final def atEof(i: Int) = if (i < bufsize) i >= ncurr else i >= nnext
+  final def atEof(i: Int) = if (i < bufsize) i >= ncurr else (i - bufsize) >= nnext
 }
