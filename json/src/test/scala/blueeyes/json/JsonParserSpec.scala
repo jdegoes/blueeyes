@@ -24,7 +24,7 @@ import java.net.URLDecoder
 import scala.util.control.Exception._
 import java.nio.ByteBuffer
 import scala.io.Source
-import scalaz.Validation
+import scalaz._
 import scala.math.min
 import scala.util.Random.nextInt
 import scala.collection.mutable
@@ -67,6 +67,28 @@ object ParserBugs extends Specification {
 
   "Can parse funky characters" in {
     JParser.parseUnsafe(URLDecoder.decode("\"%E2%84%A2\"", "UTF-8")) must_== JString("™")
+  }
+}
+
+object ParsingByteBufferSpec extends Specification {
+  "Respects current ByteBuffer's position" in {
+    val bb = ByteBuffer.wrap(Array(54, 55, 56, 57))
+    bb.remaining must_== 4
+    bb.get must_== 54
+    bb.remaining must_== 3
+    JParser.parseFromByteBuffer(bb) must_== Success(JNum(789))
+    bb.remaining must_== 0
+  }
+
+  "Respects current ByteBuffer's limit" in {
+    val bb = ByteBuffer.wrap(Array(54, 55, 56, 57))
+    bb.limit(3)
+    JParser.parseFromByteBuffer(bb) must_== Success(JNum(678))
+    bb.remaining must_== 0
+    bb.limit(4)
+    bb.remaining must_== 1
+    JParser.parseFromByteBuffer(bb) must_== Success(JNum(9))
+    bb.remaining must_== 0
   }
 }
 
