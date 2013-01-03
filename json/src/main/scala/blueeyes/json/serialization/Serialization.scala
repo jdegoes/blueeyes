@@ -32,7 +32,7 @@ trait Extractor[A] { self =>
   }
 
   def kleisli = Kleisli[({type λ[+α] = Validation[Error, α]})#λ, JValue, A](validated _)
-  
+
   def apply(jvalue: JValue): A = extract(jvalue)
 }
 
@@ -74,7 +74,7 @@ object Extractor {
 
   implicit val typeclass: Plus[Extractor] with Functor[Extractor] = new Plus[Extractor] with Functor[Extractor] {
     def plus[A](f1: Extractor[A], f2: => Extractor[A]) = new Extractor[A] {
-      def validated(jvalue: JValue) = f1.validated(jvalue) orElse f2.validated(jvalue)
+      def validated(jvalue: JValue) = f1.validated(jvalue) findSuccess f2.validated(jvalue)
     }
 
     def map[A, B](e: Extractor[A])(f: A => B): Extractor[B] = e map f

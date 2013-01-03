@@ -108,7 +108,7 @@ trait DefaultExtractors {
   implicit def Tuple3Extractor[A, B, C](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C]): Extractor[(A, B, C)] = new Extractor[(A, B, C)] {
     def validated(jvalue: JValue) = jvalue match {
       case JArray(values) if (values.length == 3) => 
-        ^[VE, A, B, C, (A, B, C)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2))) {
+        ^^[VE, A, B, C, (A, B, C)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2))) {
           Tuple3.apply _
         }
 
@@ -119,7 +119,7 @@ trait DefaultExtractors {
   implicit def Tuple4Extractor[A, B, C, D](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C], ed: Extractor[D]): Extractor[(A, B, C, D)] = new Extractor[(A, B, C, D)] {
     def validated(jvalue: JValue) = jvalue match {
       case JArray(values) if (values.length == 4) => 
-        ^[VE, A, B, C, D, (A, B, C, D)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3))) { Tuple4.apply _ }
+        ^^^[VE, A, B, C, D, (A, B, C, D)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3))) { Tuple4.apply _ }
 
       case _ => invalidv("Expected Array of length 4 but found: " + jvalue)
     }
@@ -128,7 +128,7 @@ trait DefaultExtractors {
   implicit def Tuple5Extractor[A, B, C, D, E](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C], ed: Extractor[D], ee: Extractor[E]): Extractor[(A, B, C, D, E)] = new Extractor[(A, B, C, D, E)] {
     def validated(jvalue: JValue) = jvalue match {
       case JArray(values) if (values.length == 5) => 
-        ^[VE, A, B, C, D, E, (A, B, C, D, E)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3)), ee.validated(values(4))) {
+        ^^^^[VE, A, B, C, D, E, (A, B, C, D, E)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3)), ee.validated(values(4))) {
           Tuple5.apply _
         }
 
