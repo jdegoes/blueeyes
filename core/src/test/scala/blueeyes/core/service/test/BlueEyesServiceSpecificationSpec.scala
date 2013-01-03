@@ -41,7 +41,7 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
   }
 }
 
-trait TestService extends BlueEyesServiceBuilder {
+trait TestService extends BlueEyesServiceBuilder with TestAkkaDefaults {
   private var eventuallyCondition = false
   val sampleService = service("sample", "1.32") { context =>
     request {

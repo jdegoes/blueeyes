@@ -152,8 +152,9 @@ trait HttpServerMain extends HttpServerModule {
         arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")),
         BlockFormat
       )
-
-      val executionContext: ExecutionContext = sys.error("todo")
+      
+      // TODO: This should be made configurable (and drop AkkaDefaults)
+      val executionContext: ExecutionContext = ExecutionContext.defaultExecutionContext(AkkaDefaults.actorSystem)
       
       /** Retrieves the logger for the server, which is configured directly from
        * the server's "log" configuration block.

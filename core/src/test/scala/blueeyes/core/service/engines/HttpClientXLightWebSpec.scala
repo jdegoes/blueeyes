@@ -29,7 +29,7 @@ import scalaz.StreamT
 import scalaz.syntax.monad._
 
 class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with HttpRequestMatchers {
-  val duration = 250.milliseconds
+  val duration = 2000.milliseconds
   val retries = 30
   
   sequential

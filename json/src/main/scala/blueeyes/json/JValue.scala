@@ -69,12 +69,6 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
    */
   def \ (nameToFind: String): JValue = self match {
     case j @ JObject(fields) => j.get(nameToFind)
-    case j @ JArray(elements) => 
-      elements.map(_ \ nameToFind) match {
-        case Nil => JUndefined
-        case x :: Nil => x
-        case elements @ x :: xs => JArray(elements)
-      }
     case _ => JUndefined
   }
 
@@ -1054,15 +1048,11 @@ case class JArray(elements: List[JValue]) extends JValue {
     js1 match {
       case Nil => js2 match {
         case Nil => true
-        case JUndefined :: t2 => elementsEq(Nil, t2)
         case _ => false
       }
-      case JUndefined :: t1 => elementsEq(t1, js2)
       case h1 :: t1 => js2 match {
         case Nil => false
-        case JUndefined :: t2 => elementsEq(js1, t2)
-        case h2 :: t2 =>
-          if (h1 equals h2) elementsEq(t1, t2) else false
+        case h2 :: t2 => if (h1 equals h2) elementsEq(t1, t2) else false
       }
     }
   }
@@ -1077,13 +1067,11 @@ case class JArray(elements: List[JValue]) extends JValue {
     js1 match {
       case Nil => js2 match {
         case Nil => 0
-        case JUndefined :: t2 => elementsCmp(Nil, t2)
         case _ => -1
       }
-      case JUndefined :: t1 => elementsCmp(t1, js2)
+
       case h1 :: t1 => js2 match {
         case Nil => 1
-        case JUndefined :: t2 => elementsCmp(js1, t2)
         case h2 :: t2 =>
           val i = (h1 compare h2)
           if (i == 0) elementsCmp(t1, t2) else i

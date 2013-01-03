@@ -83,7 +83,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "delete" in {
-    JParser.parse("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JParser.parse("""{ "foo": { "baz": 2 } }"""))
+    JParser.parseUnsafe("""{ "foo": { "bar": 1, "baz": 2 } }""").delete(JPath("foo.bar")) must beSome(JParser.parseUnsafe("""{ "foo": { "baz": 2 } }"""))
   }
 
   "Remove all" in {
@@ -139,7 +139,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "flattenWithPath does not produce JUndefined entries" in {
-    val test = JParser.parse("""{
+    val test = JParser.parseUnsafe("""{
       "c":2,
       "fn":[{
         "fr":-2
@@ -168,8 +168,8 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     import scalaz.Order
     import scalaz.Ordering._
  
-    val v1 = JParser.parse("""[1, 1, 1]""")
-    val v2 = JParser.parse("""[1, 1, 1]""")
+    val v1 = JParser.parseUnsafe("""[1, 1, 1]""")
+    val v2 = JParser.parseUnsafe("""[1, 1, 1]""")
  
     Order[JValue].order(v1, v2) must_== EQ
   }

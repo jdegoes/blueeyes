@@ -8,7 +8,7 @@ import org.apache.commons.io.FileUtils
 import com.google.common.io.Files
 
 import java.io.File
-import java.net.{ServerSocket, URL}
+import java.net.{InetSocketAddress, ServerSocket, URL}
 
 import scalaz.effect.IO
 
@@ -51,8 +51,9 @@ trait RealMongoSpecSupport extends Specification {
   private def isAvailable(port: Int): Boolean = {
     var ss: ServerSocket = null
     try {
-      var ss = new ServerSocket(port);
+      ss = new ServerSocket();
       ss.setReuseAddress(true);
+      ss.bind(new InetSocketAddress(port))
       return true;
     } catch {
       case t => // NOOP
@@ -119,7 +120,12 @@ trait RealMongoSpecSupport extends Specification {
         case Some(port) =>
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({
-            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, "--dbpath", dataDir.getCanonicalPath))
+            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
+                                                                                      "--dbpath", dataDir.getCanonicalPath,
+                                                                                      "--nojournal", 
+                                                                                      "--nounixsocket", 
+                                                                                      "--noauth",
+                                                                                      "--noprealloc"))
             proc.run(ProcessLogger(s => mongoLogger.debug(s)))
           })
 
@@ -136,12 +142,8 @@ trait RealMongoSpecSupport extends Specification {
             startupTries -= 1
           }
 
-          if (isAvailable(port)) {
-            throw new Exception("Mongo startup failed!")
-          }
-
           realMongoImpl = new TGMongo("localhost", port)
-          mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS))
+          mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS), None)
 
           mongoLogger.debug("Mongo started, commencing specs")
         case None => throw new IllegalStateException("Could not find an unused port for test mongo!")

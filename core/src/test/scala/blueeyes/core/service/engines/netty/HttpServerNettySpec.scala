@@ -39,8 +39,7 @@ import scalaz.syntax.monad._
 class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpRequestMatchers with FutureMatchers {
   private val configPattern = """server { port = %d sslPort = %d }"""
 
-  val duration: org.specs2.time.Duration = 1000.milliseconds
-  //implicit val testTimeouts = FutureTimeouts(50, duration)
+  val duration: org.specs2.time.Duration = 5000.milliseconds
 
   private val port = 8585
   private var stop: Option[Stoppable] = None

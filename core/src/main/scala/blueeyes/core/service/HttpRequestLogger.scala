@@ -15,9 +15,7 @@ import org.joda.time.format.DateTimeFormat
 /** A request logger is a function from (request/future of response) to future
  * of log line. Request loggers do not have side effects.
  */
-trait HttpRequestLogger[T, S] 
-extends ((HttpRequest[T], Future[HttpResponse[S]]) => Future[List[(FieldIdentifier, Either[String, Array[Byte]])]])
-with AkkaDefaults { self =>
+trait HttpRequestLogger[T, S] extends ((HttpRequest[T], Future[HttpResponse[S]]) => Future[List[(FieldIdentifier, Either[String, Array[Byte]])]]) { self =>
   /** Combines this logger with the specified logger to produce another logger.
    * If necessary, the items are separated by a single space character.
    */

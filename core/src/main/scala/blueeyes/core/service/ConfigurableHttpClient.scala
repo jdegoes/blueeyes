@@ -1,7 +1,7 @@
 package blueeyes.core.service
 
-import blueeyes.bkka.AkkaDefaults
 import akka.dispatch.Future
+import akka.dispatch.ExecutionContext
 
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
@@ -12,7 +12,9 @@ import scalaz.{Failure, Success}
 import scalaz.Validation._
 import blueeyes.Environment
 
-trait ConfigurableHttpClient extends AkkaDefaults {
+trait ConfigurableHttpClient {
+  implicit def executionContext: ExecutionContext
+
   private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
   private lazy val NotFound            = Future(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
 
@@ -21,10 +23,10 @@ trait ConfigurableHttpClient extends AkkaDefaults {
     if (isMock) mockClient(mockServer) else realClient
   }
 
-  protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb()(defaultFutureDispatch)
+  protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb()
 
   private def mockClient(h: AsyncHttpService[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
-    val executor = defaultFutureDispatch
+    val executor = executionContext
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
       case Success(rawFuture) => rawFuture recover { case throwable => convertErrorToResponse(throwable) }

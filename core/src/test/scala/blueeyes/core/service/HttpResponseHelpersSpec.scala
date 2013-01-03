@@ -1,5 +1,7 @@
 package blueeyes.core.service
 
+import blueeyes.bkka._
+
 import org.specs2.mutable.Specification
 import blueeyes.core.http._
 import blueeyes.akka_testing.FutureMatchers
@@ -8,7 +10,7 @@ import blueeyes.util.RichThrowableImplicits._
 import akka.dispatch.Future
 import akka.dispatch.Promise
 
-class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers with FutureMatchers {
+class HttpResponseHelpersSpec extends Specification with HttpResponseHelpers with FutureMatchers with TestAkkaDefaults {
   
   "HttpResponseHelpers respond: creates Future with the specified parameters" in {
     val statusCode  = InternalServerError

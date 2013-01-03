@@ -2,12 +2,12 @@ package blueeyes.json.serialization
 
 import blueeyes.json._
 
-import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus}
+import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus, Functor}
 import NonEmptyList._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.
  */
-trait Extractor[A] extends Function[JValue, A] { self =>
+trait Extractor[A] { self =>
   import Extractor._
 
   def extract(jvalue: JValue): A 
@@ -16,6 +16,10 @@ trait Extractor[A] extends Function[JValue, A] { self =>
     Success(extract(jvalue))
   } catch { 
     case ex => Failure(Thrown(ex))
+  }
+
+  def project(jpath: JPath): Extractor[A] = new Extractor[A] {
+    override def extract(jvalue: JValue) = self.extract(jvalue(jpath))
   }
 
   def map[B](f: A => B): Extractor[B] = new Extractor[B] {
@@ -38,6 +42,10 @@ object Extractor {
   }
 
   object Error {
+    def thrown(exception: Throwable): Error = Thrown(exception)
+    def invalid(message: String): Error = Invalid(message)
+    def combine(errors: NonEmptyList[Error]): Error = Errors(errors)
+
     implicit object Semigroup extends scalaz.Semigroup[Error] {
       import NonEmptyList._
       def append(e1: Error, e2: => Error): Error = (e1, e2) match {
@@ -63,12 +71,14 @@ object Extractor {
     def message = "Multiple extraction errors occurred: " + errors.map(_.message).list.mkString(": ")
   }
 
-  implicit val plus: Plus[Extractor] = new Plus[Extractor] {
+  implicit val typeclass: Plus[Extractor] with Functor[Extractor] = new Plus[Extractor] with Functor[Extractor] {
     def plus[A](f1: Extractor[A], f2: => Extractor[A]) = new Extractor[A] with ValidatedExtraction[A] {
       override def validated(jvalue: JValue) = {
         f1.validated(jvalue) orElse f2.validated(jvalue)
       }
     }
+
+    def map[A, B](e: Extractor[A])(f: A => B): Extractor[B] = e map f
   }
 
   def apply[A: Manifest](f: PartialFunction[JValue, A]): Extractor[A] = new Extractor[A] with ValidatedExtraction[A] {
@@ -80,7 +90,7 @@ object Extractor {
 
 /** Decomposes the value into a JSON object.
  */
-trait Decomposer[-A] extends Function[A, JValue] { self =>
+trait Decomposer[A] { self =>
   def decompose(tvalue: A): JValue
 
   def contramap[B](f: B => A): Decomposer[B] = new Decomposer[B] {
@@ -88,6 +98,10 @@ trait Decomposer[-A] extends Function[A, JValue] { self =>
   }
   
   def apply(tvalue: A): JValue = decompose(tvalue)
+
+  def unproject(jpath: JPath): Decomposer[A] = new Decomposer[A] {
+    override def decompose(b: A) = JUndefined.unsafeInsert(jpath, self.decompose(b))
+  }
 }
 
 /** Serialization implicits allow a convenient syntax for serialization and 
@@ -105,6 +119,7 @@ trait SerializationImplicits {
 
   case class SerializableTValue[T](tvalue: T) {
     def serialize(implicit d: Decomposer[T]): JValue = d.decompose(tvalue)
+    def jv(implicit d: Decomposer[T]): JValue = d.decompose(tvalue)
   }
   
   implicit def JValueToTValue[T](jvalue: JValue): DeserializableJValue = DeserializableJValue(jvalue)
