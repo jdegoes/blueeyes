@@ -21,7 +21,7 @@ trait AbstractNettyEngine extends HttpServerEngine with HttpServer with Logging 
   }
 
   override def stop: Future[Unit] = {
-    super.stop map { _ =>
+    Future { 
       startStopLock.writeLock.lock()
       try {
         servers.foreach(_.stop)
@@ -30,7 +30,7 @@ trait AbstractNettyEngine extends HttpServerEngine with HttpServer with Logging 
       } finally{
         startStopLock.writeLock.unlock()
       }
-    }
+    }.flatMap(_ => super.stop.map(_ => ()))
   }
 
   protected def nettyServers: List[NettyServer]
