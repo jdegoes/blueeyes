@@ -33,81 +33,88 @@ sealed trait MimeType {
   override def toString = value
 }
 
+object MimeType {
+  def apply(maintype0: String, subtype0: String): MimeType = new MimeType {
+    val maintype = maintype0.toLowerCase
+    val subtype = subtype0.toLowerCase
+  }
+}
+
 object MimeTypes {
 
   def parseMimeTypes(inString: String): Array[MimeType] = {
     def MimeTypeRegex = new Regex("""((application)|(text)|(audio)|(multipart)|(image)|(video)|(\*))/(([a-z\-]+)|\*)""")
 
     /* Split the string on commas, which separate the mimes */
-    var outMimes: Array[MimeType] = inString.toLowerCase.split(",").map(_.trim)
-      .flatMap(MimeTypeRegex findFirstIn _).map(_.split("/"))
-      .flatMap ( mimeType =>  mimeType match {
+    for {
+      baseStr   <- inString.toLowerCase.split(",")
+      composite <- MimeTypeRegex.findFirstIn(baseStr.trim)
+      mimeType  <- composite.split("/") match {
+        case Array("*" , "*")                     => Some(anymaintype / anysubtype)
 
-        case Array("*" , "*")                     => Array(anymaintype / anysubtype)
+        case Array("application", "*")            => Some(application / anysubtype)
+        case Array("application", "javascript")   => Some(application / javascript)
+        case Array("text", "javascript")          => Some(text / javascript)
 
-        case Array("application", "*")            => Array(application / anysubtype)
-        case Array("application", "javascript")   => Array(application / javascript)
-        case Array("text", "javascript")          => Array(text / javascript)
-
-        case Array("application", "x-javascript") => Array(application / `x-javascript`)
-        case Array("application", "soap+xml")     => Array(application / `soap+xml`)
-        case Array("application", "xhtml+xml")    => Array(application / `xhtml+xml`)
-        case Array("application", "xml-dtd")      => Array(application / `xml-dtd`)
-        case Array("application", "json")         => Array(application / json)
-        case Array("application", "x-latex")      => Array(application / `x-latex`)
-        case Array("application", "octet-stream") => Array(application / `octet-stream`)
-        case Array("application", "ogg" )         => Array(application / ogg)
-        case Array("application", "pdf" )         => Array(application / `pdf`)
-        case Array("application", "postscript" )  => Array(application / `postscript`)
-        case Array("application", "x-dvi")        => Array(application / `x-dvi`)
-        case Array("application", "x-shockwave-flash") => Array(application / `x-shockwave-flash`)
-        case Array("application", "x-tar")        => Array(application / `x-tar`)
-        case Array("application", "x-ttf")        => Array(application / `x-ttf`)
-        case Array("application", "zip")          => Array(application / `zip`)
+        case Array("application", "x-javascript") => Some(application / `x-javascript`)
+        case Array("application", "soap+xml")     => Some(application / `soap+xml`)
+        case Array("application", "xhtml+xml")    => Some(application / `xhtml+xml`)
+        case Array("application", "xml-dtd")      => Some(application / `xml-dtd`)
+        case Array("application", "json")         => Some(application / json)
+        case Array("application", "x-latex")      => Some(application / `x-latex`)
+        case Array("application", "octet-stream") => Some(application / `octet-stream`)
+        case Array("application", "ogg" )         => Some(application / ogg)
+        case Array("application", "pdf" )         => Some(application / `pdf`)
+        case Array("application", "postscript" )  => Some(application / `postscript`)
+        case Array("application", "x-dvi")        => Some(application / `x-dvi`)
+        case Array("application", "x-shockwave-flash") => Some(application / `x-shockwave-flash`)
+        case Array("application", "x-tar")        => Some(application / `x-tar`)
+        case Array("application", "x-ttf")        => Some(application / `x-ttf`)
+        case Array("application", "zip")          => Some(application / `zip`)
 
         /* Audio */
-        case Array("audio", "basic")              => Array(audio / basic)
-        case Array("audio", "mp4")                => Array(audio / mp4)
-        case Array("audio", "midi")               => Array(audio / midi)
-        case Array("audio", "mpeg")               => Array(audio / mpeg)
-        case Array("audio", "vorbis")             => Array(audio / vorbis)
-        case Array("audio", "x-ms-wma")           => Array(audio / `x-ms-wma`)
-        case Array("audio", "x-ms-wax")           => Array(audio / `x-ms-wax`)
-        case Array("audio", "x-realaudio")        => Array(audio / `x-realaudio`)
-        case Array("audio", "x-wav")              => Array(audio / `x-wav`)
+        case Array("audio", "basic")              => Some(audio / basic)
+        case Array("audio", "mp4")                => Some(audio / mp4)
+        case Array("audio", "midi")               => Some(audio / midi)
+        case Array("audio", "mpeg")               => Some(audio / mpeg)
+        case Array("audio", "vorbis")             => Some(audio / vorbis)
+        case Array("audio", "x-ms-wma")           => Some(audio / `x-ms-wma`)
+        case Array("audio", "x-ms-wax")           => Some(audio / `x-ms-wax`)
+        case Array("audio", "x-realaudio")        => Some(audio / `x-realaudio`)
+        case Array("audio", "x-wav")              => Some(audio / `x-wav`)
 
         /* Image */
-        case Array("image", "gif")                => Array(image / gif)
-        case Array("image", "png")                => Array(image / png)
-        case Array("image", "jpeg")               => Array(image / jpeg)
-        case Array("image", "svg+xml")            => Array(image / `svg+xml`)
-        case Array("image", "tiff")               => Array(image / tiff)
-        case Array("image", "vnd.microsoft.icon") => Array(image / `vnd.microsoft.icon`)
+        case Array("image", "gif")                => Some(image / gif)
+        case Array("image", "png")                => Some(image / png)
+        case Array("image", "jpeg")               => Some(image / jpeg)
+        case Array("image", "svg+xml")            => Some(image / `svg+xml`)
+        case Array("image", "tiff")               => Some(image / tiff)
+        case Array("image", "vnd.microsoft.icon") => Some(image / `vnd.microsoft.icon`)
 
         /* Multipart */
-        case Array("multipart", "mixed")            => Array(multipart / mixed)
-        case Array("multipart", "alternative")    => Array(multipart / alternative)
-        case Array("multipart", "related")        => Array(multipart / related)
-        case Array("multipart", "form-data")      => Array(multipart / `form-data`)
-        case Array("multipart", "signed")         => Array(multipart / signed)
-        case Array("multipart", "encrypted")      => Array(multipart / encrypted)
+        case Array("multipart", "mixed")          => Some(multipart / mixed)
+        case Array("multipart", "alternative")    => Some(multipart / alternative)
+        case Array("multipart", "related")        => Some(multipart / related)
+        case Array("multipart", "form-data")      => Some(multipart / `form-data`)
+        case Array("multipart", "signed")         => Some(multipart / signed)
+        case Array("multipart", "encrypted")      => Some(multipart / encrypted)
 
         /* Text */
-        case Array("text", "css")                 => Array(text / css)
-        case Array("text", "csv")                 => Array(text / csv)
-        case Array("text", "html")                => Array(text / html)
-        case Array("text", "plain")               => Array(text / plain)
-        case Array("text", "x-c")                 => Array(text / `x-c`)
-        case Array("text", "xml")                 => Array(text / xml)
+        case Array("text", "css")                 => Some(text / css)
+        case Array("text", "csv")                 => Some(text / csv)
+        case Array("text", "html")                => Some(text / html)
+        case Array("text", "plain")               => Some(text / plain)
+        case Array("text", "x-c")                 => Some(text / `x-c`)
+        case Array("text", "xml")                 => Some(text / xml)
 
         /* Video */
-        case Array("video", "quicktime")          => Array(video / quicktime)
-        case Array("video", "x-msvideo")          => Array(video / `x-msvideo`)
+        case Array("video", "quicktime")          => Some(video / quicktime)
+        case Array("video", "x-msvideo")          => Some(video / `x-msvideo`)
 
-        case _ => Nil
+        case Array(tpe, subtpe)                   => Some(MimeType(tpe, subtpe))
+        case _                                    => None
       }
-    )
-    return outMimes
+    } yield mimeType
   }
 
   trait GenericType extends ProductPrefixUnmangler {
