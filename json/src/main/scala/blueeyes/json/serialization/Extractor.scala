@@ -3,9 +3,9 @@ package blueeyes.json.serialization
 import blueeyes.json._
 
 import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus, Functor}
-import scalaz.syntax.bifunctor._
 import Validation._
 import NonEmptyList._
+import scalaz.syntax.bifunctor._
 
 /** Extracts the value from a JSON object. You must implement either validated or extract.
  */

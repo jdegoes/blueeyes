@@ -1,11 +1,8 @@
-package blueeyes.json.serialization
+package blueeyes.json
+package serialization
 
-import blueeyes.json._
-
-import scalaz.{Validation, Success, Failure, NonEmptyList, Kleisli, Plus, Functor}
-import scalaz.syntax.bifunctor._
+import scalaz.Validation
 import Validation._
-import NonEmptyList._
 
 /** Decomposes the value into a JSON object.
  */
