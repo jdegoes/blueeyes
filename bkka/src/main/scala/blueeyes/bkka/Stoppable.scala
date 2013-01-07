@@ -62,6 +62,11 @@ object Stoppable extends Logging {
     val dependents = Nil
   }
 
+  def Noop(implicit executor: ExecutionContext): Stoppable = new Stoppable {
+    protected lazy val stop = Promise.successful(())
+    val dependents = Nil
+  }
+
   implicit object semigroup extends Semigroup[Stoppable] {
     def append(a: Stoppable, b: => Stoppable): Stoppable = a append b
   }
