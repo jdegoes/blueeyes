@@ -152,32 +152,40 @@ trait HttpServerMain extends HttpServerModule {
         arguments.parameters.get("configFile").getOrElse(sys.error("Expected --configFile option")),
         BlockFormat
       )
-      
-      // TODO: This should be made configurable (and drop AkkaDefaults)
-      val executionContext: ExecutionContext = ExecutionContext.defaultExecutionContext(AkkaDefaults.actorSystem)
-      
-      /** Retrieves the logger for the server, which is configured directly from
-       * the server's "log" configuration block.
-       */
-      val log: Logger = Logger("blueeyes.server")
-      server(rootConfiguration, executionContext).start map {
-        _.onSuccess { case (runningState, stoppable) =>
-          log.info("Services started.")
-          Runtime.getRuntime.addShutdownHook { new Thread {
-            override def start() {
-              val doneSignal = new CountDownLatch(1)
-              
-              stoppable map { stop =>
-                Stoppable.stop(stop)(executionContext)
-                doneSignal.countDown()
-              } getOrElse {
-                doneSignal.countDown()
-              }
-              
-              doneSignal.await()
+      run(rootConfiguration)
+    }
+  }
+
+  /**
+   * The entry point to run HTTP server with the given root configuration.
+   * It can be useful to replace the default configuration from the {@link HttpServerMain#main} method.
+   */
+  def run(rootConfiguration: Configuration) = {
+
+    // TODO: This should be made configurable (and drop AkkaDefaults)
+    val executionContext: ExecutionContext = ExecutionContext.defaultExecutionContext(AkkaDefaults.actorSystem)
+
+    /** Retrieves the logger for the server, which is configured directly from
+      * the server's "log" configuration block.
+      */
+    val log: Logger = Logger("blueeyes.server")
+    server(rootConfiguration, executionContext).start map {
+      _.onSuccess { case (runningState, stoppable) =>
+        log.info("Services started.")
+        Runtime.getRuntime.addShutdownHook { new Thread {
+          override def start() {
+            val doneSignal = new CountDownLatch(1)
+
+            stoppable map { stop =>
+              Stoppable.stop(stop)(executionContext)
+              doneSignal.countDown()
+            } getOrElse {
+              doneSignal.countDown()
             }
-          }}
-        }
+
+            doneSignal.await()
+          }
+        }}
       }
     }
   }

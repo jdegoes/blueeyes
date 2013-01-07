@@ -114,7 +114,7 @@ To release
 
 ## License
 
-Copyright (c) 2010-2012
+Copyright (c) 2010-2013
 
 Published under The MIT License
 
