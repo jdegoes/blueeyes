@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 class JObjectSpec extends Specification{
   "JObjects equal even fields order is different" in {
-    JParser.parse(j1) mustEqual(JParser.parse(j2))
+    JParser.parseUnsafe(j1) mustEqual(JParser.parseUnsafe(j2))
   }
 
   val j1 = """{
