@@ -22,22 +22,22 @@ object Examples extends Specification {
   import JParser._
 
   "Lotto example" in {
-    val json = parse(lotto)
+    val json = parseUnsafe(lotto)
     val renderedLotto = json.renderCompact
-    json mustEqual parse(renderedLotto)
+    json mustEqual parseUnsafe(renderedLotto)
   }
 
   "Person example" in {
-    val json = parse(person)
+    val json = parseUnsafe(person)
     val renderedPerson = json.renderPretty
-    json mustEqual parse(renderedPerson)
+    json mustEqual parseUnsafe(renderedPerson)
     //render(json) mustEqual render(personDSL)
     //compact(render(json \\ "name")) mustEqual """["Joe","Marilyn"]"""
     //compact(render(json \ "person" \ "name")) mustEqual "\"Joe\""
   }
 
   "Transformation example" in {
-    val uppercased = parse(person).transform(JField.liftCollect { case JField(n, v) => JField(n.toUpperCase, v) })
+    val uppercased = parseUnsafe(person).transform(JField.liftCollect { case JField(n, v) => JField(n.toUpperCase, v) })
     val rendered = uppercased.renderCompact
     rendered.contains(""""NAME":"Joe"""") mustEqual true
     rendered.contains(""""AGE":35.0""") mustEqual true
@@ -46,16 +46,16 @@ object Examples extends Specification {
   }
 
   "Remove example" in {
-    val json = parse(person) remove { _ == JString("Marilyn") }
+    val json = parseUnsafe(person) remove { _ == JString("Marilyn") }
     (json \\ "name").renderCompact mustEqual "\"Joe\""
   }
 
   "Quoted example" in {
-    parse(quoted) mustEqual JArray(List(JString("foo \" \n \t \r bar")))
+    parseUnsafe(quoted) mustEqual JArray(List(JString("foo \" \n \t \r bar")))
   }
 
   "Null example" in {
-    parse(""" {"name": null} """).renderCompact mustEqual """{"name":null}"""
+    parseUnsafe(""" {"name": null} """).renderCompact mustEqual """{"name":null}"""
   }
 
   "Symbol example" in {
@@ -63,14 +63,14 @@ object Examples extends Specification {
   }
 
   "Unicode example" in {
-    parse("[\" \\u00e4\\u00e4li\\u00f6t\"]") mustEqual JArray(List(JString(" \u00e4\u00e4li\u00f6t")))
+    parseUnsafe("[\" \\u00e4\\u00e4li\\u00f6t\"]") mustEqual JArray(List(JString(" \u00e4\u00e4li\u00f6t")))
   }
 
   "Exponent example" in {
-    parse("""{"num": 2e5 }""") mustEqual JObject(List(JField("num", JNum("2e5"))))
-    parse("""{"num": -2E5 }""") mustEqual JObject(List(JField("num", JNum("-2E5"))))
-    parse("""{"num": 2.5e5 }""") mustEqual JObject(List(JField("num", JNum("2.5e5"))))
-    parse("""{"num": 2.5e-5 }""") mustEqual JObject(List(JField("num", JNum("2.5e-5"))))
+    parseUnsafe("""{"num": 2e5 }""") mustEqual JObject(List(JField("num", JNum("2e5"))))
+    parseUnsafe("""{"num": -2E5 }""") mustEqual JObject(List(JField("num", JNum("-2E5"))))
+    parseUnsafe("""{"num": 2.5e5 }""") mustEqual JObject(List(JField("num", JNum("2.5e5"))))
+    parseUnsafe("""{"num": 2.5e-5 }""") mustEqual JObject(List(JField("num", JNum("2.5e-5"))))
   }
 
   "JSON building example" in {
@@ -81,7 +81,7 @@ object Examples extends Specification {
   }
 
   "Example which collects all integers and forms a new JSON" in {
-    val json = parse(person)
+    val json = parseUnsafe(person)
     val ints = json.foldDown(JUndefined: JValue) { (a, v) => v match {
       case x: JNum => a ++ x
       case _ => a
@@ -91,7 +91,7 @@ object Examples extends Specification {
   }
   
   "Example which folds up to form a flattened list" in {
-    val json = parse(person)
+    val json = parseUnsafe(person)
   
     def form(list: JPath*): List[(JPath, JValue)] = list.toList.map { path =>
       (path, json(path))
@@ -116,7 +116,7 @@ object Examples extends Specification {
   }
 
   //"Renders JSON as Scala code" in {
-  //  val json = parse(lotto)
+  //  val json = parseUnsafe(lotto)
   //
   //  val output = Printer.compact(renderScala(json))
   //  output.contains("\"winning-numbers\",JArray(JNumStr(2)::JNumStr(45)::JNumStr(34)::JNumStr(23)::JNumStr(7)::JNumStr(5)::JNumStr(3)::Nil)") mustEqual true
