@@ -67,7 +67,7 @@ object QueryExamples extends Specification {
     clusters mustEqual List("cluster2")
   }
 
-  def json = parseUnsafe("""
+  def json = parse("""
     { "data_center": [
       {
         "name": "cluster1",

@@ -26,11 +26,10 @@ import java.io.File
 import java.nio.ByteBuffer
 
 object JParser {
+
   // legacy parsing methods
   @deprecated("Use parseFromString() instead, which returns a Validation", "1.0")
   def parse(str: String): JValue = new StringParser(str).parse()
-
-  def parseUnsafe(str: String): JValue = new StringParser(str).parse()
 
   type Result[A] = Validation[Throwable, A]
   type AsyncResult = (AsyncParse, AsyncParser)

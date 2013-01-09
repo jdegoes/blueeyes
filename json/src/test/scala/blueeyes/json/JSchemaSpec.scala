@@ -9,7 +9,7 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   override val defaultPrettyParams = Pretty.Params(2)
 
   def f(v: JValue): JSchema = JSchema.fixed(v)
-  def parseFixed(s: String): JSchema = JSchema.fixed(JParser.parseUnsafe(s))
+  def parseFixed(s: String): JSchema = JSchema.fixed(JParser.parse(s))
 
   "JSchema.JSON" should {
     "validate all JSON without exploding" in {
@@ -35,7 +35,7 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }
 
     "not break regression" in {
-      val v1 = JParser.parseUnsafe("""{"yitAwQemwwsadhpeGj105763":"wfetLyqmpjrkksvnekdqetmx","zykzjslLdcmtHmusqnwwzft202253":-4.611686018427387904E-2147483609,"cyqk382845":1E+1983360066}""")
+      val v1 = JParser.parse("""{"yitAwQemwwsadhpeGj105763":"wfetLyqmpjrkksvnekdqetmx","zykzjslLdcmtHmusqnwwzft202253":-4.611686018427387904E-2147483609,"cyqk382845":1E+1983360066}""")
 
       val v2 = JObject.empty
 
