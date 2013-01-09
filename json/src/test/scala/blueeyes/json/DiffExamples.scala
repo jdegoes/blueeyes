@@ -29,7 +29,7 @@ object DiffExamples extends Specification {
     deleted mustEqual expectedDeletions
   }
   
-  val expectedChanges = parseUnsafe("""
+  val expectedChanges = parse("""
     {
       "tags": ["static-typing","fp"],
       "features": {
@@ -37,7 +37,7 @@ object DiffExamples extends Specification {
       }
     }""")
   
-  val expectedAdditions = parseUnsafe("""
+  val expectedAdditions = parse("""
     {
       "features": {
         "key3":"val3"
@@ -45,7 +45,7 @@ object DiffExamples extends Specification {
       "compiled": true
     }""")
   
-  val expectedDeletions = parseUnsafe("""
+  val expectedDeletions = parse("""
     {
       "year":2006,
       "features":{ "key1":"val1" }
@@ -71,5 +71,5 @@ object DiffExamples extends Specification {
     deletions.renderCanonical mustEqual expectedDeletions.renderCanonical
   }
   
-  private def read(resource: String) = parseUnsafe(scala.io.Source.fromInputStream(getClass.getResourceAsStream(resource)).getLines.mkString)
+  private def read(resource: String) = parse(scala.io.Source.fromInputStream(getClass.getResourceAsStream(resource)).getLines.mkString)
 }

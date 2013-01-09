@@ -25,7 +25,7 @@ object MergeExamples extends Specification {
     (scala1 merge scala2) mustEqual expectedMergeResult
   }
 
-  def scala1 = parseUnsafe("""
+  def scala1 = parse("""
     {
       "lang": "scala",
       "year": 2006,
@@ -36,7 +36,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  def scala2 = parseUnsafe("""
+  def scala2 = parse("""
     {
       "tags": ["static-typing","fp"],
       "compiled": true,
@@ -47,7 +47,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  def expectedMergeResult = parseUnsafe("""
+  def expectedMergeResult = parse("""
     {
       "lang": "scala",
       "year": 2006,
@@ -64,7 +64,7 @@ object MergeExamples extends Specification {
     (lotto1 merge lotto2) mustEqual mergedLottoResult
   }
 
-  def lotto1 = parseUnsafe("""
+  def lotto1 = parse("""
     {
       "lotto":{
         "lotto-id":5,
@@ -76,7 +76,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  def lotto2 = parseUnsafe("""
+  def lotto2 = parse("""
     {
       "lotto":{ 
         "winners":[{
@@ -86,7 +86,7 @@ object MergeExamples extends Specification {
       }
     }""")
 
-  def mergedLottoResult = parseUnsafe("""
+  def mergedLottoResult = parse("""
     {
       "lotto":{
         "lotto-id":5,

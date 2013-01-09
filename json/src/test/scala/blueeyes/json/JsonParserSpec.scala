@@ -33,7 +33,7 @@ object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck
   import JParser._
 
   "Any valid json can be parsed" in {
-    val parsing = (json: JValue) => { parseUnsafe(json.renderPretty); true }
+    val parsing = (json: JValue) => { parse(json.renderPretty); true }
     check(parsing)
   }
 
@@ -43,12 +43,12 @@ object JsonParserSpec extends Specification with ArbitraryJValue with ScalaCheck
     val json = Examples.person
     val executor = Executors.newFixedThreadPool(100)
     val results = (0 to 100).map(_ =>
-      executor.submit(new Callable[JValue] { def call = parseUnsafe(json) } )).toList.map(_.get)
+      executor.submit(new Callable[JValue] { def call = parse(json) } )).toList.map(_.get)
     results.zip(results.tail).forall(pair => pair._1 == pair._2) mustEqual true
   }
 
   "All valid string escape characters can be parsed" in {
-    parseUnsafe("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
+    parse("[\"abc\\\"\\\\\\/\\b\\f\\n\\r\\t\\u00a0\\uffff\"]") must_== JArray(JString("abc\"\\/\b\f\n\r\t\u00a0\uffff")::Nil)
   }
 }
 
@@ -66,7 +66,7 @@ object ParserBugs extends Specification {
   }
 
   "Can parse funky characters" in {
-    JParser.parseUnsafe(URLDecoder.decode("\"%E2%84%A2\"", "UTF-8")) must_== JString("™")
+    JParser.parse(URLDecoder.decode("\"%E2%84%A2\"", "UTF-8")) must_== JString("™")
   }
 }
 
