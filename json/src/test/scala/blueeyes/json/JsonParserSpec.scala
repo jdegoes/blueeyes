@@ -275,4 +275,13 @@ xyz
     confirm(es(2), 9, 22)
     confirm(es(3), 12, 1)
   }
+
+  "Handles whitespace correctly" in {
+    def ja(ns: Int*) = JArray(ns.map(n => JNum(n)):_*)
+
+    JParser.parseFromString("[1, 2,\t3,\n4,\r5]").toOption must_== Some(ja(1, 2, 3, 4, 5))
+    JParser.parseManyFromString("[1,\r\n2]\r\n[3,\r\n4]").toOption must_== Some(Seq(ja(1, 2), ja(3, 4)))
+    JParser.parseFromString("[1, 2,\t3,\n4,\0 5]").toOption must_== None
+    JParser.parseManyFromString("[1,\r\n2]\0[3,\r\n4]").toOption must_== None
+  }
 }
