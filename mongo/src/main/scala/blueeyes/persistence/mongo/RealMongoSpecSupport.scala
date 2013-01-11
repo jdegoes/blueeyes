@@ -9,8 +9,7 @@ import com.google.common.io.Files
 
 import java.io.File
 import java.net.{InetSocketAddress, ServerSocket, URL}
-
-import scalaz.effect.IO
+import java.util.concurrent.TimeUnit
 
 import akka.dispatch.Await
 import akka.util.Timeout
@@ -19,8 +18,9 @@ import org.specs2.mutable._
 import org.specs2.specification.{Fragments, Step}
 
 import scala.sys.process._
+import scala.util.Random
 
-import java.util.concurrent.TimeUnit
+import scalaz.effect.IO
 
 trait RealMongoSpecSupport extends Specification {
   private[this] var mongoImpl: Mongo = _
@@ -35,8 +35,6 @@ trait RealMongoSpecSupport extends Specification {
 
   private var mongoProcess: Option[Process] = None
 
-  def defaultPort = 37017
-
   private final var workDir: File = Files.createTempDir()
   private final val downloadDir = new File(new File(System.getProperty("java.io.tmpdir")), "blueeyesTestArtifacts")
   downloadDir.mkdirs()
@@ -44,7 +42,14 @@ trait RealMongoSpecSupport extends Specification {
   private final val mongoDir = new File(workDir, "mongo")
   private final val dataDir  = new File(workDir, "mongo-data")
 
+  /** The minimum random port number that can be used by the underlying mongo instance */
+  def portRangeStart = 50000
+  
+  /** The size of the random port range to be used by the underlying mongo instance */
+  def portRangeSize  = 10000
 
+  /** The max number of random ports to try */
+  def portTries = 1000
 
   // Shamlessly borrowed from Camel: 
   // http://svn.apache.org/viewvc/camel/trunk/components/camel-test/src/main/java/org/apache/camel/test/AvailablePortFinder.java?view=markup#l130
@@ -69,10 +74,9 @@ trait RealMongoSpecSupport extends Specification {
     return false;
   }
 
-
-  private def findUnusedPort(startPort: Int): Option[Int] = {
-    // Limit to 1000 tries, bail if we can't find a port within that time
-    (startPort to (startPort + 1000)).find(isAvailable)
+  private def findUnusedPort(tries: Int): Option[Int] = {
+    def randomPortStream: Stream[Int] = (Random.nextInt(portRangeSize) + portRangeStart) #:: randomPortStream
+    randomPortStream.take(tries).find(isAvailable)
   }
 
   def startup(): Unit = {
@@ -116,7 +120,7 @@ trait RealMongoSpecSupport extends Specification {
       _ <- unpackMongo(mongoFile, mongoDir)
     } yield {
       mongoLogger.debug("Searching for unused port")
-      findUnusedPort(defaultPort) match {
+      findUnusedPort(portTries) match {
         case Some(port) =>
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({

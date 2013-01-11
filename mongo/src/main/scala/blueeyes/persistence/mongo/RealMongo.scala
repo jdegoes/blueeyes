@@ -51,7 +51,7 @@ object RealMongo {
         case Nil => sys.error("""MongoServers are not configured. Configure the value 'servers'. Format is '["host1:port1", "host2:port2", ...]'""")
       }
 
-      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.SECONDARY) } else { underlying.setReadPreference(ReadPreference.PRIMARY) }
+      if (config[Boolean]("slaveOk", true)) { underlying.setReadPreference(ReadPreference.secondary()) } else { underlying.setReadPreference(ReadPreference.primary()) }
 
       underlying
     }
