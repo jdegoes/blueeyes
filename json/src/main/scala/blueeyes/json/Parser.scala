@@ -229,6 +229,7 @@ private[json] trait Parser {
     // ignore whitespace
     case ' ' => parse(i + 1)
     case '\t' => parse(i + 1)
+    case '\r' => parse(i + 1)
     case '\n' => newline(i); parse(i + 1)
 
     // if we have a recursive top-level structure, we'll delegate the parsing
@@ -276,6 +277,7 @@ private[json] trait Parser {
       case DATA => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case '[' => rparse(ARRBEG, i + 1, new ArrContext :: stack)
@@ -314,6 +316,7 @@ private[json] trait Parser {
       case KEY => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case '"' =>
@@ -327,6 +330,7 @@ private[json] trait Parser {
       case ARRBEG => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case ']' => stack match {
@@ -346,6 +350,7 @@ private[json] trait Parser {
       case OBJBEG => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case '}' => stack match {
@@ -365,6 +370,7 @@ private[json] trait Parser {
       case SEP => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case ':' => rparse(DATA, i + 1, stack)
@@ -377,6 +383,7 @@ private[json] trait Parser {
       case ARREND => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case ',' => rparse(DATA, i + 1, stack)
@@ -399,6 +406,7 @@ private[json] trait Parser {
       case OBJEND => (at(i): @switch) match {
         case ' ' => rparse(state, i + 1, stack)
         case '\t' => rparse(state, i + 1, stack)
+        case '\r' => rparse(state, i + 1, stack)
         case '\n' => newline(i); rparse(state, i + 1, stack)
 
         case ',' => rparse(KEY, i + 1, stack)
