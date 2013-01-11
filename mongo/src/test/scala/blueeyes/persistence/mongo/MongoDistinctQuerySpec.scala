@@ -1,8 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
-import MongoFilterBuilder._
+import dsl._
 import MongoFilterOperators._
 import blueeyes.json.JPath
 

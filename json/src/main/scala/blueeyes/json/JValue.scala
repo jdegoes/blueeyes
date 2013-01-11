@@ -484,8 +484,6 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
       case value => Some(value)
     }
   }
-
-  override def toString = renderCompact
 }
 
 object JValue {

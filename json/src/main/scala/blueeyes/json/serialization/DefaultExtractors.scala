@@ -1,181 +1,193 @@
 package blueeyes.json.serialization 
 
 import blueeyes.json._
+import Extractor._
+
 import java.util.{Date => JDate}
 import scala.math.BigDecimal
 import org.joda.time.{DateTime, DateTimeZone}
 
-import org.joda.time.{DateTime, DateTimeZone}
+import scalaz._
+import scalaz.Validation._
+import scalaz.std.list._
+import scalaz.std.function._
+import scalaz.std.map._
+import scalaz.std.tuple._
+import scalaz.syntax.arrow._
+import scalaz.syntax.apply._
+import scalaz.syntax.bifunctor._
+import scalaz.syntax.traverse.ToTraverseOps
+import scalaz.syntax.id._
 
 /** Extractors for all basic types.
  */
 trait DefaultExtractors {
+  private type VE[a] = Validation[Error, a]
+
   implicit val JValueExtractor: Extractor[JValue] = new Extractor[JValue] {
-    def extract(jvalue: JValue): JValue = jvalue
+    override def extract(jvalue: JValue): JValue = jvalue
+    def validated(jvalue: JValue) = Success(jvalue)
   }
   
   implicit val StringExtractor: Extractor[String] = new Extractor[String] {
-    def extract(jvalue: JValue): String = jvalue match {
-      case JString(str) => str
-      
-      case JNum(i) => i.toString
-      case JBool(b) => b.toString
-      
-      case _ => sys.error("Expected String but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JString(str) => Success(str)
+      case JNum(i) => Success(i.toString)
+      case JBool(b) => Success(b.toString)
+      case _ => invalidv("Expected String but found: " + jvalue)
     }
   }
   
   implicit val BooleanExtractor: Extractor[Boolean] = new Extractor[Boolean] {
-    def extract(jvalue: JValue): Boolean = jvalue match {
-      case JBool(b) => b
-      
-      case JString(s) if (s.toLowerCase == "true")  => true
-      case JString(s) if (s.toLowerCase == "false") => false
-      
-      case JString(s) if (s.toLowerCase == "1") => true
-      case JString(s) if (s.toLowerCase == "0") => false
-      
-      case JNum(i) if (i.intValue == 1) => true
-      case JNum(i) if (i.intValue == 0) => false
-      
-      case _ => sys.error("Expected Boolean but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JBool(b) => Success(b)
+      case JString(s) if (s.toLowerCase == "true")  => Success(true)
+      case JString(s) if (s.toLowerCase == "false") => Success(false)
+      case _ => invalidv("Expected Boolean but found: " + jvalue)
     }
   }
   
   implicit val IntExtractor: Extractor[Int] = new Extractor[Int] {
-    def extract(jvalue: JValue): Int = jvalue match {
-      case JNum(i)    => i.intValue
-      case JString(s) => s.toInt
-      
-      case _ => sys.error("Expected Integer but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JNum(i)    => tryv(i.toIntExact)
+      case JString(s) => tryv(s.toInt)
+      case _ => invalidv("Expected Integer but found: " + jvalue)
     }
   }
   
   implicit val LongExtractor: Extractor[Long] = new Extractor[Long] {
-    def extract(jvalue: JValue): Long = jvalue match {
-      case JNum(i)    => i.longValue
-      case JString(s) => s.toLong
-      
-      case _ => sys.error("Expected Long but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JNum(i)    => tryv(i.toLongExact)
+      case JString(s) => tryv(s.toLong)
+      case _ => invalidv("Expected Long but found: " + jvalue)
     }
   }
   
   implicit val FloatExtractor: Extractor[Float] = new Extractor[Float] {
-    def extract(jvalue: JValue): Float = jvalue match {
-      case JNum(i)    => i.floatValue
-      case JString(s) => s.toFloat
-      
-      case _ => sys.error("Expected Float but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JNum(i)    => Success(i.toFloat)
+      case JString(s) => tryv(s.toFloat)
+      case _ => invalidv("Expected Float but found: " + jvalue)
     }
   }
 
   implicit val DoubleExtractor: Extractor[Double] = new Extractor[Double] {
-    def extract(jvalue: JValue): Double = jvalue match {
-      case JNum(i)    => i.doubleValue
-      case JString(s) => s.toDouble
-
-      case _ => sys.error("Expected Double but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JNum(i)    => Success(i.toDouble)
+      case JString(s) => tryv(s.toDouble)
+      case _ => invalidv("Expected Double but found: " + jvalue)
     }
   }
   
   implicit val BigDecimalExtractor: Extractor[BigDecimal] = new Extractor[BigDecimal] {
-    def extract(jvalue: JValue): BigDecimal = jvalue match {
-      case JNum(i)    => i
-      case JString(s) => BigDecimal(s)
-      
-      case _ => sys.error("Expected BigDecimal but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JNum(i)    => Success(i)
+      case JString(s) => tryv(BigDecimal(s))
+      case _ => invalidv("Expected BigDecimal but found: " + jvalue)
     }
   }
 
-  implicit val DateExtractor: Extractor[JDate] = new Extractor[JDate] {
-    def extract(jvalue: JValue): JDate = new JDate(LongExtractor.extract(jvalue))
-  }
+  implicit val DateExtractor: Extractor[JDate] = LongExtractor map { new JDate(_) }
   
   implicit def OptionExtractor[T](implicit extractor: Extractor[T]): Extractor[Option[T]] = new Extractor[Option[T]] {
-    def extract(jvalue: JValue): Option[T] = jvalue match {
-      case JUndefined | JNull => None
-      case x: JValue => Some(extractor.extract(x))
+    def validated(jvalue: JValue) = jvalue match {
+      case JUndefined | JNull => Success(None)
+      case x => extractor.validated(x) map { Some(_) }
     }
   }
   
-  implicit def Tuple2Extractor[T1, T2](implicit extractor1: Extractor[T1], extractor2: Extractor[T2]): Extractor[(T1, T2)] = new Extractor[(T1, T2)] {
-    def extract(jvalue: JValue): (T1, T2) = jvalue match {
-      case JArray(values) if (values.length == 2) => (extractor1(values(0)), extractor2(values(1)))
+  implicit def Tuple2Extractor[A, B](implicit ea: Extractor[A], eb: Extractor[B]): Extractor[(A, B)] = new Extractor[(A, B)] {
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) if (values.length == 2) => 
+        ea.validated(values(0)) tuple eb.validated(values(1))
 
-      case _ => sys.error("Expected Array of length 2 but found: " + jvalue)
+      case _ => invalidv("Expected Array of length 2 but found: " + jvalue)
     }
   }
   
-  implicit def Tuple3Extractor[T1, T2, T3](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3]): Extractor[(T1, T2, T3)] = new Extractor[(T1, T2, T3)] {
-    def extract(jvalue: JValue): (T1, T2, T3) = jvalue match {
-      case JArray(values) if (values.length == 3) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)))
+  implicit def Tuple3Extractor[A, B, C](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C]): Extractor[(A, B, C)] = new Extractor[(A, B, C)] {
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) if (values.length == 3) => 
+        ^^[VE, A, B, C, (A, B, C)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2))) {
+          Tuple3.apply _
+        }
 
-      case _ => sys.error("Expected Array of length 3 but found: " + jvalue)
+      case _ => invalidv("Expected Array of length 3 but found: " + jvalue)
     }
   }
   
-  implicit def Tuple4Extractor[T1, T2, T3, T4](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3], extractor4: Extractor[T4]): Extractor[(T1, T2, T3, T4)] = new Extractor[(T1, T2, T3, T4)] {
-    def extract(jvalue: JValue): (T1, T2, T3, T4) = jvalue match {
-      case JArray(values) if (values.length == 4) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)), extractor4(values(3)))
+  implicit def Tuple4Extractor[A, B, C, D](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C], ed: Extractor[D]): Extractor[(A, B, C, D)] = new Extractor[(A, B, C, D)] {
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) if (values.length == 4) => 
+        ^^^[VE, A, B, C, D, (A, B, C, D)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3))) { Tuple4.apply _ }
 
-      case _ => sys.error("Expected Array of length 4 but found: " + jvalue)
+      case _ => invalidv("Expected Array of length 4 but found: " + jvalue)
     }
   }
   
-  implicit def Tuple5Extractor[T1, T2, T3, T4, T5](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3], extractor4: Extractor[T4], extractor5: Extractor[T5]): Extractor[(T1, T2, T3, T4, T5)] = new Extractor[(T1, T2, T3, T4, T5)] {
-    def extract(jvalue: JValue): (T1, T2, T3, T4, T5) = jvalue match {
-      case JArray(values) if (values.length == 5) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)), extractor4(values(3)), extractor5(values(4)))
+  implicit def Tuple5Extractor[A, B, C, D, E](implicit ea: Extractor[A], eb: Extractor[B], ec: Extractor[C], ed: Extractor[D], ee: Extractor[E]): Extractor[(A, B, C, D, E)] = new Extractor[(A, B, C, D, E)] {
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) if (values.length == 5) => 
+        ^^^^[VE, A, B, C, D, E, (A, B, C, D, E)](ea.validated(values(0)), eb.validated(values(1)), ec.validated(values(2)), ed.validated(values(3)), ee.validated(values(4))) {
+          Tuple5.apply _
+        }
 
-      case _ => sys.error("Expected Array of length 5 but found: " + jvalue)
+      case _ => invalidv("Expected Array of length 5 but found: " + jvalue)
     }
   }
   
   implicit def ArrayExtractor[T](implicit m: ClassManifest[T], elementExtractor: Extractor[T]): Extractor[Array[T]] = new Extractor[Array[T]] {
-    def extract(jvalue: JValue): Array[T] = jvalue match {
-      case JArray(values) => values.map(elementExtractor.extract _).toArray
-
-      case _ => sys.error("Expected Array but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) => values.map(elementExtractor.validated _).sequence[VE, T].map(_.toArray)
+      case _ => invalidv("Expected JArray but found: " + jvalue)
     }
   }
   
   implicit def SetExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Set[T]] = new Extractor[Set[T]] {
-    def extract(jvalue: JValue): Set[T] = jvalue match {
-      case JArray(values) => Set(values.map(elementExtractor.extract _): _*)
-
-      case _ => sys.error("Expected Set but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) => values.map(elementExtractor.validated _).sequence[VE, T].map(_.toSet)
+      case _ => invalidv("Expected JArray but found: " + jvalue)
     }
   }
   
   implicit def ListExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[List[T]] = new Extractor[List[T]] {
-    def extract(jvalue: JValue): List[T] = jvalue match {
-      case JArray(values) => values.map(elementExtractor.extract _)
-
-      case _ => sys.error("Expected List but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) => values.map(elementExtractor.validated _).sequence[VE, T]
+      case _ => invalidv("Expected JArray but found: " + jvalue)
     }
   }
   
   implicit def VectorExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Vector[T]] = new Extractor[Vector[T]] {
-    def extract(jvalue: JValue): Vector[T] = jvalue match {
-      case JArray(values) => values.map(elementExtractor.extract _)(collection.breakOut) : Vector[T]
-
-      case _ => sys.error("Expected Vector but found: " + jvalue)
+    def validated(jvalue: JValue) = jvalue match {
+      case JArray(values) => values.map(elementExtractor.validated _).sequence[VE, T] map { vs => Vector(vs: _*) }
+      case _ => invalidv("Expected JArray but found: " + jvalue)
     }
   }
   
   implicit def MapExtractor[K, V](implicit keyExtractor: Extractor[K], valueExtractor: Extractor[V]): Extractor[Map[K, V]] = new Extractor[Map[K, V]] {
-    def extract(jvalue: JValue): Map[K, V] = Map(ListExtractor(Tuple2Extractor(keyExtractor, valueExtractor)).extract(jvalue): _*)
+    def validated(jvalue: JValue) = {
+      ListExtractor(Tuple2Extractor(keyExtractor, valueExtractor)).validated(jvalue).map(_.toMap)
+    }
   }
   
   implicit def StringMapExtractor[V](implicit valueExtractor: Extractor[V]): Extractor[Map[String, V]] = new Extractor[Map[String, V]] {
-    def extract(jvalue: JValue): Map[String, V] = jvalue match {
-      case JObject(fields) => fields.mapValues(valueExtractor.extract)
-      
-      case _ => Map(ListExtractor(Tuple2Extractor(StringExtractor, valueExtractor)).extract(jvalue): _*)
+    private val ev = (valueExtractor.validated(_:JValue)).second[String]
+
+    def validated(jvalue: JValue) = jvalue match {
+      case JObject(fields) => 
+        Traverse[({ type l[a] = Map[String, a] })#l].sequence[VE, V] {
+          fields.mapValues(valueExtractor.validated)
+        }
+
+      case other => 
+        ListExtractor(Tuple2Extractor(StringExtractor, valueExtractor)).validated(other).map(_.toMap)
     }
   }
 
   implicit val DateTimeExtractor = new Extractor[DateTime] {
-    def extract(jvalue: JValue): DateTime = new DateTime(LongExtractor.extract(jvalue), DateTimeZone.UTC)
+    def validated(jvalue: JValue) = {
+      LongExtractor.validated(jvalue) map { millis => new DateTime(millis, DateTimeZone.UTC) }
+    }
   }
 }
 

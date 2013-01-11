@@ -3,6 +3,8 @@ package blueeyes.persistence.mongo
 import org.specs2.mutable.Specification
 import UpdateFieldFunctions._
 import com.mongodb.MongoException
+import dsl._
+
 
 class PullAllFSpec extends Specification{
   "fuse applies pullAll to set update" in {

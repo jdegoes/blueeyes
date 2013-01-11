@@ -5,8 +5,10 @@ import akka.dispatch.Future
 import akka.dispatch.MessageDispatcher
 import akka.util.Timeout
 import blueeyes.json._
+
 import scalaz._
-import Scalaz._
+import scalaz.std.map._
+import scalaz.syntax.semigroup._
 
 /**
  * Simple abstraction for representing a collections of MongoDB patches.
@@ -33,7 +35,7 @@ case class MongoPatches(patches: Map[MongoFilter, MongoUpdate]) {
     */
   def commit(database: Database, collection: MongoCollection)(implicit messageDispatcher: MessageDispatcher, queryTimeout: Timeout): Future[Unit] = {
     val futures = patches.toList.map { 
-      case (filter, update) => database(upsert(collection).set(update).where(filter))
+      case (filter, update) => database(MongoQueryBuilder.upsert(collection).set(update).where(filter))
     }
 
     Future.sequence(futures).map(_ => ())

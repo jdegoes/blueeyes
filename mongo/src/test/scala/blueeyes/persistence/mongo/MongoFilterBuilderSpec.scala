@@ -1,10 +1,10 @@
 package blueeyes.persistence.mongo
 
+import dsl._
 import org.specs2.mutable.Specification
 import MongoFilterOperators._
 import blueeyes.json.JPath
 import blueeyes.json._
-import MongoFilterImplicits._
 
 class MongoFilterBuilderSpec extends Specification{
 

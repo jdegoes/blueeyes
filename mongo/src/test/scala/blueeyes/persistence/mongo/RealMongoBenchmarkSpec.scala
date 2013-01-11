@@ -21,8 +21,9 @@ import org.specs2.ScalaCheck
 
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
+import dsl._
 
-class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with MongoImplicits with ScalaCheck with FutureMatchers with AkkaDefaults {
+class RealMongoBenchmarkSpec extends Specification with ArbitraryJValue with ScalaCheck with FutureMatchers with AkkaDefaults {
   val testLive = (new java.io.File("/etc/default/blueeyes.conf")).exists
   val config = if (testLive) 
     Configuration.load("/etc/default/blueeyes.conf", BlockFormat) 

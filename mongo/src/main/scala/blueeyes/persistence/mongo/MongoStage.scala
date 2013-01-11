@@ -15,7 +15,7 @@ extends Stage[MongoFilterCollection, MongoUpdate](monitor) {
 
   def flush(filter: MongoFilterCollection, update: MongoUpdate): Unit = {
     database.unverified {
-      upsert(filter.collection).set(update).where(filter.filter)
+      dsl.upsert(filter.collection).set(update).where(filter.filter)
     }
   }
 

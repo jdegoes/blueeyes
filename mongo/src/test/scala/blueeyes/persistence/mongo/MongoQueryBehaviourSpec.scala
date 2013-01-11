@@ -1,5 +1,6 @@
 package blueeyes.persistence.mongo
 
+import dsl._
 import org.specs2.mutable.Specification
 import blueeyes.json._
 import com.mongodb.MongoException
@@ -28,7 +29,6 @@ class MongoQueryBehaviourSpec extends Specification with Mockito{
     there was one(collection).requestStart
     there was one(collection).getLastError
     there was one(collection).requestDone
-
 
     result.value must eventually (be_==(1))
   }

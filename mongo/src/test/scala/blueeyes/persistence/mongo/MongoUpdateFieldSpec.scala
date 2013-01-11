@@ -1,6 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
+import dsl._
 import MongoUpdateOperators._
 import blueeyes.json._
 import blueeyes.json.JParser

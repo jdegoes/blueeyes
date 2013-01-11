@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
 import UpdateFieldFunctions._
+import dsl._
 
 class PullFSpec extends Specification{
   "fuse applies pull to set update" in {
@@ -14,6 +15,8 @@ class PullFSpec extends Specification{
     PullF("n", "" === "foo").fuseWith(PullF("n", "foo" === "bar")) must throwA[RuntimeException]
   }
   "fuse with pullAll (with '' === value filter) composes pull" in {
-    PullF("n", "" === "foo").fuseWith(PullAllF("n", List(MongoPrimitiveString("bar")))) mustEqual(Some(PullAllF("n", List(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))))
+    PullF("n", "" === "foo").fuseWith(PullAllF("n", List(MongoPrimitiveString("bar")))) must beSome {
+      PullAllF("n", List(MongoPrimitiveString("foo"), MongoPrimitiveString("bar")))
+    }
   }
 }

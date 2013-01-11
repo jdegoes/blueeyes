@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
+import dsl._
 import blueeyes.json._
 import org.specs2.mock.Mockito
 

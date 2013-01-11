@@ -134,7 +134,7 @@ case class MongoAggregationQuery(pipeline: JArray, collection: MongoCollection, 
  * </pre>
  */
 
-trait MongoQueryBuilder{
+trait MongoQueryBuilder {
   class FromQueryEntryPoint[T <: MongoQuery](f: MongoCollection => T){
     def from (collection: MongoCollection): T = f(collection)
   }

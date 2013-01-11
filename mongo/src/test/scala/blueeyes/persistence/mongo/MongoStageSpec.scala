@@ -1,29 +1,30 @@
 package blueeyes.persistence.mongo
 
 import java.util.concurrent.TimeUnit.{MILLISECONDS}
-import org.scalacheck._
-import Gen._
-import Arbitrary.arbitrary
-import org.scalacheck.Prop._
 
+import dsl._
 import blueeyes.persistence.cache.ExpirationPolicy
-import scalaz.Semigroup
-import scala.util.Random
-
+import blueeyes.json._
 import blueeyes.bkka.AkkaDefaults
 import blueeyes.akka_testing.FutureMatchers
+
 import akka.actor.{Actor, Props}
 import akka.dispatch.Future
 import akka.pattern.ask
 import akka.util.Timeout
 
-import blueeyes.json._
 import scalaz._
 import Scalaz._
+import scala.util.Random
+
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import org.scalacheck._
+import org.scalacheck.Prop._
+import Gen._
+import Arbitrary.arbitrary
 
-class MongoStageSpec extends Specification with ScalaCheck with MongoImplicits with ArbitraryMongo with FutureMatchers with AkkaDefaults with RealMongoSpecSupport {
+class MongoStageSpec extends Specification with ScalaCheck with ArbitraryMongo with FutureMatchers with AkkaDefaults with RealMongoSpecSupport {
   implicit val queryTimeout = Timeout(10000)
 
   implicit val StringSemigroup = new Semigroup[MongoUpdate] {

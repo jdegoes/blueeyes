@@ -1,7 +1,8 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
+
+import dsl._
 import MongoFilterOperators._
 
 class MongoRemoveQuerySpec extends Specification{

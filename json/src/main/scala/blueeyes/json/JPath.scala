@@ -130,8 +130,8 @@ trait JPathSerialization {
     def decompose(jpath: JPath) : JValue = JString(jpath.toString)
   }
 
-  implicit val JPathExtractor : Extractor[JPath] = new Extractor[JPath] with ValidatedExtraction[JPath] {
-    override def validated(obj : JValue) : scalaz.Validation[Extractor.Error,JPath] =
+  implicit val JPathExtractor : Extractor[JPath] = new Extractor[JPath] {
+    def validated(obj : JValue) : scalaz.Validation[Extractor.Error,JPath] =
       obj.validated[String].map(JPath(_))
   }
 }

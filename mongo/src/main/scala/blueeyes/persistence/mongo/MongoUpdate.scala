@@ -3,15 +3,18 @@ package blueeyes.persistence.mongo
 import blueeyes.util.ProductPrefixUnmangler
 import blueeyes.json.JPath
 import blueeyes.json.{JField, JObject}
-import MongoImplicits._
+
+// TODO: remove the following 3 imports.
+import dsl._
 import MongoFilterOperators._
 
 import com.mongodb.MongoException
 
 import scala.math.BigInt._
 
-import scalaz.Scalaz._
-
+import scalaz._
+import scalaz.std.list._
+import scalaz.syntax.foldable._
 
 object MongoUpdateOperators {
   sealed trait MongoUpdateOperator extends Product with ProductPrefixUnmangler {
@@ -68,11 +71,11 @@ case class MongoUpdateBuilder(jpath: JPath) {
     val (value, filter) = if (itemsList.size == 1) {
       val value: MongoPrimitive = itemsList.head
       (value, "" === value)
-    }
-    else {
+    } else {
       val value = MongoPrimitiveArray(itemsList)
       (value, MongoFieldFilter(JPath(""), $each, value))
     }
+
     AddToSetF(jpath, value, filter)
   }
 }
@@ -84,6 +87,36 @@ sealed trait MongoUpdate { self =>
 
 object MongoUpdate {
   val Empty: MongoUpdate = MongoUpdateNothing
+
+  implicit val monoid: Monoid[MongoUpdate] = new Monoid[MongoUpdate] {
+    val zero = MongoUpdateNothing
+
+    def append(u1: MongoUpdate, u2: => MongoUpdate): MongoUpdate = {
+      import Changes._
+      import Changelist._
+      import MongoUpdateObject._
+
+      // FIXME: I found this unbelievably stupid and broken, 
+      // but don't have the time to actually fix the types now.
+      def mongoUpdate(changes: Seq[Change1]) = MongoUpdateFields(changes.map(_.asInstanceOf[MongoUpdateField]))
+
+      def updateFields(update: MongoUpdateObject) = MongoUpdateFields(decompose(update.value))
+
+      (u1, u2) match {
+        case (MongoUpdateNothing, _)  => u2
+        case (_, MongoUpdateNothing)  => u1
+
+        case (x: MongoUpdateField,   y: MongoUpdateField)  => mongoUpdate(x *> y)
+        case (x: MongoUpdateField,   y: MongoUpdateFields) => mongoUpdate(x *> y.list)
+
+        case (x: MongoUpdateFields, y: MongoUpdateField)   => mongoUpdate(Changelist(x.list) *> y)
+        case (x: MongoUpdateFields, y: MongoUpdateFields)  => mongoUpdate(Changelist(x.list) *> y.list)
+
+        case (x: MongoUpdateObject, _)   => append(updateFields(x), u2)
+        case (_, y: MongoUpdateObject)   => append(u1, updateFields(y))
+      }
+    }
+  }
 }
 
 sealed case class MongoUpdateObject(value: JObject) extends MongoUpdate {
@@ -145,7 +178,7 @@ private[mongo] object UpdateFieldFunctions{
     override protected def fuseWithImpl(older: Change1) = Some(this)
   }
 
-  case class IncF(path: JPath, value: MongoPrimitive) extends MongoUpdateField{
+  case class IncF(path: JPath, value: MongoPrimitive) extends MongoUpdateField {
     val operator = $inc
 
     val filter   = ("" === value)
@@ -159,25 +192,25 @@ private[mongo] object UpdateFieldFunctions{
     }
 
     private def plus(v1: MongoPrimitive, v2: MongoPrimitive): MongoPrimitive = (v1, v2) match {
-      case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => x1 + x2
-      case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => x1 + x2
-      case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => x1 + x2
-      case (MongoPrimitiveInt(x1),     MongoPrimitiveBigInt(x2)) => x1 + x2
+      case (MongoPrimitiveInt(x1),     MongoPrimitiveInt(x2))    => MongoPrimitiveInt(x1 + x2)
+      case (MongoPrimitiveInt(x1),     MongoPrimitiveDouble(x2)) => MongoPrimitiveDouble(x1 + x2)
+      case (MongoPrimitiveInt(x1),     MongoPrimitiveLong(x2))   => MongoPrimitiveLong(x1 + x2)
+      case (MongoPrimitiveInt(x1),     MongoPrimitiveBigInt(x2)) => MongoPrimitiveBigInt(x1 + x2)
 
-      case (MongoPrimitiveDouble(x1),  MongoPrimitiveInt(x2))    => x1 + x2
-      case (MongoPrimitiveDouble(x1),  MongoPrimitiveDouble(x2)) => x1 + x2
-      case (MongoPrimitiveDouble(x1),  MongoPrimitiveLong(x2))   => x1 + x2
-      case (MongoPrimitiveDouble(x1),  MongoPrimitiveBigInt(x2)) => x1 + x2.doubleValue
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveInt(x2))    => MongoPrimitiveDouble(x1 + x2)
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveDouble(x2)) => MongoPrimitiveDouble(x1 + x2)
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveLong(x2))   => MongoPrimitiveDouble(x1 + x2)
+      case (MongoPrimitiveDouble(x1),  MongoPrimitiveBigInt(x2)) => MongoPrimitiveDouble(x1 + x2.doubleValue)
 
-      case (MongoPrimitiveLong(x1),    MongoPrimitiveInt(x2))    => x1 + x2
-      case (MongoPrimitiveLong(x1),    MongoPrimitiveDouble(x2)) => x1 + x2
-      case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => x1 + x2
-      case (MongoPrimitiveLong(x1),    MongoPrimitiveBigInt(x2)) => x1 + x2
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveInt(x2))    => MongoPrimitiveLong(x1 + x2)
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveDouble(x2)) => MongoPrimitiveDouble(x1 + x2)
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveLong(x2))   => MongoPrimitiveLong(x1 + x2)
+      case (MongoPrimitiveLong(x1),    MongoPrimitiveBigInt(x2)) => MongoPrimitiveBigInt(x1 + x2)
 
-      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveInt(x2))    => x1 + x2
-      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveDouble(x2)) => x1.doubleValue + x2
-      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveLong(x2))   => x1 + x2
-      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveBigInt(x2)) => x1 + x2
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveInt(x2))    => MongoPrimitiveBigInt(x1 + x2)
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveDouble(x2)) => MongoPrimitiveDouble(x1.doubleValue + x2)
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveLong(x2))   => MongoPrimitiveBigInt(x1 + x2)
+      case (MongoPrimitiveBigInt(x1),    MongoPrimitiveBigInt(x2)) => MongoPrimitiveBigInt(x1 + x2)
 
       case badVals => throw new MongoException("Modifier $inc allowed for numbers only: vals = " + badVals)
     }

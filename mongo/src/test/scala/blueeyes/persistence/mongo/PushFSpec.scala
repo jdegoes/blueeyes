@@ -2,6 +2,7 @@ package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
 import UpdateFieldFunctions._
+import dsl._
 
 class PushFSpec extends Specification{
   "fuse applies push to set update" in {

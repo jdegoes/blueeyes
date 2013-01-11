@@ -140,7 +140,7 @@ object IsoSerialization {
       new ExtractorAux[String :: FT, H :: T] {
         def extract(source: JValue, fields: String :: FT) =
           for {
-            h <- eh.validated(source \ fields.head)
+            h <- eh.validated(source, fields.head)
             t <- et.extract(source, fields.tail)
           } yield h :: t
       }
@@ -152,7 +152,7 @@ object IsoSerialization {
             h <- fields.head.alts.find { alt =>
                   (source \? alt).isDefined
                  }.map { alt => 
-                   eh.validated(source \ alt)
+                   eh.validated(source, alt)
                  }.getOrElse(Failure(Invalid("Missing field")))
             t <- et.extract(source, fields.tail)
           } yield h :: t
@@ -165,7 +165,7 @@ object IsoSerialization {
             h <- fields.head.alts.find { alt =>
                   (source \? alt).isDefined
                  }.map { alt => 
-                   eh.validated(source \ alt)
+                   eh.validated(source, alt)
                  }.getOrElse(Success(fields.head.default))
             t <- et.extract(source, fields.tail)
           } yield h :: t
@@ -203,8 +203,8 @@ object IsoSerialization {
     }
 
   class IsoExtractor[T, F <: HList, L <: HList](fields: F, iso: Iso[T, L], extractor: ExtractorAux[F, L])
-    extends Extractor[T] with ValidatedExtraction[T] {
-      override def validated(source: JValue) =
+    extends Extractor[T] {
+      def validated(source: JValue) =
         for {
           l <- extractor.extract(source, fields)
         } yield iso.from(l)

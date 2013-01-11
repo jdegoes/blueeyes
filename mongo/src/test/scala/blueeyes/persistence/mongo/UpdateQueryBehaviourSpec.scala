@@ -1,10 +1,11 @@
 package blueeyes.persistence.mongo
 
-import org.specs2.mutable.Specification
-import MongoQueryBuilder._
-import org.mockito.Matchers._
 import blueeyes.json._
+import dsl._
+
+import org.specs2.mutable.Specification
 import org.specs2.mock.Mockito
+import org.mockito.Matchers._
 
 class UpdateQueryBehaviourSpec  extends Specification with Mockito{
   private val jObject = JObject(JField("address", JObject( JField("city", JString("London")) :: JField("street", JString("Regents Park Road")) ::  Nil)) :: Nil)

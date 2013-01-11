@@ -1,7 +1,7 @@
 package blueeyes.persistence.mongo
 
+import dsl._
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
 import org.mockito.Matchers._
 import blueeyes.json._
 import blueeyes.json.JPath

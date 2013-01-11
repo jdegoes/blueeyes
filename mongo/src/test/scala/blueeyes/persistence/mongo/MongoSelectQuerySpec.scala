@@ -1,21 +1,21 @@
 package blueeyes.persistence.mongo
 
 import org.specs2.mutable.Specification
-import MongoQueryBuilder._
-import MongoFilterBuilder._
+
+import dsl._
 import MongoFilterOperators._
 import blueeyes.json._
 import blueeyes.json.JPathImplicits._
 import blueeyes.json.JPath
 
-class MongoSelectQuerySpec extends Specification with MongoImplicits{
+class MongoSelectQuerySpec extends Specification {
   private val query = select("foo", "bar").from(MongoCollectionReference("collection"))
 
   "'where' method sets new filter" in {
-    query.where("name".jpath === "Joe") mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
+    query.where(JPath("name") === "Joe") mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", Some(MongoFieldFilter("name", $eq, "Joe"))))
   }
   "'sortBy' method sets new sort" in {
-    query.sortBy("name".jpath << ) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
+    query.sortBy(JPath("name") <<) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", sort = Some(MongoSort(JPath("name"), MongoSortOrderDescending))))
   }
   "'skip' method sets new skip" in {
     query.skip(10) mustEqual (MongoSelectQuery(MongoSelection(Set(JPath("foo"), JPath("bar"))), "collection", None, None, Some(10)))
