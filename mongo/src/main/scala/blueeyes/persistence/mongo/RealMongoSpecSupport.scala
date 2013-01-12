@@ -155,7 +155,7 @@ trait RealMongoSpecSupport extends Specification {
     }
 
     io.except {
-      case t: Throwable => mongoLogger.error("Error during startup", t)
+      case t: Throwable => mongoLogger.error("Error during startup", t); throw t
     }.unsafePerformIO
   }
 
