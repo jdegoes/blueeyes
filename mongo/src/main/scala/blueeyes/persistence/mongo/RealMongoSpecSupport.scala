@@ -160,21 +160,23 @@ trait RealMongoSpecSupport extends Specification {
   }
 
   def shutdown(): Unit = {
-    try {
-      Await.result(mongo.asInstanceOf[RealMongo].close, Timeout(60, TimeUnit.SECONDS).duration)
-    } catch {
-      case t => mongoLogger.warn("Error during BlueEyes mongo shutdown", t)
-    } finally {
-      mongoProcess.foreach { process =>
-        try {
+    IO { 
+      Await.result(mongo.asInstanceOf[RealMongo].close, Timeout(60, TimeUnit.SECONDS).duration) 
+    }.ensuring {
+      IO {
+        mongoProcess.foreach { process =>
           process.destroy()
-        } catch {
-          case t: Throwable => mongoLogger.warn("Error during RealMongoSpecSupport shutdown", t)
-        } finally {
-          dataDir.listFiles.foreach(FileUtils.deleteQuietly(_))
+        }
+      }.ensuring {
+        IO {
+          if (dataDir.isDirectory) {
+            dataDir.listFiles.foreach(FileUtils.deleteQuietly(_))
+          }
         }
       }
-    }
+    }.except {
+      case t: Throwable => mongoLogger.warn("Error during BlueEyes mongo shutdown", t); IO(())
+    }.unsafePerformIO
   }
 
   override def map (fs: => Fragments): Fragments = Step { startup() } ^ fs ^ Step { shutdown() }
