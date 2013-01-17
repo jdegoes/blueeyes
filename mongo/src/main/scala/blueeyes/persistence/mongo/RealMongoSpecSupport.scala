@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 import org.apache.commons.io.FileUtils
 import com.google.common.io.Files
 
-import java.io.File
+import java.io.{File, InputStream, IOException}
 import java.net.{InetSocketAddress, ServerSocket, URL}
 import java.util.concurrent.TimeUnit
 
@@ -27,6 +27,11 @@ trait RealMongoSpecSupport extends Specification {
   private[this] var realMongoImpl: TGMongo = _
 
   lazy val mongoLogger = LoggerFactory.getLogger("blueeyes.persistence.mongo.RealMongoSpecSupport")
+
+  // Calling destroy on a process causes an IOException on the thread that reads its output
+  val processStreamLogger = (in: InputStream) =>
+    try { BasicIO.processFully(s => mongoLogger.debug(s))(in) } catch { case _: IOException => () }
+  val processIO = new ProcessIO(BasicIO.input(connect = false), processStreamLogger, processStreamLogger)
 
   def mongo = mongoImpl
   def realMongo = realMongoImpl
@@ -130,7 +135,7 @@ trait RealMongoSpecSupport extends Specification {
                                                                                       "--nounixsocket", 
                                                                                       "--noauth",
                                                                                       "--noprealloc"))
-            proc.run(ProcessLogger(s => mongoLogger.debug(s)))
+            proc.run(processIO)
           })
 
           mongoStartupPause.foreach { delay =>
