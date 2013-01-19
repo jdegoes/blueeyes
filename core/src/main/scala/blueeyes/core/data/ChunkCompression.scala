@@ -20,12 +20,9 @@ abstract class ChunkCompression(implicit val executor: ExecutionContext) {
       case Left(data) => Left(compress(data))
       case Right(stream) =>
         val inPipe = new PipedInputStream()
-        val outStream = new BufferedOutputStream(new PipedOutputStream(inPipe))
-
         val inChannel = Channels.newChannel(new BufferedInputStream(inPipe))
    
-        writeCompressed(stream, outStream)
-
+        writeCompressed(stream, new PipedOutputStream(inPipe))
         Right(
           StreamT.unfoldM[Future, ByteBuffer, Option[ReadableByteChannel]](Some(inChannel)) { 
             case Some(in) => 
