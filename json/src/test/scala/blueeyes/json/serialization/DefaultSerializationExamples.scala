@@ -29,18 +29,11 @@ object DefaultSerializationExamples extends Specification {
     DoubleExtractor(JString("12.5")) mustEqual 12.5
     BooleanExtractor(JString("true")) mustEqual true
     BooleanExtractor(JString("false")) mustEqual false
-    BooleanExtractor(JString("0")) mustEqual false
-    BooleanExtractor(JString("1")) mustEqual true
   }
   
   "Reals can be extracted from integers" in {
     FloatExtractor(JNum(12)) mustEqual 12.0F
     DoubleExtractor(JNum(12)) mustEqual 12.0
-  }
-  
-  "Booleans can be extracted from integers" in {
-    BooleanExtractor(JNum(0)) mustEqual false
-    BooleanExtractor(JNum(1)) mustEqual true
   }
   
   "Integers can be extracted from reals" in {
