@@ -32,6 +32,8 @@ trait FutureMatchers extends AkkaConversions {
 
   implicit val defaultFutureTimeouts: FutureTimeouts = FutureTimeouts(10, 100L millis)
 
+  def awaited[A](duration: Duration)(matcher: Matcher[A]) = matcher ^^ { (future: Future[A]) => Await.result(future, duration) }
+
   case class whenDelivered[A](matcher: Matcher[A])(implicit timeouts: FutureTimeouts) extends Matcher[Future[A]] with Expectations {
     def apply[B <: Future[A]](expectable: Expectable[B]): MatchResult[B] = {
       val (ok, okMessage, koMessage) = retry(expectable.evaluate.value, timeouts.retries, timeouts.retries)
