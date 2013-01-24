@@ -85,7 +85,7 @@ final class AsyncParser protected[json] (
             newline(index)
             index += 1
 
-          case ' ' | '\t' =>
+          case ' ' | '\t' | '\r' =>
             index += 1
 
           // ok, let's try parsing at this point
