@@ -77,10 +77,10 @@ package object data {
       }
     }
 
-    def force(s: ByteChunk)(implicit exeuctor: ExecutionContext): Future[Either[ByteBuffer, (Vector[ByteBuffer], Int)]] = {
+    def force(s: ByteChunk)(implicit executor: ExecutionContext): Future[Either[ByteBuffer, (Vector[ByteBuffer], Int)]] = {
       s match {
         case Right(stream) =>
-          import blueeyes.bkka.AkkaTypeClasses._
+          implicit val M = new FutureMonad(executor)
           stream.foldLeft((Vector.empty[ByteBuffer], 0)) { 
             case ((acc, size), buffer) => (acc :+ buffer, size + buffer.remaining)
           } map { 
