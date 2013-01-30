@@ -1,6 +1,6 @@
 package blueeyes.persistence.mongo
 
-import com.mongodb.{Mongo => TGMongo}
+import com.mongodb.{Mongo => TGMongo, MongoOptions, ServerAddress}
 
 import org.slf4j.LoggerFactory
 
@@ -35,6 +35,9 @@ trait RealMongoSpecSupport extends Specification {
 
   def mongo = mongoImpl
   def realMongo = realMongoImpl
+
+  /** The maximum number of connections allowed by the server */
+  def maxMongoConns = 500
 
   def mongoStartupPause = Some(10000l)
 
@@ -132,7 +135,9 @@ trait RealMongoSpecSupport extends Specification {
             val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
                                                                                       "--dbpath", dataDir.getCanonicalPath,
                                                                                       "--nojournal", 
-                                                                                      "--nounixsocket", 
+                                                                                      "--nounixsocket",
+                                                                                      "--maxConns", maxMongoConns.toString,
+                                                                                      "--nohttpinterface",
                                                                                       "--noauth",
                                                                                       "--noprealloc"))
             proc.run(processIO)
@@ -151,7 +156,10 @@ trait RealMongoSpecSupport extends Specification {
             startupTries -= 1
           }
 
-          realMongoImpl = new TGMongo("localhost", port)
+          val mongoOptions = new MongoOptions
+          mongoOptions.setConnectionsPerHost(maxMongoConns)
+
+          realMongoImpl = new TGMongo(new ServerAddress("localhost", port), mongoOptions)
           mongoImpl = new RealMongo(realMongo, Timeout(60, TimeUnit.SECONDS), None)
 
           mongoLogger.debug("Mongo started, commencing specs")
