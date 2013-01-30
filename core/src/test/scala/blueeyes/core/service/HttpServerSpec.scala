@@ -17,6 +17,8 @@ import blueeyes.akka_testing.FutureMatchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Outside, Scope}
 
+import  com.weiglewilczek.slf4s._
+
 object TestServer extends HttpServerModule with TestAkkaDefaults {
   import DefaultBijections._
 
@@ -142,4 +144,53 @@ class HttpServerSpec extends Specification with FutureMatchers {
         (s.shutdownCalled must beTrue) 
     }
   }  
+}
+
+
+object FailServer extends HttpServerModule {
+  import DefaultBijections._
+
+  class HttpServer(rootConfig: Configuration, val executionContext: ExecutionContext) 
+      extends HttpServerLike(rootConfig) 
+      with BlueEyesServiceBuilder 
+      with HttpRequestCombinators 
+      with ReflectiveServiceList[ByteChunk] { enclosing =>
+
+    implicit val ctx = executionContext
+    val log = logger
+
+    lazy val testService = service("test", "1.0.7") {
+      context => {
+        startup {
+          sys.error("Error during startup should not hang.")
+          Future("Hello, world, I'm Unreachable!")
+        } ->
+        request { state: String =>
+          path("/dead") {
+            get { request: HttpRequest[ByteChunk] =>
+              akka.dispatch.Promise.failed[HttpResponse[ByteChunk]](new RuntimeException()): Future[HttpResponse[ByteChunk]]
+            }
+          }
+        } ->
+        shutdown { state: String =>
+          Future(())
+        }
+      }
+    }
+  }
+
+  def server(config: Configuration, executor: ExecutionContext): HttpServer = new HttpServer(config, executor)
+}
+
+class FailServerSpec extends Specification with FutureMatchers with TestAkkaDefaults {
+  import TestServer._
+  import DefaultBijections._
+  import akka.util.Duration._
+
+  "FailServer.start" should {
+    "not hang if an exception is thrown in the startup function" in { 
+      val config = Configuration.parse("", BlockFormat)
+      Await.result(FailServer.server(config, defaultFutureDispatch).start.get, 10 seconds) must throwA[RuntimeException]
+    }
+  }
 }
