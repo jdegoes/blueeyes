@@ -1,12 +1,12 @@
 package blueeyes.core.service
 
 import blueeyes.bkka.Stoppable
+import akka.actor.ActorSystem
 import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 import akka.util.Timeout
 
-import blueeyes.bkka.AkkaDefaults
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
 import blueeyes.core.service._
@@ -161,16 +161,15 @@ trait HttpServerMain extends HttpServerModule {
    * It can be useful to replace the default configuration from the {@link HttpServerMain#main} method.
    */
   def run(rootConfiguration: Configuration) = {
-
-    // TODO: This should be made configurable (and drop AkkaDefaults)
-    val executionContext: ExecutionContext = ExecutionContext.defaultExecutionContext(AkkaDefaults.actorSystem)
+    val actorSystem: ActorSystem = ActorSystem(rootConfiguration[String]("blueeyes.actor_system", "blueeyes-actors"))
+    val executionContext: ExecutionContext = ExecutionContext.defaultExecutionContext(actorSystem)
 
     /** Retrieves the logger for the server, which is configured directly from
       * the server's "log" configuration block.
       */
     val log: Logger = Logger("blueeyes.server")
     server(rootConfiguration, executionContext).start map {
-      _.onSuccess { case (runningState, stoppable) =>
+      _ onSuccess { case (runningState, stoppable) =>
         log.info("Services started.")
         Runtime.getRuntime.addShutdownHook { new Thread {
           override def start() {
@@ -184,8 +183,14 @@ trait HttpServerMain extends HttpServerModule {
             }
 
             doneSignal.await()
+            actorSystem.shutdown()
           }
         }}
+      } onFailure {
+        case ex =>
+          System.err.println("Startup of BlueEyes failed due to an unhandled exception.")
+          ex.printStackTrace(System.err)
+          actorSystem.shutdown()
       }
     }
   }
