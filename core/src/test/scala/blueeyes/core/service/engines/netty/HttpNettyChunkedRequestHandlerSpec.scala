@@ -7,7 +7,7 @@ import akka.dispatch.Await
 
 import blueeyes.bkka._
 import blueeyes.core.data._
-import blueeyes.core.http.HttpRequest
+import blueeyes.core.http.{HttpException, HttpRequest}
 
 import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
 import org.jboss.netty.channel._
@@ -87,6 +87,21 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
+    }
+
+    "Invalid URLs thrown encapsulated exceptions" in {
+      val invalidEvent = mock[MessageEvent]
+      val invalidNettyRequest = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_0, NettyHttpMethod.GET, "/bar/1/adCode.html?b=%1")
+
+      invalidEvent.getRemoteAddress() returns remoteAddress
+      invalidEvent.getChannel() returns channel
+      invalidEvent.getMessage() returns invalidNettyRequest
+
+      val context       = mock[ChannelHandlerContext]
+      context.getChannel() returns channel
+      nettyRequest.setChunked(false)
+
+      handler.messageReceived(context, invalidEvent) must throwA[HttpException]("URLDecoder: Incomplete trailing escape \\(%\\) pattern")
     }
   }
 
