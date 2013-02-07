@@ -3,7 +3,7 @@ package engines.netty
 
 import blueeyes.bkka._
 import blueeyes.core.data._
-import blueeyes.core.http.HttpRequest
+import blueeyes.core.http.{HttpStatusCodes, HttpException, HttpRequest}
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
@@ -60,7 +60,8 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
           }
         }
 
-        Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
+        try Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
+        catch { case ex: IllegalArgumentException => throw HttpException(HttpStatusCodes.BadRequest, ex) }
 
       case chunk: NettyChunk =>
         val current = chain
