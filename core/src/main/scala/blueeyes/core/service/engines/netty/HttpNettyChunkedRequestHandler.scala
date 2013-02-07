@@ -3,7 +3,7 @@ package engines.netty
 
 import blueeyes.bkka._
 import blueeyes.core.data._
-import blueeyes.core.http.HttpRequest
+import blueeyes.core.http.{HttpStatusCodes, HttpException, HttpRequest}
 
 import akka.dispatch.Future
 import akka.dispatch.Promise
@@ -36,7 +36,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     event.getMessage match {
-      case nettyRequest: NettyRequest => 
+      case nettyRequest: NettyRequest =>
         if (is100ContinueExpected(nettyRequest)) Channels.write(ctx, Channels.succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
         val httpRequestBuilder = fromNettyRequest(nettyRequest, event.getRemoteAddress)
@@ -54,15 +54,16 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
           Some(Right(StreamT.unfoldM[Future, ByteBuffer, Chain](head) { _.promise }))
         } else {
           if (nettyContent.readable()) {
-            Some(Left(nettyContent.toByteBuffer)) 
+            Some(Left(nettyContent.toByteBuffer))
           } else {
             None
           }
         }
 
-        Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
+        try Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
+        catch { case ex: IllegalArgumentException => throw HttpException(HttpStatusCodes.BadRequest, ex) }
 
-      case chunk: NettyChunk =>  
+      case chunk: NettyChunk =>
         val current = chain
         chain = if (chunk.isLast) Chain.complete else Chain.incomplete
         current.promise.success(Some((chunk.getContent.toByteBuffer, chain)))
