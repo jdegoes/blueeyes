@@ -46,9 +46,12 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val context       = mock[ChannelHandlerContext]
       context.getChannel() returns channel
       nettyRequest.setChunked(false)
+
       handler.messageReceived(context, event)
 
-      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, fromNettyRequest(nettyRequest, remoteAddress)(None), remoteAddress))
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(None)
+
+      there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
 
     "sends request and chunk when request is chunked and there is only one chunk" in {
@@ -60,7 +63,9 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(Right(ByteBuffer.wrap(chunkData) :: StreamT.empty[Future, ByteBuffer])))
+      val chunk: ByteChunk = Right(ByteBuffer.wrap(chunkData) :: StreamT.empty[Future, ByteBuffer])
+      val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
+
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
     }
 
@@ -68,8 +73,8 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       val context       = mock[ChannelHandlerContext]
       context.getChannel() returns channel
       nettyRequest.setChunked(true)
-
       httpChunk.isLast() returns false
+
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
@@ -107,7 +112,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       val b1 = anotherMessage.copy(content = None) == message.copy(content = None)
 
-      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList) == 
+      val b2 = message.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList) ==
                anotherMessage.content.map(c => Await.result(ByteChunk.forceByteArray(c), 10 seconds).toList)
 
       val b3 = anotherEvent.getRemoteAddress == remoteAddress

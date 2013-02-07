@@ -36,7 +36,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     event.getMessage match {
-      case nettyRequest: NettyRequest => 
+      case nettyRequest: NettyRequest =>
         if (is100ContinueExpected(nettyRequest)) Channels.write(ctx, Channels.succeededFuture(ctx.getChannel), CONTINUE.duplicate())
 
         val httpRequestBuilder = fromNettyRequest(nettyRequest, event.getRemoteAddress)
@@ -54,7 +54,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
           Some(Right(StreamT.unfoldM[Future, ByteBuffer, Chain](head) { _.promise }))
         } else {
           if (nettyContent.readable()) {
-            Some(Left(nettyContent.toByteBuffer)) 
+            Some(Left(nettyContent.toByteBuffer))
           } else {
             None
           }
@@ -62,7 +62,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
 
         Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
 
-      case chunk: NettyChunk =>  
+      case chunk: NettyChunk =>
         val current = chain
         chain = if (chunk.isLast) Chain.complete else Chain.incomplete
         current.promise.success(Some((chunk.getContent.toByteBuffer, chain)))

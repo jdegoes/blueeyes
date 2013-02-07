@@ -15,27 +15,27 @@ import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
 
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.channel.{ 
-  SimpleChannelUpstreamHandler, 
-  MessageEvent, 
-  Channel, 
-  ChannelFutureListener, 
-  ChannelHandler, 
-  ChannelHandlerContext, 
-  ChannelStateEvent, 
-  ExceptionEvent 
+import org.jboss.netty.channel.{
+  SimpleChannelUpstreamHandler,
+  MessageEvent,
+  Channel,
+  ChannelFutureListener,
+  ChannelHandler,
+  ChannelHandlerContext,
+  ChannelStateEvent,
+  ExceptionEvent
 }
 import org.jboss.netty.handler.codec.http.{
-  QueryStringDecoder, 
-  DefaultHttpChunk, 
-  DefaultHttpChunkTrailer, 
-  DefaultHttpResponse, 
+  QueryStringDecoder,
+  DefaultHttpChunk,
+  DefaultHttpChunkTrailer,
+  DefaultHttpResponse,
   HttpChunk,
-  HttpMethod => NettyHttpMethod, 
-  HttpVersion => NettyHttpVersion, 
-  HttpHeaders => NettyHttpHeaders, 
+  HttpMethod => NettyHttpMethod,
+  HttpVersion => NettyHttpVersion,
+  HttpHeaders => NettyHttpHeaders,
   HttpRequest => NettyHttpRequest,
-  HttpResponse => NettyHttpResponse, 
+  HttpResponse => NettyHttpResponse,
   HttpResponseStatus
 }
 import org.jboss.netty.handler.codec.http.HttpHeaders._
@@ -71,7 +71,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
           writeResponse(request, event.getChannel, response)
         }
 
-      case Failure(notServed) => 
+      case Failure(notServed) =>
         // FIXME: ???
     }
   }
@@ -142,13 +142,13 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
 private[engines] class StreamChunkedInput(queue: BlockingQueue[Option[HttpChunk]], channel: Channel) extends ChunkedInput {
   override def hasNextChunk() = {
-    val head = queue.peek 
+    val head = queue.peek
     (head != None && head != null)
   }
 
   override def nextChunk() = {
     queue.poll() match {
-      case None | null => null 
+      case None | null => null
       case Some(data) => data
     }
   }
@@ -163,19 +163,19 @@ private[engines] class StreamChunkedInput(queue: BlockingQueue[Option[HttpChunk]
 object StreamChunkedInput extends Logging {
   def apply(stream: StreamT[Future, ByteBuffer], channel: Channel, maxQueueSize: Int = 1)(implicit M: Monad[Future]): ChunkedInput = {
     def advance(queue: BlockingQueue[Option[HttpChunk]], stream: StreamT[Future, ByteBuffer]): Future[Unit] = {
-      stream.uncons flatMap { 
-        case Some((buffer, tail)) => 
+      stream.uncons flatMap {
+        case Some((buffer, tail)) =>
           queue.put(Some(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(buffer))))
           channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
           advance(queue, tail)
 
         case None =>
-          { 
+          {
             queue.put(Some(new DefaultHttpChunkTrailer))
-            queue.put(None) 
+            queue.put(None)
             channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
           }.point[Future]
-      } onFailure { 
+      } onFailure {
         case ex =>
           logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
           queue.put(None)
@@ -184,7 +184,7 @@ object StreamChunkedInput extends Logging {
     }
 
     val queue = new LinkedBlockingQueue[Option[HttpChunk]](maxQueueSize)
-    advance(queue, stream).onSuccess { 
+    advance(queue, stream).onSuccess {
       case _ => logger.debug("Response stream fully consumed by Netty.")
     }
 
