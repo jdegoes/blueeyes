@@ -105,8 +105,8 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
     e.getCause match {
       case HttpException(code, reason) =>
         writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Some(reason)))
-      case _ =>
-        writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError))
+      case ex =>
+        writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Some(ex.getMessage())))
     }
   }
 
