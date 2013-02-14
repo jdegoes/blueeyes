@@ -60,14 +60,14 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val scalazVersion = "7.0-precog-SNAPSHOT"
+  val scalazVersion = "7.0-precog-M2"
 
   val commonSettings = Seq(
     scalaVersion := "2.9.2",
 
     crossScalaVersions := Seq("2.9.2"),
 
-    version := "1.0.0-SNAPSHOT",
+    version := "1.0.0-M7",
 
     organization := "com.reportgrid",
 
