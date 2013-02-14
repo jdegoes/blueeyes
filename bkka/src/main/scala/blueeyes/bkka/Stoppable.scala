@@ -36,9 +36,14 @@ sealed trait Stoppable { self =>
   protected def stop: Future[Any]
   def dependents: List[Stoppable]
 
-  def append(other: Stoppable) = new Stoppable {
+  final def append(other: Stoppable) = new Stoppable {
     protected def stop = self.stop zip other.stop
     def dependents = self.dependents ++ other.dependents
+  }
+
+  final def parent(other: Stoppable) = new Stoppable {
+    protected def stop = self.stop
+    def dependents = other :: self.dependents
   }
 }
 
@@ -88,7 +93,6 @@ object Stoppable extends Logging {
         else {
           val (xs, remainder) = q.dequeue
           Future.sequence(xs.map(s => Future(Await.result(s.stop, timeout.duration)))).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
-                 //Future.sequence(xs.map(_.stop)).flatMap(r => _stop(remainder ++ xs.map(_.dependents)).map(r ::: _))
         }
       }
       
@@ -97,7 +101,6 @@ object Stoppable extends Logging {
   }
 
   implicit def stoppableStop(implicit ctx: ExecutionContext): Stop[Stoppable]  = stoppableStop(Timeout.never)
-
 
   def stop(stoppable: Stoppable, duration: Duration = Duration.Inf)(implicit ctx: ExecutionContext) = 
     stoppableStop(duration).stop(stoppable)
