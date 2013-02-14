@@ -17,10 +17,9 @@ private[json] trait SyncParser extends Parser {
     var j = i
     while (!atEof(j)) {
       (at(j): @switch) match {
-        case ' ' => j += 1
-        case '\t' => j += 1
         case '\n' => newline(j); j += 1
-        case _ => die(j, "expected whitespace")
+        case ' ' | '\t' | '\r' => j += 1
+        case _ => die(j, "expected whitespace or eof")
       }
     }
     if (!atEof(j)) die(j, "expected eof")
@@ -42,7 +41,7 @@ private[json] trait SyncParser extends Parser {
     while (!atEof(i)) {
       (at(i): @switch) match {
         case '\n' => newline(i); i += 1
-        case ' ' | '\t' => i += 1
+        case ' ' | '\t' | '\r' => i += 1 
         case _ =>
           val (value, j) = parse(i)
           results.append(value)
