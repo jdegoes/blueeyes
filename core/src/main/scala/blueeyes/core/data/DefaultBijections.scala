@@ -95,16 +95,6 @@ trait DefaultBijections {
   }
 
   implicit def chunkToFutureJValue(implicit executor: ExecutionContext) = futureJValueToChunk.inverse
-
-  /// XML Bijections ///
-  /*
-  implicit val XMLToByteArray = new Bijection[NodeSeq, Array[Byte]] {
-    def apply(s: NodeSeq)       = s.toString.getBytes("UTF-8")
-    def unapply(t: Array[Byte]) = XML.loadString(new String(t, "UTF-8"))
-  }
-
-  implicit val ByteArrayToXML = XMLToByteArray.inverse
-  */
 }
 
 object DefaultBijections extends DefaultBijections

@@ -90,37 +90,21 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
 
     val handler = new IHttpResponseHandler() {
       def onResponse(response: IHttpResponse) {
-        if(response.getStatus >= 400) {
-          val statusCode: HttpStatusCode = response.getStatus
-          val reason: String = Option(response.getReason).getOrElse("Unknown error")
-
-          statusCode match {
-            case failureCode: HttpFailure => promise.failure(HttpException(failureCode, reason))
-            case _ => promise.failure(HttpException(HttpStatusCodes.BadRequest, reason))
-          }
-        } else {
-          val headers = response.getHeaderNameSet.asScala.foldLeft(Map[String, String]()) { 
-            (acc, name) => acc + (name -> response.getHeader(name))
-          }
-
-          val isChunked = headers.exists {
-            case (key, value) => 
-              key.equalsIgnoreCase("Transfer-Encoding") && value.equalsIgnoreCase("chunked")
-          }
-
-          val data: Option[ByteChunk] = if (isChunked) readChunked(response) else readNotChunked(response)
-          promise.success(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
+        val headers = response.getHeaderNameSet.asScala.foldLeft(Map[String, String]()) { 
+          (acc, name) => acc + (name -> response.getHeader(name))
         }
+
+        val isChunked = headers.exists {
+          case (key, value) => 
+            key.equalsIgnoreCase("Transfer-Encoding") && value.equalsIgnoreCase("chunked")
+        }
+
+        val data: Option[ByteChunk] = if (isChunked) readChunked(response) else readNotChunked(response)
+        promise.success(HttpResponse[ByteChunk](status = HttpStatus(response.getStatus), content = data, headers = headers))
       }
 
       def onException(e: IOException) {
-        val httpStatus = e match {
-          case _:java.net.ConnectException => HttpStatusCodes.ServiceUnavailable
-          case _:java.net.SocketTimeoutException => HttpStatusCodes.ServiceUnavailable
-          case _ => HttpStatusCodes.InternalServerError
-        }
-
-        promise.failure(HttpException(httpStatus, e))
+        promise.failure(e)
       }
     }
 

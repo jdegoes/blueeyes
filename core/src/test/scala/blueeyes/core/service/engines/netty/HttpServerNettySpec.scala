@@ -107,20 +107,20 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
     }
 
     "return NotFound when accessing a nonexistent URI" in {
-      Await.result(client.post("/foo/foo/adCode.html")("foo").failed, duration) must beLike { 
-        case HttpException(failure, _) => failure must_== NotFound 
+      Await.result(client.post("/foo/foo/adCode.html")("foo"), duration) must beLike { 
+        case HttpResponse(status, _, content, _) => status.code must_== NotFound
       }
     }
 
     "return InternalServerError when handling request crashes" in {
-      Await.result(client.get("/error").failed, duration) must beLike { 
-        case HttpException(failure, _) => failure must_== InternalServerError 
+      Await.result(client.get("/error"), duration) must beLike { 
+        case HttpResponse(status, _, content, _) => status.code must_== InternalServerError
       }
     }
 
     "return Http error when handling request throws HttpException" in {
-      Await.result(client.get("/http/error").failed, duration) must beLike { 
-        case HttpException(failure, _) => failure must_== BadRequest 
+      Await.result(client.get("/http/error"), duration) must beLike { 
+        case HttpResponse(status, _, content, _) => status.code must_== BadRequest 
       }
     }
 
