@@ -1,12 +1,14 @@
 package blueeyes.core.service
 
 import akka.dispatch.Future
+import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 
 import blueeyes.core.data.ByteChunk
 import blueeyes.core.http._
 import blueeyes.core.service._
 import engines.HttpClientXLightWeb
+import HttpStatusCodes._
 
 import scalaz.{Failure, Success}
 import scalaz.Validation._
@@ -14,9 +16,6 @@ import blueeyes.Environment
 
 trait ConfigurableHttpClient {
   implicit def executionContext: ExecutionContext
-
-  private lazy val InternalServerError = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError))
-  private lazy val NotFound            = Future(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound)))
 
   lazy implicit val httpClient: HttpClientByteChunk = {
     val isMock = sys.props.getOrElse(Environment.MockSwitch, "false").toBoolean
@@ -30,18 +29,23 @@ trait ConfigurableHttpClient {
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
       case Success(rawFuture) => rawFuture recover { case throwable => convertErrorToResponse(throwable) }
-      case Failure(DispatchError(throwable)) => Future(convertErrorToResponse(throwable))
-      case failure => NotFound
+      case Failure(DispatchError(throwable)) => Promise.successful(convertErrorToResponse(throwable))
+      case failure => 
+        val message = "MockClient received NotFound for request " + r
+        Promise.successful(HttpResponse[ByteChunk](HttpStatus(NotFound, message)))
     }
   }
 
   private def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
     case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
-    case e => HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
+    case e => HttpResponse[ByteChunk](HttpStatus(InternalServerError, Option(e.getMessage).getOrElse("")))
   }
 
   protected def mockServer: AsyncHttpService[ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
-    def service = (request: HttpRequest[ByteChunk]) => success(Future(HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.NotFound))))
+    def service = (request: HttpRequest[ByteChunk]) => {
+      success(Future(HttpResponse[ByteChunk](HttpStatus(NotFound, "Mock server handles no requests."))))
+    }
+
     val metadata = None
   }
 }

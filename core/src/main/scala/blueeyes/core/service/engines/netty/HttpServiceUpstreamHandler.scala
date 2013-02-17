@@ -79,7 +79,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
       case Failure(Inapplicable(_)) =>
         writeResponse(request, ctx.getChannel,
-          HttpResponse(status = NotFound, content = Some("No service was found to be able to handle your request.")))
+          HttpResponse(status = NotFound, content = Some("No service was found to be able to handle your request: " + request)))
     }
   }
 

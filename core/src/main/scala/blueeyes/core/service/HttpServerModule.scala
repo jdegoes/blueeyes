@@ -16,6 +16,7 @@ import blueeyes.util.CommandLineArguments
 import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
 import java.net.InetAddress
+import java.nio.ByteBuffer
 
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
@@ -27,6 +28,7 @@ import scalaz.Validation._
 import scalaz.std.function._
 import scalaz.syntax.validation._
 import scalaz.syntax.arrow._
+import scalaz.syntax.show._
 
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
@@ -127,7 +129,11 @@ abstract class HttpServerLike(val rootConfig: Configuration) extends HttpServerC
       rawValidation match {
         case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(error) }))
         case Failure(DispatchError(throwable)) => success(Future(convertErrorToResponse(throwable)))
-        case failure => success(Promise.successful(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))))
+        case failure => 
+          val message = "No handler could be found for your request: " + r.show
+          success(
+            Promise.successful(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound, message)))
+          )
       }
     }
 

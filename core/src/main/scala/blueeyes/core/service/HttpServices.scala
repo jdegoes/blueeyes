@@ -90,7 +90,10 @@ class HttpHandlerService[A, B, C](h: HttpServiceHandler[B, C], f: A => B) extend
 }
 
 class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends CustomHttpService[A, B] {
-  val service = (r: HttpRequest[A]) => DispatchError(onFailure(r)).failure[B]
+  val service = (r: HttpRequest[A]) => {
+    val (errorCode, message) = onFailure(r)
+    DispatchError(errorCode, message + " [" + r + "]").failure[B]
+  }
 
   val metadata = None
 }
@@ -136,10 +139,12 @@ class CommitService[A, B](val delegate: HttpService[A, B]) extends DelegatingSer
       val metadata: Vector[Metadata] = (if (longest.isEmpty) paths.take(1) else longest) flatMap {
         _.foldLeft[Option[Metadata]](None)((a, m) => a.map(_ |+| m).orElse(Some(m)))
       }
+
+      val message = "No service was found to be able to handle your request (" + r + "). \n" +
+                    "Were you trying to access (one of) the following? \n" + 
+                    metadata.map(SimpleStringPrinter.printFormatted[Metadata]).mkString("\n")
       
-      DispatchError(NotFound, "No service was found to be able to handle your request. Were you trying to access (one of) the following? \n" + 
-                    metadata.map(SimpleStringPrinter.printFormatted[Metadata]).mkString("\n")).failure
-      
+      DispatchError(NotFound, message).failure    
     case other => other
   }
 
