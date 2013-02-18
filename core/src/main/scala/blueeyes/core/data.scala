@@ -16,11 +16,26 @@ package object data {
   type ByteChunk = Chunk[ByteBuffer]
 
   object Chunk {
-    implicit def pointed(implicit M: Monad[Future]): Pointed[Chunk] = new Pointed[Chunk] {
+    implicit def tc(implicit M: Monad[Future]): Applicative[Chunk] = new Applicative[Chunk] {
       def point[A](a: => A) = Left(a)
-      def map[A, B](c: Chunk[A])(f: A => B): Chunk[B] = c match {
+      override def map[A, B](c: Chunk[A])(f: A => B): Chunk[B] = c match {
         case Left(a) => Left(f(a))
         case Right(stream) => Right(stream.map(f))
+      }
+
+      def ap[A, B](c: => Chunk[A])(f: => Chunk[A => B]) = {
+        c match {
+          case Left(a) => 
+            f match {
+              case Left(f0) => Left(f0(a))
+              case Right(fx) => Right(fx.map(_(a)))
+            }
+          case Right(stream) => 
+            f match {
+              case Left(f0) => Right(stream map f0)
+              case Right(fx) => Right(for (a <- stream; f0 <- fx) yield f0(a))
+            }
+        }
       }
     }
   }
