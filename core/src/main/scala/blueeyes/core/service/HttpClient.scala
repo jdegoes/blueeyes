@@ -59,7 +59,7 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
       host = parsed.host.orElse(request.uri.host),
       port = parsed.port.orElse(request.uri.port),
       path = sep(parsed.path, request.uri.path, "/") map { _.replaceAll("/+", "/") },
-      query = sep(parsed.query, request.uri.query, "&") map { _.replaceAll("&+", "/") },
+      query = sep(parsed.query, request.uri.query, "&") map { _.replaceAll("&+", "&") },
       fragment = parsed.fragment.orElse(request.uri.fragment)
     )
     request.copy(uri = uri0, subpath = uri0.path.getOrElse(""))
