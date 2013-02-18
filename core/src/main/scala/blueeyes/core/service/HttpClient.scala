@@ -6,6 +6,11 @@ import blueeyes.core.data._
 import java.net.InetAddress
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
+import scalaz._
+import scalaz.std.option._
+import scalaz.std.string._
+import scalaz.syntax.semigroup._
+
 trait HttpClient[A] extends HttpClientHandler[A] { self =>
   def get[B](path: String)(implicit transcoder: AsyncHttpTranscoder[B, A]) = method[B](HttpMethods.GET, path)
 
@@ -39,9 +44,24 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
     request.withUriChanges(port = Some(port)) 
   }
 
+  // This is extremely dodgy. Basically, the existing semantics have been that the path combinator
+  // is an all-singing, all-dancing utility for building URIs. This is at least very slightly more
+  // sane than what was here before.
   def path(path: String) = buildClient { request =>
-    val subpath0 = request.uri.path.map(p => path + p).getOrElse(path)
-    val uri0 = URI(request.uri.copy(path = Some(subpath0)).toString) // round trip through string to get the subpath
+    def sep(o1: Option[String], o2: Option[String], s: String) = {
+      o1 |+| Apply[Option].apply2(o1, o2) { (_, _) => s } |+| o2
+    }
+
+    val parsed = URI(path)
+    val uri0 = request.uri.copy(
+      scheme = parsed.scheme.orElse(request.uri.scheme),
+      userInfo = parsed.userInfo.orElse(request.uri.userInfo),
+      host = parsed.host.orElse(request.uri.host),
+      port = parsed.port.orElse(request.uri.port),
+      path = sep(parsed.path, request.uri.path, "/") map { _.replaceAll("/+", "/") },
+      query = sep(parsed.query, request.uri.query, "&") map { _.replaceAll("&+", "/") },
+      fragment = parsed.fragment.orElse(request.uri.fragment)
+    )
     request.copy(uri = uri0, subpath = uri0.path.getOrElse(""))
   }
 

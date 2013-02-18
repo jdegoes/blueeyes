@@ -68,6 +68,17 @@ class HttpClientSpec extends Specification with TestAkkaDefaults with FutureMatc
     }
   }
 
+  "appends paths from path and get" in {  
+    val client = mockClient
+    client.protocol("http").host("google.com").port(80).path("/foo").path("/").get("/images/") must awaited(1.second) {
+      beLike {
+        case HttpResponse(HttpStatus(OK, _), _, _, _) => client.request must beLike {
+          case Some(request) => request.uri must_== URI("http://google.com:80/foo/images/")
+        }
+      }
+    }
+  }
+
   "sets content" in {  
     makeTest(initialRequest.copy(content = Some("1"))) {
       client => client.content("1".getBytes)
