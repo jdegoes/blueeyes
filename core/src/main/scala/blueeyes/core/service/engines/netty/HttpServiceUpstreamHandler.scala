@@ -175,7 +175,7 @@ object StreamChunkedInput extends Logging {
             queue.put(None) 
             channel.getPipeline.get(classOf[ChunkedWriteHandler]).resumeTransfer()
           }.point[Future]
-      } onFailure { 
+      } recover {
         case ex =>
           logger.error("An error was encountered retrieving the next chunk of data: " + ex.getMessage, ex)
           queue.put(None)
