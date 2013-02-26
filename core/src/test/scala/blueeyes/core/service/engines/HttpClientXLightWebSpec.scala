@@ -64,15 +64,11 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
 
   "HttpClientXLightWeb" should {
     "Support GET to invalid server should return http error" in {
-      val result = httpClient.get[String]("http://127.0.0.1:666/foo").failed
-      result must whenDelivered {
-        haveClass[HttpException]
-      }
-    }
-
-    "Support GET to invalid URI/404 should cancel Future" in {
-      httpClient.get[String](uri + "/bogus").failed must whenDelivered {
-        beLike { case HttpException(NotFound, _) => ok }
+      httpClient.get[String]("http://127.0.0.1:666/foo").failed must awaited(duration) {
+        beLike {
+          case ex: java.net.ConnectException => ok
+          case ex: java.net.SocketTimeoutException => ok
+        }
       }
     }
 
@@ -83,8 +79,10 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
     "Support GET requests with status Not Found" in {
-      httpClient.get[String](uri + "/bogus").failed must whenDelivered {
-        beLike { case HttpException(NotFound, _) => ok }
+      httpClient.get[String](uri + "/bogus") must awaited(duration) {
+        beLike {
+          case HttpResponse(status, _, content, _) => status.code must_== NotFound
+        }
       }
     }
 

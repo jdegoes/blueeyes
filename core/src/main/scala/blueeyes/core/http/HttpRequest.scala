@@ -1,9 +1,11 @@
 package blueeyes.core.http
 
 import blueeyes.core.http.HttpVersions._
+import blueeyes.json._
 import HttpHeaders._
 
 import java.net.InetAddress
+import scalaz._
 
 sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameters: Map[Symbol, String], headers: HttpHeaders, content: Option[T], remoteHost: Option[InetAddress], version: HttpVersion, subpath: String) {
 
@@ -27,5 +29,18 @@ object HttpRequest{
     val allParameters = parameters ++ query.map(v => blueeyes.util.QueryParser.parseQuery(v)).getOrElse(Map[Symbol, String]())
 
     HttpRequest[T](method, uri, allParameters, headers, content, remoteHost, version, subpath)
+  }
+
+  implicit def show[A]: Show[HttpRequest[A]] = new Show[HttpRequest[A]] {
+    override def shows(r: HttpRequest[A]) = {
+      JObject(
+        "method" -> JString(r.method.toString),
+        "uri" -> JString(r.uri.toString),
+        "params" -> JObject(r.parameters map { case (k, v) => k.toString -> JString(v) } toMap),
+        "headers" -> JString(r.headers.toString),
+        "remoteHost" -> JString(r.remoteHost.toString),
+        "subpath" -> JString(r.subpath)
+      ).renderPretty
+    }
   }
 }

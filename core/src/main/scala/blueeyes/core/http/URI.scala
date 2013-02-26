@@ -10,6 +10,7 @@ case class URI(scheme: Option[String], userInfo: Option[String], host: Option[St
     case x :: xs => Some((x :: xs).map(_.getOrElse("")).mkString(""))
     case Nil => None
   }
+
   val isAbsolute = scheme.map(v => true).getOrElse(false)
 
   def encode = self.copy(path = path.map(pathTranscoder.encode(_)), query = query.map(queryTranscoder.encode(_)))
@@ -18,7 +19,7 @@ case class URI(scheme: Option[String], userInfo: Option[String], host: Option[St
   override def toString = _toString
 }
 
-trait URIGrammar extends RegexParsers{
+trait URIGrammar extends RegexParsers {
   def schemeParser   = (regex("""([a-zA-Z])([a-zA-Z\+\d\.-]+)""".r) <~ ":")?
 
   def userInfoParser = (regex("""[^\:@]+(:[^\:@]+)?""".r) <~ "@")?
@@ -27,7 +28,15 @@ trait URIGrammar extends RegexParsers{
 
   def portParser     = (":" ~> (regex("""[\d]+""".r) ^^ {case v => v.toInt}) )?
 
-  def authorityParser = (("//" ~> userInfoParser ~ hostParser ~ portParser) ^^ {case  userInfo ~ host ~ port => URI(None, userInfo, host, port, None, None, None)} | userInfoParser ^^ {case  userInfo => URI(None, userInfo, None, None, None, None, None)})?
+  def authorityParser1 = ("//" ~> userInfoParser ~ hostParser ~ portParser) ^^ {
+    case userInfo ~ host ~ port => URI(None, userInfo, host, port, None, None, None)
+  }
+
+  def authorityParser2 = userInfoParser ^^ {
+    case userInfo => URI(None, userInfo, None, None, None, None, None)
+  }
+
+  def authorityParser =  (authorityParser1 | authorityParser2)?
 
   def pathParser     = (regex("""[^?#]+""".r))?
 
@@ -35,12 +44,16 @@ trait URIGrammar extends RegexParsers{
 
   def fragmentParser = ("#" ~> regex(""".+""".r))?
 
-  def parser = schemeParser ~ authorityParser ~ pathParser ~ queryParser ~ fragmentParser ^^ {case scheme ~ authority ~ path ~ query ~ fragment => URI(scheme, authority.flatMap(_.userInfo), authority.flatMap(_.host), authority.flatMap(_.port), path, query, fragment)}
+  def parser = schemeParser ~ authorityParser ~ pathParser ~ queryParser ~ fragmentParser ^^ {
+    case scheme ~ authority ~ path ~ query ~ fragment => 
+      URI(scheme, authority.flatMap(_.userInfo), authority.flatMap(_.host), authority.flatMap(_.port), path, query, fragment)
+  }
 }
 
 import scala.util.parsing.input._
-object URI extends URIGrammar{
+object URI extends URIGrammar {
   implicit def stringToUri(uri: String) = URI(uri)
+
   def apply(s: String): URI = parser.apply(new CharSequenceReader(s.trim)) match {
     case Success(result, _) => result
 

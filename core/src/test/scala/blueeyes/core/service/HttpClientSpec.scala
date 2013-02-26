@@ -3,8 +3,10 @@ package blueeyes.core.service
 import org.specs2.mutable.Specification
 
 import blueeyes.bkka._
+import blueeyes.akka_testing._
 import blueeyes.core.http._
 import blueeyes.core.data._
+import HttpStatusCodes._
 import DefaultBijections._
 
 import akka.dispatch.Future
@@ -14,7 +16,7 @@ import java.nio.ByteBuffer
 
 import org.jboss.netty.handler.codec.http.CookieEncoder
 
-class HttpClientSpec extends Specification with TestAkkaDefaults {
+class HttpClientSpec extends Specification with TestAkkaDefaults with FutureMatchers {
 
   override def is = args(sequential = true) ^ super.is
 
@@ -29,6 +31,12 @@ class HttpClientSpec extends Specification with TestAkkaDefaults {
     }
 
     def isDefinedAt(x: HttpRequest[String]) = true
+  }
+
+  private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]) = {
+    builder(mockClient).custom[String](method, uri.toString)
+
+    mockClient.request.get mustEqual(expectation)
   }
 
   "sets protocol, host, port and path to request" in {  
@@ -49,29 +57,76 @@ class HttpClientSpec extends Specification with TestAkkaDefaults {
     } 
   }
 
-  "sets content" in{  makeTest(initialRequest.copy(content = Some("1"))) {client => client.content("1".getBytes)} }
+  "sets path on get" in {  
+    val client = mockClient
+    client.path("http://google.com").get("/images") must awaited(1.second) {
+      beLike {
+        case HttpResponse(HttpStatus(OK, _), _, _, _) => client.request must beLike {
+          case Some(request) => request.uri must_== URI("http://google.com/images")
+        }
+      }
+    }
+  }
 
-  "sets cookies" in{
+  "appends paths from path and get" in {  
+    val client = mockClient
+    client.protocol("http").host("google.com").port(80).path("/foo").path("/").get("/images/") must awaited(1.second) {
+      beLike {
+        case HttpResponse(HttpStatus(OK, _), _, _, _) => client.request must beLike {
+          case Some(request) => request.uri must_== URI("http://google.com:80/foo/images/")
+        }
+      }
+    }
+  }
+
+  "sets content" in {  
+    makeTest(initialRequest.copy(content = Some("1"))) {
+      client => client.content("1".getBytes)
+    }
+  }
+
+  "sets cookies" in {
     val cookieEncoder = new CookieEncoder(false)
     cookieEncoder.addCookie("foo", "bar")
 
-    makeTest(initialRequest.copy(headers = initialRequest.headers + Tuple2("Cookie", cookieEncoder.encode()))) {client => client.cookies(("foo", "bar"))}
+    makeTest(initialRequest.copy(headers = initialRequest.headers + Tuple2("Cookie", cookieEncoder.encode()))) {
+      client => client.cookies(("foo", "bar"))
+    }
   }
 
-  "sets parameters request" in{  makeTest(initialRequest.copy(parameters = Map[Symbol, String]('foo -> "bar"))) {client => client.parameters('foo -> "bar")} }
+  "sets parameters request" in {  
+    makeTest(initialRequest.copy(parameters = Map[Symbol, String]('foo -> "bar"))) {
+      client => client.parameters('foo -> "bar")
+    } 
+  }
 
-  "sets query" in{  makeTest(HttpRequest[String](HttpMethods.GET, initialRequest.uri + "?foo=bar", Map('foo -> "bar"))) {client => client.query("foo", "bar")} }
+  "sets query" in {  
+    makeTest(HttpRequest[String](HttpMethods.GET, initialRequest.uri + "?foo=bar", Map('foo -> "bar"))) {
+      client => client.query("foo", "bar")
+    } 
+  }
 
-  "sets http version" in{ makeTest(initialRequest.copy(version = HttpVersions.`HTTP/1.0`)) {client => client.version(HttpVersions.`HTTP/1.0`)} }
+  "sets http version" in { 
+    makeTest(initialRequest.copy(version = HttpVersions.`HTTP/1.0`)) {
+      client => client.version(HttpVersions.`HTTP/1.0`)
+    } 
+  }
 
-  "sets headers request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("Content-Length" -> "1"))) {client => client.header("content-length", "1")} }
+  "sets headers request" in { 
+    makeTest(initialRequest.copy(headers = Map[String, String]("Content-Length" -> "1"))) {
+      client => client.header("content-length", "1")
+    } 
+  }
 
-  "sets remote host header request" in{ makeTest(initialRequest.copy(headers = Map[String, String]("X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress(), "X-Cluster-Client-Ip" -> InetAddress.getLocalHost.getHostAddress()),
-      remoteHost = Some(InetAddress.getLocalHost))) {client => client.remoteHost(InetAddress.getLocalHost)} }
-
-  private def makeTest(expectation: HttpRequest[String], uri: URI = initialRequest.uri, method: HttpMethod = initialRequest.method)(builder: (HttpClient[String]) => HttpClient[String]) = {
-    builder(mockClient).custom[String](method, uri.toString)
-
-    mockClient.request.get mustEqual(expectation)
+  "sets remote host header request" in { 
+    makeTest(initialRequest.copy(
+      headers = Map[String, String](
+        "X-Forwarded-For" -> InetAddress.getLocalHost.getHostAddress(), 
+        "X-Cluster-Client-Ip" -> InetAddress.getLocalHost.getHostAddress()
+      ), 
+      remoteHost = Some(InetAddress.getLocalHost))
+    ) { 
+      client => client.remoteHost(InetAddress.getLocalHost)
+    } 
   }
 }
