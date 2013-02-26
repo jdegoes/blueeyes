@@ -219,7 +219,7 @@ case class JEitherSchema(private val left0: Need[JSchema], private val right0: N
 
   def flatten: Set[JSchema] = {
     def flatten0(cur: JSchema, acc: Set[JSchema]): Set[JSchema] = cur match {
-      case JEitherSchema(left, right) => flatten0(right0.value, flatten0(left0.value, acc))
+      case JEitherSchema(left, right) => flatten0(right.value, flatten0(left.value, acc))
       case x => acc + x
     }
 
