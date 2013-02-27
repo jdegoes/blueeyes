@@ -7,8 +7,8 @@ import java.nio.charset.Charset
 // underlying parser code adapted from jawn under MIT license.
 // (https://github.com/non/jawn)
 
-case class ParseException(msg: String, index: Int, line: Int, col: Int)
-extends Exception(msg)
+case class ParseException(msg: String, index: Int, line: Int, col: Int) extends Exception(msg)
+case class IncompleteParseException(msg: String) extends Exception(msg)
 
 /**
  * Parser contains the state machine that does all the work. The only 
@@ -225,37 +225,42 @@ private[json] trait Parser {
    * Parse and return the "next" JSON value as well as the position beyond it.
    * This method is used by both parse() as well as parseMany().
    */
-  protected[this] final def parse(i: Int): (JValue, Int) = (at(i): @switch) match {
-    // ignore whitespace
-    case ' ' => parse(i + 1)
-    case '\t' => parse(i + 1)
-    case '\r' => parse(i + 1)
-    case '\n' => newline(i); parse(i + 1)
-
-    // if we have a recursive top-level structure, we'll delegate the parsing
-    // duties to our good friend rparse().
-    case '[' => rparse(ARRBEG, i + 1, new ArrContext :: Nil)
-    case '{' => rparse(OBJBEG, i + 1, new ObjContext :: Nil)
-
-    // we have a single top-level number
-    case '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
-      val ctxt = new SingleContext
-      val j = parseNumSlow(i, ctxt)
-      (ctxt.value, j)
-
-    // we have a single top-level string
-    case '"' =>
-      val ctxt = new SingleContext
-      val j = parseString(i, ctxt)
-      (ctxt.value, j)
-
-    // we have a single top-level constant
-    case 't' => (parseTrue(i), i + 4)
-    case 'f' => (parseFalse(i), i + 5)
-    case 'n' => (parseNull(i), i + 4)
-
-    // invalid
-    case _ => die(i, "expected json value")
+  protected[this] final def parse(i: Int): (JValue, Int) = try {
+    (at(i): @switch) match {
+      // ignore whitespace
+      case ' ' => parse(i + 1)
+      case '\t' => parse(i + 1)
+      case '\r' => parse(i + 1)
+      case '\n' => newline(i); parse(i + 1)
+  
+      // if we have a recursive top-level structure, we'll delegate the parsing
+      // duties to our good friend rparse().
+      case '[' => rparse(ARRBEG, i + 1, new ArrContext :: Nil)
+      case '{' => rparse(OBJBEG, i + 1, new ObjContext :: Nil)
+  
+      // we have a single top-level number
+      case '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
+        val ctxt = new SingleContext
+        val j = parseNumSlow(i, ctxt)
+        (ctxt.value, j)
+  
+      // we have a single top-level string
+      case '"' =>
+        val ctxt = new SingleContext
+        val j = parseString(i, ctxt)
+        (ctxt.value, j)
+  
+      // we have a single top-level constant
+      case 't' => (parseTrue(i), i + 4)
+      case 'f' => (parseFalse(i), i + 5)
+      case 'n' => (parseNull(i), i + 4)
+  
+      // invalid
+      case _ => die(i, "expected json value")
+    }
+  } catch {
+    case _: IndexOutOfBoundsException =>
+      throw IncompleteParseException("exhausted input")
   }
 
   /**
