@@ -1,6 +1,8 @@
 package blueeyes.core.service
 
-case class ServiceVersion(majorVersion: Int, minorVersion: Int, version: String)
+case class ServiceVersion(majorVersion: Int, minorVersion: Int, version: String) {
+  def vname = "v" + majorVersion
+}
 
 trait ServiceVersionImplicits {
   implicit def fromString(value: String) = {
