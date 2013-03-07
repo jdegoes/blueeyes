@@ -274,12 +274,15 @@ extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], Byte
 }
 
 object CompressService {
+  import HttpHeaders._
   def compress(r: HttpRequest[ByteChunk], f: Future[HttpResponse[ByteChunk]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) = {
     for (response <- f) yield {
       val encodings = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-      val supported = supportedCompressions find { case (k, _) => encodings.contains(k) } map { _._2 }
+      val supported = supportedCompressions find { case (k, _) => encodings.contains(k) }
       (supported, response.content) match {
-        case (Some(compression), Some(content)) => response.copy(content = Some(compression.compress(content)))
+        case (Some((encoding, compression)), Some(content)) => 
+          response.copy(headers = response.headers + `Content-Encoding`(encoding), content = Some(compression.compress(content)))
+
         case _ => response
       }
     }
