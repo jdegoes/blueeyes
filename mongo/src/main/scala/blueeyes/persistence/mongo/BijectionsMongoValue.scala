@@ -7,7 +7,7 @@ import com.mongodb.{BasicDBObject, DBObject}
 import org.bson.types.ObjectId
 
 import scala.collection.JavaConverters._
-import scalaz.{Success, NonEmptyList, ValidationNEL}
+import scalaz.{Success, NonEmptyList, ValidationNel}
 import scalaz.Validation._
 import scalaz.Scalaz._
 
@@ -28,15 +28,15 @@ class MongoObjectBijection extends MongoBijection[MongoValue, MongoField, MongoO
   def buildField(name: String, value: MongoValue)    = MongoField(name, value)
   def buildObject(fields: Seq[MongoField])           = MongoObject(fields.toList)
 
-  def unapply(mobject: MongoObject): ValidationNEL[String, DBObject] = {
+  def unapply(mobject: MongoObject): ValidationNel[String, DBObject] = {
     mobject.fields.foldLeft(success[NonEmptyList[String], BasicDBObject](new BasicDBObject)) {
       case (Success(obj), MongoField(name, value)) => toStorageValue(value).map(obj.append(name, _))
       case (failure, _) => failure
     }
   }
 
-  private def toStorageValue(mvalue: MongoValue): ValidationNEL[String, Any] = mvalue match {
-    case MongoArray(values)   => values.map(toStorageValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, Any].map(_.asJava)
+  private def toStorageValue(mvalue: MongoValue): ValidationNel[String, Any] = mvalue match {
+    case MongoArray(values)   => values.map(toStorageValue).sequence[({type N[B] = ValidationNel[String, B]})#N, Any].map(_.asJava)
     case MongoInt(value)      => success(new java.lang.Integer(value))
     case MongoLong(value)     => success(new java.lang.Long(value))
     case MongoFloat(value)    => success(new java.lang.Float(value))

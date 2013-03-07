@@ -19,7 +19,7 @@ package blueeyes.json
 import scalaz.NonEmptyList
 import scalaz.Validation
 import scalaz.Validation._
-import scalaz.ValidationNEL
+import scalaz.ValidationNel
 import scalaz.syntax.applicative._
 import scalaz.syntax.semigroup._
 import scalaz.syntax.order._
@@ -227,9 +227,9 @@ object JsonAST {
     /**
      * A safe merge function that ensures that values are not overwritten.
      */
-    def insertAll(other: JValue): ValidationNEL[Throwable, JValue] = {
-      other.flattenWithPath.foldLeft[ValidationNEL[Throwable, JValue]](success(self)) {
-        case (acc, (path, value)) => acc flatMap { (jv: JValue) => jv.insert(path, value).toValidationNEL }
+    def insertAll(other: JValue): ValidationNel[Throwable, JValue] = {
+      other.flattenWithPath.foldLeft[ValidationNel[Throwable, JValue]](success(self)) {
+        case (acc, (path, value)) => acc flatMap { (jv: JValue) => jv.insert(path, value).toValidationNel }
       }
     }
 

@@ -3,7 +3,7 @@ package blueeyes.core.data
 import blueeyes.json.JsonAST.JValue
 import scala.xml.NodeSeq
 
-import scalaz.{ Validation, Failure, ValidationNEL }
+import scalaz.{ Validation, Failure, ValidationNel }
 import scalaz.Scalaz._
 
 sealed trait Unapply[A, B] {
@@ -70,7 +70,7 @@ trait IdentityBijections extends Bijections {
 
 object Bijection extends Bijections with IdentityBijections 
 
-trait PartialBijection[A, B] extends Function1[A, ValidationNEL[String, B]] with Unapply[ValidationNEL[String, A], B] { self =>
+trait PartialBijection[A, B] extends Function1[A, ValidationNel[String, B]] with Unapply[ValidationNel[String, A], B] { self =>
   //TODO: make this not discard errors
   def compose[C](next: PartialBijection[C, A]): PartialBijection[C, B] = new PartialBijection[C, B] {
     def apply(c: C) = next(c).flatMap(self) 
@@ -102,11 +102,11 @@ trait PartialBijection[A, B] extends Function1[A, ValidationNEL[String, B]] with
 }
 
 sealed class PartialBiject[A](a: A) {
-  def as[B](implicit f: PartialBiject.E[A, B]): ValidationNEL[String, B] = f.fold(_ apply a, _ unapply a)
+  def as[B](implicit f: PartialBiject.E[A, B]): ValidationNel[String, B] = f.fold(_ apply a, _ unapply a)
 }
 
 object PartialBiject {
-  type E[A, B] = Either[Function1[A, ValidationNEL[String, B]], Unapply[ValidationNEL[String, B], A]] 
+  type E[A, B] = Either[Function1[A, ValidationNel[String, B]], Unapply[ValidationNel[String, B], A]] 
 }
 
 object PartialBijections {
@@ -116,7 +116,7 @@ object PartialBijections {
   }
 
   implicit def partialBiject[A](a: A): PartialBiject[A] = new PartialBiject(a)
-  implicit def forwardEither[A, B](implicit a: Function1[A, ValidationNEL[String, B]]): PartialBiject.E[A, B]= Left(a)
-  implicit def reverseEither[A, B](implicit b: Unapply[ValidationNEL[String, B], A]): PartialBiject.E[A, B] = Right(b)
+  implicit def forwardEither[A, B](implicit a: Function1[A, ValidationNel[String, B]]): PartialBiject.E[A, B]= Left(a)
+  implicit def reverseEither[A, B](implicit b: Unapply[ValidationNel[String, B], A]): PartialBiject.E[A, B] = Right(b)
 }
 
