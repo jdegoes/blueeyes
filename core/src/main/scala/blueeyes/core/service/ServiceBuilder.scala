@@ -7,6 +7,8 @@ import akka.dispatch.ExecutionContext
 import blueeyes.bkka.Stoppable
 import blueeyes.core.http._
 
+import com.weiglewilczek.slf4s.Logging
+
 /**
 val emailService = {
   service("email", "1.23") { context =>
@@ -39,7 +41,21 @@ trait ServiceBuilder[T] {
       val name = sname
       val version = sversion
       val desc = sdesc
-      def lifecycle(context: ServiceContext) = slifecycle(context)
+
+      def lifecycle(context: ServiceContext) = {
+        import HttpRequestHandlerCombinators._
+
+        // Service paths are always prefixed by service name and major version string.
+        val ServiceLifecycle(startup, runningState) = slifecycle(context)
+        ServiceLifecycle(
+          startup, 
+          (s: S) => {
+            val (service, stoppable) = runningState(s)
+            val service0 = path("/%s".format(sname)) { path("/%s".format(sversion.vname)) { service } }
+            (service0, stoppable)
+          }
+        )
+      }
     }
   }
 

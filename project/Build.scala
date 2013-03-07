@@ -75,7 +75,8 @@ object BlueEyesBuild extends Build {
       "org.scalaz"         %% "scalaz-core"   % scalazVersion,
       "org.scalaz"         %% "scalaz-effect" % scalazVersion,
       "org.specs2"         %% "specs2"        % "1.12.3"         % "test",
-      "org.scalacheck"     %% "scalacheck"    % "1.10.0"         % "test"
+      "org.scalacheck"     %% "scalacheck"    % "1.10.0"         % "test",
+      "ch.qos.logback"     %  "logback-classic"    % "1.0.0" % "test"
     ),
 
     scalacOptions ++= Seq("-deprecation", "-unchecked")
