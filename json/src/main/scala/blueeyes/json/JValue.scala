@@ -807,7 +807,7 @@ object JString {
         case '\t' => sb.append("\\t")
         case c =>
           if (c < ' ')
-            sb.append("\\u%04x" format c)
+            sb.append("\\u%04x" format c.toInt)
           else
             sb.append(c)
       }
