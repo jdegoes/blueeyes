@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
 import scalaz.Ordering._
 
+/*
 object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   override val defaultPrettyParams = Pretty.Params(2)
 
@@ -109,3 +110,4 @@ object JSchemaSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     }
   }
 }
+*/

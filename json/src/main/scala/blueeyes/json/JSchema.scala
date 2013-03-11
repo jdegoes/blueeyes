@@ -15,6 +15,7 @@ import scalaz.syntax.bifunctor._
 import scalaz.syntax.order._
 import scalaz.syntax.semigroup._
 
+/*
 sealed trait JSchema { self =>
   def validate(value: JValue): Boolean
 
@@ -258,3 +259,4 @@ case object JEitherSchema {
     else set.reduce[JSchema]((a, b) => JEitherSchema(a, b))
   }
 }
+*/
