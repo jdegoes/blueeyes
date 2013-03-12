@@ -12,7 +12,7 @@ import org.jboss.netty.handler.codec.http.{
 }
 
 import blueeyes.core.http._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import java.io.ByteArrayOutputStream
 import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.HttpVersions._
@@ -61,18 +61,24 @@ object HttpNettyConverters {
     }
   }
 
-  private def getParameters(uri: String) = {
+  private def getParameters(uri: String): Map[Symbol, String] = {
     val queryStringDecoder  = new QueryStringDecoder(uri)
-    queryStringDecoder.getParameters.map(param => (Symbol(param._1), if (!param._2.isEmpty) param._2.head else "")).toMap
+    queryStringDecoder.getParameters.asScala map {
+      case (k, v) => Symbol(k) -> (if (v != null) v.asScala.headOption.getOrElse("") else "")
+    } toMap
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
-    nettyHeaders.foldLeft(HttpHeaders.Empty) {
+    nettyHeaders.asScala.foldLeft(HttpHeaders.Empty) {
       case (headers, header) =>
-        val key   = header.getKey
-        val value = header.getValue
-
-        headers + (key -> headers.get(key).map(_ + "," + value).getOrElse(value))
+        (for {
+          key <- Option(header.getKey)
+          value <- Option(header.getValue)
+        } yield {
+          headers + (key -> headers.get(key).map(_ + "," + value).getOrElse(value))
+        }) getOrElse {
+          headers
+        }
     }
   }
 }
