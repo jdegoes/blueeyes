@@ -100,7 +100,7 @@ class HttpServerSpec extends Specification with FutureMatchers {
   "HttpServer.apply" should {
     "delegate to service request handler" in server { 
       case (s, _) =>
-        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar")).toOption.get must whenDelivered {
+        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/test/v1/foo/bar")).toOption.get must whenDelivered {
           beLike {
             case HttpResponse(HttpStatus(status, _), headers, Some(content), _) =>
               (status must_== OK) and
@@ -112,7 +112,7 @@ class HttpServerSpec extends Specification with FutureMatchers {
     
     "produce NotFound response when service is not defined for request" in server { 
       case (s, _) =>
-        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/blahblah")).toOption.get must whenDelivered {
+        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/test/v1/blahblah")).toOption.get must whenDelivered {
           beLike {
             case HttpResponse(HttpStatus(HttpStatusCodes.NotFound, _), _, _, _) => ok
           }
@@ -121,7 +121,7 @@ class HttpServerSpec extends Specification with FutureMatchers {
 
     "gracefully handle error-producing service handler" in server { 
       case (s, _) =>
-        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/error")).toOption.get must whenDelivered {
+        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/test/v1/foo/bar/error")).toOption.get must whenDelivered {
           beLike {
             case HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, _), _, _, _) => ok
           }
@@ -129,7 +129,7 @@ class HttpServerSpec extends Specification with FutureMatchers {
     }
     "gracefully handle dead-future-producing service handler" in server { 
       case (s, _) =>
-        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/foo/bar/dead")).toOption.get must whenDelivered {
+        s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/test/v1/foo/bar/dead")).toOption.get must whenDelivered {
           beLike {
             case HttpResponse(HttpStatus(HttpStatusCodes.InternalServerError, _), _, _, _) => ok
           }

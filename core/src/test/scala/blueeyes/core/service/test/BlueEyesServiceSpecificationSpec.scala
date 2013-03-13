@@ -27,16 +27,16 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
 
   "Service Specification" should {
     "support get by valid URL" in {
-      client.get[String]("/bar/id/bar.html") must whenDelivered { be_==(serviceResponse) }
+      client.get[String]("/sample/v1/bar/id/bar.html") must whenDelivered { be_==(serviceResponse) }
     }
 
     "support asynch get by valid URL" in {
-      val result = client.get[String]("/asynch/future") 
+      val result = client.get[String]("/sample/v1/asynch/future") 
       result must whenDelivered { be_==(serviceResponse) }
     }
 
     "support eventually asynch get by valid URL" in {
-      client.get[String]("/asynch/eventually") must eventually { whenDelivered { be_==(serviceResponse) } }
+      client.get[String]("/sample/v1/asynch/eventually") must eventually { whenDelivered { be_==(serviceResponse) } }
     }
   }
 }

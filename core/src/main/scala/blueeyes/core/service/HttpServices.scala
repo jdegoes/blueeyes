@@ -23,6 +23,8 @@ import scalaz.syntax.semigroup._
 import scalaz.syntax.validation._
 import scalaz.syntax.std.option._
 
+import com.weiglewilczek.slf4s.Logger
+
 sealed trait AnyService {
   def metadata: Option[Metadata]
   lazy val inapplicable: Inapplicable = Inapplicable(this)
@@ -97,6 +99,17 @@ class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) e
 
   val metadata = None
 }
+
+class DebugService[A, B](logger: Logger, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+  val service = (request: HttpRequest[A]) => {
+    println("Received request: " + request)
+    logger.debug("Received request: " + request)
+    delegate.service(request)
+  }
+
+  lazy val metadata = None
+}
+
 
 class PathService[A, B](path: RestPathPattern, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   val service = PathService.shift(path, _: HttpRequest[A]).toSuccess(inapplicable).flatMap(delegate.service)
