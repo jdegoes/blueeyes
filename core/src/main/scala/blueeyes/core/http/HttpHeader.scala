@@ -81,6 +81,11 @@ object HttpHeaderField {
     `X-Forwarded-Proto`,
     `X-Powered-By`,
     `Access-Control-Allow-Origin`,
+    `Access-Control-Max-Age`,
+    `Access-Control-Allow-Credentials`,
+    `Access-Control-Allow-Methods`,
+    `Access-Control-Allow-Headers`,
+    Origin,
     `Access-Control-Request-Method`,
     `Access-Control-Request-Headers`
   )
@@ -88,7 +93,7 @@ object HttpHeaderField {
   val ByName: Map[String, HttpHeaderField[_]] = All.map(v => (v.name.toLowerCase -> v)).toMap
 
   def parseAll(inString: String, parseType: String): List[HttpHeaderField[_]] = {
-    val fields = inString.toLowerCase.split("""\s*,\s*""").toList.flatMap(HttpHeaderField.ByName.get)
+    val fields = inString.trim.toLowerCase.split("""\s*,\s*""").toList.flatMap(HttpHeaderField.ByName.get)
 
     if (parseType == "trailer") fields.filterNot {
       case Trailer => true
@@ -663,6 +668,46 @@ object HttpHeaders {
   }
   implicit case object `Access-Control-Allow-Origin` extends HttpHeaderField[`Access-Control-Allow-Origin`] {
     override def parse(s: String) = Some(apply(s))
+    def unapply(t: (String, String)) = parse(t).map(_.origin)
+  }
+
+  case class `Access-Control-Max-Age`(maxAge: Long) extends HttpHeaderResponse {
+    def value = maxAge.toString
+  }
+  implicit case object `Access-Control-Max-Age` extends HttpHeaderField[`Access-Control-Max-Age`] {
+    override def parse(s: String) = s.trim.parseLong.toOption.map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.maxAge)
+  }
+
+  case class `Access-Control-Allow-Credentials`(allow: Boolean) extends HttpHeaderRequest with HttpHeaderResponse {
+    def value = allow.toString
+  }
+  implicit case object `Access-Control-Allow-Credentials` extends HttpHeaderField[`Access-Control-Allow-Credentials`] {
+    override def parse(s: String) = s.trim.toLowerCase.parseBoolean.toOption.map(apply)
+    def unapply(t: (String, String)) = parse(t).map(_.allow)
+  }
+
+  case class `Access-Control-Allow-Methods`(methods: HttpMethod*) extends HttpHeaderResponse {
+    def value = methods.map(_.toString).mkString(",")
+  }
+  implicit case object `Access-Control-Allow-Methods` extends HttpHeaderField[`Access-Control-Allow-Methods`] {
+    override def parse(s: String) = Some(apply(HttpMethods.parseHttpMethods(s): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.methods)
+  }
+
+  case class `Access-Control-Allow-Headers`(fields: HttpHeaderField[_]*) extends HttpHeaderResponse {
+    def value = fields.map(_.toString).mkString(",")
+  }
+  implicit case object `Access-Control-Allow-Headers` extends HttpHeaderField[`Access-Control-Allow-Headers`] {
+    override def parse(s: String) = Some(apply(HttpHeaderField.parseAll(s, "accessControl"): _*))
+    def unapply(t: (String, String)) = parse(t).map(_.fields)
+  }
+
+  case class Origin(origin: String) extends HttpHeaderRequest {
+    def value = origin
+  }
+  implicit case object Origin extends HttpHeaderField[Origin] {
+    override def parse(s: String) = Some(apply(s.trim))
     def unapply(t: (String, String)) = parse(t).map(_.origin)
   }
 
