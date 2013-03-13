@@ -58,10 +58,10 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
   """.format(System.getProperty("java.io.tmpdir") + File.separator + logFilePrefix + ".log")
 
-  implicit val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
+  val httpClient: HttpClient[ByteChunk] = new HttpClient[ByteChunk] {
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
       val responseContent = r.uri.path match {
-        case Some("/foo/v1/proxy")  => 
+        case Some("/foo/v1/email/v1/proxy")  => 
           DefaultBijections.stringToChunk("it works!")
 
         case _ => 
@@ -82,9 +82,11 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     new File(System.getProperty("java.io.tmpdir")).listFiles find { file => file.getName.startsWith(logFilePrefix) && file.getName.endsWith(".log") } 
   }
 
+  val monitorClient = client.path("/email/v1")
+
   "service" should {
     "support health monitor service" in {
-      client.get[ByteChunk]("/foo") must whenDelivered {
+      monitorClient.get[ByteChunk]("/foo") must whenDelivered {
         beLike {
           case HttpResponse(HttpStatus(OK, _), _, None, _) => ok
         }
@@ -93,7 +95,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
     "support health monitor statistics" in {
       import blueeyes.json.JParser.parse
-      client.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
+      monitorClient.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
         (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(parse("[1]"))) and
         (content \ "requests" \ "GET" \ "timing" mustNotEqual(JUndefined)) and
         (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JUndefined)) and
@@ -104,7 +106,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
     }
 
     "add service locator" in {
-      client.get[String]("/proxy") must succeedWithContent((_: String) must_== "it works!")
+      monitorClient.get[String]("/proxy") must succeedWithContent((_: String) must_== "it works!")
     }
 
     "RequestLogging: Creates logRequest" in{
