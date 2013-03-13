@@ -93,7 +93,7 @@ object HttpHeaderField {
   val ByName: Map[String, HttpHeaderField[_]] = All.map(v => (v.name.toLowerCase -> v)).toMap
 
   def parseAll(inString: String, parseType: String): List[HttpHeaderField[_]] = {
-    val fields = inString.toLowerCase.split("""\s*,\s*""").toList.flatMap(HttpHeaderField.ByName.get)
+    val fields = inString.trim.toLowerCase.split("""\s*,\s*""").toList.flatMap(HttpHeaderField.ByName.get)
 
     if (parseType == "trailer") fields.filterNot {
       case Trailer => true
@@ -675,7 +675,7 @@ object HttpHeaders {
     def value = maxAge.toString
   }
   implicit case object `Access-Control-Max-Age` extends HttpHeaderField[`Access-Control-Max-Age`] {
-    override def parse(s: String) = s.parseLong.toOption.map(apply)
+    override def parse(s: String) = s.trim.parseLong.toOption.map(apply)
     def unapply(t: (String, String)) = parse(t).map(_.maxAge)
   }
 
@@ -683,7 +683,7 @@ object HttpHeaders {
     def value = allow.toString
   }
   implicit case object `Access-Control-Allow-Credentials` extends HttpHeaderField[`Access-Control-Allow-Credentials`] {
-    override def parse(s: String) = s.parseBoolean.toOption.map(apply)
+    override def parse(s: String) = s.trim.toLowerCase.parseBoolean.toOption.map(apply)
     def unapply(t: (String, String)) = parse(t).map(_.allow)
   }
 
@@ -707,7 +707,7 @@ object HttpHeaders {
     def value = origin
   }
   implicit case object Origin extends HttpHeaderField[Origin] {
-    override def parse(s: String) = Some(apply(s))
+    override def parse(s: String) = Some(apply(s.trim))
     def unapply(t: (String, String)) = parse(t).map(_.origin)
   }
 
