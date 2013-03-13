@@ -171,9 +171,9 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
     Await.result(ByteChunk.forceByteArray(chunk).map(new String(_, "UTF-8")), 10.seconds)
   }
 
-  private def client    = new LocalClient(config).protocol("http").host("localhost").port(port).path("/sample/v1")
+  private def client    = new LocalClient(config).protocol("http").host("localhost").port(port)
 
-  private def sslClient = new LocalClient(config).protocol("https").host("localhost").port(port + 1).path("/sample/v1")
+  private def sslClient = new LocalClient(config).protocol("https").host("localhost").port(port + 1)
 }
 
 class SampleServer extends BlueEyesServer with TestEngineService with TestAkkaDefaults {

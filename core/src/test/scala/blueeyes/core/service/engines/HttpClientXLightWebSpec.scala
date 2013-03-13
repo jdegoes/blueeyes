@@ -27,7 +27,6 @@ import org.specs2.time.TimeConversions._
 import java.nio.ByteBuffer
 import scalaz.StreamT
 import scalaz.syntax.monad._
-import com.weiglewilczek.slf4s.Logging
 
 class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with HttpRequestMatchers {
   val duration = 2000.milliseconds
@@ -35,8 +34,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
   
   sequential
 
-  private val baseClient = new HttpClientXLightWeb
-  private val client = baseClient.protocol("http").host("localhost").path("/echo/v1")
+  private val httpClient = new HttpClientXLightWeb
 
   private val configPattern = """server {
     port = %d
@@ -44,6 +42,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
   }"""
 
   private var port = 8586
+  private var uri = ""
 
   override def is = args(sequential = true) ^ super.is
   override def map(fs: => Fragments) = {
@@ -52,7 +51,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     def startStep = Step {
       val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
       val echoServer = EchoServer.server(config, defaultFutureDispatch)
-      val (_, stop) = Await.result(echoServer.start.get, duration)
+      val (_, stop) = Await.result(echoServer.start.get map { t => uri = "http://localhost:%s/echo".format(port); t }, duration)
       stoppable = stop
     } 
 
@@ -63,11 +62,9 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     startStep ^ fs ^ stopStep
   }
 
-  private def httpClient = client.port(port)
-
   "HttpClientXLightWeb" should {
     "Support GET to invalid server should return http error" in {
-      baseClient.get[String]("http://127.0.0.1:666/foo").failed must awaited(duration) {
+      httpClient.get[String]("http://127.0.0.1:666/foo").failed must awaited(duration) {
         beLike {
           case ex: java.net.ConnectException => ok
           case ex: java.net.SocketTimeoutException => ok
@@ -76,13 +73,13 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
     "Support GET requests with status OK" in {
-      httpClient.parameters('param1 -> "a").get[String]("") must succeedWithContent {
+      httpClient.parameters('param1 -> "a").get[String](uri) must succeedWithContent {
         (_ : String) => ok
       }
     }
 
     "Support GET requests with status Not Found" in {
-      httpClient.get[String]("/bogus") must awaited(duration) {
+      httpClient.get[String](uri + "/bogus") must awaited(duration) {
         beLike {
           case HttpResponse(status, _, content, _) => status.code must_== NotFound
         }
@@ -90,64 +87,64 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
     "Support GET requests with query params" in {
-      httpClient.get[String]("?param1=a&param2=b") must succeedWithContent {
+      httpClient.get[String](uri + "?param1=a&param2=b") must succeedWithContent {
         be_==/("param1=a&param2=b")
       }
     }
 
     "Support GET requests with request params" in {
-      httpClient.parameters('param1 -> "a", 'param2 -> "b").get[String]("") must succeedWithContent {
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").get[String](uri) must succeedWithContent {
         be_==/("param1=a&param2=b")
       }
     }
 
     "Support POST requests with query params" in {
-      httpClient.post[String]("?param1=a&param2=b")("") must succeedWithContent {
+      httpClient.post[String](uri + "?param1=a&param2=b")("") must succeedWithContent {
         be_==/("param1=a&param2=b")
       }
     }
 
     "Support POST requests with request params" in {
-      httpClient.parameters('param1 -> "a", 'param2 -> "b").post[String]("")("") must succeedWithContent {
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").post[String](uri)("") must succeedWithContent {
         be_==/("param1=a&param2=b")
       }
     }
 
     "Support POST requests with body" in {
       val expected = "Hello, world"
-      httpClient.post[String]("")(expected) must succeedWithContent (be_==(expected))
+      httpClient.post[String](uri)(expected) must succeedWithContent (be_==(expected))
     }
 
     "Support POST requests with body and request params" in {
       val expected = "Hello, world"
-      httpClient.parameters('param1 -> "a", 'param2 -> "b").post[String]("")(expected) must succeedWithContent {
+      httpClient.parameters('param1 -> "a", 'param2 -> "b").post[String](uri)(expected) must succeedWithContent {
         be_==/("param1=a&param2=b" + expected)
       }
     }
 
     "Support PUT requests with body" in {
       val expected = "Hello, world"
-      httpClient.header(`Content-Length`(100)).put[String]("")(expected) must succeedWithContent {
+      httpClient.header(`Content-Length`(100)).put[String](uri)(expected) must succeedWithContent {
         be_==/(expected)
       }
     }
 
     "Support GET requests with header" in {
-      httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get[String]("?headers=true") must succeedWithContent {
+      httpClient.header("Fooblahblah" -> "washere").header("param2" -> "1").get[String](uri + "?headers=true") must succeedWithContent {
         contain("Fooblahblah: washere") and contain("param2: 1")
       }
     }
 
     "Support POST requests with Content-Type: text/html & Content-Length: 100" in {
       val expected = "<html></html>"
-      httpClient.headers(`Content-Type`(MimeTypes.text/html) :: `Content-Length`(100) :: Nil).post[String]("")(expected) must succeedWithContent {
+      httpClient.headers(`Content-Type`(MimeTypes.text/html) :: `Content-Length`(100) :: Nil).post[String](uri)(expected) must succeedWithContent {
         be_==(expected)
       }
     }
 
     "Support POST requests with large payload" in {
       val expected = Array.fill(2048*1000)(0).toList.mkString("")
-      httpClient.post[String]("")(expected) must succeedWithContent {
+      httpClient.post[String](uri)(expected) must succeedWithContent {
         be_==(expected)
       }
     }
@@ -155,15 +152,15 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     "Support POST requests with large payload with several chunks" in {
       val expected = Array.fill[Byte](2048*100)('0')
       val chunk: ByteChunk = Right(ByteBuffer.wrap(expected) :: Future(ByteBuffer.wrap(expected)).liftM[StreamT])
-      httpClient.post[ByteChunk]("")(chunk) must succeedWithContent {
-        (data: ByteChunk) => ByteChunk.forceByteArray(data) must awaited(duration) {
+      httpClient.post[ByteChunk](uri)(chunk) must succeedWithContent {
+        (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
           (data: Array[Byte]) => data.length must_== expected.length * 2
         }
       }
     }
 
    "Support HEAD requests" in {
-      httpClient.head("") must awaited(duration) {
+      httpClient.head(uri) must whenDelivered {
         beLike {
           case HttpResponse(status, _, _, _) =>
             (status.code must_== HttpStatusCodes.OK)
@@ -172,7 +169,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
    "Support response headers" in {
-      httpClient.get("") must awaited(duration) {
+      httpClient.get(uri) must whenDelivered {
         beLike {
           case HttpResponse(status, headers, _, _) =>
             (status.code must_== HttpStatusCodes.OK) and
@@ -185,10 +182,10 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
       val total = 1000
       val duration = 1000.milliseconds
       val futures = List.fill(total) {
-        httpClient.get("?test=true")
+        httpClient.get(uri + "?test=true")
       }
 
-      Future.sequence(futures) must awaited(duration) {
+      Future.sequence(futures) must whenDelivered {
         beLike {
           case responses =>
           (responses.size must_== total) and
@@ -200,22 +197,22 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
     "Support GET requests with query params" in {
-      httpClient.get[String]("?param1=a&param2=b") must succeedWithContent {
+      httpClient.get[String](uri + "?param1=a&param2=b") must succeedWithContent {
         be_==/("param1=a&param2=b")
       }
     }
 
     "Support POST requests with body with Array[Byte]" in {
       val expected = "Hello, world"
-      httpClient.post("")(StringToByteArray(expected)) must succeedWithContent {
+      httpClient.post(uri)(StringToByteArray(expected)) must succeedWithContent {
         (content: Array[Byte]) => ByteArrayToString(content) must_== expected
       }
     }
 
     "Support POST requests with body several chunks and transcoding" in {
       val content: ByteChunk = Right(ByteBuffer.wrap("foo".getBytes("UTF-8")) :: Future(ByteBuffer.wrap("bar".getBytes("UTF-8"))).liftM[StreamT])
-      httpClient.post("")(content) must succeedWithContent {
-        (data: ByteChunk) => ByteChunk.forceByteArray(data) must awaited(duration) {
+      httpClient.post(uri)(content) must succeedWithContent {
+        (data: ByteChunk) => ByteChunk.forceByteArray(data) must whenDelivered {
           (bytes: Array[Byte]) => new String(bytes, "UTF-8") must_== "foobar"
         }
       }
@@ -223,14 +220,14 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
 
     "Support POST requests with encoded URL should be preserved" in {
       val content = "Hello, world"
-      httpClient.post("?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content) must succeedWithContent {
+      httpClient.post(uri + "?headers=true&plckForumId=Cat:Wedding%20BoardsForum:238")(content) must succeedWithContent {
         (_: String) must contain("plckForumId=Cat:Wedding BoardsForum:238")
       }
     }
   }
 }
 
-object EchoServer extends BlueEyesServer with BlueEyesServiceBuilder with HttpRequestHandlerCombinators with TestAkkaDefaults with Logging { 
+object EchoServer extends BlueEyesServer with BlueEyesServiceBuilder with HttpRequestHandlerCombinators with TestAkkaDefaults { 
   import blueeyes.core.http.MimeTypes._
 
   val executionContext = defaultFutureDispatch
@@ -262,11 +259,13 @@ object EchoServer extends BlueEyesServer with BlueEyesServiceBuilder with HttpRe
 
   val echoService = service("echo", "1.0.0") { context =>
     request {
-      produce[ByteChunk, String, ByteChunk](text/html) {
-        get(handler _) ~
-        post(handler _) ~
-        put(handler _) ~
-        head(handler _)
+      path("/echo") {
+        produce[ByteChunk, String, ByteChunk](text/html) {
+          get(handler _) ~
+	        post(handler _) ~
+	        put(handler _) ~
+	        head(handler _)
+        }
       }
     }
   }

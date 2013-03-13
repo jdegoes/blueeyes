@@ -150,9 +150,10 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
   private def killPending(why: Throwable) {
     // Kill all pending responses to this channel:
-    pendingResponses.foreach {
-      case (pr: Promise[_]) => pr.tryComplete(Left(why))
-      case _ => // This shouldn't happen.
+    pendingResponses.foreach { pr =>
+      if (!pr.isCompleted) {
+        pr.asInstanceOf[Promise[HttpResponse[ByteChunk]]].failure(why)
+      }
     }
     pendingResponses.clear()
   }

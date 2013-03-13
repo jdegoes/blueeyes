@@ -11,8 +11,6 @@ import akka.dispatch.ExecutionContext
 import blueeyes.json._
 import blueeyes.util.metrics.DataSize
 
-import com.weiglewilczek.slf4s.Logger
-
 import scala.xml.NodeSeq
 import scalaz.Validation
 import scalaz.Semigroup
@@ -21,9 +19,6 @@ import scalaz.Semigroup
 trait HttpRequestHandlerCombinators {
   implicit def service[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = 
     new HttpHandlerService(handler, identity[A])
-
-  def debug[A, B](logger: Logger): HttpService[A, B] => HttpService[A, B] =
-    (h: HttpService[A, B]) => new DebugService[A, B](logger, h)
 
   /** The path combinator creates a handler that is defined only for suffixes
    * of the specified path pattern.
@@ -309,7 +304,6 @@ trait HttpRequestHandlerCombinators {
   def decodeUrl[A, B](h: HttpService[A, B]) = new DecodeUrlService[A, B](h)
 }
 
-object HttpRequestHandlerCombinators extends HttpRequestHandlerCombinators
 
 class IdentifierWithDefault[A, B](val identifier: A, dflt: => Option[B]) {
   lazy val default = dflt
