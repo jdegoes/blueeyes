@@ -1,7 +1,7 @@
 
 package blueeyes.json
 
-/*import scalaz._
+import scalaz._
 import scalaz.Ordering._
 import scalaz.Validation._
 import scalaz.std.anyVal._
@@ -14,32 +14,8 @@ import scalaz.syntax.applicative._
 import scalaz.syntax.bifunctor._
 import scalaz.syntax.order._
 import scalaz.syntax.semigroup._
-*/
 
-class Lazy[A] private (f: () => A) extends (() => A) { self =>
-  lazy val force: A = f()
-
-  def apply(): A = force
-
-  def map[B](f: A => B): Lazy[B] = Lazy(f(force))
-
-  def flatMap[B](f: A => Lazy[B]): Lazy[B] = Lazy(f(self.force).force)
-
-  override def equals(that: Any): Boolean = that match {
-    case that: Lazy[_] => force == that.force
-    case _ => false
-  }
-
-  override def hashCode() = force.hashCode
-
-  override def toString = force.toString
-}
-object Lazy {
-  def apply[A](value: => A): Lazy[A] = new Lazy(() => value)
-
-  @inline implicit def LazyToValue[A](thunk: Lazy[A]): A = thunk.force
-}
-
+/*
 sealed trait JSchema { self =>
   def validate(value: JValue): Boolean
 
@@ -91,10 +67,10 @@ case object JSchema {
       lazy val uniqueEls = Set(elements: _*)
 
       if (elements.size > 1 && uniqueEls.size == 1) JSetSchema(fixed(elements.head))
-      else JArraySchema(Array(elements.map(v => Lazy(fixed(v))): _*))
+      else JArraySchema(Array(elements.map(v => Need(fixed(v))): _*))
     
     case JObject(fields) =>
-      JObjectSchema(fields.mapValues(v => Lazy(fixed(v))))
+      JObjectSchema(fields.mapValues(v => Need(fixed(v))))
 
     case x => JFixedSchema(value)
   }
@@ -114,11 +90,11 @@ case object JSchema {
       lazy val elSchemas = elements.map(unfixed _)
       lazy val uniqSchemas = Set(elSchemas: _*)
 
-      if (elements.size == 0) JArraySchema(Array.empty[Lazy[JSchema]])
+      if (elements.size == 0) JArraySchema(Array.empty[Need[JSchema]])
       else if (elements.size > 1 && uniqSchemas.size == 1) JSetSchema(uniqSchemas.head)
-      else JArraySchema(Array(elSchemas.map(v => Lazy(v)): _*))
+      else JArraySchema(Array(elSchemas.map(v => Need(v)): _*))
 
-    case JObject(fields) => JObjectSchema(fields.mapValues(v => Lazy(unfixed(v))))
+    case JObject(fields) => JObjectSchema(fields.mapValues(v => Need(unfixed(v))))
   }
 }
 
@@ -128,82 +104,57 @@ case class JFixedSchema(schema: JValue) extends JSchema {
   private[json] def minimize(fixedBound: Option[Long]): JSchema = if (fixedBound.getOrElse(Long.MaxValue) <= 0) JSchema.unfixed(schema) else this
 }
 
-case class JObjectValueSchema(private val valueSchema0: Lazy[JSchema]) extends JSchema {
-  lazy val valueSchema: JSchema = valueSchema0
-
+case class JObjectValueSchema(private val schema0: Need[JSchema]) extends JSchema {
   def validate(value: JValue): Boolean = value match {
-    case JObject(fields) => fields.values.forall(valueSchema.validate)
+    case JObject(fields) => fields.values.forall(schema0.value.validate)
 
     case _ => false
   }
 
-  private[json] def minimize(fixedBound: Option[Long]): JSchema = JObjectValueSchema(valueSchema.minimize(fixedBound))
+  private[json] def minimize(fixedBound: Option[Long]): JSchema = JObjectValueSchema(schema0.value.minimize(fixedBound))
 }
 object JObjectValueSchema {
-  def apply(valueSchema: => JSchema): JObjectValueSchema = new JObjectValueSchema(Lazy(valueSchema))
+  def apply(valueSchema: => JSchema): JObjectValueSchema = new JObjectValueSchema(Need(valueSchema))
 }
 
-case class JObjectSchema(private val schema0: Map[String, Lazy[JSchema]]) extends JSchema {
-  private lazy val schemaKeysSet = schema.keys.toSet
-
-  lazy val schema: Map[String, JSchema] = schema0.mapValues(_.force)
+case class JObjectSchema(private val schema0: Map[String, Need[JSchema]]) extends JSchema {
+  lazy val schema: Map[String, JSchema] = schema0.mapValues(_.value)
+  private val schemaKeysSet = schema0.keySet
 
   def validate(value: JValue): Boolean = {
      value match {
       case JObject(fields) => 
-        
-        schemaKeysSet.foreach { key =>
-          val value = schema(key)
-
-          if (!fields.contains(key) && value != JUndefinedSchema) return false
-          else if (!value.validate(fields(key))) return false
+        fields forall {
+          case (k, v) => schema.get(k).exists(_ validate v)
         }
-
-        // Make sure "remaining" not contained in the schema are all undefined:
-        val rem = fields.keys.toSet diff schemaKeysSet
-
-        rem.forall(k => fields(k) == JUndefined)
 
       case _ => false
     }
   }
 
-  private[json] def minimize(fixedBound: Option[Long]): JSchema = JObjectSchema(schema.mapValues(v => Lazy(v.minimize(fixedBound))))
+  private[json] def minimize(fixedBound: Option[Long]): JSchema = JObjectSchema(schema.mapValues(v => Need(v.minimize(fixedBound))))
 }
 
-case class JSetSchema(private val schema0: Lazy[JSchema]) extends JSchema {
-  lazy val schema: JSchema = schema0
-
+case class JSetSchema(private val schema0: Need[JSchema]) extends JSchema {
   def validate(value: JValue): Boolean = value match {
-    case JArray(elements) => elements.forall(schema.validate)
+    case JArray(elements) => elements.forall(schema0.value.validate)
 
     case _ => false
   }
 
-  private[json] def minimize(fixedBound: Option[Long]): JSchema = JSetSchema(schema.minimize)
+  private[json] def minimize(fixedBound: Option[Long]): JSchema = JSetSchema(schema0.value.minimize)
 }
 object JSetSchema {
-  def apply(schema: => JSchema): JSetSchema = new JSetSchema(Lazy(schema))
+  def apply(schema: => JSchema): JSetSchema = new JSetSchema(Need(schema))
 }
 
-case class JArraySchema(private val schemas0: Array[Lazy[JSchema]]) extends JSchema {
-  lazy val schemas: Seq[JSchema] = schemas0.map(_.force)
+case class JArraySchema(private val schemas0: Array[Need[JSchema]]) extends JSchema {
+  private lazy val schemas: Seq[JSchema] = schemas0.map(_.value)
 
   def validate(value: JValue): Boolean = value match {
     case JArray(elements) => 
       if (elements.length != schemas.length) false
-      else {
-        var i = 0
-
-        elements.foreach { e =>
-          if (!schemas(i).validate(e))
-            return false
-
-          i = i + 1
-        }
-
-        return true
-      }
+      else (schemas zip elements) forall { case (s, e) => s validate e }
 
     case _ => false
   }
@@ -212,7 +163,7 @@ case class JArraySchema(private val schemas0: Array[Lazy[JSchema]]) extends JSch
 }
 
 case object JArraySchema {
-  def apply(schemas: Seq[Lazy[JSchema]]): JArraySchema = new JArraySchema(schemas.toArray)
+  def apply(schemas: Seq[Need[JSchema]]): JArraySchema = new JArraySchema(schemas.toArray)
 }
 
 case object JNumSchema extends JSchema {
@@ -228,7 +179,6 @@ case object JNumSchema extends JSchema {
 case object JStringSchema extends JSchema {
   def validate(value: JValue): Boolean = value match {
     case _ : JString => true
-
     case _ => false
   }
 
@@ -265,16 +215,12 @@ case object JUndefinedSchema extends JSchema {
   private[json] def minimize(fixedBound: Option[Long]): JSchema = this
 }
 
-case class JEitherSchema(private val left0: Lazy[JSchema], private val right0: Lazy[JSchema]) extends JSchema {
-  lazy val left: JSchema = left0
-
-  lazy val right: JSchema = right0
-
-  def validate(value: JValue): Boolean = left.validate(value) || right.validate(value)
+case class JEitherSchema(private val left0: Need[JSchema], private val right0: Need[JSchema]) extends JSchema {
+  def validate(value: JValue): Boolean = left0.value.validate(value) || right0.value.validate(value)
 
   def flatten: Set[JSchema] = {
     def flatten0(cur: JSchema, acc: Set[JSchema]): Set[JSchema] = cur match {
-      case JEitherSchema(left, right) => flatten0(right, flatten0(left, acc))
+      case JEitherSchema(left, right) => flatten0(right.value, flatten0(left.value, acc))
       case x => acc + x
     }
 
@@ -305,7 +251,7 @@ case class JEitherSchema(private val left0: Lazy[JSchema], private val right0: L
 }
 
 case object JEitherSchema {
-  def apply(left: => JSchema, right: => JSchema): JEitherSchema = new JEitherSchema(Lazy(left), Lazy(right))
+  def apply(left: => JSchema, right: => JSchema): JEitherSchema = new JEitherSchema(Need(left), Need(right))
 
   private[json] def apply(set: Set[JSchema]): JSchema = {
     if (set.isEmpty) JUndefinedSchema
@@ -313,3 +259,4 @@ case object JEitherSchema {
     else set.reduce[JSchema]((a, b) => JEitherSchema(a, b))
   }
 }
+*/

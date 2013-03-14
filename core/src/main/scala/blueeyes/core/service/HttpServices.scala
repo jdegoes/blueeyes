@@ -18,7 +18,8 @@ import blueeyes.util.printer._
 import java.net.URLDecoder._
 
 import scalaz.{Validation, Success, Failure, Monad, StreamT, Semigroup}
-import scalaz.syntax.pointed._
+import scalaz.syntax.functor._
+import scalaz.syntax.kleisli._
 import scalaz.syntax.semigroup._
 import scalaz.syntax.validation._
 import scalaz.syntax.std.option._
@@ -360,30 +361,34 @@ object JsonpService extends AkkaDefaults {
   private implicit val M: Monad[Future] = new FutureMonad(defaultFutureDispatch)
 
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit fromString: String => T): Validation[NotServed, HttpRequest[T]] = {
-    import blueeyes.json.JParser.parse
+    import blueeyes.json.JParser.validateFromString
+    import blueeyes.json.serialization.Extractor
     import blueeyes.json.serialization.DefaultSerialization._
+    import scalaz.Validation._
+    import scalaz.syntax.bifunctor._
+    import HttpStatusCodes._
     import Bijection._
+
+    def parseFailure(err: Extractor.Error) = DispatchError(HttpException(BadRequest, "Errors encountered parsing JSON-encoded headers: " + err.message))
 
     r.parameters.get('callback) match {
       case Some(callback) if (r.method == HttpMethods.GET) =>
         if (r.content.isEmpty) {
-          try {
-            val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
+          val methodStr = r.parameters.get('method).getOrElse("get").toUpperCase
 
-            val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
-            val content = r.parameters.get('content).map(fromString)
-            val headers = r.parameters.get('headers).map(parse _).map(_.deserialize[Map[String, String]]).getOrElse(Map.empty[String, String])
+          val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
+          val content = r.parameters.get('content).map(fromString)
+          val headers = (parseFailure _) <-: r.parameters.get('headers).map(validateFromString[Map[String, String]]).getOrElse(success(Map()))
 
-            r.copy(method = method, content = content, headers = r.headers ++ headers).success
-          } catch {
-            case e => DispatchError(HttpException(HttpStatusCodes.BadRequest, Option(e.getMessage).getOrElse(""))).failure
-          }
+          headers map { headers0 =>
+            r.copy(method = method, content = content, headers = r.headers ++ headers0)
+          } 
         } else {
-          DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but content body is non-empty")).failure
+          DispatchError(HttpException(BadRequest, "JSONP requested but content body is non-empty")).failure
         }
 
       case Some(callback) =>
-        DispatchError(HttpException(HttpStatusCodes.BadRequest, "JSONP requested but HTTP method is not GET")).failure
+        DispatchError(HttpException(BadRequest, "JSONP requested but HTTP method is not GET")).failure
 
       case None => 
         r.success
