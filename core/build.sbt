@@ -6,7 +6,7 @@ libraryDependencies ++= Seq(
   "commons-codec"               % "commons-codec"       % "1.5",
   "javolution"                  % "javolution"          % "5.5.1",
   "joda-time"                   % "joda-time"           % "1.6.2",
-  "org.jboss.netty"             % "netty"               % "3.2.6.Final",
+  "io.netty"                    % "netty"               % "3.6.3.Final",
   "org.streum"                  %%  "configrity-core"   % "0.10.2",
   "org.xlightweb"               % "xlightweb"           % "2.13.2",
   "javax.servlet"               % "javax.servlet-api"   % "3.0.1"           % "provided",

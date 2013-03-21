@@ -50,6 +50,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import scalaz._
 import scalaz.syntax.monad._
+import scalaz.syntax.show._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 
@@ -79,7 +80,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
       case Failure(Inapplicable(_)) =>
         writeResponse(request, ctx.getChannel,
-          HttpResponse(status = NotFound, content = Some("No service was found to be able to handle your request: " + request)))
+          HttpResponse(status = NotFound, content = Some("No service was found to be able to handle your request: " + request.shows)))
     }
   }
 
@@ -97,16 +98,21 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
     logger.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
+    try {
+      killPending(e.getCause)
 
-    killPending(e.getCause)
+      val request = ctx.getAttachment.asInstanceOf[HttpRequest[ByteChunk]]
 
-    val request = ctx.getAttachment.asInstanceOf[HttpRequest[ByteChunk]]
-
-    e.getCause match {
-      case HttpException(code, reason) =>
-        writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Some(reason)))
-      case ex =>
-        writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Some(ex.getMessage())))
+      e.getCause match {
+        case HttpException(code, reason) =>
+          writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
+        case ex =>
+          writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Option(ex.getMessage())))
+      }
+    } catch {
+      case ex => 
+        logger.error("An exception was caught attempting to handle an exception in the Netty exceptionCaught handler.", ex)
+        super.exceptionCaught(ctx, e)
     }
   }
 
@@ -152,7 +158,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
     // Kill all pending responses to this channel:
     pendingResponses.foreach {
       case (pr: Promise[_]) => pr.tryComplete(Left(why))
-      case _ => // This shouldn't happen.
+      case notPromise => logger.error("Pending response was not a promise, but a %s. This should never happen.".format(Option(notPromise).toString))
     }
     pendingResponses.clear()
   }
