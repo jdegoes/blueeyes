@@ -101,7 +101,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       context.getChannel() returns channel
       nettyRequest.setChunked(false)
 
-      handler.messageReceived(context, invalidEvent) must throwA[HttpException]("URLDecoder: Incomplete trailing escape \\(%\\) pattern")
+      handler.messageReceived(context, invalidEvent) must throwA[HttpException]("partial escape sequence at end of string: %1")
     }
   }
 
