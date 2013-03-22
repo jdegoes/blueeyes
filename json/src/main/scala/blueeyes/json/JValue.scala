@@ -942,7 +942,14 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   }
 
   override def equals(other: Any) = other match {
-    case o: JObject => fieldsEq(fields, o.fields)
+    case o: JObject => {
+      if (fields == null)
+        o.fields == null
+      else if (o.fields == null)
+        fields == null
+      else
+        fieldsEq(fields, o.fields)
+    }
     case _ => false
   }
 

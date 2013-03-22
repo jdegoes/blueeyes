@@ -6,6 +6,12 @@ class JObjectSpec extends Specification{
   "JObjects equal even fields order is different" in {
     JParser.parseUnsafe(j1) mustEqual(JParser.parseUnsafe(j2))
   }
+  
+  "JObjects equal even with null fields" in {
+    JObject(null: Map[String,blueeyes.json.JValue]) mustNotEqual JParser.parseUnsafe(j1)
+    JParser.parseUnsafe(j1) mustNotEqual JObject(null: Map[String,blueeyes.json.JValue])
+    JObject(null: Map[String,blueeyes.json.JValue]) mustEqual JObject(null: Map[String,blueeyes.json.JValue])
+  }
 
   val j1 = """{
   "eSzgqekhuzwtceLxkkwysoqKig499526":[[null]],
