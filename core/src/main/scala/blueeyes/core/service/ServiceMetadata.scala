@@ -75,7 +75,7 @@ case class ParameterMetadata(parameter: Symbol, default: Option[String]) extends
   }
 }
 
-case class CookieMetadata(ident: Symbol,     default: Option[String]) extends Metadata(6) {
+case class CookieMetadata(ident: Symbol, default: Option[String]) extends Metadata(6) {
   override def compare(other: Metadata) = other match {
     case CookieMetadata(i, _) => ident.toString.compare(i.toString)
     case _ => super.compare(other)
@@ -89,8 +89,27 @@ case class EncodingMetadata     (encodings: Encoding*)  extends Metadata(10)
 case class AboutMetadata        (metadata: Metadata, about: Metadata) extends Metadata(11)
 case class AndMetadata          (metadata: Metadata*) extends Metadata(12)
 case class OrMetadata           (metadata: Metadata*) extends Metadata(13)
+case object NoMetadata extends Metadata(14)
 
 object Metadata {
+  def pathPattern(pattern: RestPathPattern): Metadata = PathPatternMetadata(pattern)
+  def httpMethod(method: HttpMethod): Metadata = HttpMethodMetadata(method)
+  def requestHeaderField[T <: HttpHeader](header: HttpHeaderField[T], default: Option[T] = None): Metadata = RequestHeaderMetadata(Left(header), default)
+  def requestHeader[T <: HttpHeader](header: T, default: Option[T] = None): Metadata = RequestHeaderMetadata(Right(header), default)
+  def responseHeaderField[T <: HttpHeader](header: HttpHeaderField[T], default: Option[T] = None): Metadata = ResponseHeaderMetadata(Left(header), default)
+  def responseHeader[T <: HttpHeader](header: T, default: Option[T] = None): Metadata = ResponseHeaderMetadata(Right(header), default)
+  def parameter(param: Symbol, default: Option[String] = None): Metadata = ParameterMetadata(param, default)
+  def cookie(ident: Symbol, default: Option[String] = None): Metadata = CookieMetadata(ident, default)
+  def title(title: String): Metadata = TitleMetadata(title)
+  def description(desc: String): Metadata = DescriptionMetadata(desc)
+  def dataSize(dataSize: DataSize): Metadata = DataSizeMetadata(dataSize)
+  def encodings(enc: Encoding*) = EncodingMetadata(enc: _*)
+  def about(m1: Metadata, m2: Metadata) = AboutMetadata(m1, m2)
+  def and(ms: Metadata*) = AndMetadata(ms: _*)
+  def or(ms: Metadata*) = OrMetadata(ms: _*)
+
+  implicit def opt2M(opt: Option[Metadata]): Metadata = opt getOrElse NoMetadata
+
   implicit object MetadataSemigroup extends Semigroup[Metadata] {
     private def paths(m: List[Metadata]) = {
       val merge = m.foldLeft((List[Metadata](), None: Option[Metadata], None: Option[DescriptionMetadata], None: Option[PathPatternMetadata])){
@@ -115,13 +134,18 @@ object Metadata {
     }
 
     def append(a: Metadata, b: => Metadata) = {
-      val ab = (a, b) match {
+      val ab: Seq[Metadata] = ((a, b) match {
         case (AndMetadata(ams @ _*), AndMetadata(bms @ _*)) => ams ++ bms
         case (AndMetadata(ams @ _*), other) => ams :+ other
         case (other, AndMetadata(bms @ _*)) => other +: bms
+        case (NoMetadata, other) => Seq(other)
+        case (other, NoMetadata) => Seq(other)
         case _ => Seq(a, b)
-      }
-      AndMetadata(paths(mergeDesc(ab: _*)): _*)
+      }) filter {
+        _ != NoMetadata
+      } 
+
+      if (ab.isEmpty) NoMetadata else AndMetadata(paths(mergeDesc(ab: _*)): _*)
     }
   }  
 
@@ -181,10 +205,10 @@ object Metadata {
     }
   }
 
-  def serviceToMetadata(service: AnyService): Metadata = {
-    def metadata(m: Option[Metadata], service: AnyService): Option[Metadata] = service match {
+  def serviceMetadata(service: AnyService): Metadata = {
+    def metadata(m: Metadata, service: AnyService): Metadata = service match {
       case OrService(services @ _*)  =>
-        val ms = services.map(metadata(m, _)).collect{case Some(v) => v}
+        val ms = services.map(metadata(m, _))
         Some(OrMetadata(ms.foldLeft(Seq[Metadata]()){
           case (l, OrMetadata(ms @ _*)) => l ++ ms
           case (l, m) => l :+ m
@@ -193,16 +217,12 @@ object Metadata {
       case s => m |+| nePath(s.metadata)
     }
 
-    def nePath(m: Option[Metadata]) = m.flatMap{
-      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern) => None
-      case _ => m
+    def nePath(m: Metadata) = m match {
+      case PathPatternMetadata(RestPathPatternParsers.EmptyPathPattern) => NoMetadata
+      case other => other
     }
 
-    metadata(None, service) match {
-      case Some(m: OrMetadata) => m
-      case Some(m) => OrMetadata(m)
-      case None => OrMetadata()
-    }
+    metadata(None, service) 
   }
 }
 

@@ -12,7 +12,7 @@ import blueeyes.bkka.AkkaDefaults
 class MetadataSpec extends Specification with HttpRequestHandlerCombinators with AkkaDefaults {
   import Metadata._
 
-  "serviceToMetadata" should{
+  "serviceMetadata" should{
     "extract metadata from services" in{
       val expected = """<html>
 
@@ -108,7 +108,7 @@ class MetadataSpec extends Specification with HttpRequestHandlerCombinators with
           }
         }
       }
-      HtmlPrinter.printFormatted(serviceToMetadata(handler)) mustEqual (expected)
+      HtmlPrinter.printFormatted(serviceMetadata(handler)) mustEqual (expected)
     }
   }
 }

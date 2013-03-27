@@ -26,7 +26,7 @@ import org.scalacheck.Gen._
 
 import DefaultBijections._
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with HttpRequestMatchers with TestAkkaDefaults {
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorTestService with HttpRequestMatchers with TestAkkaDefaults {
   val logFilePrefix = "w3log-" + identifier.sample.get
   val executionContext = defaultFutureDispatch
 
@@ -115,7 +115,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with TestAkkaDefaults {
+trait HealthMonitorTestService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with TestAkkaDefaults {
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {
