@@ -91,7 +91,7 @@ object DelegatingService {
 class HttpHandlerService[A, B, C](h: HttpServiceHandler[B, C], f: A => B) extends CustomHttpService[A, C] {
   val service = (r: HttpRequest[A]) => h(r.map(f)).success
 
-  val metadata = DescriptionMetadata("(opaque HTTP handler)")
+  val metadata = NoMetadata
 }
 
 class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends CustomHttpService[A, B] {
@@ -116,7 +116,6 @@ class DebugService[A, B](logger: Logger, val delegate: HttpService[A, B]) extend
 class HealthMonitorService[A, B](context: ServiceContext, monitor: HealthMonitor, startTime: Long)(implicit jv2b: JValue => B) extends CustomHttpService[A, Future[HttpResponse[B]]] {
   val service = (req: HttpRequest[A]) => Success {
     import scalaz.syntax.show._
-    println("Serviced request " + req.show)
     for (requests <- monitor.toJValue) yield {
       val version       = context.serviceVersion
       val responseContent = JObject(

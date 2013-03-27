@@ -70,9 +70,11 @@ with FutureMatchers {
     monitor.error("foo")(new NullPointerException())
     Thread.sleep(900)
 
-    val monitorJson = JParser.parse("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
+    val monitorJson = JParser.parseUnsafe("""{"foo":{"errorDistribution":{"java.lang.NullPointerException":{"1s x 3":[1,0,0]}},"count":{"1s x 3":[1,0,0]}}}""")
     val jValue = monitor.toJValue
-    jValue.map(_.renderCanonical) must whenDelivered (be_==(monitorJson.renderCanonical))
+    jValue must whenDelivered {
+      be_==(monitorJson)
+    }
   }
 
   "composes into JValue" in{

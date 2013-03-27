@@ -95,7 +95,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
     "support health monitor statistics" in {
       import blueeyes.json.JParser.parse
-      monitorClient.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
+      monitorClient.get[JValue]("/health") must succeedWithContent { (content: JValue) =>
         (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(parse("[1]"))) and
         (content \ "requests" \ "GET" \ "timing" mustNotEqual(JUndefined)) and
         (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JUndefined)) and
@@ -121,7 +121,7 @@ trait HealthMonitorTestService extends BlueEyesServiceBuilder with ServiceDescri
   val emailService = service ("email", "1.2.3") {
     requestLogging(Timeout(60000)) {
       logging { log =>
-        healthMonitor(Timeout(60000), List(eternity)) { monitor =>
+        healthMonitor("/health", Timeout(60000), List(eternity)) { monitor =>
           serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {

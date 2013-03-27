@@ -50,9 +50,13 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }}}
    */
   def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])
-                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor(defaultShutdownTimeout)(f)
+                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor("/health", defaultShutdownTimeout)(f)
 
-  def healthMonitor[T, S](shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)
+  def healthMonitor[T, S](pathPrefix: RestPathPattern)
+                         (f: HealthMonitor => ServiceDescriptorFactory[T, S])
+                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor(pathPrefix, defaultShutdownTimeout)(f)
+
+  def healthMonitor[T, S](pathPrefix: RestPathPattern, shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)
                          (f: HealthMonitor => ServiceDescriptorFactory[T, S])
                          (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
@@ -71,14 +75,11 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
 
           val monitoredService = new MonitorHttpRequestService(service, monitor)
 
-          val monitorService = path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
-            debug(logger) { get { new HealthMonitorService[T, T](context, monitor, startTime) } }
+          val monitorService = path(pathPrefix) {
+            get { new HealthMonitorService[T, T](context, monitor, startTime) }
           }
 
-          val resultService = monitoredService ~ monitorService
-
-          println("Metadata: " + Metadata.serviceMetadata(resultService))
-          (resultService, monitorStoppable)
+          (monitorService ~ monitoredService, monitorStoppable)
         }
       )
     }
@@ -94,7 +95,9 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
+  def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = help("/docs/api")(f)
+
+  def help[T, S](pathPrefix: RestPathPattern)(f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
       val underlying = f(context)
       underlying.copy(
@@ -102,7 +105,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
           val (service, stoppable) = underlying.runningState(state)
           val helpService = {
             service ~ 
-            path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/docs/api") {
+            path(pathPrefix) {
               get {
                 produce(text/html){
                   new HttpHandlerService(
