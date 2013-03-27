@@ -46,6 +46,6 @@ trait ConfigurableHttpClient {
       success(Future(HttpResponse[ByteChunk](HttpStatus(NotFound, "Mock server handles no requests."))))
     }
 
-    val metadata = None
+    val metadata = DescriptionMetadata("Mock service that handles no requests.")
   }
 }

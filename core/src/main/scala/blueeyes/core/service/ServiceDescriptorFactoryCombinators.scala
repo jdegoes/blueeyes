@@ -24,6 +24,7 @@ import akka.util.Timeout
 
 import org.streum.configrity.Configuration
 import com.weiglewilczek.slf4s.Logger
+import com.weiglewilczek.slf4s.Logging
 
 import java.util.Calendar
 import printer.HtmlPrinter
@@ -32,7 +33,7 @@ import IntervalLength._
 
 import scalaz._
 
-trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits {
+trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators with RestPathPatternImplicits with Logging {
   def defaultHealthMonitorConfig = Seq(interval(1.minutes, 1), interval(5.minutes, 1), interval(10.minutes, 1))
   def defaultShutdownTimeout     = akka.util.Timeout(10000)
 
@@ -49,46 +50,38 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }}}
    */
   def healthMonitor[T, S](f: HealthMonitor => ServiceDescriptorFactory[T, S])
-                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor(defaultShutdownTimeout)(f)
+                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor("/health", defaultShutdownTimeout)(f)
 
-  def healthMonitor[T, S](shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)
+  def healthMonitor[T, S](pathPrefix: RestPathPattern)
+                         (f: HealthMonitor => ServiceDescriptorFactory[T, S])
+                         (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = healthMonitor(pathPrefix, defaultShutdownTimeout)(f)
+
+  def healthMonitor[T, S](pathPrefix: RestPathPattern, shutdownTimeout: Timeout, config: Seq[IntervalConfig] = defaultHealthMonitorConfig)
                          (f: HealthMonitor => ServiceDescriptorFactory[T, S])
                          (implicit jv2t: JValue => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
-      val intervals = context.config.detach("healthMonitor").get[List[String]]("intervals").map( _.map(IntervalParser.parse(_))).getOrElse(config).toList
-      val monitor: HealthMonitor = new CompositeHealthMonitor(intervals match {
-        case x :: xs => intervals
-        case Nil => config.toList
-      })
-
       implicit val stop: Stop[HealthMonitor] = HealthMonitor.stop(shutdownTimeout)
-      val underlying = f(monitor)(context)
-      val descriptor = underlying.copy(
-        runningState  = (state: S) => {
-          val (service, stoppable) = underlying.runningState(state)
+
+      val intervals = context.config.detach("healthMonitor").get[List[String]]("intervals").map(_.map(IntervalParser.parse(_))).getOrElse(config).toList
+      val monitor: HealthMonitor = new CompositeHealthMonitor(intervals)
+
+      val serviceLifecycle = f(monitor)(context)
+      serviceLifecycle.copy(
+        runningState = (state: S) => {
+          val startTime = System.currentTimeMillis
+
+          val (service, stoppable) = serviceLifecycle.runningState(state)
+          val monitorStoppable = stoppable map { s => Stoppable(monitor, s :: Nil) } orElse { Some(Stoppable(monitor)) }
+
           val monitoredService = new MonitorHttpRequestService(service, monitor)
-          val monitorStoppable = stoppable.map(s => Stoppable(monitor, s :: Nil)).orElse(Some(Stoppable(monitor)))
-          (monitoredService, monitorStoppable)
+
+          val monitorService = path(pathPrefix) {
+            get { new HealthMonitorService[T, T](context, monitor, startTime) }
+          }
+
+          (monitorService ~ monitoredService, monitorStoppable)
         }
       )
-
-      val startTime = System.currentTimeMillis
-
-      descriptor ~> describe("""Exports real-time metrics on health status, for use in continuous deployment. The default health monitor automatically exports information on number of requests, number and type of errors, and length of requests""")
-        { path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/health") {
-          get {
-            request: HttpRequest[T] => {
-              val version       = context.serviceVersion
-              val who           = JObject(JField("service", JObject(JField("name", JString(context.serviceName)) :: JField("version", JString("%d.%d.%s".format(version.majorVersion, version.minorVersion, version.version))) :: Nil)) :: Nil)
-              val server        = JObject(JField("server", JObject(JField("hostName", JString(context.hostName)) :: JField("port", JNum(context.port)) :: JField("sslPort", JNum(context.sslPort)) :: Nil)) :: Nil)
-              val uptimeSeconds = JObject(JField("uptimeSeconds", JNum((System.currentTimeMillis - startTime) / 1000)) :: Nil)
-              val health        = monitor.toJValue.map(value => JObject(JField("requests", value) :: Nil))
-
-              health map {health => HttpResponse[T](content=Some(jv2t(health.merge(who).merge(server).merge(uptimeSeconds))))}
-            }
-          }
-        }
-      }
     }
   }
 
@@ -102,7 +95,9 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
    * }
    * }}}
    */
-  def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
+  def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = help("/docs/api")(f)
+
+  def help[T, S](pathPrefix: RestPathPattern)(f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
     (context: ServiceContext) => {
       val underlying = f(context)
       underlying.copy(
@@ -110,7 +105,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
           val (service, stoppable) = underlying.runningState(state)
           val helpService = {
             service ~ 
-            path("/blueeyes/services/" + context.serviceName + "/v" + context.serviceVersion.majorVersion + "/docs/api") {
+            path(pathPrefix) {
               get {
                 produce(text/html){
                   new HttpHandlerService(
@@ -303,7 +298,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       }
     }
 
-    val metadata = None
+    val metadata = NoMetadata
   }
 
   private[service] class HttpRequestLoggerActor[T](fieldsDirective: FieldsDirective, includePaths: List[Regex], excludePaths: List[Regex], log: RequestLogger, formatter: HttpRequestLoggerFormatter)(implicit contentBijection: Bijection[T, ByteChunk]) extends Actor with ClockSystem{
@@ -319,7 +314,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       }
     }
 
-    val metadata = None
+    val metadata = NoMetadata
   }
 
   private[service] class MonitorHttpRequestService[T](val delegate: AsyncHttpService[T], healthMonitor: HealthMonitor) extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]] with JPathImplicits{
@@ -358,7 +353,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
       monitor(healthMonitor.trap(errorPath){delegate.service(request)})
     }
 
-    val metadata = None
+    val metadata = NoMetadata
   }
 }
 

@@ -26,7 +26,7 @@ import org.scalacheck.Gen._
 
 import DefaultBijections._
 
-class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorService with HttpRequestMatchers with TestAkkaDefaults {
+class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecification with HealthMonitorTestService with HttpRequestMatchers with TestAkkaDefaults {
   val logFilePrefix = "w3log-" + identifier.sample.get
   val executionContext = defaultFutureDispatch
 
@@ -95,7 +95,7 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
 
     "support health monitor statistics" in {
       import blueeyes.json.JParser.parse
-      monitorClient.get[JValue]("/blueeyes/services/email/v1/health") must succeedWithContent { (content: JValue) =>
+      monitorClient.get[JValue]("/health") must succeedWithContent { (content: JValue) =>
         (content \ "requests" \ "GET" \ "count" \ "eternity" mustEqual(parse("[1]"))) and
         (content \ "requests" \ "GET" \ "timing" mustNotEqual(JUndefined)) and
         (content \ "requests" \ "GET" \ "timing" \ "perSecond" \ "eternity" mustNotEqual(JUndefined)) and
@@ -115,13 +115,13 @@ class HttpServiceDescriptorFactoryCombinatorsSpec extends BlueEyesServiceSpecifi
   }
 }
 
-trait HealthMonitorService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with TestAkkaDefaults {
+trait HealthMonitorTestService extends BlueEyesServiceBuilder with ServiceDescriptorFactoryCombinators with TestAkkaDefaults {
   implicit def httpClient: HttpClient[ByteChunk]
 
   val emailService = service ("email", "1.2.3") {
     requestLogging(Timeout(60000)) {
       logging { log =>
-        healthMonitor(Timeout(60000), List(eternity)) { monitor =>
+        healthMonitor("/health", Timeout(60000), List(eternity)) { monitor =>
           serviceLocator { locator: ServiceLocator[ByteChunk] =>
             context => {
               request {

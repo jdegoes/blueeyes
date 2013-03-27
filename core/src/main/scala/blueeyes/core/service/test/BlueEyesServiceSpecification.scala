@@ -41,6 +41,10 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
         case (service, stoppable) => 
           _service = service
           _stoppable = stoppable
+      } onFailure {
+        case ex => 
+          System.err.println("Unable to begin test due to error in service start.")
+          ex.printStackTrace(System.err)
       }
 
       Await.result(started, new DurationLong(startTimeOut) millis)
@@ -109,7 +113,9 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
         val response = service.service(request)
         response.toOption.getOrElse(Future(NotFound))
       } catch {
-        case t: Throwable => Future(convertErrorToResponse(t))
+        case t: Throwable => 
+          logger.error("Error reported in service.", t)
+          Future(convertErrorToResponse(t))
       }
     }
   }
