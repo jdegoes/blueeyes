@@ -864,6 +864,8 @@ case object JField extends ((String, JValue) => JField) {
 }
 
 case class JObject(fields: Map[String, JValue]) extends JValue {
+  assert(fields.values.forall(_ != null))
+
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
   def hasDefinedChild: Boolean = {
@@ -931,6 +933,7 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   }
 
   private def fieldsEq(m1: Map[String, JValue], m2: Map[String, JValue]): Boolean = {
+    assert(m1.keys != null && m2.keys != null)
     val keys = (m1.keys ++ m2.keys).toArray
     quickSort(keys)
     keys.foreach { key =>
@@ -1013,6 +1016,8 @@ case object JObject extends (Map[String, JValue] => JObject) {
 }
 
 case class JArray(elements: List[JValue]) extends JValue {
+  assert(elements.forall(_ != null))
+
   def hasDefinedChild: Boolean = {
     elements.foreach(v => if (v != JUndefined) return true)
     false

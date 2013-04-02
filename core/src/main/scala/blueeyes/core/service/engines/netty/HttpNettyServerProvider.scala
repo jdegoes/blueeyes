@@ -8,12 +8,15 @@ import akka.dispatch.ExecutionContext
 import org.jboss.netty.channel.{Channels, ChannelPipeline, ChannelPipelineFactory}
 import org.jboss.netty.channel.group.ChannelGroup
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder
+import org.jboss.netty.handler.codec.http.HttpContentCompressor
 import org.jboss.netty.handler.stream.ChunkedWriteHandler
 import com.weiglewilczek.slf4s.Logging
 
+import HttpServerConfig._
+
 private[engines] class HttpNettyServerProvider(server: HttpServerConfig, service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
   def pipelineFactory(channelGroup: ChannelGroup) = {
-    new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, service, channelGroup, executionContext)
+    new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, server.compressionLevel, service, channelGroup, executionContext)
   }
 
   def engineType = "http"
@@ -25,7 +28,7 @@ private[engines] class HttpNettyServerProvider(server: HttpServerConfig, service
   def log = server.log
 }
 
-private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int,
+private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int, compression: Option[CompressionLevel],
                                            service: AsyncHttpService[ByteChunk], channelGroup: ChannelGroup,
                                            executionContext: ExecutionContext) extends ChannelPipelineFactory with Logging {
   def getPipeline: ChannelPipeline = {
@@ -37,7 +40,8 @@ private[engines] class HttpPipelineFactory(protocol: String, host: String, port:
     pipeline.addLast("aggregator",      new HttpNettyChunkedRequestHandler(chunkSize)(executionContext))
     pipeline.addLast("channelsTracker", new ChannelsTrackerUpstreamHandler(channelGroup))
     pipeline.addLast("handler",         new HttpServiceUpstreamHandler(service, executionContext))
-
+    compression foreach { c => pipeline.addFirst("compression", new HttpContentCompressor(c)) }
+    
     pipeline
   }
 }

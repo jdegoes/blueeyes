@@ -244,16 +244,6 @@ trait HttpRequestHandlerCombinators {
     }
   }
 
-  /**
-   *  The compress combinator creates a handler that compresses content by encoding supported by client
-   *  (specified by Accept-Encoding header). The combinator supports gzip and deflate encoding.
-   */
-  def compress(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) = 
-    new CompressService(h)
-
-  def compress2[E1](h: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) = 
-    new CompressService2[E1](h)
-
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */

@@ -15,6 +15,7 @@ import blueeyes.util.CommandLineArguments
 
 import java.lang.reflect.{Method}
 import java.util.concurrent.CountDownLatch
+import java.util.zip.Deflater
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
@@ -23,12 +24,14 @@ import org.streum.configrity.io.BlockFormat
 
 import com.weiglewilczek.slf4s.Logger
 
+
 import scalaz._
 import scalaz.Validation._
 import scalaz.std.function._
-import scalaz.syntax.validation._
 import scalaz.syntax.arrow._
 import scalaz.syntax.show._
+import scalaz.syntax.validation._
+import scalaz.syntax.std.boolean._
 
 /** An http server acts as a container for services. A server can be stopped
  * and started, and has a main function so it can be mixed into objects.
@@ -39,7 +42,13 @@ trait HttpServerModule {
   def server(rootConfig: Configuration, executionContext: ExecutionContext): HttpServer
 }
 
+object HttpServerConfig {
+  type CompressionLevel = Int
+}
+
 trait HttpServerConfig {
+  import HttpServerConfig._
+
   def config: Configuration
 
   /** Retrieves the port the server should be running at, which defaults to
@@ -64,6 +73,19 @@ trait HttpServerConfig {
    * true.
    */
   def sslEnable: Boolean = config[Boolean]("sslEnable", true)
+
+  /**
+   * Set compressionEnable to false to specifically disable compression.
+   */
+  def enableCompression: Boolean = config[Boolean]("compressionEnable", true)
+
+  /**
+   * A compression level for deflate encoding, which must be a value between 1 and 9. 
+   * GZip encoding does not require a specific level to be set, but the value must be specified.
+   */
+  def compressionLevel: Option[CompressionLevel] = config.get[CompressionLevel]("compressionLevel")
+                                                   .orElse(enableCompression.option(Deflater.BEST_SPEED))
+                                                   .filter(l => l >= 1 && l <= 9)
 
   /**
    * The default timeout to be used when stopping dependent services is forever. Override this value
