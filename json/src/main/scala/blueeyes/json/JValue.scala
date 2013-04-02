@@ -327,20 +327,19 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
     def rec(p: JPath, v: JValue): JValue = {
       f(p, v) match {
         case JObject(l) =>
-          JObject(l.flatMap { f =>
-            val v2 = rec(p \ f._1, f._2)
-
-            if (v2 == JUndefined) Nil else JField(f._1, v2) :: Nil
+          JObject(l.flatMap { 
+            case (k, v) => 
+            val v2 = rec(p \ k, v)
+            if (v2 == JUndefined) Nil else JField(k, v2) :: Nil
           })
 
         case JArray(l) =>
-          JArray(l.zipWithIndex.flatMap { t =>
-            val (e, idx) = t
-
-            rec(p \ idx, e) match {
-              case JUndefined => Nil
-              case x => x :: Nil
-            }
+          JArray(l.zipWithIndex flatMap { 
+            case (e, idx) =>
+              rec(p \ idx, e) match {
+                case JUndefined => Nil
+                case x => x :: Nil
+              }
           })
 
         case x => x
@@ -909,23 +908,27 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   protected[json] final def typeIndex = 7
 
   private def fieldsCmp(m1: Map[String, JValue], m2: Map[String, JValue]): Int = {
-    @tailrec def rec(fields: List[String]): Int = fields match {
-      case key :: xs => 
+    @tailrec def rec(fields: Array[String], i: Int): Int = {
+      if (i < fields.length) {
+        val key = fields(i)
         val v1 = m1.getOrElse(key, JUndefined)
         val v2 = m2.getOrElse(key, JUndefined)
 
-        if (v1 == JUndefined && v2 == JUndefined) rec(xs)
+        if (v1 == JUndefined && v2 == JUndefined) rec(fields, i + 1)
         else if (v1 == JUndefined) 1
         else if (v2 == JUndefined) -1
         else {
-          val i = (v1 compare v2)
-          if (i != 0) i else rec(xs)
+          val cres = (v1 compare v2)
+          if (cres == 0) rec(fields, i + 1) else cres
         }
-         
-      case Nil => 0
+      } else {
+        0
+      }
     }
 
-    rec((m1.keySet ++ m2.keySet).toList.sorted)
+    val arr: Array[String] = (m1.keySet ++ m2.keySet).toArray
+    quickSort(arr)
+    rec(arr, 0)
   }
 
   override def compare(that: JValue): Int = that match {
