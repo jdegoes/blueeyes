@@ -406,13 +406,16 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
    */
   def find(p: JValue => Boolean): Option[JValue] = {
     def find(json: JValue): Option[JValue] = {
-      if (p(json)) return Some(json)
-      json match {
-        case JObject(l) => l.map(_._2).flatMap(find).headOption
-        case JArray(l) => l.flatMap(find).headOption
-        case _ => None
+      if (p(json)) Some(json)
+      else {
+        json match {
+          case JObject(l) => l.flatMap({ case (_, v) => find(v) }).headOption
+          case JArray(l)  => l.flatMap(find).headOption
+          case _ => None
+        }
       }
     }
+
     find(self)
   }
 
@@ -868,10 +871,7 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
 
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
-  def hasDefinedChild: Boolean = {
-    fields.values.foreach(v => if (v != JUndefined) return true)
-    false
-  }
+  def hasDefinedChild: Boolean = fields.values.exists(_ != JUndefined) 
 
   def normalize: JObject = JObject(
     fields flatMap {
@@ -909,22 +909,23 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   protected[json] final def typeIndex = 7
 
   private def fieldsCmp(m1: Map[String, JValue], m2: Map[String, JValue]): Int = {
-    val keys = (m1.keys ++ m2.keys).toArray
-    quickSort(keys)
-    keys.foreach { key =>
-      val v1 = m1.getOrElse(key, JUndefined)
-      val v2 = m2.getOrElse(key, JUndefined)
-      if (v1 == JUndefined && v2 == JUndefined) {
-      } else if (v1 == JUndefined) {
-        return 1
-      } else if (v2 == JUndefined) {
-        return -1
-      } else {
-        val i = (v1 compare v2)
-        if (i != 0) return i
-      }
+    @tailrec def rec(fields: List[String]): Int = fields match {
+      case key :: xs => 
+        val v1 = m1.getOrElse(key, JUndefined)
+        val v2 = m2.getOrElse(key, JUndefined)
+
+        if (v1 == JUndefined && v2 == JUndefined) rec(xs)
+        else if (v1 == JUndefined) 1
+        else if (v2 == JUndefined) -1
+        else {
+          val i = (v1 compare v2)
+          if (i != 0) i else rec(xs)
+        }
+         
+      case Nil => 0
     }
-    0
+
+    rec((m1.keySet ++ m2.keySet).toList.sorted)
   }
 
   override def compare(that: JValue): Int = that match {
@@ -933,22 +934,11 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   }
 
   private def fieldsEq(m1: Map[String, JValue], m2: Map[String, JValue]): Boolean = {
-    try {
-      assert(m1.keys != null && m2.keys != null)
-      val allKeys: Iterable[String] = m1.keys ++ m2.keys
-      assert(allKeys != null)
-      assert(implicitly[ClassManifest[String]] != null)
-      val keys = allKeys.toArray
-      quickSort(keys)
-      keys.foreach { key =>
-        val v1 = m1.getOrElse(key, JUndefined)
-        val v2 = m2.getOrElse(key, JUndefined)
-        if (!v1.equals(v2)) return false
-      }
-      true
-    } catch {
-      case ex => ex.printStackTrace; throw ex
-    } 
+    (m1.keySet ++ m2.keySet) forall { key =>
+      val v1 = m1.getOrElse(key, JUndefined)
+      val v2 = m2.getOrElse(key, JUndefined)
+      v1 == v2
+    }
   }
 
   override def equals(other: Any) = other match {
@@ -1025,10 +1015,7 @@ case object JObject extends (Map[String, JValue] => JObject) {
 case class JArray(elements: List[JValue]) extends JValue {
   assert(elements.forall(_ != null))
 
-  def hasDefinedChild: Boolean = {
-    elements.foreach(v => if (v != JUndefined) return true)
-    false
-  }
+  def hasDefinedChild: Boolean = elements exists { _ != JUndefined }
 
   def normalize: JArray = JArray(
     elements flatMap {

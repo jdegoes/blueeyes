@@ -67,19 +67,18 @@ trait RealMongoSpecSupport extends Specification {
       ss = new ServerSocket();
       ss.setReuseAddress(true);
       ss.bind(new InetSocketAddress(port))
-      return true;
-    } catch {
-      case t => // NOOP
+      true
+    } catch { case t: Exception => 
+      false
     } finally {
       if (ss != null) {
         try {
           ss.close();
         } catch {
-          case t => /* should not be thrown */
+          case t => t.printStackTrace
         }
       }
     }
-    return false;
   }
 
   private def findUnusedPort(tries: Int): Option[Int] = {

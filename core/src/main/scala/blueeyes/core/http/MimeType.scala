@@ -210,35 +210,35 @@ object MimeTypes {
     case object TextTypeJavaScript extends TextType(appType.extensions) { 
       override def subtype = appType.subtype 
     }
-    return TextTypeJavaScript
+    TextTypeJavaScript
   }
 
   implicit def applicationTypeOgg2AudioTypeOgg(appType: OggApplicationType ): AudioType = {
     case object AudioTypeOgg extends AudioType(appType.extensions) {
       override def subtype = appType.subtype
     }
-    return AudioTypeOgg
+    AudioTypeOgg
   }
 
   implicit def applicationTypeOgg2VideoTypeOgg(appType: OggApplicationType): VideoType = {
     case object VideoTypeOgg extends VideoType(appType.extensions) {
       override def subtype = appType.subtype 
     }
-    return VideoTypeOgg
+    VideoTypeOgg
   }
 
   implicit def audioTypeMpeg2VideoTypeMpeg (audioType: MpegAudioType): VideoType = {
     case object VideoTypeMpeg extends VideoType(audioType.extensions) {
       override def subtype = audioType.subtype
     }
-    return VideoTypeMpeg
+    VideoTypeMpeg
   }
 
   implicit def audioTypeMp42VideoTypeMp4 (audioType: Mp4AudioType): VideoType = {
     case object VideoTypeMp4 extends VideoType(audioType.extensions) {
       override def subtype = audioType.subtype
     }
-    return VideoTypeMp4
+    VideoTypeMp4
   }
 
   /* Implicit conversions for Star (*) */
@@ -247,56 +247,56 @@ object MimeTypes {
     case object ApplicationTypeStar extends ApplicationType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return ApplicationTypeStar 
+    ApplicationTypeStar 
   }
 
   implicit def starTypeStar2AudioTypeStar (starType: StarType): AudioType = {
     case object AudioTypeStar extends AudioType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return AudioTypeStar 
+    AudioTypeStar 
   }
 
   implicit def starTypeStar2ImageTypeStar (starType: StarType): ImageType = {
     case object ImageTypeStar extends ImageType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return ImageTypeStar 
+    ImageTypeStar 
   }
 
   implicit def starTypeStar2MessageTypeStar (starType: StarType): MessageType = {
     case object MessageTypeStar extends MessageType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return MessageTypeStar 
+    MessageTypeStar 
   }
 
   implicit def starTypeStar2MultipartTypeStar (starType: StarType): MultipartType = {
     case object MultipartTypeStar extends MultipartType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return MultipartTypeStar 
+    MultipartTypeStar 
   }
 
   implicit def starTypeStar2PrsTypeStar (starType: StarType): PrsType = {
     case object PrsTypeStar extends PrsType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return PrsTypeStar 
+    PrsTypeStar 
   }
 
   implicit def starTypeStar2TextTypeStar (starType: StarType): TextType = {
     case object TextTypeStar extends TextType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return TextTypeStar 
+    TextTypeStar 
   }
 
   implicit def starTypeStar2VideoTypeStar (starType: StarType): VideoType = {
     case object VideoTypeStar extends VideoType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    return VideoTypeStar 
+    VideoTypeStar 
   }
 
 

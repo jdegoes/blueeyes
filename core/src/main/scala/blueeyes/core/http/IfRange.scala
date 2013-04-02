@@ -26,16 +26,8 @@ object IfRanges {
 
   def parseIfRanges(inString: String): Option[IfRange] = {
     /* First try to parse Entity Tags */
-    def etag: Option[EntityTag] = EntityTags.parseEntityTags(inString)
-    if (etag != None) 
-      return Some(TagRange(etag))
-
-    /* Next, let's try to parse HttpDateTimes */
-    def date: Option[HttpDateTime] = HttpDateTimes.parseHttpDateTimes(inString)
-    if (date != None) 
-      return Some(DateRange(date))
-
-    return None
+    EntityTags.parseEntityTags(inString).map(TagRange(_)) orElse 
+    HttpDateTimes.parseHttpDateTimes(inString).map(DateRange(_))
   }
 
 

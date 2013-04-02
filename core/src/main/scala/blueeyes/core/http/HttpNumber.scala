@@ -15,7 +15,7 @@ object HttpNumbers {
 
   def parseHttpNumbers(inString: String): Option[HttpNumber] = {
     def NumParser = """[\d]+""".r
-    return NumParser.findFirstIn(inString.trim).map(x => LongNumber(x.toLong))
+    NumParser.findFirstIn(inString.trim).map(x => LongNumber(x.toLong))
   }
 
   case class LongNumber(number: Long) extends HttpNumber

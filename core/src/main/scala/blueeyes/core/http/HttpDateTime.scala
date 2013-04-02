@@ -26,28 +26,24 @@ object HttpDateTimes extends Rfc1123Standard{
   /* It might be good to add more timezones than just UTC/GMT */
   def parseHttpDateTimes (inString: String): Option[HttpDateTime] = {
     def modString = inString.trim.replaceFirst("UTC", "GMT").replace("-", " ")
-    var initDate: Option[DateTime] = None
     try {
-      initDate = Some(rfc1123DateFormat.parseDateTime(modString))
+      Some(StandardDateTime(rfc1123DateFormat.parseDateTime(modString)))
     } catch {
-      case ex: UnsupportedOperationException => return None   // -- parser doesn't work?
-      case ex: IllegalArgumentException => return None  // Can't parse the text 
+      case ex: UnsupportedOperationException => None   // -- parser doesn't work?
+      case ex: IllegalArgumentException => None  // Can't parse the text 
     }
-    return Some(StandardDateTime(initDate.get))
   }
 
   case class StandardDateTime (storedDate: DateTime) extends HttpDateTime 
-
 }
 
 trait HttpDateImplicits {
-
   implicit def jodaDateTime2HttpDateTime(jodaDateTime: DateTime): HttpDateTime =  {
-    return HttpDateTimes.StandardDateTime(jodaDateTime)
+    HttpDateTimes.StandardDateTime(jodaDateTime)
   } 
 
   implicit def javaDate2HttpDateTime(javaDate: java.util.Date): HttpDateTime = {
-    return HttpDateTimes.StandardDateTime(new DateTime(javaDate))
+    HttpDateTimes.StandardDateTime(new DateTime(javaDate))
   }
 }
 

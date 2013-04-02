@@ -20,8 +20,7 @@ object WarningInfos {
 
   /* Note about parsing warnings: It's really hard to extract the date! */
   def parseWarnings(inString: String): List[WarningInfo] = {
-
-    def outWarnings = inString.trim.split(",").map(_.trim.split(" ")).map{ x => 
+    inString.trim.split(",").map(_.trim.split(" ")).map{ x => 
       val agent = x(1)
       x(0) match {
         case "110" => Response(agent, None)
@@ -32,9 +31,7 @@ object WarningInfos {
         case "214" => Transformation(agent, None)
         case "299" => MiscellaneousPersistent(agent, None)
       }
-    }
-
-    return outWarnings.toList
+    }.toList
   }
 
   case class Response(warnAgent: String, date: Option[HttpDateTime]) extends WarningInfo {

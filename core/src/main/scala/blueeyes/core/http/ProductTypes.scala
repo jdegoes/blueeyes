@@ -1,24 +1,26 @@
 package blueeyes.core.http
 
+import scalaz.syntax.std.boolean._
+
 /* For use in the Upgrade HTTP and X-Powered-By Headers */
 
 sealed trait ProductType {
-
   def product: String
   def version: Option[String]
-  def value = ((product.toList) ::: (version.toList)) .mkString("/")
+  def value = (product :: version.toList).mkString("/")
   override def toString = value
-
 }
 
 object ProductTypes {
-
   def parseProductTypes(inString: String): Option[List[ProductType]] = {
-    def outProducts = inString.trim.split(",").map(_.trim.split("/") match {
-      case Array(x, y) => CustomProduct(x, y)
-      case Array(x) => CustomProduct(x)
-    })
-    return Some(outProducts.toList)
+    val outProducts = inString.trim.split(",") map { 
+      _.trim.split("/") match {
+        case Array(x, y) => CustomProduct(x, y)
+        case Array(x) => CustomProduct(x)
+      }
+    }
+
+    outProducts.isEmpty.option(outProducts.toList)
   }
 
   case class CustomProduct(product: String, version: Option[String]) extends ProductType

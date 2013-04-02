@@ -44,8 +44,7 @@ private[cache] class ExpirableMap[K, V](
       if (expirable._value == value) {
         if (hasExpired(expirable)) {
           handleExpiration(expirable)
-        }
-        else {
+        } else {
           return true
         }
       }

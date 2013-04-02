@@ -15,18 +15,12 @@ sealed trait ContentTypeOption extends ProductPrefixUnmangler {
 }
 
 object ContentTypeOptions {
-
   def parseContentTypeOptions(inString: String): Option[ContentTypeOption] = {
-
-    def outOption: Option[ContentTypeOption]  = inString.trim.toLowerCase match {
+    inString.trim.toLowerCase match {
       case "nosniff" => Some(nosniff)
       case default => None
     }
-
-    return outOption
-
   }
 
   case object nosniff extends ContentTypeOption
-
 }

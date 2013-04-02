@@ -28,10 +28,9 @@ object DispositionTypes {
   def parseDispositionTypes(inString: String): DispositionType = {
     def splitStr = inString.toLowerCase.split(";")
     def disBuild = new DispositionTypeBuilder(splitStr(0))
-    if (splitStr.length > 1) {
-      disBuild.filename = Some(splitStr(1))
-    }
-    return disBuild.buildType
+    if (splitStr.length > 1) disBuild.filename = Some(splitStr(1))
+
+    disBuild.buildType
   }
 
   case class inline (fileName: Option[String], creationDate: Option[HttpDateTime], size: Option[Int]) extends DispositionType

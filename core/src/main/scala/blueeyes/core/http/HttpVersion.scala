@@ -13,12 +13,11 @@ sealed abstract class HttpVersion extends ProductPrefixUnmangler {
 object HttpVersions {
 
   def parseByVersionNum(inString: String): Option[HttpVersion] = { 
-    def outHttpVers = inString.trim match {
+    inString.trim match {
       case "1.1" => Some(`HTTP/1.1`)
       case "1.0" => Some(`HTTP/1.0`)
       case _ => None
     }
-    return outHttpVers
   }
 
   case object `HTTP/1.0` extends HttpVersion
