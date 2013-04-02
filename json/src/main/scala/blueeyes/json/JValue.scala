@@ -150,9 +150,9 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
   /**
    * A safe merge function that ensures that values are not overwritten.
    */
-  def insertAll(other: JValue): ValidationNEL[Throwable, JValue] = {
-    other.flattenWithPath.foldLeft[ValidationNEL[Throwable, JValue]](success(self)) {
-      case (acc, (path, value)) => acc flatMap { (_: JValue).insert(path, value).toValidationNEL }
+  def insertAll(other: JValue): ValidationNel[Throwable, JValue] = {
+    other.flattenWithPath.foldLeft[ValidationNel[Throwable, JValue]](success(self)) {
+      case (acc, (path, value)) => acc flatMap { (_: JValue).insert(path, value).toValidationNel }
     }
   }
 
@@ -933,15 +933,22 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   }
 
   private def fieldsEq(m1: Map[String, JValue], m2: Map[String, JValue]): Boolean = {
-    assert(m1.keys != null && m2.keys != null)
-    val keys = (m1.keys ++ m2.keys).toArray
-    quickSort(keys)
-    keys.foreach { key =>
-      val v1 = m1.getOrElse(key, JUndefined)
-      val v2 = m2.getOrElse(key, JUndefined)
-      if (!v1.equals(v2)) return false
-    }
-    true
+    try {
+      assert(m1.keys != null && m2.keys != null)
+      val allKeys: Iterable[String] = m1.keys ++ m2.keys
+      assert(allKeys != null)
+      assert(implicitly[ClassManifest[String]] != null)
+      val keys = allKeys.toArray
+      quickSort(keys)
+      keys.foreach { key =>
+        val v1 = m1.getOrElse(key, JUndefined)
+        val v2 = m2.getOrElse(key, JUndefined)
+        if (!v1.equals(v2)) return false
+      }
+      true
+    } catch {
+      case ex => ex.printStackTrace; throw ex
+    } 
   }
 
   override def equals(other: Any) = other match {

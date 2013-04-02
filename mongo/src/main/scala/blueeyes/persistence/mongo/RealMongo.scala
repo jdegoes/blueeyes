@@ -118,7 +118,7 @@ private[mongo] class RealDatabase(actorSystem: ActorSystem, val mongo: Mongo, va
 }
 
 private[mongo] class RealDatabaseCollection(val collection: DBCollection, database: RealDatabase) extends DatabaseCollection{
-  type V[B] = ValidationNEL[String, B]
+  type V[B] = ValidationNel[String, B]
 
   def requestDone() { collection.getDB.requestDone() }
 
@@ -235,7 +235,7 @@ private[mongo] class RealDatabaseCollection(val collection: DBCollection, databa
   private def toMongoKeys(keysPaths: Iterable[JPath]): JObject = JObject(keysPaths.map(key => JField(JPathExtension.toMongoField(key), JNum(1))).toList)
   private def toMongoFilter(filter: Option[MongoFilter])       = filter.map(_.filter.asInstanceOf[JObject]).getOrElse(JObject(Nil))
 
-  private implicit def unvalidated(v: ValidationNEL[String, JObject]): JObject = v valueOr {
+  private implicit def unvalidated(v: ValidationNel[String, JObject]): JObject = v valueOr {
     errors => sys.error("An error occurred deserializing the database object: " + errors.list.mkString("; "))
   }
 

@@ -13,7 +13,7 @@ import org.joda.time.format.ISODateTimeFormat
 
 import scala.collection.JavaConverters._
 
-import scalaz.{Validation, Success, NonEmptyList, ValidationNEL}
+import scalaz.{Validation, Success, NonEmptyList, ValidationNel}
 import scalaz.Validation._
 import scalaz.NonEmptyList._
 import scalaz.syntax.validation._
@@ -30,8 +30,8 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
   override def extractDouble (value: java.lang.Double)        = JNum(value.doubleValue).success
   override def extractBoolean(value: java.lang.Boolean)       = JBool(value).success
   override def extractDate   (value: java.util.Date)          = JString(ISO8601.print(new DateTime(value.getTime, DateTimeZone.UTC))).success
-  override def extractRegex  (value: java.util.regex.Pattern) = "Regex type is not supported".failure.toValidationNEL
-  override def extractBinary (value: Array[Byte])             = "Binary type is not supported".failure.toValidationNEL
+  override def extractRegex  (value: java.util.regex.Pattern) = "Regex type is not supported".failure.toValidationNel
+  override def extractBinary (value: Array[Byte])             = "Binary type is not supported".failure.toValidationNel
   override def extractId     (value: ObjectId)                = JString("ObjectId(\"" + Hex.encodeHexString(value.toByteArray) + "\")").success
   override def buildNull                                      = JNull.success
 
@@ -39,7 +39,7 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
   override def buildField(name: String, value: JValue)        = JField(name, value)
   override def buildObject(fields: Seq[JField])               = JObject(fields.toList)
 
-  def unapply(jobject: JObject): ValidationNEL[String, DBObject] = {
+  def unapply(jobject: JObject): ValidationNel[String, DBObject] = {
     jobject.fields.foldLeft(success[NonEmptyList[String], BasicDBObject](new BasicDBObject)) {
       case (success @ Success(obj), JField(name, JUndefined)) => success
       case (Success(obj), JField(name, value)) => toStorageValue(value).map(obj.append(name, _))
@@ -49,13 +49,13 @@ object MongoJValueBijection extends MongoBijection[JValue, JField, JObject] {
 
   private val ObjectIdPattern = """ObjectId\("([0-9a-f]*)"\)""".r
 
-  private def toStorageValue(v: JValue): ValidationNEL[String, Any] = (v: @unchecked) match {
+  private def toStorageValue(v: JValue): ValidationNel[String, Any] = (v: @unchecked) match {
     case JNull | JUndefined => success(null)
     case JString(ObjectIdPattern(id)) => new ObjectId(Hex.decodeHex(id.toCharArray)).success
     case JString(x) => x.success
     case JNum(x)    => x.doubleValue.success
     case JBool(x)   => x.success
-    case JArray(x)  => x.map(toStorageValue).sequence[({type N[B] = ValidationNEL[String, B]})#N, Any].map(_.asJava)
+    case JArray(x)  => x.map(toStorageValue).sequence[({type N[B] = ValidationNel[String, B]})#N, Any].map(_.asJava)
     case jobject @ JObject(_) => unapply(jobject)
   }
 }

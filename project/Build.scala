@@ -60,7 +60,7 @@ object BlueEyesBuild extends Build {
     }
   )
 
-  val scalazVersion = "7.0.0-M8"
+  val scalazVersion = "7.0.0-RC1"
 
   val commonSettings = Seq(
     scalaVersion := "2.9.2",
