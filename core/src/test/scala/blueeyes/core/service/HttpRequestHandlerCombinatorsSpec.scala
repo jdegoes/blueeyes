@@ -38,7 +38,6 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
   sequential
 
   def stream = ByteBuffer.wrap(Array[Byte]('1', '2')) :: Future(ByteBuffer.wrap(Array[Byte]('3', '4'))).liftM[StreamT]
-  implicit val supportedCompressions = CompressService.defaultCompressions
 
   "composition of paths" should {
     "have the right type" in {
@@ -324,50 +323,6 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           future must succeedWithContent {
             be_==(JString("blahblah"))
           }
-      }
-    }
-  }
-
-  "compress combinator" should {
-    "compress content if request contains accept encoding header" in {
-      val chunk = Left(ByteBuffer.wrap(Array[Byte]('1', '2')))
-      val handler = compress {
-        path("/foo") {
-          get { (request: HttpRequest[ByteChunk]) =>
-            Future(HttpResponse[ByteChunk](content = request.content))
-          }
-        }
-      }
-
-      todo
-      /*
-      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.gzip, Encodings.compress))) must beLike {
-        case Success(future) => 
-          future must succeedWithContent {
-            (v: ByteChunk) => v must beLike {
-              case Left(data) => new String(data.array, "UTF-8") must_== new String(ChunkCompression.gzip.apply(chunk).data)
-            }
-          }
-      }
-      */
-    }
-
-    "does not compress content if request does not contain accept appropriate encoding header" in {
-      val chunk = Left(ByteBuffer.wrap(Array[Byte]('1', '2')))
-      val handler =compress {
-        path("/foo") {
-          get { (request: HttpRequest[ByteChunk]) =>
-            Future(HttpResponse[ByteChunk](content = request.content))
-          }
-        }
-      }
-      
-      handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(chunk), headers = HttpHeaders.Empty + `Accept-Encoding`(Encodings.compress))) must beLike {
-        case Success(future) => future must succeedWithContent {
-          (v: ByteChunk) => v must beLike {
-            case Left(data) => new String(data.array, "UTF-8") must_== "12"
-          }
-        }
       }
     }
   }

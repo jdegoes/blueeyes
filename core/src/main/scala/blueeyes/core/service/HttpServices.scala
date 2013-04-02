@@ -303,44 +303,6 @@ extends DelegatingService[T, S, T, RangeHeaderValues => S] {
   )
 }
 
-class CompressService(val delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
-extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
-  import CompressService._
-  def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{compress(r, _)}
-
-  val metadata = EncodingMetadata(supportedCompressions.keys.toSeq: _*) 
-}
-
-class CompressService2[E1](val delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) 
-extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
-
-  import CompressService._
-  def service = (r: HttpRequest[ByteChunk]) => delegate.service(r).map{function => (e: E1) => compress(r, function.apply(e))}
-
-  val metadata = EncodingMetadata(supportedCompressions.keys.toSeq: _*)
-}
-
-object CompressService {
-  import HttpHeaders._
-  def compress(r: HttpRequest[ByteChunk], f: Future[HttpResponse[ByteChunk]])(implicit supportedCompressions: Map[Encoding, ChunkCompression]) = {
-    for (response <- f) yield {
-      val encodings = r.headers.header(`Accept-Encoding`).map(_.encodings.toList).getOrElse(Nil)
-      val supported = supportedCompressions find { case (k, _) => encodings.contains(k) }
-      (supported, response.content) match {
-        case (Some((encoding, compression)), Some(content)) => 
-          response.copy(headers = response.headers + `Content-Encoding`(encoding), content = Some(compression.compress(content)))
-
-        case _ => response
-      }
-    }
-  }
-
-  def defaultCompressions(implicit ctx: ExecutionContext) = Map[Encoding, ChunkCompression](
-    Encodings.gzip -> ChunkCompression.gzip,
-    Encodings.deflate -> ChunkCompression.zlib()
-  )
-}
-
 class AggregateService(chunkSize: Option[DataSize], val delegate: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) 
 extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk, Future[HttpResponse[ByteChunk]]]{
   private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
