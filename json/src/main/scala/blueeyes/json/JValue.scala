@@ -430,24 +430,22 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
    */
   def flattenWithPath: Vector[(JPath, JValue)] = {
     def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
-      case JObject.empty => Vector((path -> value))
-
       case JObject(fields) => 
-        fields.foldLeft(Vector.empty[(JPath, JValue)]) { 
-          case (acc, field) =>
-            acc ++ flatten0(path \ field._1)(field._2)
+        if (fields.isEmpty) {
+          Vector(path -> value)
+        } else {
+          fields.flatMap({ case (k, v) => flatten0(path \ k)(v) })(collection.breakOut)
         }
-      
-      case JArray(Nil) => Vector((path -> value))
 
       case JArray(elements) => 
-        Vector(elements: _*).zipWithIndex.flatMap { tuple =>
-          val (element, index) = tuple
-
-          flatten0(path \ index)(element)
+        if (elements.isEmpty) {
+          Vector(path -> value)
+        } else {
+          elements.zipWithIndex.flatMap({ case (element, index) => flatten0(path \ index)(element) })(collection.breakOut)
         }
 
-      case _ => Vector((path -> value))
+      case _ => 
+        Vector(path -> value)
     }
 
     flatten0(JPath.Identity)(self)
@@ -866,6 +864,7 @@ case object JField extends ((String, JValue) => JField) {
 }
 
 case class JObject(fields: Map[String, JValue]) extends JValue {
+  assert(fields != null)
   assert(fields.values.forall(_ != null))
 
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
