@@ -428,24 +428,20 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   /** Flattens the JValue down to a list of path to simple JValue primitive.
    */
-  def flattenWithPath: Vector[(JPath, JValue)] = {
-    def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
+  def flattenWithPath: List[(JPath, JValue)] = {
+    def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
+      case JObject.empty | JArray.empty =>
+        List(path -> value)
+
       case JObject(fields) => 
-        if (fields.isEmpty) {
-          Vector(path -> value)
-        } else {
-          fields.flatMap({ case (k, v) => flatten0(path \ k)(v) })(collection.breakOut)
-        }
+        fields.flatMap({ case (k, v) => flatten0(path \ k)(v) })(collection.breakOut)
 
       case JArray(elements) => 
-        if (elements.isEmpty) {
-          Vector(path -> value)
-        } else {
-          elements.zipWithIndex.flatMap({ case (element, index) => flatten0(path \ index)(element) })(collection.breakOut)
-        }
+        elements.zipWithIndex.flatMap({ case (element, index) => flatten0(path \ index)(element) })
 
-      case _ => 
-        Vector(path -> value)
+      case JUndefined => Nil
+
+      case leaf => List(path -> leaf)
     }
 
     flatten0(JPath.Identity)(self)
