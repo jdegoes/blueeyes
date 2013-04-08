@@ -16,6 +16,8 @@ import blueeyes.util._
 import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
 
+import java.io.IOException
+
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.channel.{
   SimpleChannelUpstreamHandler,
@@ -106,11 +108,17 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
       e.getCause match {
         case HttpException(code, reason) =>
           writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
+        case ioe: IOException if Option(ioe.getMessage).map(_.contains("reset by peer")).getOrElse(false) =>
+          try {
+            logger.warn("Connection reset by peer: " + Option(ctx.getChannel.getRemoteAddress).getOrElse("unknown"))
+          } catch {
+            case _ => // Noop
+          }
         case ex =>
           writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Option(ex.getMessage())))
       }
     } catch {
-      case ex => 
+      case ex =>
         logger.error("An exception was caught attempting to handle an exception in the Netty exceptionCaught handler.", ex)
         super.exceptionCaught(ctx, e)
     }
@@ -122,7 +130,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
     val nettyResponse = new DefaultHttpResponse(toNettyVersion(response.version), toNettyStatus(response.status))
     for (header <- response.headers.raw) nettyResponse.setHeader(header._1, header._2)
 
-    if (channel.isConnected) {
+    if (channel.isOpen && channel.isConnected) {
       val nettyFuture = response.content match {
         case Some(Left(buffer)) =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, buffer.remaining.toString)
