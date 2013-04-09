@@ -108,7 +108,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
       e.getCause match {
         case HttpException(code, reason) =>
           writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
-        case ioe: IOException if Option(ioe.getMessage).map(_.contains("reset by peer")).getOrElse(false) =>
+        case ioe: IOException if Option(ioe.getMessage).exists(_.contains("reset by peer")) =>
           try {
             logger.warn("Connection reset by peer: " + Option(ctx.getChannel.getRemoteAddress).getOrElse("unknown"))
           } catch {
