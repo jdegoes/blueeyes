@@ -130,7 +130,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
     val nettyResponse = new DefaultHttpResponse(toNettyVersion(response.version), toNettyStatus(response.status))
     for (header <- response.headers.raw) nettyResponse.setHeader(header._1, header._2)
 
-    if (channel.isOpen && channel.isConnected) {
+    if (channel.isConnected) {
       val nettyFuture = response.content match {
         case Some(Left(buffer)) =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, buffer.remaining.toString)
