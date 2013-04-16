@@ -201,29 +201,29 @@ extends DelegatingService[A, Future[HttpResponse[A]], Future[B], Future[HttpResp
   val metadata = NoMetadata
 }
 
-class AcceptService[T, S, U](mimeType: MimeType, val delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
+class AcceptService[T, S, U](mimeTypes: Seq[MimeType], val delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
 extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
   import AcceptService._
-  val service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] => 
+  val service = (r: HttpRequest[U]) => convert(mimeTypes.toSet, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] => 
     delegate.service(newRequest) map { checkConvert(newRequest, _) } 
   }
 
-  val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeType))) 
+  val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*))) 
 }
 
-class Accept2Service[T, S, U, E1](mimeType: MimeType, val delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
+class Accept2Service[T, S, U, E1](mimeTypes: Seq[MimeType], val delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit f: U => Future[T]) 
 extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
   import AcceptService._
-  val service = (r: HttpRequest[U]) => convert(mimeType, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
+  val service = (r: HttpRequest[U]) => convert(mimeTypes.toSet, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
     delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
   }
 
-  val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeType))) 
+  val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*))) 
 }
 
 object AcceptService extends blueeyes.bkka.AkkaDefaults {
-  def convert[U, T](mimeType: MimeType, r: HttpRequest[U], inapplicable: => Inapplicable)(implicit f: U => Future[T]) = {
-    r.mimeTypes.find(_ == mimeType).map(_ => r.copy(content = r.content.map(f)).success).getOrElse(inapplicable.failure)
+  def convert[U, T](mimeTypes: Set[MimeType], r: HttpRequest[U], inapplicable: => Inapplicable)(implicit f: U => Future[T]) = {
+    r.mimeTypes.find(mimeTypes).map(_ => r.copy(content = r.content.map(f)).success).getOrElse(inapplicable.failure)
   }
 
   def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
@@ -239,8 +239,14 @@ object AcceptService extends blueeyes.bkka.AkkaDefaults {
 
 class ProduceService[T, S, V](mimeType: MimeType, val delegate: HttpService[T, Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]] {
-  def service = (r: HttpRequest[T]) => delegate.service(r).map { 
-    _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
+  import HttpHeaders.Accept
+  def service = (r: HttpRequest[T]) => {
+    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
+    filter(_.mimeTypes.contains(mimeType)).toSuccess(inapplicable) flatMap { _ =>
+      delegate.service(r).map { 
+        _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
+      }
+    }
   }
 
   val metadata = ResponseHeaderMetadata(Right(`Content-Type`(mimeType))) 
@@ -248,8 +254,14 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
 
 class Produce2Service[T, S, V, E1](mimeType: MimeType, val delegate: HttpService[T, E1 => Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]] {
-  def service = (r: HttpRequest[T]) => delegate.service(r).map {
-    f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
+  import HttpHeaders.Accept
+  def service = (r: HttpRequest[T]) => {
+    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
+    filter(_.mimeTypes.contains(mimeType)).toSuccess(inapplicable) flatMap { _ =>
+      delegate.service(r).map {
+        f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
+      }
+    } 
   }
 
   val metadata = ResponseHeaderMetadata(Right(`Content-Type`(mimeType)))
