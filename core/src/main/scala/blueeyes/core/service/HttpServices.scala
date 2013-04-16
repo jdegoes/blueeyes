@@ -239,8 +239,14 @@ object AcceptService extends blueeyes.bkka.AkkaDefaults {
 
 class ProduceService[T, S, V](mimeType: MimeType, val delegate: HttpService[T, Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]] {
-  def service = (r: HttpRequest[T]) => delegate.service(r).map { 
-    _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
+  import HttpHeaders.Accept
+  def service = (r: HttpRequest[T]) => {
+    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
+    filter(_.mimeTypes.contains(mimeType)).toSuccess(inapplicable) flatMap { _ =>
+      delegate.service(r).map { 
+        _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
+      }
+    }
   }
 
   val metadata = ResponseHeaderMetadata(Right(`Content-Type`(mimeType))) 
@@ -248,8 +254,14 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
 
 class Produce2Service[T, S, V, E1](mimeType: MimeType, val delegate: HttpService[T, E1 => Future[HttpResponse[S]]], transcoder: S => V) 
 extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]] {
-  def service = (r: HttpRequest[T]) => delegate.service(r).map {
-    f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
+  import HttpHeaders.Accept
+  def service = (r: HttpRequest[T]) => {
+    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
+    filter(_.mimeTypes.contains(mimeType)).toSuccess(inapplicable) flatMap { _ =>
+      delegate.service(r).map {
+        f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
+      }
+    } 
   }
 
   val metadata = ResponseHeaderMetadata(Right(`Content-Type`(mimeType)))

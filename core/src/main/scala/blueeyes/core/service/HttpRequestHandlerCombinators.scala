@@ -222,7 +222,7 @@ trait HttpRequestHandlerCombinators {
     new ProduceService(mimeType, h, f)
 
   /** The produce combinator creates a handler that is produces responses
-   * that have the specified content type. Requires an implicit bijection
+   * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
   def produce2[A, B, B0, E1](mimeType: MimeType)(h: HttpService[A, E1 => Future[HttpResponse[B]]])(implicit f: B => B0): HttpService[A, E1 => Future[HttpResponse[B0]]] = 
