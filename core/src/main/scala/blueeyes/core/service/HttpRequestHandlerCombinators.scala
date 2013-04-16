@@ -204,15 +204,15 @@ trait HttpRequestHandlerCombinators {
    * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
-  def accept[A, B, A0](mimeType: MimeType)(h: HttpService[Future[A], Future[HttpResponse[B]]])(implicit f: A0 => Future[A]): HttpService[A0, Future[HttpResponse[B]]] = 
-    new AcceptService[A, B, A0](mimeType, h)
+  def accept[A, B, A0](mimeTypes: MimeType*)(h: HttpService[Future[A], Future[HttpResponse[B]]])(implicit f: A0 => Future[A]): HttpService[A0, Future[HttpResponse[B]]] = 
+    new AcceptService[A, B, A0](mimeTypes, h)
 
   /** The accept combinator creates a handler that is defined only for requests
    * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
-  def accept2[A, B, A0, E1](mimeType: MimeType)(h: HttpService[Future[A], E1 => Future[HttpResponse[B]]])(implicit f: A0 => Future[A]) = 
-    new Accept2Service[A, B, A0, E1](mimeType, h)
+  def accept2[A, B, A0, E1](mimeTypes: MimeType*)(h: HttpService[Future[A], E1 => Future[HttpResponse[B]]])(implicit f: A0 => Future[A]) = 
+    new Accept2Service[A, B, A0, E1](mimeTypes, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit function
