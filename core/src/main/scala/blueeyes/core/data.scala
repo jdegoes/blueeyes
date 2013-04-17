@@ -25,12 +25,12 @@ package object data {
 
       def ap[A, B](c: => Chunk[A])(f: => Chunk[A => B]) = {
         c match {
-          case Left(a) => 
+          case Left(a) =>
             f match {
               case Left(f0) => Left(f0(a))
               case Right(fx) => Right(fx.map(_(a)))
             }
-          case Right(stream) => 
+          case Right(stream) =>
             f match {
               case Left(f0) => Right(stream map f0)
               case Right(fx) => Right(for (a <- stream; f0 <- fx) yield f0(a))
@@ -64,23 +64,23 @@ package object data {
           }
         } else {
           tail.uncons flatMap {
-            case Some((head0, tail0)) => 
+            case Some((head0, tail0)) =>
               fill(buffer.put(head), head0, tail0)
 
-            case None => 
+            case None =>
               buffer.put(head)
               Promise.successful((buffer, StreamT.empty[Future, ByteBuffer]))
           }
         }
       }
-      
+
       chunk.right map { stream =>
         StreamT.unfoldM[Future, ByteBuffer, (ByteBuffer, StreamT[Future, ByteBuffer])]((alloc, stream)) {
           case (acc, stream) =>
             stream.uncons flatMap {
-              case Some((head, tail)) => 
-                fill(acc, head, tail) map { 
-                  case (filled, remainder) => 
+              case Some((head, tail)) =>
+                fill(acc, head, tail) map {
+                  case (filled, remainder) =>
                     filled.flip()
                     Some((filled, (alloc, remainder)))
                 }
@@ -96,9 +96,9 @@ package object data {
       s match {
         case Right(stream) =>
           implicit val M = new FutureMonad(executor)
-          stream.foldLeft((Vector.empty[ByteBuffer], 0)) { 
-            case ((acc, size), buffer) => (acc :+ buffer, size + buffer.remaining)
-          } map { 
+          stream.foldLeft((Vector.empty[ByteBuffer], 0)) {
+            case ((acc, size), buffer) => (acc :+ buffer.duplicate, size + buffer.remaining)
+          } map {
             case (buffers, size) =>
               if (buffers.size == 1) {
                 Left(buffers.head)
@@ -107,7 +107,7 @@ package object data {
               }
           }
 
-        case Left(buffer) => 
+        case Left(buffer) =>
           Future(Left(buffer)) // either right type must match
       }
     }
@@ -133,7 +133,7 @@ package object data {
 
     implicit def semigroup(implicit m: Monad[Future]): Semigroup[ByteChunk] = new Semigroup[ByteChunk] {
       def append(c0: ByteChunk, c1: => ByteChunk) = (c0, c1) match {
-        case (Left(buf0), Left(buf1)) => 
+        case (Left(buf0), Left(buf1)) =>
           val buf = ByteBuffer.allocate(buf0.remaining + buf1.remaining)
           buf.put(buf0).put(buf1)
           buf.flip()
