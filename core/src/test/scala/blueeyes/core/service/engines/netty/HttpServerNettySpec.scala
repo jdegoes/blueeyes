@@ -29,6 +29,8 @@ import org.streum.configrity.io.BlockFormat
 
 import blueeyes.akka_testing.FutureMatchers
 
+import com.weiglewilczek.slf4s.Logging
+
 import org.specs2.mutable.Specification
 import org.specs2.specification.{Step, Fragments}
 import org.specs2.time.TimeConversions._
@@ -36,12 +38,18 @@ import org.specs2.time.TimeConversions._
 import scalaz._
 import scalaz.syntax.monad._
 
-class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpRequestMatchers with FutureMatchers {
+class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpRequestMatchers with FutureMatchers with PortFinder with Logging {
   private val configPattern = """server { port = %d sslPort = %d }"""
 
   val duration: org.specs2.time.Duration = 5000.milliseconds
 
-  private val port = 8585
+  private val (port, sslPort) = findUnusedPorts(1000, 2) match {
+    case Some(p :: sp :: Nil) => (p, sp)
+    case _ => throw new Exception("Failed to find 2 unused ports for testing")
+  }
+
+  logger.info("Running HttpServerNettySpec with config " + configPattern.format(port, sslPort))
+
   private var stop: Option[Stoppable] = None
   private var config: Configuration = null
 
@@ -49,7 +57,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
 
   override def map(fs: => Fragments) = {
     def startStep = Step {
-      val conf = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val conf = Configuration.parse(configPattern.format(port, sslPort), BlockFormat)
       val sampleServer = (new SampleServer).server(conf, defaultFutureDispatch)
       config = sampleServer.config
 
@@ -58,8 +66,8 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
       } getOrElse {
         sys.error("No handlers available in service being started; aborting test.")
       }
-    } 
-    
+    }
+
     def stopStep = Step {
       TestEngineService.dataFile.delete
       stop.foreach(Stoppable.stop(_, duration))
@@ -107,20 +115,20 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
     }
 
     "return NotFound when accessing a nonexistent URI" in {
-      Await.result(client.post("/foo/foo/adCode.html")("foo"), duration) must beLike { 
+      Await.result(client.post("/foo/foo/adCode.html")("foo"), duration) must beLike {
         case HttpResponse(status, _, content, _) => status.code must_== NotFound
       }
     }
 
     "return InternalServerError when handling request crashes" in {
-      Await.result(client.get("/error"), duration) must beLike { 
+      Await.result(client.get("/error"), duration) must beLike {
         case HttpResponse(status, _, content, _) => status.code must_== InternalServerError
       }
     }
 
     "return Http error when handling request throws HttpException" in {
-      Await.result(client.get("/http/error"), duration) must beLike { 
-        case HttpResponse(status, _, content, _) => status.code must_== BadRequest 
+      Await.result(client.get("/http/error"), duration) must beLike {
+        case HttpResponse(status, _, content, _) => status.code must_== BadRequest
       }
     }
 
@@ -129,7 +137,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
         be_==(TestEngineService.content)
       }
     }
-    
+
     "return huge content" in {
       Await.result(client.get[ByteChunk]("/huge"), 10.seconds) must beLike {
         case HttpResponse(status, _, Some(content), _) =>
@@ -173,7 +181,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
 
   private def client    = new LocalClient(config).protocol("http").host("localhost").port(port).path("/sample/v1")
 
-  private def sslClient = new LocalClient(config).protocol("https").host("localhost").port(port + 1).path("/sample/v1")
+  private def sslClient = new LocalClient(config).protocol("https").host("localhost").port(sslPort).path("/sample/v1")
 }
 
 class SampleServer extends BlueEyesServer with TestEngineService with TestAkkaDefaults {
