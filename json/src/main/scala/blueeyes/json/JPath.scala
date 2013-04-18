@@ -87,7 +87,7 @@ sealed trait JPath { self =>
     expand0(Nil, nodes, jvalue)
   }
 
-  def path = nodes.mkString("")
+  def path = nodes.map(_.render).mkString("")
 
   def iterator = nodes.iterator
 
@@ -99,6 +99,7 @@ sealed trait JPath { self =>
 sealed trait JPathNode {
   def \(that: JPath) = JPath(this :: that.nodes)
   def \(that: JPathNode) = JPath(this :: that :: Nil)
+  def render: String
 }
 
 object JPathNode {
@@ -118,10 +119,12 @@ object JPathNode {
 }
 
 sealed case class JPathField(name: String) extends JPathNode {
-  override def toString = "." + name
+  def render = "." + name
+  override def toString = render //FIXME
 }
 
 sealed case class JPathIndex(index: Int) extends JPathNode {
+  def render = "[" + index + "]"
   override def toString = "[" + index + "]"
 }
 
