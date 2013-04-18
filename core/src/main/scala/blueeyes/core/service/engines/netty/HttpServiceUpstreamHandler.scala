@@ -99,14 +99,14 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    logger.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
     try {
       killPending(e.getCause)
 
       val request = ctx.getAttachment.asInstanceOf[HttpRequest[ByteChunk]]
 
       e.getCause match {
-        case HttpException(code, reason) =>
+        case ex @ HttpException(code, reason) =>
+          logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
           writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
         case ioe: IOException if Option(ioe.getMessage).exists(_.contains("reset by peer")) =>
           try {
@@ -115,6 +115,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
             case _ => // Noop
           }
         case ex =>
+          logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
           writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Option(ex.getMessage())))
       }
     } catch {
