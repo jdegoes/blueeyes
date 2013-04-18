@@ -75,9 +75,9 @@ object Versioned {
         jv.validated[Option[Version]]("schemaVersion") flatMap {
           case Some(vrec) => 
             if (v.isBackwardCompatible(vrec)) success(vrec) 
-            else failure(Invalid("schemaVersion value " + vrec.shows + " was incompatible with desired version " + v.shows))
+            else failure(Invalid(versionField.path + " value " + vrec.shows + " was incompatible with desired version " + v.shows))
           case None => 
-            failure(Invalid("schemaVersion property missing for value " + jv.renderCompact + "; was expecting " + v.shows))
+            failure(Invalid(versionField.path + " property missing for value " + jv.renderCompact + "; was expecting " + v.shows))
         } 
       } flatMap { _: Option[Version] => 
         extractor.validated(jv)
