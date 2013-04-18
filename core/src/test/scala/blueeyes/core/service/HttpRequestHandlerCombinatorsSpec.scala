@@ -27,11 +27,11 @@ import blueeyes.akka_testing.FutureMatchers
 import scalaz._
 import scalaz.syntax.monad._
 
-class HttpRequestHandlerCombinatorsSpec extends Specification 
-    with HttpRequestHandlerCombinators 
-    with RestPathPatternImplicits 
-    with HttpRequestHandlerImplicits 
-    with TestAkkaDefaults 
+class HttpRequestHandlerCombinatorsSpec extends Specification
+    with HttpRequestHandlerCombinators
+    with RestPathPatternImplicits
+    with HttpRequestHandlerImplicits
+    with TestAkkaDefaults
     with HttpRequestMatchers {
 
   import DefaultBijections._
@@ -60,7 +60,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler: AsyncHttpService[ByteChunk] = {
         jsonp { transcode {
           path("/") {
-            get { (request: HttpRequest[Future[JValue]]) => 
+            get { (request: HttpRequest[Future[JValue]]) =>
               Future(HttpResponse[JValue](content = Some(JString("foo"))))
             }
           }
@@ -68,7 +68,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       }
 
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
             be_==("""jsFunc("foo",{"headers":{},"status":{"code":"OK","reason":""}});""")
           }
@@ -79,7 +79,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler: AsyncHttpService[ByteChunk] = {
         jsonp { transcode {
           path("/") {
-            post { 
+            post {
               (_: HttpRequest[Future[JValue]]).content match {
                 case Some(future) => future.map(c => HttpResponse[JValue](content = Some(c)))
                 case None => Future(HttpResponse[JValue](content = None))
@@ -93,7 +93,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
                                            uri = "/?callback=jsFunc&method=POST&content=" + encodeUrl("{\"bar\":123}", "UTF-8"))
 
       handler.service(request) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
             be_==("""jsFunc({"bar":123},{"headers":{},"status":{"code":"OK","reason":""}});""")
           }
@@ -115,7 +115,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
                                            uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
 
       handler.service(request) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
             be_==("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":"OK","reason":""}});""")
           }
@@ -126,7 +126,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler: AsyncHttpService[ByteChunk] = {
         jsonp { transcode {
           path("/") {
-            get { (request: HttpRequest[Future[JValue]]) => 
+            get { (request: HttpRequest[Future[JValue]]) =>
               Future(HttpResponse[JValue]())
             }
           }
@@ -137,7 +137,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
                                            uri = "/?callback=jsFunc&method=GET&headers=" + encodeUrl("{\"bar\":\"123\"}", "UTF-8"))
 
       handler.service(request) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
             be_==("""jsFunc(undefined,{"headers":{},"status":{"code":"OK","reason":""}});""")
           }
@@ -148,7 +148,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler: AsyncHttpService[ByteChunk] = {
         jsonp { transcode[ByteChunk, JValue] {
           path("/") {
-            get { (request: HttpRequest[Future[JValue]]) => 
+            get { (request: HttpRequest[Future[JValue]]) =>
               Future(HttpResponse[JValue](content = Some(JString("foo")), headers = Map("foo" -> "bar")))
             }
           }
@@ -158,7 +158,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val request = HttpRequest[ByteChunk]( method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")
 
       handler.service(request) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
             be_==("""jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":"OK","reason":""}});""")
           }
@@ -177,11 +177,11 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
         }}
       }
 
-      val request = HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET") 
-      
+      val request = HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")
+
       errorHandler.service(request) must beLike {
-        case Success(future) => 
-          future must succeedWithContent { (byteChunk: ByteChunk) => 
+        case Success(future) =>
+          future must succeedWithContent { (byteChunk: ByteChunk) =>
             futureStringToChunk.unapply(byteChunk) must whenDelivered {
               be_==("""jsFunc("bang",{"headers":{},"status":{"code":"BadRequest","reason":"Funky request."}});""")
             }
@@ -195,7 +195,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val defaultValue = "defaultValue"
       val handler = path("/foo/bar") {
         cookie('someCookie, Some(defaultValue)) {
-          get { 
+          get {
             service {
               (request: HttpRequest[String]) => {
                 cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
@@ -204,7 +204,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[String](HttpMethods.GET, "/foo/bar")) must beLike {
         case Success(future) => future must succeedWithContent(be_==(defaultValue))
       }
@@ -215,14 +215,14 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     "extract parameter" in {
       val handler = path("/foo/'bar") {
         parameter('bar) {
-          get { 
+          get {
             service {
               (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[String](content = Some(bar)))
             }
           }
         }
       }
-      
+
       handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah")) must beLike {
         case Success(future) => future must succeedWithContent(be_==("blahblah"))
       }
@@ -231,7 +231,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     "put default parameter value into request parameters field when value not specified" in {
       val handler = path("/foo/") {
         parameter[String, Future[HttpResponse[String]]]('bar, Some("bebe")) {
-          get { 
+          get {
             service {
               (request: HttpRequest[String]) => (bar: String) => {
                 request.parameters mustEqual Map('bar -> "bebe")
@@ -251,7 +251,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/'bar") {
         produce[String, JValue, JValue](application / json) {
           parameter('bar) {
-            get { 
+            get {
               service {
                 (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
               }
@@ -259,7 +259,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah")) must beLike {
         case Success(future) => future must succeedWithContent(be_==(JString("blahblah")))
       }
@@ -269,7 +269,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/'bar") {
         produce[String, JValue, JValue](application / json) {
           parameter('bar) {
-            get { 
+            get {
               service {
                 (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
               }
@@ -277,7 +277,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blah%20blah")) must beLike {
         case Success(future) => future must succeedWithContent(be_==(JString("blah blah")))
       }
@@ -290,8 +290,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
         parameter('token) {
           get {
             service {
-              (request: HttpRequest[String]) => { 
-                (token: String) => Future(HttpResponse[String](content = Some(token))) 
+              (request: HttpRequest[String]) => {
+                (token: String) => Future(HttpResponse[String](content = Some(token)))
               }
             }
           }
@@ -308,7 +308,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
         path('bar / "entries") {
           produce[String, JValue, JValue](application / json) {
             parameter('bar) {
-              get { 
+              get {
                 service {
                   (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
                 }
@@ -317,9 +317,9 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[String](HttpMethods.GET, "/foo/blahblah/entries")) must beLike {
-        case Success(future) => 
+        case Success(future) =>
           future must succeedWithContent {
             be_==(JString("blahblah"))
           }
@@ -336,7 +336,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
@@ -354,12 +354,12 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           }
         }
       }
-      
+
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
             case Right(data) => Await.result(data.head.map(buf => buf.array.toList.take(buf.remaining)), Duration(2, "seconds")) must_== List[Byte]('1','2')
-              
+
           }
         }
       }
@@ -383,6 +383,51 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
           be_==(JString("/foo/blah blah"))
         }
       }
+    }
+  }
+
+  "produce combinator" should {
+    val svc = path("/json") {
+      produce[String, JValue, JValue](application / json) {
+        get { (request: HttpRequest[String]) =>
+          Future(HttpResponse[JValue](content = Some(JString("Good"))))
+        }
+      }
+    }
+
+    "return a proper content-type header" in {
+      svc.service(HttpRequest[String](HttpMethods.GET, "/json")) must beLike {
+        case Success(future) => future must whenDelivered {
+          beLike {
+            case HttpResponse(HttpStatus(OK, _), headers, _, _) => headers.get("Content-Type") must beSome("application/json")
+          }
+        }
+      }
+    }
+
+    "not respond for incompatible Accept mime types" in {
+      svc.service(HttpRequest[String](HttpMethods.GET, "/json", headers = HttpHeaders(Accept(MimeTypes.text / MimeTypes.csv) :: Nil))) must beLike {
+        case Failure(Inapplicable(_)) => ok
+      }
+    }
+
+    "respond to wildcard Accept mime types" in {
+      svc.service(HttpRequest[String](HttpMethods.GET, "/json", headers = HttpHeaders(Accept(MimeTypes.parseMimeTypes("*/*"): _*) :: Nil))) must beLike {
+        case Success(future) => future must whenDelivered {
+          beLike {
+            case HttpResponse(HttpStatus(OK, _), headers, _, _) => headers.get("Content-Type") must beSome("application/json")
+          }
+        }
+      }
+
+      svc.service(HttpRequest[String](HttpMethods.GET, "/json", headers = HttpHeaders(Accept(MimeTypes.parseMimeTypes("application/*"): _*) :: Nil))) must beLike {
+        case Success(future) => future must whenDelivered {
+          beLike {
+            case HttpResponse(HttpStatus(OK, _), headers, _, _) => headers.get("Content-Type") must beSome("application/json")
+          }
+        }
+      }
+
     }
   }
 }
