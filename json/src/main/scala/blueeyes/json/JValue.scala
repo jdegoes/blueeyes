@@ -428,26 +428,20 @@ sealed trait JValue extends Merge.Mergeable with Diff.Diffable with Product with
 
   /** Flattens the JValue down to a list of path to simple JValue primitive.
    */
-  def flattenWithPath: Vector[(JPath, JValue)] = {
-    def flatten0(path: JPath)(value: JValue): Vector[(JPath, JValue)] = value match {
-      case JObject.empty => Vector((path -> value))
+  def flattenWithPath: List[(JPath, JValue)] = {
+    def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
+      case JObject.empty | JArray.empty =>
+        List(path -> value)
 
       case JObject(fields) => 
-        fields.foldLeft(Vector.empty[(JPath, JValue)]) { 
-          case (acc, field) =>
-            acc ++ flatten0(path \ field._1)(field._2)
-        }
-      
-      case JArray(Nil) => Vector((path -> value))
+        fields.flatMap({ case (k, v) => flatten0(path \ k)(v) })(collection.breakOut)
 
       case JArray(elements) => 
-        Vector(elements: _*).zipWithIndex.flatMap { tuple =>
-          val (element, index) = tuple
+        elements.zipWithIndex.flatMap({ case (element, index) => flatten0(path \ index)(element) })
 
-          flatten0(path \ index)(element)
-        }
+      case JUndefined => Nil
 
-      case _ => Vector((path -> value))
+      case leaf => List(path -> leaf)
     }
 
     flatten0(JPath.Identity)(self)
@@ -866,6 +860,7 @@ case object JField extends ((String, JValue) => JField) {
 }
 
 case class JObject(fields: Map[String, JValue]) extends JValue {
+  assert(fields != null)
   assert(fields.values.forall(_ != null))
 
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)

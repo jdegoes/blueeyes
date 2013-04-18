@@ -92,6 +92,7 @@ class HttpServiceUpstreamHandlerSpec extends Specification with Mockito with Log
     val stateEvent   = mock[ChannelStateEvent]
     val exceptionEvent = new DefaultExceptionEvent(channel, HttpException(HttpStatusCodes.BadRequest, "bad mojo"))
 
+    channel.isOpen() returns true
     channel.isConnected() returns true
     context.getChannel() returns channel
 

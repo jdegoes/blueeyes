@@ -1,5 +1,7 @@
 package blueeyes.persistence.mongo
 
+import blueeyes.util.PortFinder
+
 import com.mongodb.{Mongo => TGMongo, MongoOptions, ServerAddress}
 
 import org.slf4j.LoggerFactory
@@ -8,7 +10,7 @@ import org.apache.commons.io.FileUtils
 import com.google.common.io.Files
 
 import java.io.{File, InputStream, IOException}
-import java.net.{InetSocketAddress, ServerSocket, URL}
+import java.net.URL
 import java.util.concurrent.TimeUnit
 
 import akka.dispatch.Await
@@ -18,15 +20,17 @@ import org.specs2.mutable._
 import org.specs2.specification.{Fragments, Step}
 
 import scala.sys.process._
-import scala.util.Random
 
 import scalaz.effect.IO
 
-trait RealMongoSpecSupport extends Specification {
+trait RealMongoSpecSupport extends Specification with PortFinder {
   private[this] var mongoImpl: Mongo = _
   private[this] var realMongoImpl: TGMongo = _
 
   lazy val mongoLogger = LoggerFactory.getLogger("blueeyes.persistence.mongo.RealMongoSpecSupport")
+
+  /** The max number of random ports to try */
+  def portTries = 1000
 
   // Calling destroy on a process causes an IOException on the thread that reads its output
   val processStreamLogger = (in: InputStream) =>
@@ -50,42 +54,6 @@ trait RealMongoSpecSupport extends Specification {
   private final val mongoDir = new File(workDir, "mongo")
   private final val dataDir  = new File(workDir, "mongo-data")
 
-  /** The minimum random port number that can be used by the underlying mongo instance */
-  def portRangeStart = 50000
-  
-  /** The size of the random port range to be used by the underlying mongo instance */
-  def portRangeSize  = 10000
-
-  /** The max number of random ports to try */
-  def portTries = 1000
-
-  // Shamlessly borrowed from Camel: 
-  // http://svn.apache.org/viewvc/camel/trunk/components/camel-test/src/main/java/org/apache/camel/test/AvailablePortFinder.java?view=markup#l130
-  private def isAvailable(port: Int): Boolean = {
-    var ss: ServerSocket = null
-    try {
-      ss = new ServerSocket();
-      ss.setReuseAddress(true);
-      ss.bind(new InetSocketAddress(port))
-      true
-    } catch { case t: Exception => 
-      false
-    } finally {
-      if (ss != null) {
-        try {
-          ss.close();
-        } catch {
-          case t => t.printStackTrace
-        }
-      }
-    }
-  }
-
-  private def findUnusedPort(tries: Int): Option[Int] = {
-    def randomPortStream: Stream[Int] = (Random.nextInt(portRangeSize) + portRangeStart) #:: randomPortStream
-    randomPortStream.take(tries).find(isAvailable)
-  }
-
   def startup(): Unit = {
     def mkDirs(d: File) = IO {
       if (! (d.isDirectory || d.mkdirs())) {
@@ -103,23 +71,23 @@ trait RealMongoSpecSupport extends Specification {
           } else {
             "http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.2.0.tgz"
           })
-          
+
           FileUtils.copyURLToFile(url, downloadFile)
         }
 
         mongoLogger.debug("Unpacking mongo")
-        Process("tar", 
-                Seq("-C", 
-                    targetDir.getCanonicalPath, 
-                    "--strip-components", 
-                    "1", 
-                    "-x", 
-                    "-v", 
-                    "-z", 
+        Process("tar",
+                Seq("-C",
+                    targetDir.getCanonicalPath,
+                    "--strip-components",
+                    "1",
+                    "-x",
+                    "-v",
+                    "-z",
                     "-f", downloadFile.getCanonicalPath)).!!(ProcessLogger(s => mongoLogger.debug(s)))
       }
     }
-    
+
     val io: IO[Unit] = for {
       _ <- mkDirs(downloadDir)
       _ <- mkDirs(mongoDir)
@@ -131,9 +99,9 @@ trait RealMongoSpecSupport extends Specification {
         case Some(port) =>
           mongoLogger.info("Starting mongo on port " + port)
           mongoProcess = Some({
-            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString, 
+            val proc = Process(new File(mongoDir, "bin/mongod").getCanonicalPath, Seq("--port", port.toString,
                                                                                       "--dbpath", dataDir.getCanonicalPath,
-                                                                                      "--nojournal", 
+                                                                                      "--nojournal",
                                                                                       "--nounixsocket",
                                                                                       "--maxConns", maxMongoConns.toString,
                                                                                       "--nohttpinterface",
@@ -172,8 +140,8 @@ trait RealMongoSpecSupport extends Specification {
   }
 
   def shutdown(): Unit = {
-    IO { 
-      Await.result(mongo.asInstanceOf[RealMongo].close, Timeout(60, TimeUnit.SECONDS).duration) 
+    IO {
+      Await.result(mongo.asInstanceOf[RealMongo].close, Timeout(60, TimeUnit.SECONDS).duration)
     }.ensuring {
       IO {
         mongoProcess.foreach { process =>

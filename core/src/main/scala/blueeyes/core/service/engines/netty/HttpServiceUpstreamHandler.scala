@@ -16,6 +16,8 @@ import blueeyes.util._
 import com.weiglewilczek.slf4s.Logger
 import com.weiglewilczek.slf4s.Logging
 
+import java.io.IOException
+
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.channel.{
   SimpleChannelUpstreamHandler,
@@ -97,20 +99,27 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
-    logger.warn("An exception was raised by an I/O thread or a ChannelHandler", e.getCause)
     try {
       killPending(e.getCause)
 
       val request = ctx.getAttachment.asInstanceOf[HttpRequest[ByteChunk]]
 
       e.getCause match {
-        case HttpException(code, reason) =>
+        case ex @ HttpException(code, reason) =>
+          logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
           writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
+        case ioe: IOException if Option(ioe.getMessage).exists(_.contains("reset by peer")) =>
+          try {
+            logger.warn("Connection reset by peer: " + Option(ctx.getChannel.getRemoteAddress).getOrElse("unknown"))
+          } catch {
+            case _ => // Noop
+          }
         case ex =>
+          logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
           writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Option(ex.getMessage())))
       }
     } catch {
-      case ex => 
+      case ex =>
         logger.error("An exception was caught attempting to handle an exception in the Netty exceptionCaught handler.", ex)
         super.exceptionCaught(ctx, e)
     }

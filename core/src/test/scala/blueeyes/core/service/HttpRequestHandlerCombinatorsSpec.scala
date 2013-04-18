@@ -70,7 +70,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/?callback=jsFunc&method=GET")) must beLike {
         case Success(future) => 
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
-            be_==("""jsFunc("foo",{"headers":{},"status":{"code":"OK","reason":""}});""")
+            be_==("""jsFunc("foo",{"headers":{},"status":{"code":200,"reason":""}});""")
           }
       }
     }
@@ -95,7 +95,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(request) must beLike {
         case Success(future) => 
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
-            be_==("""jsFunc({"bar":123},{"headers":{},"status":{"code":"OK","reason":""}});""")
+            be_==("""jsFunc({"bar":123},{"headers":{},"status":{"code":200,"reason":""}});""")
           }
       }
     }
@@ -117,7 +117,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(request) must beLike {
         case Success(future) => 
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
-            be_==("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":"OK","reason":""}});""")
+            be_==("""jsFunc("foo",{"headers":{"bar":"123"},"status":{"code":200,"reason":""}});""")
           }
       }
     }
@@ -139,7 +139,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(request) must beLike {
         case Success(future) => 
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
-            be_==("""jsFunc(undefined,{"headers":{},"status":{"code":"OK","reason":""}});""")
+            be_==("""jsFunc(undefined,{"headers":{},"status":{"code":200,"reason":""}});""")
           }
       }
     }
@@ -160,7 +160,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(request) must beLike {
         case Success(future) => 
           future.flatMap(response => futureStringToChunk.unapply(response.content.get)) must whenDelivered {
-            be_==("""jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":"OK","reason":""}});""")
+            be_==("""jsFunc("foo",{"headers":{"foo":"bar"},"status":{"code":200,"reason":""}});""")
           }
       }
     }
@@ -183,7 +183,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
         case Success(future) => 
           future must succeedWithContent { (byteChunk: ByteChunk) => 
             futureStringToChunk.unapply(byteChunk) must whenDelivered {
-              be_==("""jsFunc("bang",{"headers":{},"status":{"code":"BadRequest","reason":"Funky request."}});""")
+              be_==("""jsFunc("bang",{"headers":{},"status":{"code":400,"reason":"Funky request."}});""")
             }
           }
       }
