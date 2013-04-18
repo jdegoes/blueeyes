@@ -409,15 +409,11 @@ object JsonpService extends AkkaDefaults {
   }
 
   private def jsonpMetadata[A](r: HttpResponse[A]) = JObject(
-    JField("headers", r.headers.raw.serialize) ::
-    JField("status",
-      JObject(
-        JField("code",    r.status.code.toString.jv) ::
-        JField("reason",  r.status.reason.jv) ::
-        Nil
-      )
-    ) ::
-    Nil
+    "headers" -> r.headers.raw.jv,
+    "status" -> JObject(
+      "code" -> r.status.code.value.jv,
+      "reason" -> r.status.reason.jv
+    )
   ).renderCompact
 
   def jsonpConvertResponse[T](response: HttpResponse[T], callback: Option[String])(implicit fromString: String => T, semigroup: Semigroup[T]): HttpResponse[T] = {
