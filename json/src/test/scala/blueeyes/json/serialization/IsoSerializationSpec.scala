@@ -9,7 +9,7 @@ import IsoSerialization._
 import shapeless._
 import scalaz._
 
-class IsoSerializationSpec extends Specification {
+object IsoSerializationSpec {
   case class Foo(s: String, i: Option[Int], b: Boolean)
   implicit val fooIso = Iso.hlist(Foo.apply _, Foo.unapply _)
   val foo = Foo("Hello world", Some(23), true)
@@ -32,7 +32,10 @@ class IsoSerializationSpec extends Specification {
   implicit val bazIso = Iso.hlist(Baz.apply _, Baz.unapply _)
   val baz = Baz("Hello world", List(foo, foo2))
   val bazSchema = "s" :: "l" :: HNil
-  
+}
+
+class IsoSerializationSpec extends Specification {
+  import IsoSerializationSpec._
   "serialization" should {
     "serialize a simple case class" in {
       val fooDecomp = decomposer[Foo](fooSchema)
