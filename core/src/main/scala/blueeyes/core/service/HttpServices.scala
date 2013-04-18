@@ -373,10 +373,13 @@ object JsonpService extends AkkaDefaults {
     HttpMethodMetadata(HttpMethods.DELETE)
   )
 
+  val reservedParameters = List('method, 'content, 'headers, 'query)
+
   def jsonpConvertRequest[T](r: HttpRequest[T])(implicit fromString: String => T): Validation[NotServed, HttpRequest[T]] = {
     import blueeyes.json.JParser.validateFromString
     import blueeyes.json.serialization.Extractor
     import blueeyes.json.serialization.DefaultSerialization._
+    import blueeyes.util.QueryParser.parseQuery
     import scalaz.Validation._
     import scalaz.syntax.bifunctor._
     import HttpStatusCodes._
@@ -392,9 +395,10 @@ object JsonpService extends AkkaDefaults {
           val method = HttpMethods.PredefinedHttpMethods.find(_.value == methodStr).getOrElse(HttpMethods.GET)
           val content = r.parameters.get('content).map(fromString)
           val headers = (parseFailure _) <-: r.parameters.get('headers).map(validateFromString[Map[String, String]]).getOrElse(success(Map()))
+          val parameters = (r.parameters -- reservedParameters) ++ r.parameters.get('query).map(parseQuery).getOrElse(Map.empty[Symbol, String])
 
           headers map { headers0 =>
-            r.copy(method = method, content = content, headers = r.headers ++ headers0)
+            r.copy(method = method, headers = r.headers ++ headers0, parameters = parameters, content = content)
           }
         } else {
           DispatchError(HttpException(BadRequest, "JSONP requested but content body is non-empty")).failure
