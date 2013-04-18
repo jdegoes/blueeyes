@@ -30,7 +30,7 @@ sealed trait MimeType {
     case _ => false
   }
 
-  def isApplicableTo(desired: MimeType) = {
+  def satisfiesRequestFor(desired: MimeType) = {
     val ourmain = maintype
     (desired.maintype, desired.subtype) match {
       case ("*", _) => true
