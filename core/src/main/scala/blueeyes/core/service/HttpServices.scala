@@ -242,9 +242,7 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
   import HttpHeaders.Accept
   def service = (r: HttpRequest[T]) => {
     r.headers.header[Accept].orElse(Some(Accept(mimeType))).
-    filter { accept =>
-      accept.mimeTypes.contains(mimeType) || accept.mimeTypes.contains(MimeTypes.anymaintype / MimeTypes.anysubtype)
-    }.toSuccess(inapplicable) flatMap { _ =>
+    filter(_.mimeTypes.exists(mimeType.isApplicableTo)).toSuccess(inapplicable) flatMap { _ =>
       delegate.service(r).map {
         _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
       }
@@ -259,9 +257,7 @@ extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[Http
   import HttpHeaders.Accept
   def service = (r: HttpRequest[T]) => {
     r.headers.header[Accept].orElse(Some(Accept(mimeType))).
-    filter { accept =>
-      accept.mimeTypes.contains(mimeType) || accept.mimeTypes.contains(MimeTypes.anymaintype / MimeTypes.anysubtype)
-    }.toSuccess(inapplicable) flatMap { _ =>
+    filter(_.mimeTypes.exists(mimeType.isApplicableTo)).toSuccess(inapplicable) flatMap { _ =>
       delegate.service(r).map {
         f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
       }

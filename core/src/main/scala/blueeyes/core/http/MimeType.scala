@@ -4,30 +4,39 @@ import scala.util.matching.Regex
 import blueeyes.util.ProductPrefixUnmangler
 
 /*
-Usage: 
+Usage:
 
 import MimeTypes._
 val mimeType = image/gif
-val imageMimeType = image/gif 
+val imageMimeType = image/gif
 val javaScriptMimeType = text/javascript
 */
 
 sealed trait MimeType {
   def maintype: String
   def subtype: String
-  
+
   def value: String = maintype + "/" + subtype
-  
+
   def extensions: List[String] = subtype :: Nil
-  
+
   def defaultExtension = extensions.head
-  
+
   override def hashCode = value.hashCode
-  
+
   override def equals(o: Any) = o match {
     case that: MimeType => this.value.toLowerCase == that.value.toLowerCase
-    
+
     case _ => false
+  }
+
+  def isApplicableTo(desired: MimeType) = {
+    val ourmain = maintype
+    (desired.maintype, desired.subtype) match {
+      case ("*", _) => true
+      case (`ourmain`, "*") => true
+      case _ => equals(desired)
+    }
   }
 
   override def toString = value
@@ -173,7 +182,7 @@ object MimeTypes {
   case object `x-realaudio` extends AudioType("ra" :: Nil)
   case object `x-wav` extends AudioType("wav" :: Nil)
 
-  /* Image Types */ 
+  /* Image Types */
   case object gif extends ImageType("gif" :: Nil)
   case object png extends ImageType("png" :: Nil)
   case object jpeg extends ImageType("jpg" :: "jpeg" :: "jpe" :: Nil)
@@ -207,8 +216,8 @@ object MimeTypes {
 
   /* Implicit Conversions */
   implicit def applicationTypeJavaScript2TextTypeJavaScript(appType: JavaScriptApplicationType): TextType = {
-    case object TextTypeJavaScript extends TextType(appType.extensions) { 
-      override def subtype = appType.subtype 
+    case object TextTypeJavaScript extends TextType(appType.extensions) {
+      override def subtype = appType.subtype
     }
     TextTypeJavaScript
   }
@@ -222,7 +231,7 @@ object MimeTypes {
 
   implicit def applicationTypeOgg2VideoTypeOgg(appType: OggApplicationType): VideoType = {
     case object VideoTypeOgg extends VideoType(appType.extensions) {
-      override def subtype = appType.subtype 
+      override def subtype = appType.subtype
     }
     VideoTypeOgg
   }
@@ -247,56 +256,56 @@ object MimeTypes {
     case object ApplicationTypeStar extends ApplicationType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    ApplicationTypeStar 
+    ApplicationTypeStar
   }
 
   implicit def starTypeStar2AudioTypeStar (starType: StarType): AudioType = {
     case object AudioTypeStar extends AudioType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    AudioTypeStar 
+    AudioTypeStar
   }
 
   implicit def starTypeStar2ImageTypeStar (starType: StarType): ImageType = {
     case object ImageTypeStar extends ImageType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    ImageTypeStar 
+    ImageTypeStar
   }
 
   implicit def starTypeStar2MessageTypeStar (starType: StarType): MessageType = {
     case object MessageTypeStar extends MessageType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    MessageTypeStar 
+    MessageTypeStar
   }
 
   implicit def starTypeStar2MultipartTypeStar (starType: StarType): MultipartType = {
     case object MultipartTypeStar extends MultipartType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    MultipartTypeStar 
+    MultipartTypeStar
   }
 
   implicit def starTypeStar2PrsTypeStar (starType: StarType): PrsType = {
     case object PrsTypeStar extends PrsType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    PrsTypeStar 
+    PrsTypeStar
   }
 
   implicit def starTypeStar2TextTypeStar (starType: StarType): TextType = {
     case object TextTypeStar extends TextType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    TextTypeStar 
+    TextTypeStar
   }
 
   implicit def starTypeStar2VideoTypeStar (starType: StarType): VideoType = {
     case object VideoTypeStar extends VideoType(starType.extensions) {
       override def subtype = starType.subtype
     }
-    VideoTypeStar 
+    VideoTypeStar
   }
 
 
@@ -312,7 +321,7 @@ object MimeTypes {
   object application {
     def / (applicationType: ApplicationType) = new MimeType {
       def maintype = "application"
-      def subtype = applicationType.subtype 
+      def subtype = applicationType.subtype
       override def extensions = applicationType.extensions
     }
   }
@@ -320,7 +329,7 @@ object MimeTypes {
   object audio {
     def / (audioType: AudioType) = new MimeType {
       def maintype = "audio"
-      def subtype = audioType.subtype 
+      def subtype = audioType.subtype
       override def extensions = audioType.extensions
     }
   }
@@ -328,7 +337,7 @@ object MimeTypes {
   object image {
     def / (imageType: ImageType) = new MimeType {
       def maintype = "image"
-      def subtype = imageType.subtype 
+      def subtype = imageType.subtype
       override def extensions = imageType.extensions
     }
   }
@@ -336,7 +345,7 @@ object MimeTypes {
   object message {
     def / (messageType: MessageType) = new MimeType {
       def maintype = "message"
-      def subtype = messageType.subtype 
+      def subtype = messageType.subtype
       override def extensions = messageType.extensions
     }
   }
@@ -344,7 +353,7 @@ object MimeTypes {
   object multipart {
     def / (multipartType: MultipartType) = new MimeType {
       def maintype = "multipart"
-      def subtype = multipartType.subtype 
+      def subtype = multipartType.subtype
       override def extensions = multipartType.extensions
     }
   }
@@ -352,7 +361,7 @@ object MimeTypes {
   object text {
     def / (textType: TextType) = new MimeType {
       def maintype = "text"
-      def subtype = textType.subtype 
+      def subtype = textType.subtype
       override def extensions = textType.extensions
     }
   }
@@ -365,5 +374,3 @@ object MimeTypes {
     }
   }
 }
-
-
