@@ -84,8 +84,4 @@ object JParser {
 
   def validateManyFromByteBuffer[A: Extractor](buf: ByteBuffer) = 
     ((thrown _) <-: parseManyFromByteBuffer(buf)) flatMap { _.toStream.map(_.validated[A]).sequence[Extract, A] }
-
-
-  def parseAsync(buf: ByteBuffer): AsyncResult =
-    AsyncParser().feed(Some(buf))
 }

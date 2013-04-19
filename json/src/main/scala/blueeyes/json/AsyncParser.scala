@@ -15,7 +15,8 @@ private[json] class AsyncException extends Exception
 private[json] class FailureException extends Exception
 
 object AsyncParser {
-  def apply() = new AsyncParser(new Array[Byte](131072), 0, 131072, 0, false)
+  def apply(failFast: Boolean): AsyncParser =
+    new AsyncParser(new Array[Byte](131072), 0, 131072, 0, false, failFast)
 }
 
 final class AsyncParser protected[json] (
@@ -23,7 +24,8 @@ final class AsyncParser protected[json] (
   protected[json] var len: Int,
   protected[json] var allocated: Int,
   protected[json] var index: Int,
-  protected[json] var done: Boolean
+  protected[json] var done: Boolean,
+  protected[json] val failFast: Boolean
 ) extends ByteBasedParser {
 
   protected[this] var line = 0
@@ -32,7 +34,7 @@ final class AsyncParser protected[json] (
   protected[this] final def column(i: Int) = i - pos
 
   protected[this] final def copy() =
-    new AsyncParser(data.clone, len, allocated, index, done)
+    new AsyncParser(data.clone, len, allocated, index, done, failFast)
 
   final def apply(b: Option[ByteBuffer]): (AsyncParse, AsyncParser) = copy.feed(b)
 
@@ -100,7 +102,11 @@ final class AsyncParser protected[json] (
               // make an effort to find the next value.
               case e: ParseException =>
                 errors.append(e)
-                recoverFromError(e)
+                if (failFast) {
+                  throw new AsyncException
+                } else {
+                  recoverFromError(e)
+                }
             }
         }
       }

@@ -124,12 +124,12 @@ object AsyncParserSpec extends Specification {
   
   private def runTest(path: String, step: Int) = {
     val data = loadBytes(path)
-    chunkAll(AsyncParser(), data, () => step)
+    chunkAll(AsyncParser(true), data, () => step)
   }
   
   private def runTestRandomStep(path: String, f: () => Int) = {
     val data = loadBytes(path)
-    chunkAll(AsyncParser(), data, f)
+    chunkAll(AsyncParser(true), data, f)
   }
   
   "Async parser works on one 1M chunk" in {
@@ -189,7 +189,7 @@ object AsyncParserSpec extends Specification {
   }
   
   def run1(chunks: Seq[Option[ByteBuffer]], expected: Int) = {
-    var p: AsyncParser = AsyncParser()
+    var p: AsyncParser = AsyncParser(true)
     var t0 = System.nanoTime
     var count = 0
     chunks.foreach { chunk =>
@@ -239,7 +239,7 @@ object AsyncParserSpec extends Specification {
     println("byteb: %.2f ms" format (t2 / 10000000.0))
   }
 
-  "Async parser recovers from errors" in {
+  "Async parser can recover from errors" in {
     val json = """{"foo": 123, "bar": 999}
 {"foo": 123, "bar": 999x}
 {"foo": 123, "bar": 999}
@@ -258,7 +258,7 @@ xyz
     val bs = json.getBytes(utf8)
     val c = chunk(bs, 0, bs.length)
 
-    var p = AsyncParser()
+    var p = AsyncParser(false)
     val (AsyncParse(es, js), p2) = p(c)
 
     // each line should become an error or a jvalue
@@ -274,6 +274,49 @@ xyz
     confirm(es(1), 6, 1)
     confirm(es(2), 9, 22)
     confirm(es(3), 12, 1)
+  }
+
+  "Async parser can fail fast" in {
+    val json = """{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999x}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": {"foo": 123, "bar": 999}}
+{"foo": 123, "bar: {"foo": 123, "bar": 999}}
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}
+xyz
+{"foo": 123, "bar": 999}
+{"foo": 123, "bar": 999}"""
+
+    val bs = json.getBytes(utf8)
+    val c = chunk(bs, 0, bs.length)
+
+    var p = AsyncParser(true)
+    val (AsyncParse(es, js), p2) = p(c)
+
+    // we should only have parsed 1 valid record, and seen 1 error
+    json.split('\n').length must_== 14
+    es.length must_== 1
+    js.length must_== 1
+
+    def confirm(e: ParseException, y: Int, x: Int) {
+      e.line must_== y
+      e.col must_== x
+    }
+    confirm(es(0), 2, 24)
+  }
+
+  "Handles whitespace correctly" in {
+    def ja(ns: Int*) = JArray(ns.map(n => JNum(n)):_*)
+
+    JParser.parseFromString("[1, 2,\t3,\n4,\r5]\r").toOption must_== Some(ja(1, 2, 3, 4, 5))
+    JParser.parseManyFromString("[1,\r\n2]\r\n[3,\r\n4]\r\n").toOption must_== Some(Seq(ja(1, 2), ja(3, 4)))
+    JParser.parseFromString("[1, 2,\t3,\n4,\0 5]").toOption must_== None
+    JParser.parseManyFromString("[1,\r\n2]\0[3,\r\n4]\r\n").toOption must_== None
   }
 
   "Handles whitespace correctly" in {
