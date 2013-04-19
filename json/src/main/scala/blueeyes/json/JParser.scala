@@ -53,6 +53,7 @@ object JParser {
   def parseManyFromByteBuffer(buf: ByteBuffer): Result[Seq[JValue]] =
     fromTryCatch(new ByteBufferParser(buf).parseMany())
 
+  @deprecated("Use the AsyncParser() factory constructor instead.", "1.0")
   def parseAsync(buf: ByteBuffer): AsyncResult =
-    AsyncParser().feed(Some(buf))
+    AsyncParser(false).feed(Some(buf))
 }
