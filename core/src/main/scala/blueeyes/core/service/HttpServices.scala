@@ -64,6 +64,10 @@ trait DelegatingService[A, B, A0, B0] extends HttpService[A, B] {
   val delegate: HttpService[A0, B0]
 }
 
+object DelegatingService {
+  def unapply[A, B, C, D](s: DelegatingService[A, B, C, D]): Option[HttpService[C, D]] = Some(s.delegate)
+}
+
 case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, B] {
   private def pick(r: HttpRequest[A], services: Seq[HttpService[A, B]]): Validation[NotServed, B] = {
     services.headOption.toSuccess(inapplicable) flatMap {
@@ -84,9 +88,19 @@ case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, 
   val metadata = NoMetadata
 }
 
-object DelegatingService {
-  def unapply[A, B, C, D](s: DelegatingService[A, B, C, D]): Option[HttpService[C, D]] = Some(s.delegate)
+trait ResponseModifier[A, B] {
+  def modify(result: A)(f: HttpResponse[B] => HttpResponse[B]): A
 }
+
+object ResponseModifier {
+  implicit def Identity[A, B]: ResponseModifier[A, B] = new ResponseModifier[A, B] {
+    def modify(result: A)(f: HttpResponse[B] => HttpResponse[B]): A = result
+  }
+}
+
+////////////////////////////////////////////////////
+// Handlers that are descendents of the ADT types //
+////////////////////////////////////////////////////
 
 class HttpHandlerService[A, B, C](h: HttpServiceHandler[B, C], f: A => B) extends CustomHttpService[A, C] {
   val service = (r: HttpRequest[A]) => h(r.map(f)).success
@@ -195,49 +209,19 @@ class CommitService[A, B](val delegate: HttpService[A, B]) extends DelegatingSer
   val metadata = NoMetadata
 }
 
-class TranscodeService[A, B](val delegate: HttpService[Future[B], Future[HttpResponse[B]]])(implicit inj: A => Future[B], surj: B => A)
-extends DelegatingService[A, Future[HttpResponse[A]], Future[B], Future[HttpResponse[B]]] {
+class TranscodeService[A, B](val delegate: HttpService[Future[B], Future[HttpResponse[B]]])(implicit inj: A => B, surj: B => A)
+extends DelegatingService[A, Future[HttpResponse[A]], B, Future[HttpResponse[B]]] {
   val service = (request: HttpRequest[A]) => delegate.service(request.map(inj)).map(_.map(_.map(surj)))
   val metadata = NoMetadata
 }
 
-class AcceptService[T, S, U](mimeTypes: Seq[MimeType], val delegate: HttpService[Future[T], Future[HttpResponse[S]]])(implicit f: U => Future[T])
-extends DelegatingService[U, Future[HttpResponse[S]], Future[T], Future[HttpResponse[S]]] {
+class AcceptService[A, B](mimeTypes: Seq[MimeType], val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B]
   import AcceptService._
-  val service = (r: HttpRequest[U]) => convert(mimeTypes.toSet, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
-    delegate.service(newRequest) map { checkConvert(newRequest, _) }
-  }
-
+  val service = (r: HttpRequest[A]) => r.mimeTypes.exists(mimeTypes.toSet).option(r).toSuccess(inapplicable) flatMap { delegate.service }
   val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*)))
 }
 
-class Accept2Service[T, S, U, E1](mimeTypes: Seq[MimeType], val delegate: HttpService[Future[T], E1 => Future[HttpResponse[S]]])(implicit f: U => Future[T])
-extends DelegatingService[U, E1 => Future[HttpResponse[S]], Future[T], E1 => Future[HttpResponse[S]]] {
-  import AcceptService._
-  val service = (r: HttpRequest[U]) => convert(mimeTypes.toSet, r, inapplicable) flatMap { newRequest: HttpRequest[Future[T]] =>
-    delegate.service(newRequest).map(function => (e: E1) => function.apply(e))
-  }
-
-  val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*)))
-}
-
-object AcceptService extends blueeyes.bkka.AkkaDefaults {
-  def convert[U, T](mimeTypes: Set[MimeType], r: HttpRequest[U], inapplicable: => Inapplicable)(implicit f: U => Future[T]) = {
-    r.mimeTypes.find(mimeTypes).map(_ => r.copy(content = r.content.map(f)).success).getOrElse(inapplicable.failure)
-  }
-
-  def checkConvert[T, S](request: HttpRequest[Future[T]], response: Future[HttpResponse[S]]) = {
-    request.content.map{content =>
-      val result = Promise[HttpResponse[S]]()
-      content  onFailure { case error => result.success(HttpResponse[S](status = HttpStatus(BadRequest, error.getMessage))) }
-      response onFailure { case error => result.failure(error) }
-      response onSuccess { case value => result.success(value) }
-      result
-    }.getOrElse(response)
-  }
-}
-
-class ProduceService[T, S, V](mimeType: MimeType, val delegate: HttpService[T, Future[HttpResponse[S]]], transcoder: S => V)
+class ProduceService[A, B](mimeType: MimeType, val delegate: HttpService[A, B])
 extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]] {
   import HttpHeaders.Accept
   def service = (r: HttpRequest[T]) => {
@@ -245,21 +229,6 @@ extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]
     filter(_.mimeTypes.exists(mimeType.satisfiesRequestFor)).toSuccess(inapplicable) flatMap { _ =>
       delegate.service(r).map {
         _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
-      }
-    }
-  }
-
-  val metadata = ResponseHeaderMetadata(Right(`Content-Type`(mimeType)))
-}
-
-class Produce2Service[T, S, V, E1](mimeType: MimeType, val delegate: HttpService[T, E1 => Future[HttpResponse[S]]], transcoder: S => V)
-extends DelegatingService[T, E1 => Future[HttpResponse[V]], T, E1 => Future[HttpResponse[S]]] {
-  import HttpHeaders.Accept
-  def service = (r: HttpRequest[T]) => {
-    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
-    filter(_.mimeTypes.exists(mimeType.satisfiesRequestFor)).toSuccess(inapplicable) flatMap { _ =>
-      delegate.service(r).map {
-        f => f andThen ((_: Future[HttpResponse[S]]).map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType))))
       }
     }
   }
@@ -326,31 +295,10 @@ extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk,
   val metadata = opt2M(chunkSize.map(DataSizeMetadata))
 }
 
-class Aggregate2Service[E1](chunkSize: Option[DataSize], val delegate: HttpService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext)
-extends DelegatingService[ByteChunk, E1 => Future[HttpResponse[ByteChunk]], ByteChunk, E1 => Future[HttpResponse[ByteChunk]]]{
-  private val size = chunkSize.map(_.intBytes).getOrElse(ByteChunk.defaultChunkSize)
-
-  def service = (r: HttpRequest[ByteChunk]) => {
-    delegate.service(r.copy(content = r.content.map(ByteChunk.aggregate(_, size)))).map(f => (e: E1) => f(e))
-  }
-
-  val metadata = opt2M(chunkSize.map(DataSizeMetadata))
-}
-
 class JsonpService[T](val delegate: HttpService[T, Future[HttpResponse[T]]])(implicit fromString: String => T, semigroup: Semigroup[T])
 extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]]{
   import JsonpService._
   def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
-
-  val metadata = JsonpService.metadata
-}
-
-class Jsonp2Service[T, E1](val delegate: HttpService[T, E1 => Future[HttpResponse[T]]])(implicit fromString: String => T, semigroup: Semigroup[T])
-extends DelegatingService[T, E1 => Future[HttpResponse[T]], T, E1 => Future[HttpResponse[T]]]{
-  import JsonpService._
-  def service = (r: HttpRequest[T]) => {
-    jsonpConvertRequest(r).flatMap(delegate.service).map(f => (e: E1) => f(e).map(jsonpConvertResponse(_, r.parameters.get('callback))))
-  }
 
   val metadata = JsonpService.metadata
 }
