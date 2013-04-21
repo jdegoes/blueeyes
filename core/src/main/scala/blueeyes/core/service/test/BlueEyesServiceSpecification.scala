@@ -32,6 +32,8 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
   private var _service: AsyncHttpService[ByteChunk] = _
   private var _stoppable: Option[Stoppable] = None
 
+  implicit def executionContext: ExecutionContext
+
   private val specBefore = Step {
     setMockCongiguration
 
@@ -63,7 +65,6 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
   def stopTimeOut    = 60000
   def httpServerStopTimeout = stopTimeOut
   def configuration  = ""
-  implicit def executionContext: ExecutionContext
 
   protected def beforeSpec: Step = Step()
   protected def afterSpec: Step = Step()
@@ -71,14 +72,11 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
   final def service = _service
   final def stoppable = _stoppable
 
-  class HttpServer(config: Configuration, executor: ExecutionContext) extends HttpServerLike(config) {
-    override implicit val executionContext = executor
-
+  class HttpServer(rootConfig: Configuration, executor: ExecutionContext) extends HttpServerLike(rootConfig, self.services, executor) {
     // For the purposes of tests, kill the server early since we don't care about losing data in a spec
-    override val stopTimeout = akka.util.Timeout(httpServerStopTimeout - 5000)
-
-    override val services = self.services
-    override val log = self.logger
+    override val config = new HttpServerConfig(rootConfig) {
+      override val stopTimeout = akka.util.Timeout(httpServerStopTimeout - 5000)
+    }
   }
 
   def server(config: Configuration, executor: ExecutionContext) = new HttpServer(config, executor)

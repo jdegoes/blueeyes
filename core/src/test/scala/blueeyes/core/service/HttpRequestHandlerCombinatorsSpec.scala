@@ -196,10 +196,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/bar") {
         cookie('someCookie, Some(defaultValue)) {
           get { 
-            service {
-              (request: HttpRequest[String]) => {
-                cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
-              }
+            (request: HttpRequest[String]) => {
+              cookieVal: String => Future(HttpResponse[String](content = Some(cookieVal)))
             }
           }
         }
@@ -216,9 +214,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/'bar") {
         parameter('bar) {
           get { 
-            service {
-              (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[String](content = Some(bar)))
-            }
+            (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[String](content = Some(bar)))
           }
         }
       }
@@ -232,11 +228,9 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path("/foo/") {
         parameter[String, Future[HttpResponse[String]]]('bar, Some("bebe")) {
           get { 
-            service {
-              (request: HttpRequest[String]) => (bar: String) => {
-                request.parameters mustEqual Map('bar -> "bebe")
-                Future(HttpResponse[String](content = request.parameters.get('bar)))
-              }
+            (request: HttpRequest[String]) => (bar: String) => {
+              request.parameters mustEqual Map('bar -> "bebe")
+              Future(HttpResponse[String](content = request.parameters.get('bar)))
             }
           }
         }
@@ -249,12 +243,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "extract parameter even when combined with produce" in {
       val handler = path("/foo/'bar") {
-        produce[String, JValue, JValue](application / json) {
+        produce(application / json) {
           parameter('bar) {
             get { 
-              service {
-                (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
-              }
+              (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
             }
           }
         }
@@ -267,12 +259,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
     "extract decoded parameter" in {
       val handler = path("/foo/'bar") {
-        produce[String, JValue, JValue](application / json) {
+        produce(application / json) {
           parameter('bar) {
             get { 
-              service {
-                (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
-              }
+              (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
             }
           }
         }
@@ -289,10 +279,8 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       val handler = path('token) {
         parameter('token) {
           get {
-            service {
-              (request: HttpRequest[String]) => { 
-                (token: String) => Future(HttpResponse[String](content = Some(token))) 
-              }
+            (request: HttpRequest[String]) => { 
+              (token: String) => Future(HttpResponse[String](content = Some(token))) 
             }
           }
         }
@@ -306,12 +294,10 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     "support nested paths" in {
       val handler = path("/foo/") {
         path('bar / "entries") {
-          produce[String, JValue, JValue](application / json) {
+          produce(application / json) {
             parameter('bar) {
               get { 
-                service {
-                  (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
-                }
+                (request: HttpRequest[String]) => (bar: String) => Future(HttpResponse[JValue](content = Some(JString(bar))))
               }
             }
           }
@@ -369,7 +355,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
   "decodeUrl combinator" should {
     "decode request URI" in {
       val svc = path("/foo/'bar") {
-        produce[String, JValue, JValue](application / json) {
+        produce(application / json) {
           decodeUrl {
             get { (request: HttpRequest[String]) =>
               Future(HttpResponse[JValue](content = Some(JString(request.uri.toString))))

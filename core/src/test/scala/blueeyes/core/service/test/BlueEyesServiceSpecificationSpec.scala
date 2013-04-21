@@ -42,29 +42,33 @@ class BlueEyesServiceSpecificationSpec extends BlueEyesServiceSpecification with
 }
 
 trait TestService extends BlueEyesServiceBuilder with TestAkkaDefaults {
+  import HttpRequestHandlerImplicits._
   private var eventuallyCondition = false
+
   val sampleService = service("sample", "1.32") { context =>
     request {
-      produce(text/html) {
-        path("/bar/'foo/bar.html") {
-          get { request: HttpRequest[ByteChunk] =>
-            Future(serviceResponse)
-          }
-        }~
-        path("/asynch/future") {
-          get { request: HttpRequest[ByteChunk] =>
-            async {
-              serviceResponse
-            }
-          }
-        }~
-        path("/asynch/eventually") {
-          get { request: HttpRequest[ByteChunk] =>
-            if (eventuallyCondition) {
+      encode[ByteChunk, Future[HttpResponse[String]], Future[HttpResponse[ByteChunk]]] {
+        produce(text/html) {
+          path("/bar/'foo/bar.html") {
+            get { request: HttpRequest[ByteChunk] =>
               Future(serviceResponse)
-            } else {
-              eventuallyCondition = true
-              Promise.successful(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)))
+            }
+          }~
+          path("/asynch/future") {
+            get { request: HttpRequest[ByteChunk] =>
+              async {
+                serviceResponse
+              }
+            }
+          }~
+          path("/asynch/eventually") {
+            get { request: HttpRequest[ByteChunk] =>
+              if (eventuallyCondition) {
+                Future(serviceResponse)
+              } else {
+                eventuallyCondition = true
+                Promise.successful(HttpResponse[String](HttpStatus(HttpStatusCodes.NotFound)))
+              }
             }
           }
         }

@@ -28,12 +28,11 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
   private var stoppable: Option[Stoppable] = null
   private var _executionContext: ExecutionContext = null
 
-  private implicit def executionContext: ExecutionContext = _executionContext
-
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
 
   override def service(httpRequest: HttpServletRequest, httpResponse: HttpServletResponse) {
-    implicit val M: Monad[Future] = new FutureMonad(executionContext)
+    implicit val executor: ExecutionContext = _executionContext
+    implicit val M: Monad[Future] = new FutureMonad(executor)
 
     def writeResponse(response: HttpResponse[ByteChunk], asyncContext: AsyncContext): Future[Unit] = {
       def writeStream(stream: StreamT[Future, ByteBuffer], channel: WritableByteChannel): Future[Unit] = {
@@ -88,6 +87,7 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
   }
 
   override def destroy() {
+    implicit val executor = _executionContext
     pendingResponses.foreach(_.asInstanceOf[Promise[HttpResponse[ByteChunk]]].failure(new RuntimeException("Connection closed.")))
     pendingResponses.clear()
 
@@ -103,14 +103,14 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
     )
 
     _executionContext = AkkaDefaults.defaultFutureDispatch
-    val run = server(rootConfiguration, executionContext)
+    val run = server(rootConfiguration, _executionContext)
     run.start map { startFuture => 
       val startupTimeout = Timeout(rootConfiguration[Long]("server.startup.timeout.seconds", 30L))
       val started = startFuture map {
         case (svc, stop) => 
           service = svc
           stoppable = stop
-          stopTimeout = run.stopTimeout
+          stopTimeout = run.config.stopTimeout
       }
 
       Await.result(started, startupTimeout.duration)

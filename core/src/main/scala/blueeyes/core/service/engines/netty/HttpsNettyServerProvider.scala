@@ -11,22 +11,21 @@ import org.jboss.netty.channel.group.ChannelGroup
 import org.jboss.netty.channel.ChannelPipeline
 import org.jboss.netty.handler.ssl.SslHandler
 
+import com.weiglewilczek.slf4s.Logger
 import org.streum.configrity.Configuration
 
 import HttpServerConfig._
 
-private[engines] class HttpsNettyServerProvider(server: HttpServerConfig, service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
+private[engines] class HttpsNettyServerProvider(conf: HttpServerConfig, service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
   def pipelineFactory(channelGroup: ChannelGroup) = {
-    new HttpsPipelineFactory("https", server.host, server.sslPort, server.chunkSize, server.compressionLevel, service, channelGroup, server.config, executionContext)
+    new HttpsPipelineFactory("https", conf.host, conf.sslPort, conf.chunkSize, conf.compressionLevel, service, channelGroup, conf.config, executionContext)
   }
 
   def engineType = "https"
 
-  def enginePort = server.sslPort
+  def enginePort = conf.sslPort
 
-  def config = server.config
-
-  def log = server.log
+  def config = conf.config
 }
 
 private[engines] class HttpsPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int, compression: Option[CompressionLevel],

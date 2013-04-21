@@ -98,6 +98,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
   def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = help("/docs/api")(f)
 
   def help[T, S](pathPrefix: RestPathPattern)(f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
+    implicit val F: scalaz.Functor[Future] = new blueeyes.bkka.FutureMonad(executor)
+    import HttpRequestHandlerImplicits._
     (context: ServiceContext) => {
       val underlying = f(context)
       underlying.copy(
@@ -108,12 +110,9 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             path(pathPrefix) {
               get {
                 produce(text/html){
-                  new HttpHandlerService(
-                    (request: HttpRequest[T]) => {
-                      Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
-                    },
-                    identity[T]
-                  )
+                  (request: HttpRequest[T]) => {
+                    Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
+                  }
                 }
               }
             }

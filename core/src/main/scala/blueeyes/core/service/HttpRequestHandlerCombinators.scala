@@ -16,11 +16,11 @@ import com.weiglewilczek.slf4s.Logger
 import scala.xml.NodeSeq
 import scalaz.Validation
 import scalaz.Semigroup
+import scalaz.Monad
 
 
 trait HttpRequestHandlerCombinators {
-  implicit def service[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = 
-    new HttpHandlerService(handler, identity[A])
+  implicit def handle[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = new HttpHandlerService(handler)
 
   def debug[A, B](logger: Logger): HttpService[A, B] => HttpService[A, B] =
     (h: HttpService[A, B]) => new DebugService[A, B](logger, h)
@@ -182,7 +182,6 @@ trait HttpRequestHandlerCombinators {
     (s: HttpService[A, E1 => B]) => CookieService[A, B](ident, default, s.map((_: E1 => B) compose convert))
   }
 
-
   def field[B, F1 <: JValue](s1AndDefault: IdentifierWithDefault[Symbol, F1])(implicit mc1: Manifest[F1]): HttpService[JValue, F1 => B] => HttpService[JValue, B] = {
     def extractField[F <: JValue](content: JValue, s1AndDefault: IdentifierWithDefault[Symbol, F])(implicit mc: Manifest[F]): F = {
       val c: Class[F] = mc.erasure.asInstanceOf[Class[F]]
@@ -205,24 +204,29 @@ trait HttpRequestHandlerCombinators {
    * used for transcoding.
    */
   def accept[A, B](mimeTypes: MimeType*)(h: HttpService[A, B]): HttpService[A, B] = 
-    new AcceptService[A, B, A0](mimeTypes, h)
+    new AcceptService(mimeTypes, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
-  def produce[A, B](mimeType: MimeType)(h: HttpService[A, Future[HttpResponse[B]]]): HttpService[A, Future[HttpResponse[B]]] = 
-    new ProduceService(mimeType, h)
+  def produce[A, B](mimeType: MimeType)(h: HttpService[A, B])(implicit modifier: ResponseModifier[B]): HttpService[A, B] = 
+    new ProduceService(mimeType, h, modifier)
+
+  def decode[A, B, C](h: HttpService[B, C])(implicit f: A => B): HttpService[A, C] = 
+    h.contramap(f)
+
+  def encode[A, B, C](h: HttpService[A, B])(implicit f: B => C): HttpService[A, C] = 
+    h.map(f)
 
   /** The content type combinator creates a handler that accepts and produces
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
    */
-  def contentType[A, B](mimeType: MimeType)(h: HttpService[A, Future[HttpResponse[A]]]): HttpService[A, Future[HttpResponse[B]]] = {
+  def contentType[A, B](mimeType: MimeType)(h: HttpService[A, B])(implicit modifier: ResponseModifier[B]): HttpService[A, B] = 
     accept(mimeType) {
-      produce[Future[A], A, B](mimeType) { h }
+      produce(mimeType) { h }
     }
-  }
 
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
@@ -242,17 +246,17 @@ trait HttpRequestHandlerCombinators {
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
    */
-  def jvalue[A](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit inj: A => Future[JValue], surj: JValue => A): HttpService[A, Future[HttpResponse[A]]] = 
-    contentType(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map surj }
+  def jvalue[A](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit inj: A => Future[JValue], surj: JValue => A, M: Monad[Future]): HttpService[A, Future[HttpResponse[A]]] = 
+    contentType(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
 
   /** The xml combinator creates a handler that accepts and produces XML.
    * Requires an implicit bijection used for transcoding.
    */
-  def xml[A](h: HttpService[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit inj: A => Future[NodeSeq], surj: NodeSeq => A) = 
-    contentType(MimeTypes.text/MimeTypes.xml) { h.contramap(inj) } map { _ map surj }
+  def xml[A](h: HttpService[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit inj: A => Future[NodeSeq], surj: NodeSeq => A, M: Monad[Future]) = 
+    contentType(MimeTypes.text/MimeTypes.xml) { h.contramap(inj) } map { _ map { _ map surj } }
 
-  def forwarding[A, A0](f: HttpRequest[A] => Option[HttpRequest[A0]], httpClient: HttpClient[A0]) = 
-    (h: HttpService[A, HttpResponse[A]]) => new ForwardingService[A, A0](f, httpClient, h)
+  def forwarding[A, A0](f: HttpRequest[A] => Option[HttpRequest[A0]], httpClient: HttpClient[A0])(h: HttpService[A, HttpResponse[A]]) = 
+    new ForwardingService[A, A0](f, httpClient, h)
 
   def metadata[A, B](metadata: Metadata*)(h: HttpService[A, Future[HttpResponse[B]]]) = new MetadataService(Some(AndMetadata(metadata: _*)), h)
 

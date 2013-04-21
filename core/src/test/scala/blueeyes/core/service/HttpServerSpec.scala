@@ -22,36 +22,32 @@ import  com.weiglewilczek.slf4s._
 object TestServer extends HttpServerModule with TestAkkaDefaults {
   import DefaultBijections._
 
-  class HttpServer(rootConfig: Configuration, val executionContext: ExecutionContext) 
-      extends HttpServerLike(rootConfig) 
-      with BlueEyesServiceBuilder 
-      with HttpRequestCombinators 
-      with ReflectiveServiceList[ByteChunk] { enclosing =>
-
+  class TestServices extends BlueEyesServiceBuilder with HttpRequestCombinators { 
     var startupCalled   = false
     var shutdownCalled  = false
-    val log = logger
-
-    lazy val testService = service("test", "1.0.7") {
+    
+    val testService = service("test", "1.0.7") {
       context => {
         startup {
           startupCalled = true
           Future("blahblah")
         } ->
         request { value: String =>
-          path("/foo/bar") {
-            produce[ByteChunk, String, ByteChunk](text/plain) {
-              get {
-                request: HttpRequest[ByteChunk] => Future(HttpResponse[String](content=Some(value)))
-              } ~
-              path("/error") { 
-                get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
-                  sys.error("He's dead, Jim.")
-                }
-              } ~
-              path("/dead") {
-                get { request: HttpRequest[ByteChunk] =>
-                  akka.dispatch.Promise.failed[HttpResponse[String]](new RuntimeException())
+          encode[ByteChunk, Future[HttpResponse[String]], Future[HttpResponse[ByteChunk]]] {
+            produce(text/plain) {
+              path("/foo/bar") {
+                get {
+                  request: HttpRequest[ByteChunk] => Future(HttpResponse[String](content=Some(value)))
+                } ~
+                path("/error") { 
+                  get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
+                    sys.error("He's dead, Jim.")
+                  }
+                } ~
+                path("/dead") {
+                  get { request: HttpRequest[ByteChunk] =>
+                    akka.dispatch.Promise.failed[HttpResponse[String]](new RuntimeException())
+                  }
                 }
               }
             }
@@ -62,12 +58,18 @@ object TestServer extends HttpServerModule with TestAkkaDefaults {
         }
       }
     }
+  }
+
+  class HttpServer(rootConfig: Configuration, executor: ExecutionContext, testServices: TestServices) extends HttpServerLike(rootConfig, List(testServices.testService), executor) { enclosing =>
+
+    import HttpRequestHandlerImplicits._
+    private implicit val M = new blueeyes.bkka.FutureMonad(executor)
 
     class TestService(svc: AsyncHttpService[ByteChunk]) extends CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
       def metadata = None
       def service = svc.service
-      def startupCalled = enclosing.startupCalled
-      def shutdownCalled = enclosing.shutdownCalled
+      def startupCalled = testServices.startupCalled
+      def shutdownCalled = testServices.shutdownCalled
     }
 
     override def start: Option[Future[(TestService, Option[Stoppable])]] = {
@@ -76,7 +78,9 @@ object TestServer extends HttpServerModule with TestAkkaDefaults {
   }
 
   def server(config: Configuration): HttpServer = server(config, defaultFutureDispatch)
-  def server(config: Configuration, executor: ExecutionContext): HttpServer = new HttpServer(config, executor)
+  def server(config: Configuration, executor: ExecutionContext): HttpServer = {
+    new HttpServer(config, executor, new TestServices)
+  }
 }
 
 class HttpServerSpec extends Specification with FutureMatchers {
@@ -100,12 +104,14 @@ class HttpServerSpec extends Specification with FutureMatchers {
   "HttpServer.apply" should {
     "delegate to service request handler" in server { 
       case (s, _) =>
+        import HttpHeaders._
+        import MimeTypes._
         s.service(HttpRequest[ByteChunk](HttpMethods.GET, "/test/v1/foo/bar")).toOption.get must whenDelivered {
           beLike {
             case HttpResponse(HttpStatus(status, _), headers, Some(content), _) =>
               (status must_== OK) and
               (content must beLike { case Left(buf) => new String(buf.array) must_== "blahblah" }) and
-              (headers.get("Content-Type") must beSome("text/plain"))
+              (headers.header[`Content-Type`] must beSome(`Content-Type`(MimeTypes.text/plain)))
           }
         }
     }
@@ -147,37 +153,32 @@ class HttpServerSpec extends Specification with FutureMatchers {
 }
 
 
-object FailServer extends HttpServerModule {
+object FailServer extends HttpServerModule 
+      with BlueEyesServiceBuilder 
+      with HttpRequestCombinators { enclosing =>
+
   import DefaultBijections._
 
-  class HttpServer(rootConfig: Configuration, val executionContext: ExecutionContext) 
-      extends HttpServerLike(rootConfig) 
-      with BlueEyesServiceBuilder 
-      with HttpRequestCombinators 
-      with ReflectiveServiceList[ByteChunk] { enclosing =>
-
-    implicit val ctx = executionContext
-    val log = logger
-
-    lazy val testService = service("test", "1.0.7") {
-      context => {
-        startup {
-          sys.error("Error during startup should not hang.")
-          Future("Hello, world, I'm Unreachable!")
-        } ->
-        request { state: String =>
-          path("/dead") {
-            get { request: HttpRequest[ByteChunk] =>
-              akka.dispatch.Promise.failed[HttpResponse[ByteChunk]](new RuntimeException()): Future[HttpResponse[ByteChunk]]
-            }
+  def testService(implicit executor: ExecutionContext) = service("test", "1.0.7") {
+    context => {
+      startup {
+        sys.error("Error during startup should not hang.")
+        Future("Hello, world, I'm Unreachable!")
+      } ->
+      request { state: String =>
+        path("/dead") {
+          get { request: HttpRequest[ByteChunk] =>
+            akka.dispatch.Promise.failed[HttpResponse[ByteChunk]](new RuntimeException()): Future[HttpResponse[ByteChunk]]
           }
-        } ->
-        shutdown { state: String =>
-          Future(())
         }
+      } ->
+      shutdown { state: String =>
+        Future(())
       }
     }
   }
+
+  class HttpServer(rootConfig: Configuration, executor: ExecutionContext) extends HttpServerLike(rootConfig, List(testService(executor)), executor) 
 
   def server(config: Configuration, executor: ExecutionContext): HttpServer = new HttpServer(config, executor)
 }

@@ -23,10 +23,8 @@ import com.weiglewilczek.slf4s.Logging
  * </pre>
  */
 trait BlueEyesServer extends NettyEngine with ReflectiveServiceList[ByteChunk] with Logging with HttpServerMain { self =>
-  class HttpServer(rootConfig: Configuration, ctx: ExecutionContext) extends NettyHttpServer(rootConfig, ctx) {
+  class HttpServer(rootConfig: Configuration, ctx: ExecutionContext) extends NettyHttpServer(rootConfig, services, ctx) {
     implicit val executionContext = ctx
-    val services = self.services
-    val log = self.logger
   }
 
   def server(rootConfig: Configuration, ctx: ExecutionContext) = new HttpServer(rootConfig, ctx)

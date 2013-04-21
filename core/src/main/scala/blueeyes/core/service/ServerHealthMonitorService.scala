@@ -4,6 +4,7 @@ import akka.dispatch.ExecutionContext
 import akka.dispatch.Future
 import akka.util.Timeout
 
+import blueeyes.bkka._
 import blueeyes.BlueEyesServiceBuilder
 import blueeyes.core.data._
 import blueeyes.core.http.HttpRequest
@@ -16,18 +17,25 @@ import blueeyes.json._
 
 import DefaultBijections._
 
+import scalaz._
+
 trait ServerHealthMonitorService extends BlueEyesServiceBuilder {
+  import HttpRequestHandlerImplicits._
+
   implicit def executionContext: ExecutionContext
+  private implicit def F: Functor[Future] = new FutureMonad(executionContext)
 
   def createService = {
     val monitor = new ServerHealthMonitor
     service("serverhealth", "1.0.0") { context =>
       request {
         path("/blueeyes/server/health") {
-          produce[ByteChunk, JValue, ByteChunk](application/json) {
-            get { 
-              (request: HttpRequest[ByteChunk]) => monitor.toJValue(context) map { jv => 
-                HttpResponse[JValue](content = Some(jv))
+          encode[ByteChunk, Future[HttpResponse[JValue]], Future[HttpResponse[ByteChunk]]] {
+            produce(application/json) {
+              get {
+                (request: HttpRequest[ByteChunk]) => monitor.toJValue(context).map { jv => 
+                  HttpResponse[JValue](content = Some(jv))
+                } 
               }
             }
           }

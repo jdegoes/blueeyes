@@ -19,11 +19,12 @@ import Metadata._
 
 import java.net.URLDecoder._
 
-import scalaz.{Validation, Success, Failure, Monad, StreamT, Semigroup}
+import scalaz.{ Unapply => _, _ }
 import scalaz.syntax.functor._
 import scalaz.syntax.kleisli._
 import scalaz.syntax.semigroup._
 import scalaz.syntax.validation._
+import scalaz.syntax.std.boolean._
 import scalaz.syntax.std.option._
 
 import com.weiglewilczek.slf4s.Logger
@@ -52,6 +53,22 @@ sealed trait HttpService[A, B] extends AnyService { self =>
   }
 
   def withMetadata(m: Metadata) = new MetadataService(m, this)
+}
+
+object HttpService {
+  implicit def cov[A]: Functor[({ type l[b] = HttpService[A, b] })#l] = {
+    type SF[B] = HttpService[A, B]
+    new Functor[SF] {
+      def map[B0, B](fa: SF[B0])(f: B0 => B): SF[B] = fa.map(f)
+    }
+  }
+
+  implicit def con[B]: Contravariant[({ type l[a] = HttpService[a, B] })#l] = {
+    type SF[A] = HttpService[A, B]
+    new Contravariant[SF] {
+      def contramap[A0, A](fa: SF[A0])(f: A => A0): SF[A] = fa.contramap(f)
+    }
+  }
 }
 
 /**
@@ -88,13 +105,23 @@ case class OrService[A, B](services: HttpService[A, B]*) extends HttpService[A, 
   val metadata = NoMetadata
 }
 
-trait ResponseModifier[A, B] {
-  def modify(result: A)(f: HttpResponse[B] => HttpResponse[B]): A
+
+/**
+ * A higher-order natural transformation on responses that allows uniform handling
+ * for any 
+ */
+trait ResponseModifier[A] {
+  def modify(result: A)(f: HttpResponse ~> HttpResponse): A
 }
 
 object ResponseModifier {
-  implicit def Identity[A, B]: ResponseModifier[A, B] = new ResponseModifier[A, B] {
-    def modify(result: A)(f: HttpResponse[B] => HttpResponse[B]): A = result
+  // because automatically lifting to the identity functor isn't likely to work
+  implicit def response[A]: ResponseModifier[HttpResponse[A]] = new ResponseModifier[HttpResponse[A]] {
+    def modify(result: HttpResponse[A])(f: HttpResponse ~> HttpResponse) = f[A](result)
+  }
+
+  implicit def responseF[F[_]: Functor, A]: ResponseModifier[F[HttpResponse[A]]] = new ResponseModifier[F[HttpResponse[A]]] {
+    def modify(result: F[HttpResponse[A]])(f: HttpResponse ~> HttpResponse) = result map { r => f[A](r) }
   }
 }
 
@@ -102,8 +129,8 @@ object ResponseModifier {
 // Handlers that are descendents of the ADT types //
 ////////////////////////////////////////////////////
 
-class HttpHandlerService[A, B, C](h: HttpServiceHandler[B, C], f: A => B) extends CustomHttpService[A, C] {
-  val service = (r: HttpRequest[A]) => h(r.map(f)).success
+class HttpHandlerService[A, B](h: HttpServiceHandler[A, B]) extends CustomHttpService[A, B] {
+  val service = (r: HttpRequest[A]) => h(r).success
 
   val metadata = NoMetadata
 }
@@ -209,27 +236,23 @@ class CommitService[A, B](val delegate: HttpService[A, B]) extends DelegatingSer
   val metadata = NoMetadata
 }
 
-class TranscodeService[A, B](val delegate: HttpService[Future[B], Future[HttpResponse[B]]])(implicit inj: A => B, surj: B => A)
-extends DelegatingService[A, Future[HttpResponse[A]], B, Future[HttpResponse[B]]] {
-  val service = (request: HttpRequest[A]) => delegate.service(request.map(inj)).map(_.map(_.map(surj)))
+class TranscodeService[A, B](val delegate: HttpService[Future[B], Future[HttpResponse[B]]])(implicit inj: A => Future[B], surj: B => A)
+extends DelegatingService[A, Future[HttpResponse[A]], Future[B], Future[HttpResponse[B]]] {
+  val service = delegate.contramap(inj).map(_ map { _ map surj }).service
   val metadata = NoMetadata
 }
 
-class AcceptService[A, B](mimeTypes: Seq[MimeType], val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B]
-  import AcceptService._
+class AcceptService[A, B](mimeTypes: Seq[MimeType], val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
   val service = (r: HttpRequest[A]) => r.mimeTypes.exists(mimeTypes.toSet).option(r).toSuccess(inapplicable) flatMap { delegate.service }
   val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*)))
 }
 
-class ProduceService[A, B](mimeType: MimeType, val delegate: HttpService[A, B])
-extends DelegatingService[T, Future[HttpResponse[V]], T, Future[HttpResponse[S]]] {
+class ProduceService[A, B](mimeType: MimeType, val delegate: HttpService[A, B], modifier: ResponseModifier[B]) extends DelegatingService[A, B, A, B] {
   import HttpHeaders.Accept
-  def service = (r: HttpRequest[T]) => {
-    r.headers.header[Accept].orElse(Some(Accept(mimeType))).
-    filter(_.mimeTypes.exists(mimeType.satisfiesRequestFor)).toSuccess(inapplicable) flatMap { _ =>
-      delegate.service(r).map {
-        _.map(r => r.copy(content = r.content.map(transcoder), headers = r.headers + `Content-Type`(mimeType)))
-      }
+  def service = (r: HttpRequest[A]) => {
+    val acceptHeader = r.headers.header[Accept].orElse(Some(Accept(mimeType)))
+    acceptHeader.flatMap(_.mimeTypes.find(mimeType.satisfiesRequestFor)).toSuccess(inapplicable) flatMap { accepted =>
+      delegate.map(b => modifier.modify(b) { HttpResponse.modifyHeaders(_ + `Content-Type`(accepted)) }).service(r)
     }
   }
 
