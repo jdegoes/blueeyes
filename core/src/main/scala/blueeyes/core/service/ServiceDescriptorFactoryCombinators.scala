@@ -109,9 +109,11 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             service ~ 
             path(pathPrefix) {
               get {
-                produce(text/html){
-                  (request: HttpRequest[T]) => {
-                    Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
+                encode {
+                  produce(text/html){
+                    (request: HttpRequest[T]) => {
+                      Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
+                    }
                   }
                 }
               }

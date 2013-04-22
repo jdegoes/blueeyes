@@ -19,7 +19,7 @@ import Metadata._
 
 import java.net.URLDecoder._
 
-import scalaz.{ Unapply => _, _ }
+import scalaz._
 import scalaz.syntax.functor._
 import scalaz.syntax.kleisli._
 import scalaz.syntax.show._
@@ -49,9 +49,6 @@ sealed trait HttpService[A, B] extends AnyService { self =>
   }
 
   def ~ (other: HttpService[A, B]): OrService[A, B] = OrService(self, other)
-  def ~ [C, D](other: HttpService[C, D])(implicit unapply: Unapply[C, A], apply: D => B): OrService[A, B] = {
-    self ~ other.contramap(unapply.unapply).map(apply)
-  }
 
   def withMetadata(m: Metadata) = new MetadataService(m, this)
 }
