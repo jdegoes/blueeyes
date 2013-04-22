@@ -240,8 +240,8 @@ trait HttpRequestHandlerCombinators {
    * HTTP method and content using the query string parameters "method" and
    * "content", respectively.
    */
-  def jsonp[A](delegate: AsyncHttpService[A, A])(implicit fromString: String => A, semigroup: Semigroup[A]) = 
-    new JsonpService[A](delegate)
+  def jsonp[A, B](delegate: AsyncHttpService[A, B])(implicit extractReq: String => A, extractResp: String => B, semigroup: Semigroup[B]) = 
+    new JsonpService[A, B](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.

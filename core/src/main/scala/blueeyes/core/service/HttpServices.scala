@@ -316,10 +316,10 @@ extends DelegatingService[ByteChunk, Future[HttpResponse[ByteChunk]], ByteChunk,
   val metadata = opt2M(chunkSize.map(DataSizeMetadata))
 }
 
-class JsonpService[T](val delegate: HttpService[T, Future[HttpResponse[T]]])(implicit fromString: String => T, semigroup: Semigroup[T])
-extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]]{
+class JsonpService[A, B](val delegate: HttpService[A, Future[HttpResponse[B]]])(implicit extractReq: String => A, extractResp: String => B, semigroup: Semigroup[B])
+extends DelegatingService[A, Future[HttpResponse[B]], A, Future[HttpResponse[B]]]{
   import JsonpService._
-  def service = (r: HttpRequest[T]) => jsonpConvertRequest(r).flatMap(delegate.service).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
+  def service = (r: HttpRequest[A]) => jsonpConvertRequest(r).flatMap(delegate.service).map(_.map(jsonpConvertResponse(_, r.parameters.get('callback))))
 
   val metadata = JsonpService.metadata
 }
