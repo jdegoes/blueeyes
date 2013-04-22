@@ -93,7 +93,7 @@ object ParsingByteBufferSpec extends Specification {
 }
 
 object AsyncParserSpec extends Specification {
-  import JParser._
+  import AsyncParser._
 
   val utf8 = java.nio.charset.Charset.forName("UTF-8")
 
@@ -102,7 +102,7 @@ object AsyncParserSpec extends Specification {
 
   private def chunk(data: Array[Byte], i: Int, j: Int) = {
     val len = min(j, data.length) - i
-    if (len > 0) Some(ByteBuffer.wrap(data, i, len)) else None
+    if (len > 0) More(ByteBuffer.wrap(data, i, len)) else Done
   }
 
   private def chunkAll(async: AsyncParser, data: Array[Byte], f: () => Int) = {
@@ -112,13 +112,10 @@ object AsyncParserSpec extends Specification {
     var parser: AsyncParser = async
     while (i < n) {
       val step = f()
-      chunk(data, i, i + step) foreach { byteChunk =>
-        val (AsyncParse(errors, results), p0) = parser(byteChunk)
-        if (!errors.isEmpty) sys.error("failed %s" format errors)
-        vs ++= results
-        parser = p0
-      }
-
+      val (AsyncParse(errors, results), p0) = parser(chunk(data, i, i + step))
+      if (!errors.isEmpty) sys.error("failed %s" format errors)
+      vs ++= results
+      parser = p0
       i += step
     }
     vs
@@ -190,12 +187,12 @@ object AsyncParserSpec extends Specification {
     (0 until 1000).foreach { _.toOption must beSome }
   }
   
-  def run1(chunks: Seq[Option[ByteBuffer]], expected: Int) = {
+  def run1(chunks: Seq[Input], expected: Int) = {
     var parser: AsyncParser = AsyncParser(true)
     var t0 = System.nanoTime
     var count = 0
-    chunks.flatten.foreach { byteChunk =>
-      val (AsyncParse(errors, results), p0) = parser(byteChunk)
+    chunks.foreach { input =>
+      val (AsyncParse(errors, results), p0) = parser(input)
       if (!errors.isEmpty) sys.error("errors: %s" format errors)
       count += results.length
       parser = p0
@@ -257,7 +254,7 @@ xyz
 {"foo": 123, "bar": 999}"""
 
     val bs = json.getBytes(utf8)
-    val Some(c) = chunk(bs, 0, bs.length)
+    val c = chunk(bs, 0, bs.length)
 
     var p = AsyncParser(false)
     val (AsyncParse(es, js), p2) = p(c)
@@ -294,7 +291,7 @@ xyz
 {"foo": 123, "bar": 999}"""
 
     val bs = json.getBytes(utf8)
-    val Some(c) = chunk(bs, 0, bs.length)
+    val c = chunk(bs, 0, bs.length)
 
     var p = AsyncParser(true)
     val (AsyncParse(es, js), p2) = p(c)
