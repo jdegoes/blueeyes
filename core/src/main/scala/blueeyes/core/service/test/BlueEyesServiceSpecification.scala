@@ -29,7 +29,7 @@ abstract class BlueEyesServiceSpecification extends Specification with FutureMat
   private val NotFound = HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound))
   private val mockSwitch = sys.props.get(Environment.MockSwitch)
 
-  private var _service: AsyncHttpService[ByteChunk] = _
+  private var _service: AsyncHttpService[ByteChunk, ByteChunk] = _
   private var _stoppable: Option[Stoppable] = None
 
   implicit def executionContext: ExecutionContext

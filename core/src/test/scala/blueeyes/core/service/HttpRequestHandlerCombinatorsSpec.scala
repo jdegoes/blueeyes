@@ -41,7 +41,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
   "composition of paths" should {
     "have the right type" in {
-      val handler: AsyncHttpService[Int] = {
+      val handler: AsyncHttpService[Int, Int] = {
         path("/foo/bar") {
           path("/baz") {
             get { (request: HttpRequest[Int]) =>
@@ -57,7 +57,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
   "jsonp combinator" should {
     "detect jsonp by callback & method parameters" in {
-      val handler: AsyncHttpService[ByteChunk] = {
+      val handler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode {
           path("/") {
             get { (request: HttpRequest[Future[JValue]]) => 
@@ -76,7 +76,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     }
 
     "retrieve POST content from query string parameter" in {
-      val handler: AsyncHttpService[ByteChunk] = {
+      val handler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode {
           path("/") {
             post { 
@@ -101,7 +101,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     }
 
     "retrieve headers from query string parameter" in {
-      val handler: AsyncHttpService[ByteChunk] = {
+      val handler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode {
           path("/") {
             get { (request: HttpRequest[Future[JValue]]) =>
@@ -123,7 +123,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     }
 
     "pass undefined to callback when there is no content" in {
-      val handler: AsyncHttpService[ByteChunk] = {
+      val handler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode {
           path("/") {
             get { (request: HttpRequest[Future[JValue]]) => 
@@ -145,7 +145,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
     }
 
     "return headers in 2nd argument to callback function" in {
-      val handler: AsyncHttpService[ByteChunk] = {
+      val handler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode[ByteChunk, JValue] {
           path("/") {
             get { (request: HttpRequest[Future[JValue]]) => 
@@ -167,7 +167,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
 
 
     "return 200 and propigate status to callback under failure scenarios" in {
-      val errorHandler: AsyncHttpService[ByteChunk] = {
+      val errorHandler: AsyncHttpService[ByteChunk, ByteChunk] = {
         jsonp { transcode {
           path("/") {
             get { (request: HttpRequest[Future[JValue]]) =>

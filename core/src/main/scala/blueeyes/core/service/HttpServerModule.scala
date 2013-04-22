@@ -103,7 +103,7 @@ trait HttpServerModule extends Logging {
       ServiceContext(rootConfig, serviceConfig, service.name, service.version, service.desc, host, port, sslPort)
     }
 
-    def start: Option[Future[(AsyncHttpService[ByteChunk], Option[Stoppable])]] = {
+    def start: Option[Future[(AsyncHttpService[ByteChunk, ByteChunk], Option[Stoppable])]] = {
       def append[S](lifecycle: ServiceLifecycle[ByteChunk, S], tail: List[Service[ByteChunk, _]]): ServiceLifecycle[ByteChunk, _] = {
         tail match {
           case x :: xs => append(lifecycle ~ x.lifecycle(context(x)), xs)
@@ -119,7 +119,7 @@ trait HttpServerModule extends Logging {
       lifecycle map { _.run map { (trapErrors _).first } }
     }
 
-    def trapErrors(delegate: AsyncHttpService[ByteChunk]): AsyncHttpService[ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
+    def trapErrors(delegate: AsyncHttpService[ByteChunk, ByteChunk]): AsyncHttpService[ByteChunk, ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
       private def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
         case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
         case e => {

@@ -65,7 +65,7 @@ object TestServer extends HttpServerModule with TestAkkaDefaults {
     import HttpRequestHandlerImplicits._
     private implicit val M = new blueeyes.bkka.FutureMonad(executor)
 
-    class TestService(svc: AsyncHttpService[ByteChunk]) extends CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
+    class TestService(svc: AsyncHttpService[ByteChunk, ByteChunk]) extends CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
       def metadata = None
       def service = svc.service
       def startupCalled = testServices.startupCalled

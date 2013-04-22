@@ -36,7 +36,7 @@ final class AsyncParser protected[json] (
   protected[this] final def copy() =
     new AsyncParser(data.clone, len, allocated, index, done, failFast)
 
-  final def apply(b: Option[ByteBuffer]): (AsyncParse, AsyncParser) = copy.feed(b)
+  final def apply(b: ByteBuffer): (AsyncParse, AsyncParser) = copy.feed(Some(b))
 
   protected[this] final def absorb(buf: ByteBuffer): Unit = {
     done = false

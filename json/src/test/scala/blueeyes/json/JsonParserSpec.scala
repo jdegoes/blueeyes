@@ -109,14 +109,16 @@ object AsyncParserSpec extends Specification {
     var vs = mutable.ArrayBuffer.empty[JValue]
     val n = data.length
     var i = 0
-    var p = async
+    var parser: AsyncParser = async
     while (i < n) {
       val step = f()
-      val tpl = p(chunk(data, i, i + step))
-      val (AsyncParse(errors, results), parser) = tpl
-      if (!errors.isEmpty) sys.error("failed %s" format errors)
-      vs ++= results
-      p = parser
+      chunk(data, i, i + step) foreach { byteChunk =>
+        val (AsyncParse(errors, results), p0) = parser(byteChunk)
+        if (!errors.isEmpty) sys.error("failed %s" format errors)
+        vs ++= results
+        parser = p0
+      }
+
       i += step
     }
     vs
@@ -189,15 +191,14 @@ object AsyncParserSpec extends Specification {
   }
   
   def run1(chunks: Seq[Option[ByteBuffer]], expected: Int) = {
-    var p: AsyncParser = AsyncParser(true)
+    var parser: AsyncParser = AsyncParser(true)
     var t0 = System.nanoTime
     var count = 0
-    chunks.foreach { chunk =>
-      val tpl = p(chunk)
-      val (AsyncParse(errors, results), parser) = tpl
+    chunks.flatten.foreach { byteChunk =>
+      val (AsyncParse(errors, results), p0) = parser(byteChunk)
       if (!errors.isEmpty) sys.error("errors: %s" format errors)
       count += results.length
-      p = parser
+      parser = p0
     }
     val t = System.nanoTime - t0
     if(count != expected) sys.error("wrong number of records")
@@ -256,7 +257,7 @@ xyz
 {"foo": 123, "bar": 999}"""
 
     val bs = json.getBytes(utf8)
-    val c = chunk(bs, 0, bs.length)
+    val Some(c) = chunk(bs, 0, bs.length)
 
     var p = AsyncParser(false)
     val (AsyncParse(es, js), p2) = p(c)
@@ -293,7 +294,7 @@ xyz
 {"foo": 123, "bar": 999}"""
 
     val bs = json.getBytes(utf8)
-    val c = chunk(bs, 0, bs.length)
+    val Some(c) = chunk(bs, 0, bs.length)
 
     var p = AsyncParser(true)
     val (AsyncParse(es, js), p2) = p(c)

@@ -22,7 +22,7 @@ sealed case class HttpRequest[T] private(method: HttpMethod, uri: URI, parameter
   def map[U](f: T => U): HttpRequest[U] = copy(content = content map f)
 }
 
-object HttpRequest{
+object HttpRequest {
   def apply[T](method: HttpMethod, uri: URI, parameters: Map[Symbol, String] = Map(), headers: HttpHeaders = HttpHeaders.Empty, content: Option[T] = None, remoteHost: Option[InetAddress] = None, version: HttpVersion = `HTTP/1.1`): HttpRequest[T] = {
     val subpath   = uri.path.getOrElse("")
     val query     = uri.query

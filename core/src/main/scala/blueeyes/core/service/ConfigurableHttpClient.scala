@@ -24,7 +24,7 @@ trait ConfigurableHttpClient {
 
   protected def realClient: HttpClientByteChunk = new HttpClientXLightWeb()
 
-  private def mockClient(h: AsyncHttpService[ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
+  private def mockClient(h: AsyncHttpService[ByteChunk, ByteChunk]): HttpClientByteChunk = new HttpClientByteChunk {
     val executor = executionContext
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
@@ -41,7 +41,7 @@ trait ConfigurableHttpClient {
     case e => HttpResponse[ByteChunk](HttpStatus(InternalServerError, Option(e.getMessage).getOrElse("")))
   }
 
-  protected def mockServer: AsyncHttpService[ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
+  protected def mockServer: AsyncHttpService[ByteChunk, ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
     def service = (request: HttpRequest[ByteChunk]) => {
       success(Future(HttpResponse[ByteChunk](HttpStatus(NotFound, "Mock server handles no requests."))))
     }

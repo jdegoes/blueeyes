@@ -11,7 +11,7 @@ trait NettyEngine extends AbstractNettyEngine { self =>
   type HttpServer <: NettyHttpServer
 
   abstract class NettyHttpServer(rootConfig: Configuration, services: List[Service[ByteChunk, _]], executor: ExecutionContext) extends AbstractNettyHttpServer(rootConfig, services, executor) { self =>
-    protected def nettyServers(service: AsyncHttpService[ByteChunk]) = {
+    protected def nettyServers(service: AsyncHttpService[ByteChunk, ByteChunk]) = {
       val httpProvider = new HttpNettyServerProvider(self.config, service, executor)
       val httpServer = new NettyServer(httpProvider)
       if (self.config.sslEnable) {

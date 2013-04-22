@@ -20,7 +20,7 @@ import scalaz.Monad
 
 
 trait HttpRequestHandlerCombinators {
-  implicit def handle[A, B](handler: HttpServiceHandler[A, B]): HttpService[A, B] = new HttpHandlerService(handler)
+  implicit def handle[A, B](handler: HttpRequest[A] => B): HttpService[A, B] = new HttpHandlerService(handler)
 
   def debug[A, B](logger: Logger): HttpService[A, B] => HttpService[A, B] =
     (h: HttpService[A, B]) => new DebugService[A, B](logger, h)
@@ -231,7 +231,7 @@ trait HttpRequestHandlerCombinators {
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
-  def aggregate(chunkSize: Option[DataSize])(h: HttpService[ByteChunk, Future[HttpResponse[ByteChunk]]])(implicit executor: ExecutionContext) = 
+  def aggregate(chunkSize: Option[DataSize])(h: AsyncHttpService[ByteChunk, ByteChunk])(implicit executor: ExecutionContext) = 
     new AggregateService(chunkSize, h)
 
   /** The jsonp combinator creates a handler that accepts and produces JSON.
@@ -240,7 +240,7 @@ trait HttpRequestHandlerCombinators {
    * HTTP method and content using the query string parameters "method" and
    * "content", respectively.
    */
-  def jsonp[A](delegate: HttpService[A, Future[HttpResponse[A]]])(implicit fromString: String => A, semigroup: Semigroup[A]) = 
+  def jsonp[A](delegate: AsyncHttpService[A, A])(implicit fromString: String => A, semigroup: Semigroup[A]) = 
     new JsonpService[A](delegate)
 
   /** The jvalue combinator creates a handler that accepts and produces JSON.
@@ -255,15 +255,18 @@ trait HttpRequestHandlerCombinators {
   def xml[A](h: HttpService[Future[NodeSeq], Future[HttpResponse[NodeSeq]]])(implicit inj: A => Future[NodeSeq], surj: NodeSeq => A, M: Monad[Future]) = 
     contentType(MimeTypes.text/MimeTypes.xml) { h.contramap(inj) } map { _ map { _ map surj } }
 
+  def proxy[A](httpClient: HttpClient[A])(filter: HttpRequest[A] => Boolean = (_: HttpRequest[A]) => true): AsyncHttpService[A, A] = 
+    new ProxyService(httpClient, filter)
+    
+
   def forwarding[A, A0](f: HttpRequest[A] => Option[HttpRequest[A0]], httpClient: HttpClient[A0])(h: HttpService[A, HttpResponse[A]]) = 
     new ForwardingService[A, A0](f, httpClient, h)
 
-  def metadata[A, B](metadata: Metadata*)(h: HttpService[A, Future[HttpResponse[B]]]) = new MetadataService(Some(AndMetadata(metadata: _*)), h)
+  def metadata[A, B](metadata: Metadata*)(h: AsyncHttpService[A, B]) = new MetadataService(Some(AndMetadata(metadata: _*)), h)
 
-  def describe[A, B](description: String)(h: HttpService[A, Future[HttpResponse[B]]]) = new MetadataService(Some(DescriptionMetadata(description)), h)
+  def describe[A, B](description: String)(h: AsyncHttpService[A, B]) = new MetadataService(Some(DescriptionMetadata(description)), h)
 
-  /** The decodeUrl combinator creates a handler that decode HttpRequest URI.
-   */
+  /** A handler that applies an extra pass of HTTP URL decoding to the inbound HttpRequest URI.  */
   def decodeUrl[A, B](h: HttpService[A, B]) = new DecodeUrlService[A, B](h)
 }
 

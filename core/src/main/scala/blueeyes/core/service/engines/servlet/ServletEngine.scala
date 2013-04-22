@@ -23,7 +23,7 @@ import scalaz._
 import scala.collection.mutable.{HashSet, SynchronizedSet}
 
 abstract class ServletEngine extends HttpServlet with HttpServerModule with HttpServletConverters {
-  private var service: AsyncHttpService[ByteChunk] = null
+  private var service: AsyncHttpService[ByteChunk, ByteChunk] = null
   private var stopTimeout: Timeout = null
   private var stoppable: Option[Stoppable] = null
   private var _executionContext: ExecutionContext = null

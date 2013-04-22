@@ -32,7 +32,7 @@ import scalaz._
 class HttpServiceUpstreamHandlerSpec extends Specification with Mockito with Logging with TestAkkaDefaults with FutureMatchers {
   import HttpNettyConverters._
 
-  private val handler       = mock[AsyncHttpService[ByteChunk]]
+  private val handler       = mock[AsyncHttpService[ByteChunk, ByteChunk]]
   private val context       = mock[ChannelHandlerContext]
   private val channel       = mock[Channel]
   private val channelFuture = mock[ChannelFuture]

@@ -21,7 +21,7 @@ class HttpServiceBuilderSpec extends Specification with Mockito with TestAkkaDef
   }
 
   "ServiceBuilder startup: creates StartupDescriptor with specified request function" in{
-    val function = mock[Function[Unit, AsyncHttpService[Unit]]]
+    val function = mock[Function[Unit, AsyncHttpService[Unit, Unit]]]
     val builder  = new ServiceBuilder[Unit]{
       val descriptor = request(function)
     }

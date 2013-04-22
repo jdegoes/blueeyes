@@ -32,6 +32,6 @@ trait AbstractNettyEngine extends HttpServerModule { self =>
       }
     }
 
-    protected def nettyServers(service: AsyncHttpService[ByteChunk]): List[NettyServer]
+    protected def nettyServers(service: AsyncHttpService[ByteChunk, ByteChunk]): List[NettyServer]
   }
 }

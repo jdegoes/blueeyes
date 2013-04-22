@@ -16,7 +16,7 @@ import org.streum.configrity.Configuration
 
 import HttpServerConfig._
 
-private[engines] class HttpsNettyServerProvider(conf: HttpServerConfig, service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
+private[engines] class HttpsNettyServerProvider(conf: HttpServerConfig, service: AsyncHttpService[ByteChunk, ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
   def pipelineFactory(channelGroup: ChannelGroup) = {
     new HttpsPipelineFactory("https", conf.host, conf.sslPort, conf.chunkSize, conf.compressionLevel, service, channelGroup, conf.config, executionContext)
   }
@@ -29,7 +29,7 @@ private[engines] class HttpsNettyServerProvider(conf: HttpServerConfig, service:
 }
 
 private[engines] class HttpsPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int, compression: Option[CompressionLevel],
-                                            requestHandler: AsyncHttpService[ByteChunk], channelGroup: ChannelGroup, 
+                                            requestHandler: AsyncHttpService[ByteChunk, ByteChunk], channelGroup: ChannelGroup, 
                                             config: Configuration, //TODO: Use of Configuration here is bogus
                                             executionContext: ExecutionContext)
     extends HttpPipelineFactory(protocol: String, host, port, chunkSize, compression, requestHandler, channelGroup, executionContext) {

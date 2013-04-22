@@ -22,6 +22,7 @@ import java.net.URLDecoder._
 import scalaz.{ Unapply => _, _ }
 import scalaz.syntax.functor._
 import scalaz.syntax.kleisli._
+import scalaz.syntax.show._
 import scalaz.syntax.semigroup._
 import scalaz.syntax.validation._
 import scalaz.syntax.std.boolean._
@@ -129,7 +130,7 @@ object ResponseModifier {
 // Handlers that are descendents of the ADT types //
 ////////////////////////////////////////////////////
 
-class HttpHandlerService[A, B](h: HttpServiceHandler[A, B]) extends CustomHttpService[A, B] {
+class HttpHandlerService[A, B](h: HttpRequest[A] => B) extends CustomHttpService[A, B] {
   val service = (r: HttpRequest[A]) => h(r).success
 
   val metadata = NoMetadata
@@ -435,6 +436,19 @@ object JsonpService extends AkkaDefaults {
       )
     }
   }
+}
+
+class ProxyService[A](httpClient: HttpClient[A], filter: HttpRequest[A] => Boolean) 
+extends CustomHttpService[A, Future[HttpResponse[A]]] {
+  def service = { r: HttpRequest[A] => 
+    if (filter(r) && httpClient.isDefinedAt(r)) {
+      Success(httpClient(r))
+    } else {
+      Failure(inapplicable)
+    }
+  }
+
+  val metadata = NoMetadata
 }
 
 
