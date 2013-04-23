@@ -37,6 +37,8 @@ trait Extractor[A] { self =>
 }
 
 object Extractor {
+  def apply[A](implicit e: Extractor[A]): Extractor[A] = e
+
   def invalidv[A](message: String) = failure[Error, A](Invalid(message))
   def tryv[A](a: => A) = (Thrown.apply _) <-: Validation.fromTryCatch(a)
 
