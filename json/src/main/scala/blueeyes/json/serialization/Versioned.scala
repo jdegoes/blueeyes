@@ -67,53 +67,59 @@ object Versioned {
     def v: Version = (s: @unchecked) match { case SVersion(v) => v }
   }
 
-  def versioned[A](extractor: Extractor[A], version: Option[Version], versionField: JPath): Extractor[A] = new Extractor[A] {
-    def validated(jv: JValue) = {
-      import scalaz.syntax.traverse._
+  implicit def toVersionableExtractor[A](extractor: Extractor[A]): VersionableExtractor[A] = new VersionableExtractor(extractor)
+  class VersionableExtractor[A](extractor: Extractor[A]) {
+    def versioned(version: Option[Version], versionField: JPath = defaultVersionProperty): Extractor[A] = new Extractor[A] {
+      def validated(jv: JValue) = {
+        import scalaz.syntax.traverse._
 
-      version.traverse[({ type λ[α] = Validation[Error, α] })#λ, Version] { v => 
-        jv.validated[Option[Version]]("schemaVersion") flatMap {
-          case Some(vrec) => 
-            if (v.isBackwardCompatible(vrec)) success(vrec) 
-            else failure(Invalid(versionField.path + " value " + vrec.shows + " was incompatible with desired version " + v.shows))
-          case None => 
-            failure(Invalid(versionField.path + " property missing for value " + jv.renderCompact + "; was expecting " + v.shows))
-        } 
-      } flatMap { _: Option[Version] => 
-        extractor.validated(jv)
+        version.traverse[({ type λ[α] = Validation[Error, α] })#λ, Version] { v => 
+          jv.validated[Option[Version]]("schemaVersion") flatMap {
+            case Some(vrec) => 
+              if (v.isBackwardCompatible(vrec)) success(vrec) 
+              else failure(Invalid(versionField.path + " value " + vrec.shows + " was incompatible with desired version " + v.shows))
+            case None => 
+              failure(Invalid(versionField.path + " property missing for value " + jv.renderCompact + "; was expecting " + v.shows))
+          } 
+        } flatMap { _: Option[Version] => 
+          extractor.validated(jv)
+        }
       }
     }
   }
 
-  def versioned[A](decomposer: Decomposer[A], version: Option[Version], versionField: JPath): Decomposer[A] = new Decomposer[A] {
-    def decompose(a: A): JValue = {
-      val baseResult = decomposer.decompose(a)
-      version map { v =>
-       if (baseResult.isInstanceOf[JObject]) {
-          baseResult.unsafeInsert(versionField, v.jv)
-        } else {
-          sys.error("Cannot version primitive or array values!")
+  implicit def toVersionableDecomposer[A](decomposer: Decomposer[A]): VersionableDecomposer[A] = new VersionableDecomposer(decomposer)
+  class VersionableDecomposer[A](decomposer: Decomposer[A]) {
+    def versioned(version: Option[Version], versionField: JPath = defaultVersionProperty): Decomposer[A] = new Decomposer[A] {
+      def decompose(a: A): JValue = {
+        val baseResult = decomposer.decompose(a)
+        version map { v =>
+         if (baseResult.isInstanceOf[JObject]) {
+            baseResult.unsafeInsert(versionField, v.jv)
+          } else {
+            sys.error("Cannot version primitive or array values!")
+          }
+        } getOrElse {
+          baseResult
         }
-      } getOrElse {
-        baseResult
       }
     }
   }
 
   class MkDecomposerV[T] {
-    def apply[F <: HList, L <: HList](fields: F, version: Option[Version])(implicit iso: Iso[T, L], decomposer: DecomposerAux[F, L]): Decomposer[T] =
-      versioned(new IsoDecomposer(fields, iso, decomposer), version, defaultVersionProperty)
+    def apply[F <: HList, L <: HList](fields: F, version: Option[Version], versionProperty: JPath = defaultVersionProperty)(implicit iso: Iso[T, L], decomposer: DecomposerAux[F, L]): Decomposer[T] =
+      new IsoDecomposer(fields, iso, decomposer).versioned(version, versionProperty)
   }
 
   class MkExtractorV[T] {
-    def apply[F <: HList, L <: HList](fields: F, version: Option[Version])(implicit iso: Iso[T, L], extractor: ExtractorAux[F, L]): Extractor[T] =
-      versioned(new IsoExtractor(fields, iso, extractor), version, defaultVersionProperty)
+    def apply[F <: HList, L <: HList](fields: F, version: Option[Version], versionProperty: JPath = defaultVersionProperty)(implicit iso: Iso[T, L], extractor: ExtractorAux[F, L]): Extractor[T] =
+      new IsoExtractor(fields, iso, extractor).versioned(version, versionProperty)
   }
 
   class MkSerializationV[T] {
-    def apply[F <: HList, L <: HList](fields: F, version: Option[Version])
-      (implicit iso: Iso[T, L], decomposer: DecomposerAux[F, L], extractor: ExtractorAux[F, L]): (Decomposer[T], Extractor[T]) =
-        (versioned(new IsoDecomposer(fields, iso, decomposer), version, defaultVersionProperty),
-         versioned(new IsoExtractor(fields, iso, extractor), version, defaultVersionProperty))
+    def apply[F <: HList, L <: HList](fields: F, version: Option[Version], versionProperty: JPath = defaultVersionProperty)
+        (implicit iso: Iso[T, L], decomposer: DecomposerAux[F, L], extractor: ExtractorAux[F, L]): (Decomposer[T], Extractor[T]) =
+      (new IsoDecomposer(fields, iso, decomposer).versioned(version, versionProperty),
+       new IsoExtractor(fields, iso, extractor).versioned(version, versionProperty))
   }
 }
