@@ -2,7 +2,7 @@ package blueeyes.core.service
 
 import blueeyes.bkka._
 import blueeyes.core.data._
-import blueeyes.core.http.{HttpRequest, HttpResponse}
+import blueeyes.core.http._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.health.metrics._
@@ -340,10 +340,10 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
                 healthMonitor.count(JPath(List(JPathField("statusCodes"), JPathField(v.status.code.value.toString))))
             }
 
-          case Failure(DispatchError(error)) =>
+          case Failure(DispatchError(httpFailure, message, detail)) =>
             healthMonitor.call(overagePath)
             healthMonitor.count(countPath)
-            healthMonitor.error(errorPath)(error)
+            healthMonitor.error(errorPath)(HttpException(httpFailure, message))
 
           case failure =>
         }
