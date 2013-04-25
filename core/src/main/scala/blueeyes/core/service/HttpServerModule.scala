@@ -152,7 +152,11 @@ abstract class HttpServerLike(val rootConfig: Configuration) extends HttpServerC
       // Convert the raw future into one that cannot die:
       rawValidation match {
         case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(r, error) }))
-        case Failure(DispatchError(throwable)) => success(Promise.successful(convertErrorToResponse(r, throwable)))
+        case Failure(DispatchError(failure, message, detail)) => 
+          success(
+            Promise.successful(HttpResponse[ByteChunk](HttpStatus(failure, message)))
+          )
+
         case Failure(Inapplicable(services @ _*)) =>
           val message = "No handler could be found for your request: " + r.shows
           success(
