@@ -108,7 +108,7 @@ package object data {
           }
 
         case Left(buffer) =>
-          Future(Left(buffer)) // either right type must match
+          Promise successful Left(buffer) // either right type must match
       }
     }
 

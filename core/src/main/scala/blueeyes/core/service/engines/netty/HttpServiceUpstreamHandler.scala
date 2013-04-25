@@ -78,7 +78,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
         }
 
       case Failure(DispatchError(cause)) =>
-        writeResponse(request, ctx.getChannel, HttpResponse(cause))
+        writeResponse(request, ctx.getChannel, HttpResponse.error[ByteChunk](cause))
 
       case Failure(Inapplicable(_)) =>
         writeResponse(request, ctx.getChannel,

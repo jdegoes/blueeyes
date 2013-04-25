@@ -1,5 +1,12 @@
 package blueeyes.core.service.engines.netty
 
+import blueeyes.core.data.{ Chunk, ByteChunk }
+import blueeyes.core.http._
+import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.http.HttpHeaders._
+import blueeyes.core.http.HttpVersions._
+
+import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.http.{
   QueryStringDecoder, 
   HttpResponseStatus, 
@@ -11,15 +18,14 @@ import org.jboss.netty.handler.codec.http.{
   HttpResponse => NettyHttpResponse
 }
 
-import blueeyes.core.http._
-import scala.collection.JavaConverters._
 import java.io.ByteArrayOutputStream
-import blueeyes.core.http.HttpHeaders._
-import blueeyes.core.http.HttpVersions._
-import org.jboss.netty.buffer.ChannelBuffer
 import java.net.{SocketAddress, InetSocketAddress}
-import blueeyes.core.data.{ Chunk, ByteChunk }
+
 import akka.dispatch.Future
+
+import scala.collection.JavaConverters._
+import scalaz.syntax.apply._
+import scalaz.std.option._
 
 object HttpNettyConverters {
   def fromNettyVersion(version: NettyHttpVersion): HttpVersion = version.getText.toUpperCase match {
@@ -62,21 +68,24 @@ object HttpNettyConverters {
   }
 
   private def getParameters(uri: String): Map[Symbol, String] = {
-    val queryStringDecoder  = new QueryStringDecoder(uri)
-    queryStringDecoder.getParameters.asScala map {
-      case (k, v) => Symbol(k) -> (if (v != null) v.asScala.headOption.getOrElse("") else "")
-    } toMap
+    try {
+      val queryStringDecoder  = new QueryStringDecoder(uri)
+
+      queryStringDecoder.getParameters.asScala map {
+        case (k, v) => Symbol(k) -> Option(v).flatMap(_.asScala.headOption).getOrElse("")
+      } toMap
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new HttpException(BadRequest, "An encoding error prevented decoding of query string parameters from the uri %s: %s".format(uri, ex.getMessage))
+    }
   }
 
   private def buildHeaders(nettyHeaders: java.util.List[java.util.Map.Entry[java.lang.String,java.lang.String]]) = {
     nettyHeaders.asScala.foldLeft(HttpHeaders.Empty) {
       case (headers, header) =>
-        (for {
-          key <- Option(header.getKey)
-          value <- Option(header.getValue)
-        } yield {
+        ^(Option(header.getKey), Option(header.getValue)) { (key, value) =>
           headers + (key -> headers.get(key).map(_ + "," + value).getOrElse(value))
-        }) getOrElse {
+        } getOrElse {
           headers
         }
     }
