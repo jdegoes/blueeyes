@@ -136,7 +136,7 @@ class HttpHandlerService[A, B](h: HttpRequest[A] => B) extends CustomHttpService
 class FailureService[A, B](onFailure: HttpRequest[A] => (HttpFailure, String)) extends CustomHttpService[A, B] {
   val service = (r: HttpRequest[A]) => {
     val (errorCode, message) = onFailure(r)
-    DispatchError(errorCode, message + " [" + r + "]").failure[B]
+    DispatchError(errorCode, message, Some(r.shows)).failure[B]
   }
 
   val metadata = DescriptionMetadata("This service will always return a DispatchError.")
@@ -250,7 +250,7 @@ class ProduceService[A, B](mimeType: MimeType, val delegate: HttpService[A, B], 
   def service = (r: HttpRequest[A]) => {
     val acceptHeader = r.headers.header[Accept].orElse(Some(Accept(mimeType)))
     acceptHeader.flatMap(_.mimeTypes.find(mimeType.satisfiesRequestFor)).toSuccess(inapplicable) flatMap { accepted =>
-      delegate.map(b => modifier.modify(b) { HttpResponse.modifyHeaders(_ + `Content-Type`(accepted)) }).service(r)
+      delegate.map(b => modifier.modify(b) { HttpResponse.modifyHeaders(_ + `Content-Type`(mimeType)) }).service(r)
     }
   }
 
@@ -350,7 +350,7 @@ object JsonpService extends AkkaDefaults {
     import HttpStatusCodes._
     import Bijection._
 
-    def parseFailure(err: Extractor.Error) = DispatchError(HttpException(BadRequest, "Errors encountered parsing JSON-encoded headers: " + err.message))
+    def parseFailure(err: Extractor.Error) = DispatchError(BadRequest, "Errors encountered parsing JSON-encoded headers.", Some(err.message))
 
     r.parameters.get('callback) match {
       case Some(callback) if (r.method == HttpMethods.GET) =>
@@ -366,11 +366,11 @@ object JsonpService extends AkkaDefaults {
             r.copy(method = method, headers = r.headers ++ headers0, parameters = parameters, content = content)
           }
         } else {
-          DispatchError(HttpException(BadRequest, "JSONP requested but content body is non-empty")).failure
+          DispatchError(BadRequest, "JSONP requested but content body is non-empty").failure
         }
 
       case Some(callback) =>
-        DispatchError(HttpException(BadRequest, "JSONP requested but HTTP method is not GET")).failure
+        DispatchError(BadRequest, "JSONP requested but HTTP method is not GET").failure
 
       case None =>
         r.success

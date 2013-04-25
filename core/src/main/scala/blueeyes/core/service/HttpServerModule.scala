@@ -7,8 +7,12 @@ import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 import akka.util.Timeout
 
-import blueeyes.core.data.ByteChunk
+import blueeyes.core.data._
 import blueeyes.core.http._
+import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.http.HttpStatusImplicits._
+import blueeyes.core.http.HttpHeaders._
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.service._
 import blueeyes.util.RichThrowableImplicits._
 import blueeyes.util.CommandLineArguments
@@ -120,32 +124,37 @@ trait HttpServerModule extends Logging {
     }
 
     def trapErrors(delegate: AsyncHttpService[ByteChunk, ByteChunk]): AsyncHttpService[ByteChunk, ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
-      private def convertErrorToResponse(th: Throwable): HttpResponse[ByteChunk] = th match {
-        case e: HttpException => HttpResponse[ByteChunk](HttpStatus(e.failure, e.reason))
-        case e => {
-          logger.error("Error handling request", e)
-          HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
-        }
+      private def convertErrorToResponse(request: HttpRequest[ByteChunk], th: Throwable): HttpResponse[ByteChunk] = {
+        import DefaultBijections._
+        logger.error("Error handling request " + request.shows, th)
+        HttpResponse.error[ByteChunk](th)
       }
 
-      val service = (r: HttpRequest[ByteChunk]) => {
+      val service = (request: HttpRequest[ByteChunk]) => {
         // The raw future may die due to error:
         val rawValidation = try {
-           delegate.service(r)
+           delegate.service(request)
         } catch {
           // An error during invocation of the request handler, convert to
           // proper response:
-          case error: Throwable => success(Promise.successful(convertErrorToResponse(error)))
+          case error: Throwable => success(Promise.successful(convertErrorToResponse(request, error)))
         }
 
         // Convert the raw future into one that cannot die:
         rawValidation match {
-          case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(error) }))
-          case Failure(DispatchError(throwable)) => success(Future(convertErrorToResponse(throwable)))
-          case failure => 
-            val message = "No handler could be found for your request: " + r.show
+          case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(request, error) }))
+
+          case Failure(DispatchError(failure, message, detail)) => 
+            success(Promise.successful(HttpResponse[ByteChunk](HttpStatus(failure, message))))
+
+          case Failure(Inapplicable(services @ _*)) =>
+            val message = "No handler could be found for your request: " + request.shows
             success(
-              Promise.successful(HttpResponse[ByteChunk](HttpStatus(HttpStatusCodes.NotFound, message)))
+              Promise.successful(
+                HttpResponse[ByteChunk](NotFound, 
+                                        headers = HttpHeaders(`Content-Type`(text/plain)), 
+                                        content = Some(DefaultBijections.stringToChunk(message)))
+              )
             )
         }
       }

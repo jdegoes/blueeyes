@@ -1,8 +1,9 @@
 package blueeyes.core.http
 
 import blueeyes.core.http.HttpStatusCodes._
+import blueeyes.core.http.HttpHeaders._
+import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpVersions._
-import com.weiglewilczek.slf4s.Logging
 
 import scalaz._
 
@@ -18,9 +19,9 @@ sealed case class HttpResponse[+A](
 object HttpResponse {
   def empty[T] = HttpResponse[T](content = None)
 
-  def apply[T](th: Throwable): HttpResponse[T] = th match {
-    case e: HttpException => HttpResponse[T](HttpStatus(e.failure, e.reason))
-    case e => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError, Option(e.getMessage).getOrElse("")))
+  def error[T](th: Throwable)(implicit decode: String => T): HttpResponse[T] = th match {
+    case e: HttpException => HttpResponse[T](HttpStatus(e.failure), headers = HttpHeaders(`Content-Type`(text/plain)), content = Some(decode(e.reason)))
+    case e => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError))
   }
 
   implicit val instances: Functor[HttpResponse] = new Functor[HttpResponse] {

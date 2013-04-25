@@ -14,13 +14,8 @@ sealed trait NotServed {
   def or[A](result: => Validation[NotServed, A]): Validation[NotServed, A]
 }
 
-case class DispatchError(exception: HttpException) extends NotServed {
+case class DispatchError(httpFailure: HttpFailure, headerMessage: String, detail: Option[String] = None) extends NotServed {
   override def or[A](result: => Validation[NotServed, A]) = this.failure[A]
-}
-
-object DispatchError {
-  def apply(failure: HttpFailure, reason: String): DispatchError = DispatchError(HttpException(failure, reason))
-  def apply(t: (HttpFailure, String)): DispatchError = DispatchError(HttpException(t._1, t._2))
 }
 
 case class Inapplicable private[service] (services: AnyService*) extends NotServed {

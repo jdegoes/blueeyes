@@ -29,8 +29,9 @@ trait ConfigurableHttpClient {
     def isDefinedAt(r: HttpRequest[ByteChunk]) = true
     def apply(r: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = h.service(r) match {
       case Success(rawFuture) => rawFuture recover { case throwable => convertErrorToResponse(throwable) }
-      case Failure(DispatchError(throwable)) => Promise.successful(convertErrorToResponse(throwable))
-      case failure => 
+      case Failure(DispatchError(failure, message, detail)) => 
+        Promise.successful(HttpResponse[ByteChunk](HttpStatus(failure, message)))
+      case Failure(Inapplicable(services @ _*)) => 
         val message = "MockClient received NotFound for request " + r
         Promise.successful(HttpResponse[ByteChunk](HttpStatus(NotFound, message)))
     }

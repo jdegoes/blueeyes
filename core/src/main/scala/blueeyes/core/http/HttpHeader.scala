@@ -161,13 +161,14 @@ trait HttpHeadersImplicits extends HttpHeaderImplicits {
 }
 
 object HttpHeaders {
-  def apply(i: Iterable[(String, String)]): HttpHeaders = {
-    new HttpHeaders(i.map(HttpHeader(_).tuple)(collection.breakOut))
-  }
+  def apply(headers: HttpHeader*): HttpHeaders = 
+    apply(headers.map(_.tuple))
+    
+  def apply(i: Iterable[(String, String)]): HttpHeaders = 
+    apply(i.map(HttpHeader(_)))
 
-  def apply[A](i: Iterable[A])(implicit ev: A <:< HttpHeader): HttpHeaders = {
+  def apply[A](i: Iterable[A])(implicit ev: A <:< HttpHeader): HttpHeaders = 
     new HttpHeaders(i.map(ev(_).tuple)(collection.breakOut))
-  }
 
   val Empty: HttpHeaders = new HttpHeaders(Map.empty[String, String])
 
