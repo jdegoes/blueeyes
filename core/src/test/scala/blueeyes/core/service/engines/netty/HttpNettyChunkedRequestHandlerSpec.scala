@@ -8,6 +8,7 @@ import akka.dispatch.Await
 import blueeyes.bkka._
 import blueeyes.core.data._
 import blueeyes.core.http.{HttpException, HttpRequest}
+import blueeyes.core.http.HttpStatusCodes._
 
 import org.jboss.netty.buffer.{HeapChannelBufferFactory, ChannelBuffers}
 import org.jboss.netty.channel._
@@ -101,7 +102,9 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       context.getChannel() returns channel
       nettyRequest.setChunked(false)
 
-      handler.messageReceived(context, invalidEvent) must throwA[HttpException]("partial escape sequence at end of string: %1")
+      handler.messageReceived(context, invalidEvent) must throwA[HttpException].like {
+        case HttpException(BadRequest, string) => string must startWith("An encoding error")
+      }
     }
   }
 

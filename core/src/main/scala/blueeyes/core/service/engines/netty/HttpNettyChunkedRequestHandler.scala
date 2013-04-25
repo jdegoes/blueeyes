@@ -60,8 +60,7 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
           }
         }
 
-        try Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
-        catch { case ex: IllegalArgumentException => throw HttpException(HttpStatusCodes.BadRequest, ex) }
+        Channels.fireMessageReceived(ctx, httpRequestBuilder(content), event.getRemoteAddress)
 
       case chunk: NettyChunk =>
         val current = chain
