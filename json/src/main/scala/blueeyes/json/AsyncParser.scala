@@ -19,6 +19,17 @@ object AsyncParser {
     new AsyncParser(new Array[Byte](131072), 0, 131072, 0, false, failFast)
 }
 
+// TODO: improve the async parser to store partial parsing results
+// (i.e. Context) so that we *can* asynchronously parse one large JSON
+// object.
+
+/**
+ * Asynchronous JSON parser.
+ * 
+ * NOTE: This class is actually designed to parse streams of JSON
+ * values, separated by whitespace. It will not perform well when
+ * parsing a single large JSON value. You have been warned!
+ */
 final class AsyncParser protected[json] (
   protected[json] var data: Array[Byte],
   protected[json] var len: Int,
