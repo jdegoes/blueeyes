@@ -124,12 +124,12 @@ object AsyncParserSpec extends Specification {
   
   private def runTest(path: String, step: Int) = {
     val data = loadBytes(path)
-    chunkAll(AsyncParser(true), data, () => step)
+    chunkAll(AsyncParser.stream(), data, () => step)
   }
   
   private def runTestRandomStep(path: String, f: () => Int) = {
     val data = loadBytes(path)
-    chunkAll(AsyncParser(true), data, f)
+    chunkAll(AsyncParser.stream(), data, f)
   }
   
   "Async parser works on one 1M chunk" in {
@@ -189,7 +189,7 @@ object AsyncParserSpec extends Specification {
   }
   
   def run1(chunks: Seq[Option[ByteBuffer]], expected: Int) = {
-    var p: AsyncParser = AsyncParser(true)
+    var p: AsyncParser = AsyncParser.stream()
     var t0 = System.nanoTime
     var count = 0
     chunks.foreach { chunk =>
@@ -239,43 +239,6 @@ object AsyncParserSpec extends Specification {
     println("byteb: %.2f ms" format (t2 / 10000000.0))
   }
 
-  "Async parser can recover from errors" in {
-    val json = """{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999x}
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": {"foo": 123, "bar": 999}}
-{"foo": 123, "bar: {"foo": 123, "bar": 999}}
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999}
-xyz
-{"foo": 123, "bar": 999}
-{"foo": 123, "bar": 999}"""
-
-    val bs = json.getBytes(utf8)
-    val c = chunk(bs, 0, bs.length)
-
-    var p = AsyncParser(false)
-    val (AsyncParse(es, js), p2) = p(c)
-
-    // each line should become an error or a jvalue
-    json.split('\n').length must_== 14
-    es.length must_== 4
-    js.length must_== 10
-
-    def confirm(e: ParseException, y: Int, x: Int) {
-      e.line must_== y
-      e.col must_== x
-    }
-    confirm(es(0), 2, 24)
-    confirm(es(1), 6, 1)
-    confirm(es(2), 9, 22)
-    confirm(es(3), 12, 1)
-  }
-
   "Async parser can fail fast" in {
     val json = """{"foo": 123, "bar": 999}
 {"foo": 123, "bar": 999x}
@@ -295,7 +258,7 @@ xyz
     val bs = json.getBytes(utf8)
     val c = chunk(bs, 0, bs.length)
 
-    var p = AsyncParser(true)
+    var p = AsyncParser.stream()
     val (AsyncParse(es, js), p2) = p(c)
 
     // we should only have parsed 1 valid record, and seen 1 error
@@ -328,3 +291,163 @@ xyz
     JParser.parseManyFromString("[1,\r\n2]\0[3,\r\n4]\r\n").toOption must_== None
   }
 }
+
+object ArrayUnwrappingSpec extends Specification {
+  import JParser._
+
+  val utf8 = java.nio.charset.Charset.forName("UTF-8")
+
+  def bb(s: String) = Some(ByteBuffer.wrap(s.getBytes("UTF-8")))
+  def j(s: String, n: Int) = JObject(Map(s -> JNum(n)))
+
+  "Unwrapping array parser catches errors" in {
+    val p1 = AsyncParser.unwrap()
+    val (AsyncParse(e1, r1), p2) = p1.apply(bb("""[{"a": 1}, {"b": 2}"""))
+    e1.length must_== 0
+    r1 must_== Seq(j("a", 1), j("b", 2))
+
+    val (AsyncParse(e2, r2), p3) = p2.apply(bb(""", {"c": 3}"""))
+    e2.length must_== 0
+    r2 must_== Seq(j("c", 3))
+
+    val (AsyncParse(e3a, r3a), _) = p3.apply(bb("""["""))
+    r3a must_== Seq()
+    e3a.length must_== 1
+
+    val (AsyncParse(e3b, r3b), _) = p3.apply(bb(""))
+    r3b must_== Seq()
+    e3b.length must_== 0
+
+    val (AsyncParse(e3c, r3c), _) = p3.apply(bb("]"))
+    r3c must_== Seq()
+    e3c.length must_== 0
+  }
+
+  "Unwrapping array parser treats non-arrays correctly" in {
+    val p1 = AsyncParser.unwrap()
+    val (AsyncParse(e1, _), p2) = p1.apply(bb("""{"a": 1, "b": 2"""))
+    e1.length must_== 0
+
+    // ending the object is valid
+    val (AsyncParse(e2a, _), _) = p2.apply(bb("""}"""))
+    e2a.length must_== 0
+
+    // acting like you're in an array is not valid
+    val (AsyncParse(e2b, _), _) = p2.apply(bb("""}, 999"""))
+    e2b.length must_== 1
+
+    // in unwrap mode only a single object is allowed
+    val (AsyncParse(e2c, _), _) = p2.apply(bb("""} 999"""))
+    e2c.length must_== 1
+  }
+
+  "Unwrapping array parser performs adequately" in {
+    import scala.collection.mutable
+    import scala.math.min
+    import java.nio._
+
+    val num = 100 * 1000
+    //val num = 1 * 1000 * 1000
+    //val num = 2 * 1000 * 1000
+    val elem = """{"a": 999, "b": [1,2,3], "c": "fooooo", "d": {"aa": 123}}"""
+
+    def sync(elem: String, num: Int): (Int, Int, Long) = {
+      val sb = new StringBuilder
+      sb.append("[" + elem)
+      for (_ <- 1 until num) {
+        sb.append(",")
+        sb.append(elem)
+      }
+      sb.append("]")
+      val data = sb.toString.getBytes("UTF-8")
+      val bb = ByteBuffer.wrap(data)
+      val t0 = System.currentTimeMillis
+      JParser.parseFromByteBuffer(bb)
+      val ms = System.currentTimeMillis() - t0
+      (1, data.length, ms)
+    }
+
+    def syncStream(elem: String, num: Int): (Int, Int, Long) = {
+      val sb = new StringBuilder
+      for (_ <- 0 until num) {
+        sb.append(elem)
+        sb.append("\n")
+      }
+      val data = sb.toString.getBytes("UTF-8")
+      val bb = ByteBuffer.wrap(data)
+      val t0 = System.currentTimeMillis
+      val Success(js) = JParser.parseManyFromByteBuffer(bb)
+      val ms = System.currentTimeMillis() - t0
+      (js.length, data.length, ms)
+    }
+
+    def async(parser: AsyncParser, isArray: Boolean, elem: String, num: Int): (Int, Int, Long) = {
+      val elemsPerChunk = 4520
+      val completeChunks = num / elemsPerChunk
+      val partialChunkSize = num % elemsPerChunk
+      assert(partialChunkSize != 0)
+
+      val es = (0 until elemsPerChunk).map(_ => elem)
+      val leftover = (0 until partialChunkSize).map(_ => elem)
+      val (firstChunk, chunk, lastChunk) = if (isArray) {
+        (es.mkString("[", ",", ",").getBytes("UTF-8"),
+          es.mkString("", ",", ",").getBytes("UTF-8"),
+          leftover.mkString("", ",", "]").getBytes("UTF-8"))
+      } else {
+        (es.mkString("", "\n", "\n").getBytes("UTF-8"),
+          es.mkString("", "\n", "\n").getBytes("UTF-8"),
+          leftover.mkString("", "\n", "\n").getBytes("UTF-8"))
+      }
+
+      var i = 0
+      var offset = 0
+      var p = parser
+      var done = false
+      var seen = 0
+      var bytes = 0
+      val t0 = System.currentTimeMillis
+
+      while (i <= completeChunks && !done) {
+        val (AsyncParse(errors, results), parser) = if (i <= completeChunks) {
+          val data = if (i == 0)
+            firstChunk
+          else if (i < completeChunks)
+            chunk
+          else
+            lastChunk
+
+          bytes += data.length
+          p.apply(Some(ByteBuffer.wrap(data)))
+        } else {
+          done = true
+          p.apply(None)
+        }
+        if (!errors.isEmpty) throw errors.head
+        seen += results.length
+        p = parser
+        i += 1
+      }
+
+      val ms = System.currentTimeMillis() - t0
+      (seen, bytes, ms)
+    }
+
+    def verifyAndTime(tpl: (Int, Int, Long), expected: Int): (Int, Long) = {
+      tpl._1 must_== expected
+      (tpl._2, tpl._3)
+    }
+
+    val (b1, t1) = verifyAndTime(sync(elem, num), 1)
+    val (b2, t2) = verifyAndTime(syncStream(elem, num), num)
+    val (b3, t3) = verifyAndTime(async(AsyncParser.stream(), true, elem, num), 1)
+    val (b4, t4) = verifyAndTime(async(AsyncParser.stream(), false, elem, num), num)
+    val (b5, t5) = verifyAndTime(async(AsyncParser.unwrap(), true, elem, num), num)
+
+    b2 must_== b4
+    b1 must_== b3
+    b1 must_== b5
+    println("parsed array (%d bytes):  sync=%dms  async=%dms  unpacked=%dms" format (b1, t1, t3, t5))
+    println("parsed stream (%d bytes): sync=%dms  async=%dms" format (b2, t2, t4))
+  }
+}
+
