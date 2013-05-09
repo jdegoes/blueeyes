@@ -19,14 +19,30 @@ object AsyncParser {
   @deprecated("Use AsyncParser.stream() to maintain the current behavior", "1.0")
   def apply(): AsyncParser = stream()
 
+  /**
+   * Asynchronous parser for a stream of (whitespace-delimited) JSON values.
+   */
   def stream(): AsyncParser = 
-    new AsyncParser(-1, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, 0)
+    new AsyncParser(state = -1, curr = 0, stack = Nil,
+      data = new Array[Byte](131072), len = 0, allocated = 131072,
+      offset = 0, done = false, streamMode = 0)
 
+  /**
+   * Asynchronous parser for a single JSON value.
+   */
   def json(): AsyncParser =
-    new AsyncParser(-1, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, -1)
+    new AsyncParser(state = -1, curr = 0, stack = Nil,
+      data = new Array[Byte](131072), len = 0, allocated = 131072,
+      offset = 0, done = false, streamMode = -1)
 
+  /**
+   * Asynchronous parser which can unwrap a single JSON array into a stream of
+   * values (or return a single value otherwise).
+   */
   def unwrap(): AsyncParser =
-    new AsyncParser(-5, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, 1)
+    new AsyncParser(state = -5, curr = 0, stack = Nil,
+      data = new Array[Byte](131072), len = 0, allocated = 131072,
+      offset = 0, done = false, streamMode = 1)
 }
 
 // We have a lot of fields here.
@@ -138,9 +154,6 @@ final class AsyncParser protected[json] (
     // accumulates errors and results
     val errors = mutable.ArrayBuffer.empty[ParseException]
     val results = mutable.ArrayBuffer.empty[JValue]
-
-    // FIXME: make sure that array streamer stores whether it is
-    // streaming an array or not.
 
     // we rely on exceptions to tell us when we run out of data
     try {
