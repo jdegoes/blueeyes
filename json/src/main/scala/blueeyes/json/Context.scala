@@ -21,7 +21,7 @@ private[json] final class SingleContext extends Context {
 }
 
 private[json] final class ArrContext extends Context {
-  private val vs = mutable.ListBuffer.empty[JValue]
+  private val vs = mutable.ArrayBuffer.empty[JValue]
 
   def add(s: String): Unit = vs.append(JString(s))
   def add(v: JValue): Unit = vs.append(v)

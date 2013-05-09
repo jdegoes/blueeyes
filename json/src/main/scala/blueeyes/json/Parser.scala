@@ -53,6 +53,12 @@ private[json] trait Parser {
   protected[this] def reset(i: Int): Int
 
   /**
+   * The checkpoint() method is used to allow some parsers to store their
+   * progress.
+   */
+  protected[this] def checkpoint(state: Int, i: Int, stack: List[Context]): Unit
+
+  /**
    * Should be called when parsing is finished.
    */
   protected[this] def close(): Unit
@@ -277,6 +283,7 @@ private[json] trait Parser {
   @tailrec
   protected[this] final def rparse(state: Int, j: Int, stack: List[Context]): (JValue, Int) = {
     val i = reset(j)
+    checkpoint(state, i, stack)
     (state: @switch) match {
       // we are inside an object or array expecting to see data
       case DATA => (at(i): @switch) match {

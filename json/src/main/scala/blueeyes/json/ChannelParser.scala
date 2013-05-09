@@ -70,6 +70,8 @@ extends SyncParser with ByteBasedParser {
     }
   }
 
+  final def checkpoint(state: Int, i: Int, stack: List[Context]) {}
+
   /**
    * This is a specialized accessor for the case where our underlying data are
    * bytes not chars.
