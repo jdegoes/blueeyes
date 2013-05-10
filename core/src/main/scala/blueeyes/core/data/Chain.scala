@@ -4,10 +4,13 @@ import akka.dispatch.ExecutionContext
 import akka.dispatch.Promise
 import java.nio.ByteBuffer
 
-class Chain(val promise: Promise[Option[(ByteBuffer, Chain)]])
+class Chain(val promise: Promise[Option[(Array[Byte], Chain)]])
+
 object Chain {
-  def incomplete(implicit executor: ExecutionContext) = new Chain(Promise[Option[(ByteBuffer, Chain)]]())
-  def complete(implicit executor: ExecutionContext) = new Chain(Promise.successful(None))
+  def incomplete(implicit executor: ExecutionContext) =
+    new Chain(Promise[Option[(Array[Byte], Chain)]]())
+  def complete(implicit executor: ExecutionContext) =
+    new Chain(Promise.successful(None))
 }
 
 

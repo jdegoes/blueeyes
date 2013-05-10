@@ -7,13 +7,17 @@ import akka.dispatch.Future
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 
+import java.util.Arrays
 import java.nio.ByteBuffer
 
 import scalaz._
 
+import scala.math.max
+import scala.collection.mutable.ListBuffer
+
 package object data {
   type Chunk[A] = Either[A, StreamT[Future, A]]
-  type ByteChunk = Chunk[ByteBuffer]
+  type ByteChunk = Chunk[Array[Byte]]
 
   object Chunk {
     implicit def tc(implicit M: Monad[Future]): Applicative[Chunk] = new Applicative[Chunk] {
@@ -43,106 +47,119 @@ package object data {
   object ByteChunk {
     val defaultChunkSize = 8192
 
-    def apply(data: Array[Byte]) = Left(ByteBuffer.wrap(data))
-    def aggregate(chunk: ByteChunk, chunkSize: Int)(implicit executor: ExecutionContext): ByteChunk = {
-      implicit val M = new FutureMonad(executor)
+    def apply(data: Array[Byte]): ByteChunk = Left(data)
 
-      @inline def alloc = ByteBuffer.allocate(chunkSize)
+    def apply(data: Seq[Array[Byte]])(implicit executor: ExecutionContext): ByteChunk = {
+      implicit val M: Monad[Future] = new FutureMonad(executor)
 
-      def fill(buffer: ByteBuffer, head: ByteBuffer, tail: StreamT[Future, ByteBuffer]): Future[(ByteBuffer, StreamT[Future, ByteBuffer])] = {
-        if (head.remaining > buffer.remaining) {
-          Future {
-            val limit = head.limit
-            // set the limit to the max that can be read into the current buffer
-            val newLimit = head.position + buffer.remaining
-            head.limit(newLimit)
-            buffer.put(head)
-            // reset the limit to its original position
-            head.limit(limit)
+      Right(data.reverse.foldLeft(StreamT.empty[Future, Array[Byte]]) {
+        case (stream, arr) => arr :: stream
+      })
+    }
 
-            (buffer, head :: tail)
-          }
-        } else {
-          tail.uncons flatMap {
-            case Some((head0, tail0)) =>
-              fill(buffer.put(head), head0, tail0)
+    def aggregate(s: ByteChunk, chunkSize: Int = 8192)(implicit executor: ExecutionContext): ByteChunk = {
+      implicit val M: Monad[Future] = new FutureMonad(executor)
 
-            case None =>
-              buffer.put(head)
-              Promise.successful((buffer, StreamT.empty[Future, ByteBuffer]))
-          }
-        }
-      }
+      import StreamT._
 
-      chunk.right map { stream =>
-        StreamT.unfoldM[Future, ByteBuffer, (ByteBuffer, StreamT[Future, ByteBuffer])]((alloc, stream)) {
-          case (acc, stream) =>
-            stream.uncons flatMap {
-              case Some((head, tail)) =>
-                fill(acc, head, tail) map {
-                  case (filled, remainder) =>
-                    filled.flip()
-                    Some((filled, (alloc, remainder)))
-                }
-
-              case None =>
-                Promise.successful(None)
+      def aggregateStream(stream: StreamT[Future, Array[Byte]], buf: Array[Byte], offset: Int): Future[StreamT[Future, Array[Byte]]] = {
+        stream.uncons.flatMap {
+          case None =>
+            if (offset > 0)
+              Promise.successful(Arrays.copyOf(buf, offset) :: StreamT.empty[Future, Array[Byte]])
+            else
+              Promise.successful(StreamT.empty[Future, Array[Byte]])
+          case Some((bytes, tail)) =>
+            val limit = buf.length - offset
+            if (bytes.length <= limit) {
+              System.arraycopy(bytes, 0, buf, 0, bytes.length)
+              aggregateStream(tail, buf, offset + bytes.length)
+            } else if (offset > 0) {
+              val copy = Arrays.copyOf(buf, offset)
+              aggregateStream(tail, new Array[Byte](chunkSize), 0).map {
+                copy :: bytes :: _
+              }
+            } else {
+              aggregateStream(tail, new Array[Byte](chunkSize), 0).map { bytes :: _ }
             }
         }
       }
-    }
 
-    def force(s: ByteChunk)(implicit executor: ExecutionContext): Future[Either[ByteBuffer, (Vector[ByteBuffer], Int)]] = {
       s match {
+        case Left(bytes) =>
+          Left(bytes)
         case Right(stream) =>
-          implicit val M = new FutureMonad(executor)
-          stream.foldLeft((Vector.empty[ByteBuffer], 0)) {
-            case ((acc, size), buffer) => (acc :+ buffer.duplicate, size + buffer.remaining)
-          } map {
-            case (buffers, size) =>
-              if (buffers.size == 1) {
-                Left(buffers.head)
-              } else {
-                Right((buffers, size))
-              }
+          Right(StreamT.wrapEffect(aggregateStream(stream, new Array[Byte](chunkSize), 0)))
+      }
+    }
+
+    def force(s: ByteChunk)(implicit executor: ExecutionContext): Future[Array[Array[Byte]]] = {
+      implicit val M: Monad[Future] = new FutureMonad(executor)
+
+      def loop(stream: StreamT[Future, Array[Byte]], buf: ListBuffer[Array[Byte]])(implicit M: Monad[Future]): Future[Array[Array[Byte]]] =
+        stream.uncons.flatMap {
+          case None =>
+            Promise.successful(buf.toArray)
+          case Some((bytes, tail)) =>
+            buf.append(bytes)
+            loop(tail, buf)
+        }
+      s match {
+        case Right(stream) => loop(stream, ListBuffer.empty[Array[Byte]])
+        case Left(bytes) => Promise.successful(Array(bytes))
+      }
+    }
+
+    def forceByteArray(s: ByteChunk)(implicit executor: ExecutionContext): Future[Array[Byte]] = {
+      implicit val M: Monad[Future] = new FutureMonad(executor)
+
+      ByteChunk.force(s) map { arrays =>
+        val len = arrays.foldLeft(0)(_ + _.length)
+        val arr = new Array[Byte](len)
+        var i = 0
+        arrays.foreach { bytes =>
+          System.arraycopy(bytes, 0, arr, i, bytes.length)
+        }
+        arr
+      }
+    }
+
+    def forceEagerChunk(s: ByteChunk)(implicit executor: ExecutionContext): Future[ByteChunk] =
+      forceByteArray(s).map(Left(_))
+
+    def chunkToStreamT(s: ByteChunk)(implicit executor: ExecutionContext): StreamT[Future, Array[Byte]] = {
+      implicit val M: Monad[Future] = new FutureMonad(executor)
+      s match {
+        case Left(bytes) => bytes :: StreamT.empty[Future, Array[Byte]]
+        case Right(stream) => stream
+      }
+    }
+
+    private val empty: ByteChunk = Left(new Array[Byte](0))
+
+    implicit def monoid(implicit executor: ExecutionContext): Monoid[ByteChunk] =
+      new Monoid[ByteChunk] {
+        implicit private val M: Monad[Future] = new FutureMonad(executor)
+
+        val zero: ByteChunk = ByteChunk.empty
+
+        def append(c0: ByteChunk, c1: => ByteChunk): ByteChunk =
+          c0 match {
+            case Left(bytes0) => c1 match {
+              case Left(bytes1) =>
+                val len0 = bytes0.length
+                val len1 = bytes1.length
+                val bytes = new Array[Byte](len0 + len1)
+                System.arraycopy(bytes0, 0, bytes, 0, len0)
+                System.arraycopy(bytes1, 0, bytes, len0, len1)
+                Left(bytes)
+              case Right(stream1) =>
+                Right(bytes0 :: stream1)
+            }
+
+            case Right(stream0) =>
+              Right(stream0 ++ chunkToStreamT(c1))
           }
-
-        case Left(buffer) =>
-          Promise successful Left(buffer) // either right type must match
       }
-    }
-
-    def forceByteArray(s: ByteChunk)(implicit exeuctor: ExecutionContext): Future[Array[Byte]] = {
-      ByteChunk.force(s) map {
-        case Left(buffer) =>
-          val resultArray = new Array[Byte](buffer.remaining)
-          buffer.get(resultArray)
-          resultArray
-
-        case Right((acc, size)) =>
-          val resultArray = new Array[Byte](size)
-          val resultBuf = ByteBuffer.wrap(resultArray)
-          acc foreach { resultBuf put _ }
-          resultArray
-      }
-    }
-
-    def forceEagerChunk(s: ByteChunk)(implicit executor: ExecutionContext): Future[ByteChunk] = {
-      forceByteArray(s) map { bytes => Left(ByteBuffer.wrap(bytes)) }
-    }
-
-    implicit def semigroup(implicit m: Monad[Future]): Semigroup[ByteChunk] = new Semigroup[ByteChunk] {
-      def append(c0: ByteChunk, c1: => ByteChunk) = (c0, c1) match {
-        case (Left(buf0), Left(buf1)) =>
-          val buf = ByteBuffer.allocate(buf0.remaining + buf1.remaining)
-          buf.put(buf0).put(buf1)
-          buf.flip()
-          Left(buf)
-
-        case (Right(stream), Left(buf1)) => Right(stream ++ (buf1 :: StreamT.empty[Future, ByteBuffer]))
-        case (Left(buf1), Right(stream)) => Right(buf1 :: stream)
-        case (Right(stream1), Right(stream2)) => Right(stream1 ++ stream2)
-      }
-    }
   }
 }

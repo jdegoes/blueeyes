@@ -15,19 +15,13 @@ import scala.xml.NodeSeq
 import scala.xml.XML
 
 trait DefaultBijections {
-  implicit def byteArrayToChunk(a: Array[Byte]): ByteChunk = Left(ByteBuffer.wrap(a))
+  implicit def byteArrayToChunk(a: Array[Byte]): ByteChunk = Left(a)
 
   implicit def futureByteArrayToChunk(implicit executor: ExecutionContext): Bijection[Future[Array[Byte]], ByteChunk] = {
     new Bijection[Future[Array[Byte]], ByteChunk] {
       private implicit val M: Monad[Future] = new FutureMonad(executor)
-
-      def apply(f: Future[Array[Byte]]): ByteChunk = {
-        Right(f.map(ByteBuffer.wrap _).liftM[StreamT])
-      }
-
-      def unapply(s: ByteChunk): Future[Array[Byte]] = {
-        ByteChunk.forceByteArray(s)
-      }
+      def apply(f: Future[Array[Byte]]): ByteChunk = Right(f.liftM[StreamT])
+      def unapply(s: ByteChunk): Future[Array[Byte]] = ByteChunk.forceByteArray(s)
     }
   }
 
@@ -42,19 +36,17 @@ trait DefaultBijections {
 
   implicit val ByteArrayToString = StringToByteArray.inverse
 
-  implicit def stringToChunk(s: String): ByteChunk = Left(ByteBuffer.wrap(s.getBytes("UTF-8")))
+  implicit def stringToChunk(s: String): ByteChunk = Left(s.getBytes("UTF-8"))
 
   implicit def futureStringToChunk(implicit executor: ExecutionContext): Bijection[Future[String], ByteChunk] = {
     new Bijection[Future[String], ByteChunk] {
       private implicit val M: Monad[Future] = new FutureMonad(executor)
 
-      def apply(t: Future[String]): ByteChunk = {
-        Right(t.map(s => ByteBuffer.wrap(s.getBytes("UTF-8"))).liftM[StreamT])
-      }
+      def apply(t: Future[String]): ByteChunk =
+        Right(t.map(_.getBytes("UTF-8")).liftM[StreamT])
 
-      def unapply(s: ByteChunk): Future[String] = {
-        ByteChunk.forceByteArray(s).map(bytes => new String(bytes, "UTF-8"))
-      }
+      def unapply(s: ByteChunk): Future[String] =
+        ByteChunk.forceByteArray(s).map(new String(_, "UTF-8"))
     }
   }
 
@@ -76,21 +68,21 @@ trait DefaultBijections {
 
   implicit val ByteArrayToJValue = JValueToByteArray.inverse
 
-  implicit def jvalueToChunk(jv: JValue): ByteChunk = Left(ByteBuffer.wrap(JValueToByteArray(jv)))
+  implicit def jvalueToChunk(jv: JValue): ByteChunk = Left(JValueToByteArray(jv))
 
   implicit def futureJValueToChunk(implicit executor: ExecutionContext): Bijection[Future[JValue], ByteChunk] = {
     new Bijection[Future[JValue], ByteChunk] {
       private implicit val M: Monad[Future] = new FutureMonad(executor)
 
       def apply(t: Future[JValue]) = {
-        Right(t.map(jv => ByteBuffer.wrap(JValueToByteArray(jv))).liftM[StreamT])
+        Right(t.map(JValueToByteArray(_)).liftM[StreamT])
       }
 
-      def unapply(s: ByteChunk) = {
+      // TODO: we could use the async parser here to avoid forcing
+      def unapply(s: ByteChunk) =
         ByteChunk.forceByteArray(s) map { bytes =>
           JParser.parseFromByteBuffer(ByteBuffer.wrap(bytes)) | JUndefined
         }
-      }
     }
   }
 

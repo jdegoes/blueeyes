@@ -12,43 +12,70 @@ import java.io.{OutputStream, FileOutputStream, RandomAccessFile, File}
 
 import scalaz._
 
-class FileSource(file: File, offset: Long, length: Long, chunkSize: Int = 8192) {
-  def this(file: File) = this(file, 0, file.length())
+import scala.math.min
+
+object FileSource {
+  def apply(file: File) = {
+    val len = file.length
+    if (len > Int.MaxValue)
+      throw new IllegalArgumentException("file is too large (%d)" format len)
+    new FileSource(file, 0, len.toInt)
+  }
+}
+
+class FileSource(file: File, offset: Long, length: Int, chunkSize: Int = 8192) {
+  //def this(file: File) = if (this(file, 0, file.length())
 
   def read(implicit executor: ExecutionContext): ByteChunk = {
     implicit val M = new FutureMonad(executor)
 
-    if (length < chunkSize) {
-      val raf = new RandomAccessFile(file, "r")
-      try {
-        raf.seek(offset)
-        val buffer = ByteBuffer.allocate(length.toInt)
-        raf.getChannel().read(buffer)
-        buffer.flip()
-        Left(buffer)
-      } finally {
-        raf.close()
-      }
-    } else {
-      val raf = new RandomAccessFile(file, "r")
-      Right(
-        StreamT.unfoldM[Future, ByteBuffer, Option[(Long, FileChannel)]](Some((0L, raf.getChannel()))) { 
-          case Some((consumed, channel)) => 
-            Future {
-              val buffer = ByteBuffer.allocate(chunkSize)
-              val read = channel.read(buffer) 
-              if (read == -1) {
-                None
-              } else {
-                buffer.flip()
-                Some((buffer, Some((consumed + read, channel))))
-              }
-            }
+    val raf = new RandomAccessFile(file, "r")
+    try {
+      raf.seek(offset)
 
-          case None =>
-            Future { raf.close(); None }
+      def readUntil(arr: Array[Byte], size: Int): Int = {
+        var offset = 0
+        var left = size
+        while (true) {
+          val n = raf.read(arr, offset, left)
+          if (n == -1) return size - left
+          offset += n
+          left -= n
+          if (left == 0) return size
         }
-      )
+        return -1 // impossible
+      }
+
+      def makeArray(size: Int): Array[Byte] = {
+        val arr = new Array[Byte](size)
+        val n = readUntil(arr, size)
+        if (n == length) {
+          arr
+        } else if (n > 0) {
+          val arr2 = new Array[Byte](n)
+          System.arraycopy(arr, 0, arr2, 0, n)
+          arr2
+        } else {
+          new Array[Byte](0)
+        }
+      }
+
+      def makeStreamT(left: Int): StreamT[Future, Array[Byte]] = {
+        val size = min(chunkSize, left)
+        val arr = makeArray(size)
+        if (arr.length < size || size == left) {
+          arr :: StreamT.empty[Future, Array[Byte]]
+        } else {
+          arr :: makeStreamT(left - size)
+        }
+      }
+
+      if (length < chunkSize)
+        Left(makeArray(length))
+      else
+        Right(makeStreamT(length))
+    } finally {
+      raf.close()
     }
   }
 }
@@ -60,7 +87,8 @@ class FileSink(file: File) {
     implicit val M = new FutureMonad(executor)
 
     val killed = new java.util.concurrent.atomic.AtomicReference[Option[Throwable]](None)
-    def writeStream(stream: StreamT[Future, ByteBuffer], out: FileChannel): Future[Unit] = {
+
+    def writeStream(stream: StreamT[Future, Array[Byte]], out: FileChannel): Future[Unit] = {
       stream.uncons flatMap {
         case Some((head, tail)) =>
           killed.get() match {
@@ -69,7 +97,7 @@ class FileSink(file: File) {
               throw error
 
             case None =>
-              out.write(head)
+              out.write(ByteBuffer.wrap(head))
               writeStream(tail, out)
           }
 
@@ -79,12 +107,13 @@ class FileSink(file: File) {
     }
 
     file.createNewFile()
+
     chunk match {
-      case Left(buffer) =>
+      case Left(bytes) =>
         None -> Future {
           val out = new FileOutputStream(file)
           try {
-            out.getChannel.write(buffer)
+            out.getChannel.write(ByteBuffer.wrap(bytes))
           } finally {
             out.close()
           }

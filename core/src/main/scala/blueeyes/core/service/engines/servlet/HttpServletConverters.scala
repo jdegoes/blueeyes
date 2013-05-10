@@ -53,15 +53,15 @@ trait HttpServletConverters {
       }
 
       val written = byteContents.toByteArray
-      if (written.length == 0) None else Some(Left(ByteBuffer.wrap(written)))
+      if (written.length == 0) None else Some(Left(written))
     } else {
       implicit val M: Monad[Future] = new FutureMonad(ctx)
       Some(Right(
-       StreamT.unfoldM[Future, ByteBuffer, InputStream](request.getInputStream) { in =>
+       StreamT.unfoldM[Future, Array[Byte], InputStream](request.getInputStream) { in =>
          Future {
-           val buffer = new Array[Byte](maxBufferSize)
-           val length = in.read(buffer)
-           if (length == 0) None else Some((ByteBuffer.wrap(buffer), in))
+           val bytes = new Array[Byte](maxBufferSize)
+           val length = in.read(bytes)
+           if (length < 1) None else Some((bytes, in))
          }
        }
       ))

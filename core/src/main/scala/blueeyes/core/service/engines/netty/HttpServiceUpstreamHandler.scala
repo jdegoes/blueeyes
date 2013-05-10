@@ -133,15 +133,15 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
 
     if (channel.isConnected) {
       val nettyFuture = response.content match {
-        case Some(Left(buffer)) =>
-          nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, buffer.remaining.toString)
-          nettyResponse.setContent(ChannelBuffers.copiedBuffer(buffer))
+        case Some(Left(bytes)) =>
+          nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, bytes.length.toString)
+          nettyResponse.setContent(ChannelBuffers.copiedBuffer(ByteBuffer.wrap(bytes)))
           channel.write(nettyResponse)
 
         case Some(Right(stream)) =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.TRANSFER_ENCODING, "chunked")
           channel.write(nettyResponse)
-          channel.write(StreamChunkedInput(stream, channel, 2))
+          channel.write(StreamChunkedInput(stream.map(ByteBuffer.wrap(_)), channel, 2))
 
         case None =>
           nettyResponse.setHeader(NettyHttpHeaders.Names.CONTENT_LENGTH, "0")

@@ -121,10 +121,10 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
   }
 
   private def sendData(chunk: ByteChunk, bodyDataSink: BodyDataSink) = {
-    def writeStream(stream: StreamT[Future, ByteBuffer]): Future[Unit] = {
+    def writeStream(stream: StreamT[Future, Array[Byte]]): Future[Unit] = {
       stream.uncons flatMap {
         case Some((data, tail)) => 
-          bodyDataSink.write(data)
+          bodyDataSink.write(ByteBuffer.wrap(data))
           writeStream(tail)
         case None =>
           Future(bodyDataSink.close())
@@ -132,14 +132,19 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
     }
 
     chunk match {
-      case Left(data) => Future(bodyDataSink.write(data)).map(_ => bodyDataSink.close())
-      case Right(stream) => writeStream(stream)
+      case Left(data) =>
+        Future {
+          bodyDataSink.write(ByteBuffer.wrap(data))
+          bodyDataSink.close()
+        }
+      case Right(stream) =>
+        writeStream(stream)
     }
   }
 
   private def readNotChunked(response: IHttpResponse): Option[ByteChunk] = {
     val bytes = response.getBody.readBytes
-    if (!bytes.isEmpty) Some(Left(ByteBuffer.wrap(bytes))) else None
+    if (!bytes.isEmpty) Some(Left(bytes)) else None
   }
 
   private def readChunked(response: IHttpResponse): Option[ByteChunk] = {
@@ -152,13 +157,13 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
         override def onData(source: NonBlockingBodyDataSource) = {
           val available = source.available()
           if (available > 0) {
-            val buffer = ByteBuffer.allocate(available)
+            val bytes = new Array[Byte](available)
+            val buffer = ByteBuffer.wrap(bytes)
             source.read(buffer)
-            buffer.flip()
 
             val current = chain
             chain = Chain.incomplete
-            current.promise.success(Some((buffer, chain)))
+            current.promise.success(Some((bytes, chain)))
           } else if (available == -1){
             chain.promise.success(None)
           }
@@ -168,7 +173,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
       }
     }
 
-    Some(Right(StreamT.unfoldM[Future, ByteBuffer, Chain](head) { _.promise }))
+    Some(Right(StreamT.unfoldM[Future, Array[Byte], Chain](head) { _.promise }))
   }
 
   private def createXLRequest(request: HttpRequest[ByteChunk]): IHeader =  {
@@ -213,7 +218,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
   private def postRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
     request.content match {
       case None => new PostRequest(url)
-      case Some(Left(data))    => new PostRequest(url, requestContentType(request).value, Array(data))
+      case Some(Left(data))    => new PostRequest(url, requestContentType(request).value, Array(ByteBuffer.wrap(data)))
       case Some(Right(stream)) => new HttpRequestHeader("POST", url, requestContentType(request).value)
     }
   }
@@ -221,7 +226,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
   private def putRequest(request: HttpRequest[ByteChunk], url: String): IHeader = {
     request.content match{
       case None => new PutRequest(url)
-      case Some(Left(data))    => new PutRequest(url, requestContentType(request).value, Array(data))
+      case Some(Left(data))    => new PutRequest(url, requestContentType(request).value, Array(ByteBuffer.wrap(data)))
       case Some(Right(stream)) => new HttpRequestHeader("PUT", url, requestContentType(request).value)
     }
   }
@@ -230,7 +235,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
 
   private def requestContentLength(request: HttpRequest[ByteChunk]): Option[HttpHeader] = {
     for (content <- request.content; v <- content.left.toOption) yield {
-      `Content-Length`(v.remaining)
+      `Content-Length`(v.length)
     }
   }
 }

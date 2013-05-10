@@ -35,10 +35,10 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
     implicit val M: Monad[Future] = new FutureMonad(executor)
 
     def writeResponse(response: HttpResponse[ByteChunk], asyncContext: AsyncContext): Future[Unit] = {
-      def writeStream(stream: StreamT[Future, ByteBuffer], channel: WritableByteChannel): Future[Unit] = {
+      def writeStream(stream: StreamT[Future, Array[Byte]], channel: WritableByteChannel): Future[Unit] = {
         stream.uncons flatMap {
-          case Some((head, tail)) =>
-            channel.write(head)
+          case Some((bytes, tail)) =>
+            channel.write(ByteBuffer.wrap(bytes))
             writeStream(tail, channel)
           case None =>
             Future {
@@ -58,12 +58,12 @@ abstract class ServletEngine extends HttpServlet with HttpServerModule with Http
       } else {
         realHttpResponse.setStatus(response.status.code.value)
         response.content match {
-          case Some(Left(buffer)) => 
-            realHttpResponse.setHeader("Content-Length", buffer.remaining.toString)
+          case Some(Left(bytes)) => 
+            realHttpResponse.setHeader("Content-Length", bytes.length.toString)
 
             Future {  
               val channel = Channels.newChannel(realHttpResponse.getOutputStream)
-              channel.write(buffer)
+              channel.write(ByteBuffer.wrap(bytes))
               channel.close()
               asyncContext.complete()
             }

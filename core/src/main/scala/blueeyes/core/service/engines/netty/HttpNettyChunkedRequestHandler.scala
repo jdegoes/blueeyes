@@ -46,15 +46,21 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
           val head = Chain.incomplete
           if (nettyContent.readable()) {
             chain = Chain.incomplete
-            head.promise.success(Some((nettyContent.toByteBuffer, chain)))
+            val len = nettyContent.readableBytes
+            val bytes = new Array[Byte](len)
+            nettyContent.readBytes(bytes)
+            head.promise.success(Some((bytes, chain)))
           } else {
             chain = head
           }
 
-          Some(Right(StreamT.unfoldM[Future, ByteBuffer, Chain](head) { _.promise }))
+          Some(Right(StreamT.unfoldM[Future, Array[Byte], Chain](head) { _.promise }))
         } else {
           if (nettyContent.readable()) {
-            Some(Left(nettyContent.toByteBuffer))
+            val len = nettyContent.readableBytes
+            val bytes = new Array[Byte](len)
+            nettyContent.readBytes(bytes)
+            Some(Left(bytes))
           } else {
             None
           }
@@ -65,7 +71,11 @@ private[engines] class HttpNettyChunkedRequestHandler(chunkSize: Int)(implicit e
       case chunk: NettyChunk =>
         val current = chain
         chain = if (chunk.isLast) Chain.complete else Chain.incomplete
-        current.promise.success(Some((chunk.getContent.toByteBuffer, chain)))
+        val content = chunk.getContent
+        val len = content.readableBytes
+        val bytes = new Array[Byte](len)
+        content.readBytes(bytes)
+        current.promise.success(Some((bytes, chain)))
 
       case _ =>
         Channels.write(ctx, Channels.succeededFuture(ctx.getChannel), BAD_REQUEST.duplicate())
