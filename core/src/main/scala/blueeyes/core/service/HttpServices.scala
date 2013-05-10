@@ -121,6 +121,10 @@ object ResponseModifier {
   implicit def responseF[F[_]: Functor, A]: ResponseModifier[F[HttpResponse[A]]] = new ResponseModifier[F[HttpResponse[A]]] {
     def modify(result: F[HttpResponse[A]])(f: HttpResponse ~> HttpResponse) = result map { r => f[A](r) }
   }
+
+  implicit def responseFG[F[_]: Functor, G[_]: Functor, A]: ResponseModifier[F[G[HttpResponse[A]]]] = new ResponseModifier[F[G[HttpResponse[A]]]] {
+    def modify(result: F[G[HttpResponse[A]]])(f: HttpResponse ~> HttpResponse) = result map { _ map { r => f[A](r) } }
+  }
 }
 
 ////////////////////////////////////////////////////
