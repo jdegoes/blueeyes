@@ -17,6 +17,7 @@ extends SyncParser with ByteBasedParser {
 
   final def close() { src.position(src.limit) }
   final def reset(i: Int): Int = i
+  final def checkpoint(state: Int, i: Int, stack: List[Context]) {}
   final def byte(i: Int): Byte = src.get(i + start)
   final def at(i: Int): Char = src.get(i + start).toChar
 

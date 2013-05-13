@@ -32,9 +32,9 @@ trait ServiceBuilder[T] {
     StartupDescriptor[T, S](thunk)
   }
   
-  protected def request[S](request: S => AsyncHttpService[T]): RequestDescriptor[T, S] = RequestDescriptor[T, S](request)
+  protected def request[S](request: S => AsyncHttpService[T, T]): RequestDescriptor[T, S] = RequestDescriptor[T, S](request)
   
-  protected def request(request: => AsyncHttpService[T]): RequestDescriptor[T, Unit] = RequestDescriptor[T, Unit]((u) => request)
+  protected def request(request: => AsyncHttpService[T, T]): RequestDescriptor[T, Unit] = RequestDescriptor[T, Unit]((u) => request)
   
   def service[S](sname: String, sversion: ServiceVersion, sdesc: Option[String] = None)(slifecycle: ServiceContext => ServiceLifecycle[T, S]): Service[T, S] = {
     new Service[T, S] {
@@ -82,5 +82,5 @@ case class StartupDescriptor[T, S](startup: () => Future[S]) {
   }
 }
 
-case class RequestDescriptor[T, S](serviceBuilder: S => AsyncHttpService[T])
+case class RequestDescriptor[T, S](serviceBuilder: S => AsyncHttpService[T, T])
 case class ShutdownDescriptor[-S](shutdownBuilder: S => Option[Stoppable])

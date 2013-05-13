@@ -26,6 +26,7 @@ import java.nio.ByteBuffer
 import org.streum.configrity.Configuration
 import org.streum.configrity.io.BlockFormat
 
+import com.weiglewilczek.slf4s.Logging
 import com.weiglewilczek.slf4s.Logger
 
 
@@ -37,23 +38,12 @@ import scalaz.syntax.show._
 import scalaz.syntax.validation._
 import scalaz.syntax.std.boolean._
 
-/** An http server acts as a container for services. A server can be stopped
- * and started, and has a main function so it can be mixed into objects.
- */
-trait HttpServerModule {
-  type HttpServer <: HttpServerLike
-
-  def server(rootConfig: Configuration, executionContext: ExecutionContext): HttpServer
-}
-
 object HttpServerConfig {
   type CompressionLevel = Int
 }
 
-trait HttpServerConfig {
+class HttpServerConfig(val config: Configuration) {
   import HttpServerConfig._
-
-  def config: Configuration
 
   /** Retrieves the port the server should be running at, which defaults to
    * 8888.
@@ -96,80 +86,81 @@ trait HttpServerConfig {
    * to provide a different timeout.
    */
   def stopTimeout = Timeout(config[Long]("shutdownTimeout", Long.MaxValue))
-  
-  def log: Logger
 }
 
-abstract class HttpServerLike(val rootConfig: Configuration) extends HttpServerConfig { self =>
-  implicit def executionContext: ExecutionContext
+/** An http server acts as a container for services. A server can be stopped
+ * and started, and has a main function so it can be mixed into objects.
+ */
+trait HttpServerModule extends Logging {
+  type HttpServer <: HttpServerLike
 
-  /** Retrieves the server configuration, which is always located in the 
-   * "server" block of the root configuration object.
-   */
-  val config: Configuration = rootConfig.detach("server")
-  
-  /** The list of services that this server is supposed to run. */
-  val services: List[Service[ByteChunk, _]]
+  def server(rootConfig: Configuration, executionContext: ExecutionContext): HttpServer
 
-  private def context[T, S](service: Service[T, S]): ServiceContext = {
-    val config = rootConfig.detach("services." + service.name + ".v" + service.version.majorVersion)
-    ServiceContext(rootConfig, config, service.name, service.version, service.desc, host, port, sslPort)
-  }
+  class HttpServerLike(rootConfig: Configuration, services: List[Service[ByteChunk, _]], executor0: ExecutionContext) { self =>
+    implicit protected val executor: ExecutionContext = executor0
 
-  def start: Option[Future[(AsyncHttpService[ByteChunk], Option[Stoppable])]] = {
-    def append[S](lifecycle: ServiceLifecycle[ByteChunk, S], tail: List[Service[ByteChunk, _]]): ServiceLifecycle[ByteChunk, _] = {
-      tail match {
-        case x :: xs => append(lifecycle ~ x.lifecycle(context(x)), xs)
-        case Nil => lifecycle 
-      }
+    val config = new HttpServerConfig(rootConfig.detach("server"))
+    import config._
+    
+    private def context[T, S](service: Service[T, S]): ServiceContext = {
+      val serviceConfig = rootConfig.detach("services." + service.name + ".v" + service.version.majorVersion)
+      ServiceContext(rootConfig, serviceConfig, service.name, service.version, service.desc, host, port, sslPort)
     }
 
-    val lifecycle = services match {
-      case x :: xs => Some(append(x.lifecycle(context(x)), xs))
-      case Nil => None
-    }
-
-    lifecycle map { _.run map { (trapErrors _).first } }
-  }
-
-  def trapErrors(delegate: AsyncHttpService[ByteChunk]): AsyncHttpService[ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
-    private def convertErrorToResponse(request: HttpRequest[ByteChunk], th: Throwable): HttpResponse[ByteChunk] = {
-      import DefaultBijections._
-      log.error("Error handling request " + request.shows, th)
-      HttpResponse.error[ByteChunk](th)
-    }
-
-    val service = (r: HttpRequest[ByteChunk]) => {
-      // The raw future may die due to error:
-      val rawValidation = try {
-         delegate.service(r)
-      } catch {
-        // An error during invocation of the request handler, convert to
-        // proper response:
-        case error: Throwable => success(Promise.successful(convertErrorToResponse(r, error)))
+    def start: Option[Future[(AsyncHttpService[ByteChunk, ByteChunk], Option[Stoppable])]] = {
+      def append[S](lifecycle: ServiceLifecycle[ByteChunk, S], tail: List[Service[ByteChunk, _]]): ServiceLifecycle[ByteChunk, _] = {
+        tail match {
+          case x :: xs => append(lifecycle ~ x.lifecycle(context(x)), xs)
+          case Nil => lifecycle 
+        }
       }
 
-      // Convert the raw future into one that cannot die:
-      rawValidation match {
-        case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(r, error) }))
-        case Failure(DispatchError(failure, message, detail)) => 
-          success(
-            Promise.successful(HttpResponse[ByteChunk](HttpStatus(failure, message)))
-          )
+      val lifecycle = services match {
+        case x :: xs => Some(append(x.lifecycle(context(x)), xs))
+        case Nil => None
+      }
 
-        case Failure(Inapplicable(services @ _*)) =>
-          val message = "No handler could be found for your request: " + r.shows
-          success(
-            Promise.successful(
-              HttpResponse[ByteChunk](NotFound, 
-                                      headers = HttpHeaders(`Content-Type`(text/plain)), 
-                                      content = Some(DefaultBijections.stringToChunk(message)))
+      lifecycle map { _.run map { (trapErrors _).first } }
+    }
+
+    def trapErrors(delegate: AsyncHttpService[ByteChunk, ByteChunk]): AsyncHttpService[ByteChunk, ByteChunk] = new CustomHttpService[ByteChunk, Future[HttpResponse[ByteChunk]]] {
+      private def convertErrorToResponse(request: HttpRequest[ByteChunk], th: Throwable): HttpResponse[ByteChunk] = {
+        import DefaultBijections._
+        logger.error("Error handling request " + request.shows, th)
+        HttpResponse.error[ByteChunk](th)
+      }
+
+      val service = (request: HttpRequest[ByteChunk]) => {
+        // The raw future may die due to error:
+        val rawValidation = try {
+           delegate.service(request)
+        } catch {
+          // An error during invocation of the request handler, convert to
+          // proper response:
+          case error: Throwable => success(Promise.successful(convertErrorToResponse(request, error)))
+        }
+
+        // Convert the raw future into one that cannot die:
+        rawValidation match {
+          case Success(rawFuture) => success((rawFuture recover { case error => convertErrorToResponse(request, error) }))
+
+          case Failure(DispatchError(failure, message, detail)) => 
+            success(Promise.successful(HttpResponse[ByteChunk](HttpStatus(failure, message))))
+
+          case Failure(Inapplicable(services @ _*)) =>
+            val message = "No handler could be found for your request: " + request.shows
+            success(
+              Promise.successful(
+                HttpResponse[ByteChunk](NotFound, 
+                                        headers = HttpHeaders(`Content-Type`(text/plain)), 
+                                        content = Some(DefaultBijections.stringToChunk(message)))
+              )
             )
-          )
+        }
       }
-    }
 
-    val metadata = delegate.metadata
+      val metadata = delegate.metadata
+    }
   }
 }
 
@@ -238,7 +229,7 @@ trait HttpServerMain extends HttpServerModule {
  * Reflectively discovers service handlers from the fields of the class into which it is mixed.
  */
 trait ReflectiveServiceList[T] { self =>
-  lazy val services: List[Service[T, _]] = {
+  def services: List[Service[T, _]] = {
     val c = self.getClass
     
     val allMethods: List[Method] = c.getDeclaredMethods.toList

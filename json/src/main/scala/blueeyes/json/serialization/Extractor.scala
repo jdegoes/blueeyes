@@ -31,12 +31,18 @@ trait Extractor[A] { self =>
     def validated(jvalue: JValue) = self.validated(jvalue) map f
   }
 
+  def mapv[B](f: A => Validation[Error, B]): Extractor[B] = new Extractor[B] {
+    def validated(jvalue: JValue) = self.validated(jvalue) flatMap f
+  }
+
   def kleisli = Kleisli[({type λ[+α] = Validation[Error, α]})#λ, JValue, A](validated _)
 
   def apply(jvalue: JValue): A = extract(jvalue)
 }
 
 object Extractor {
+  def apply[A](implicit e: Extractor[A]): Extractor[A] = e
+
   def invalidv[A](message: String) = failure[Error, A](Invalid(message))
   def tryv[A](a: => A) = (Thrown.apply _) <-: Validation.fromTryCatch(a)
 

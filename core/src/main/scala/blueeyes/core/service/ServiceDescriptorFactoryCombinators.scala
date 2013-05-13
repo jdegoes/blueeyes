@@ -98,6 +98,8 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
   def help[T, S](f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = help("/docs/api")(f)
 
   def help[T, S](pathPrefix: RestPathPattern)(f: => ServiceDescriptorFactory[T, S])(implicit s2t: String => T, executor: ExecutionContext): ServiceDescriptorFactory[T, S] = {
+    implicit val F: scalaz.Functor[Future] = new blueeyes.bkka.FutureMonad(executor)
+    import HttpRequestHandlerImplicits._
     (context: ServiceContext) => {
       val underlying = f(context)
       underlying.copy(
@@ -107,13 +109,12 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
             service ~ 
             path(pathPrefix) {
               get {
-                produce(text/html){
-                  new HttpHandlerService(
+                encode {
+                  produce(text/html){
                     (request: HttpRequest[T]) => {
                       Future(HttpResponse[String](content = Some(ServiceDocumenter.printFormatted(context, service)(Metadata.StringFormatter, HtmlPrinter))))
-                    },
-                    identity[T]
-                  )
+                    }
+                  }
                 }
               }
             }
@@ -284,7 +285,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     }
   }
 
-  private[service] class HttpRequestLoggerService[T](actor: ActorRef, underlying: AsyncHttpService[T])(implicit executor: ExecutionContext) 
+  private[service] class HttpRequestLoggerService[T](actor: ActorRef, underlying: AsyncHttpService[T, T])(implicit executor: ExecutionContext) 
       extends CustomHttpService[T, Future[HttpResponse[T]]]{
     def service = (request: HttpRequest[T]) => {
       try {
@@ -317,7 +318,7 @@ trait ServiceDescriptorFactoryCombinators extends HttpRequestHandlerCombinators 
     val metadata = NoMetadata
   }
 
-  private[service] class MonitorHttpRequestService[T](val delegate: AsyncHttpService[T], healthMonitor: HealthMonitor) extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]] with JPathImplicits{
+  private[service] class MonitorHttpRequestService[T](val delegate: AsyncHttpService[T, T], healthMonitor: HealthMonitor) extends DelegatingService[T, Future[HttpResponse[T]], T, Future[HttpResponse[T]]] with JPathImplicits{
     def service = {request: HttpRequest[T] =>
       val methodName    = request.method.value
       val requestPath   = JPathField(methodName)

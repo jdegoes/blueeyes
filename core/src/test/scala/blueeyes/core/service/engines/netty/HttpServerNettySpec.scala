@@ -59,7 +59,7 @@ class HttpServerNettySpec extends Specification with TestAkkaDefaults with HttpR
     def startStep = Step {
       val conf = Configuration.parse(configPattern.format(port, sslPort), BlockFormat)
       val sampleServer = (new SampleServer).server(conf, defaultFutureDispatch)
-      config = sampleServer.config
+      config = conf.detach("server")
 
       sampleServer.start map { startFuture =>
         Await.result(startFuture map { case (_, shutdown) => stop = shutdown }, duration)

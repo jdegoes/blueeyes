@@ -11,6 +11,7 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpStatusCodes._
 import blueeyes.json._
+import blueeyes.util._
 import DefaultBijections._
 
 import akka.dispatch.Future
@@ -29,7 +30,7 @@ import scalaz.StreamT
 import scalaz.syntax.monad._
 import com.weiglewilczek.slf4s.Logging
 
-class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with HttpRequestMatchers {
+class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with HttpRequestMatchers with PortFinder {
   val duration = 2000.milliseconds
   val retries = 30
   
@@ -43,14 +44,17 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     sslPort = %d
   }"""
 
-  private var port = 8586
+  private val (port, sslPort) = findUnusedPorts(1000, 2) match {
+    case Some(p :: sp :: Nil) => (p, sp)
+    case _ => throw new Exception("Failed to find 2 unused ports for testing")
+  }
 
   override def is = args(sequential = true) ^ super.is
   override def map(fs: => Fragments) = {
     var stoppable: Option[Stoppable] = None
 
     def startStep = Step {
-      val config = Configuration.parse(configPattern.format(port, port + 1), BlockFormat)
+      val config = Configuration.parse(configPattern.format(port, sslPort), BlockFormat)
       val echoServer = EchoServer.server(config, defaultFutureDispatch)
       val (_, stop) = Await.result(echoServer.start.get, duration)
       stoppable = stop
@@ -231,7 +235,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
 }
 
 object EchoServer extends BlueEyesServer with BlueEyesServiceBuilder with HttpRequestHandlerCombinators with TestAkkaDefaults with Logging { 
-  import blueeyes.core.http.MimeTypes._
+  import HttpRequestHandlerImplicits._
 
   val executionContext = defaultFutureDispatch
 
@@ -262,11 +266,13 @@ object EchoServer extends BlueEyesServer with BlueEyesServiceBuilder with HttpRe
 
   val echoService = service("echo", "1.0.0") { context =>
     request {
-      produce[ByteChunk, String, ByteChunk](text/html) {
-        get(handler _) ~
-        post(handler _) ~
-        put(handler _) ~
-        head(handler _)
+      encode[ByteChunk, Future[HttpResponse[String]], Future[HttpResponse[ByteChunk]]] {
+        produce(text/html) {
+          get(handler _) ~
+          post(handler _) ~
+          put(handler _) ~
+          head(handler _)
+        }
       }
     }
   }

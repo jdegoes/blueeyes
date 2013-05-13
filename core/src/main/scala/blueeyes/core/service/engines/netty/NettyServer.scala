@@ -1,16 +1,21 @@
 package blueeyes.core.service.engines.netty
 
+import blueeyes.core.service.engines.InetInterfaceLookup
+
 import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
-import com.weiglewilczek.slf4s.Logger
-import java.util.concurrent.Executors
 import org.jboss.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.channel._
-import blueeyes.core.service.engines.InetInterfaceLookup
+
+import java.util.concurrent.Executors
+
+import com.weiglewilczek.slf4s.Logger
+import com.weiglewilczek.slf4s.Logging
+
 import org.streum.configrity.Configuration
 
 
-class NettyServer(provider: NettyServerProvider) {
+class NettyServer(provider: NettyServerProvider) extends Logging {
   private val startStopLock = new java.util.concurrent.locks.ReentrantReadWriteLock
   private val channelGroup = new DefaultChannelGroup()
 
@@ -24,10 +29,10 @@ class NettyServer(provider: NettyServerProvider) {
       channelGroup.add(channel)
       server = Some(bootstrap)
 
-      provider.log.info("%s netty engine is started using port: %d".format(provider.engineType, provider.enginePort))
+      logger.info("%s netty engine is started using port: %d".format(provider.engineType, provider.enginePort))
     } catch {
       case e: Throwable => {
-        provider.log.error("Error on server startup", e)
+        logger.error("Error on server startup", e)
         stop
         throw e
       }
@@ -47,7 +52,7 @@ class NettyServer(provider: NettyServerProvider) {
       startStopLock.writeLock.unlock()
     }
 
-    provider.log.info("%s Netty engine is stopped.".format(provider.engineType))
+    logger.info("%s Netty engine is stopped.".format(provider.engineType))
   }
 }
 
@@ -56,12 +61,12 @@ trait NettyServerProvider {
 
   def enginePort: Int
 
-  def log: Logger
-
   def startEngine(channelGroup: ChannelGroup): (Bootstrap, Channel)
 }
 
 trait AbstractNettyServerProvider extends NettyServerProvider {
+  def config: Configuration 
+
   def startEngine(channelGroup: ChannelGroup) = {
     val executor  = Executors.newCachedThreadPool()
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor))
@@ -73,8 +78,6 @@ trait AbstractNettyServerProvider extends NettyServerProvider {
   }
 
   def pipelineFactory(channelGroup: ChannelGroup): ChannelPipelineFactory
-
-  def config: Configuration 
 
   private[engines] class SetBacklogHandler(backlog: Int) extends SimpleChannelUpstreamHandler {
     override def channelOpen(ctx: ChannelHandlerContext, e: ChannelStateEvent) {

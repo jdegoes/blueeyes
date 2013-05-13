@@ -1,6 +1,7 @@
 package blueeyes.json
 
 import scala.annotation.{switch, tailrec}
+import scala.math.max
 import scala.collection.mutable
 import java.nio.ByteBuffer
 
@@ -15,18 +16,65 @@ private[json] class AsyncException extends Exception
 private[json] class FailureException extends Exception
 
 object AsyncParser {
-  def apply(failFast: Boolean): AsyncParser =
-    new AsyncParser(new Array[Byte](131072), 0, 131072, 0, false, failFast)
+  sealed trait Input
+  case class More(buf: ByteBuffer) extends Input
+  case object Done extends Input
+
+  @deprecated("Use AsyncParser.stream() to maintain the current behavior", "1.0")
+  def apply(): AsyncParser = stream()
+
+  def stream(): AsyncParser = 
+    new AsyncParser(-1, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, 0)
+
+  def json(): AsyncParser =
+    new AsyncParser(-1, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, -1)
+
+  def unwrap(): AsyncParser =
+    new AsyncParser(-5, 0, Nil, new Array[Byte](131072), 0, 131072, 0, false, 1)
 }
 
+// We have a lot of fields here.
+// 
+// The (state, curr, stack) triple is used to save and restore parser
+// state between async calls. State also helps encode extra
+// information when streaming or unwrapping an array.
+//
+// The (data, len, allocated) triple is used to manage the underlying
+// data the parser is keeping track of. As new data comes in, data may
+// be expanded if not enough space is available.
+// 
+// The offset parameter is used to drive the outer async parsing. It
+// stores similar information to curr but is kept separate to avoid
+// "corrupting" our snapshot.
+// 
+// The done parameter is used internally to help figure out when the
+// atEof() parser method should return true. This will be set when
+// apply(None) is called.
+// 
+// The streamMode parameter controls how the asynchronous parser will
+// be handling multiple values. There are three states:
+// 
+//    1: An array is being unwrapped. Normal JSON array rules apply
+//       (Note that if the outer value observed is not an array, this
+//       mode will toggle to the -1 mode).
+//
+//    0: A JSON stream is being parsed. JSON values will be separated
+//       by optional whitespace
+//
+//   -1: No streaming is occuring. Only a single JSON value is
+//       allowed.
 final class AsyncParser protected[json] (
+  protected[json] var state: Int,
+  protected[json] var curr: Int,
+  protected[json] var stack: List[Context],
   protected[json] var data: Array[Byte],
   protected[json] var len: Int,
   protected[json] var allocated: Int,
-  protected[json] var index: Int,
+  protected[json] var offset: Int,
   protected[json] var done: Boolean,
-  protected[json] val failFast: Boolean
+  protected[json] var streamMode: Int
 ) extends ByteBasedParser {
+  import AsyncParser._
 
   protected[this] var line = 0
   protected[this] var pos = 0
@@ -34,9 +82,9 @@ final class AsyncParser protected[json] (
   protected[this] final def column(i: Int) = i - pos
 
   protected[this] final def copy() =
-    new AsyncParser(data.clone, len, allocated, index, done, failFast)
+    new AsyncParser(state, curr, stack, data.clone, len, allocated, offset, done, streamMode)
 
-  final def apply(b: Option[ByteBuffer]): (AsyncParse, AsyncParser) = copy.feed(b)
+  final def apply(input: Input): (AsyncParse, AsyncParser) = copy.feed(input)
 
   protected[this] final def absorb(buf: ByteBuffer): Unit = {
     done = false
@@ -48,95 +96,174 @@ final class AsyncParser protected[json] (
     // data array. we never shrink the data array, assuming users will call
     // feed with similarly-sized buffers.
     if (need > allocated) {
-      val newdata = new Array[Byte](need)
+      val doubled = if (allocated < 0x40000000) allocated * 2 else Int.MaxValue
+      val newsize = max(need, doubled)
+      val newdata = new Array[Byte](newsize)
       System.arraycopy(data, 0, newdata, 0, len)
       data = newdata
-      allocated = need
+      allocated = newsize
     }
 
     buf.get(data, len, buflen)
     len = need
   }
 
-  // if this runs off the end of at() we'll get an AsyncException, which is OK
-  // as it will signal the end of the parse.
-  protected[json] def recoverFromError(e: ParseException) {
-    if (e.index > index && at(e.index - 1) == '\n') {
-      index = e.index
-    } else {
-      while (at(index) != '\n') index += 1
-    }
-  }
+  // Explanation of the new synthetic states .The parser machinery
+  // uses positive integers for states while parsing json values. We
+  // use these negative states to keep track of the async parser's
+  // status between json values.
+  //
+  // ASYNC_PRESTART: We haven't seen any non-whitespace yet. We
+  // could be parsing an array, or not. We are waiting for valid
+  // JSON.
+  // 
+  // ASYNC_START: We've seen an array and have begun unwrapping
+  // it. We could see a ] if the array is empty, or valid JSON.
+  // 
+  // ASYNC_END: We've parsed an array and seen the final ]. At this
+  // point we should only see whitespace or an EOF.
+  // 
+  // ASYNC_POSTVAL: We just parsed a value from inside the array. We
+  // expect to see whitespace, a comma, or an EOF.
+  // 
+  // ASYNC_PREVAL: We are in an array and we just saw a comma. We
+  // expect to see whitespace or a JSON value.
+  @inline private[this] final def ASYNC_PRESTART = -5
+  @inline private[this] final def ASYNC_START = -4
+  @inline private[this] final def ASYNC_END = -3
+  @inline private[this] final def ASYNC_POSTVAL = -2
+  @inline private[this] final def ASYNC_PREVAL = -1
 
-  protected[json] def feed(b: Option[ByteBuffer]): (AsyncParse, AsyncParser) = {
+  protected[json] def feed(b: Input): (AsyncParse, AsyncParser) = {
     b match {
-      case None => done = true
-      case Some(buf) => absorb(buf)
+      case Done => done = true
+      case More(buf) => absorb(buf)
     }
 
     // accumulates errors and results
     val errors = mutable.ArrayBuffer.empty[ParseException]
     val results = mutable.ArrayBuffer.empty[JValue]
 
+    // FIXME: make sure that array streamer stores whether it is
+    // streaming an array or not.
+
     // we rely on exceptions to tell us when we run out of data
     try {
       while (true) {
-        (at(index): @switch) match {
-          // just pass whitespace by looking for the next value
-          case '\n' =>
-            newline(index)
-            index += 1
+        if (state < 0) {
+          (at(offset): @switch) match {
+            case '\n' =>
+              newline(offset)
+              offset += 1
 
-          case ' ' | '\t' | '\r' =>
-            index += 1
+            case ' ' | '\t' | '\r' =>
+              offset += 1
 
-          // ok, let's try parsing at this point
-          case _ =>
-            try {
-              index = reset(index)
-              val (value, j) = parse(index)
-              results.append(value)
-              index = j
-            } catch {
-              // we'll catch a parsing exception, note the error, and try to
-              // make an effort to find the next value.
-              case e: ParseException =>
-                errors.append(e)
-                if (failFast) {
-                  throw new AsyncException
+            case '[' =>
+              if (state == ASYNC_PRESTART) {
+                offset += 1
+                state = ASYNC_START
+              } else if (state == ASYNC_END) {
+                die(offset, "expected eof")
+              } else if (state == ASYNC_POSTVAL) {
+                die(offset, "expected , or ]")
+              } else {
+                state = 0
+              }
+
+            case ',' =>
+              if (state == ASYNC_POSTVAL) {
+                offset += 1
+                state = ASYNC_PREVAL
+              } else if (state == ASYNC_END) {
+                die(offset, "expected eof")
+              } else {
+                die(offset, "expected json value")
+              }
+
+            case ']' =>
+              if (state == ASYNC_POSTVAL || state == ASYNC_START) {
+                if (streamMode > 0) {
+                  offset += 1
+                  state = ASYNC_END
                 } else {
-                  recoverFromError(e)
+                  die(offset, "expected json value or eof")
                 }
-            }
+              } else if (state == ASYNC_END) {
+                die(offset, "expected eof")
+              } else {
+                die(offset, "expected json value")
+              }
+
+            case c =>
+              if (state == ASYNC_END) {
+                die(offset, "expected eof")
+              } else if (state == ASYNC_POSTVAL) {
+                die(offset, "expected ] or ,")
+              } else {
+                if (state == ASYNC_PRESTART && streamMode > 0) streamMode = -1
+                state = 0
+              }
+          }
+
+        } else {
+          // jump straight back into rparse
+          offset = reset(offset)
+          val (value, j) = if (state <= 0) {
+            parse(offset)
+          } else {
+            rparse(state, curr, stack)
+          }
+          if (streamMode > 0) {
+            state = ASYNC_POSTVAL
+          } else if (streamMode == 0) {
+            state = ASYNC_PREVAL
+          } else {
+            state = ASYNC_END
+          }
+          curr = j
+          offset = j
+          stack = Nil
+          results.append(value)
         }
       }
     } catch {
       case e: AsyncException =>
-        // we ran out of data. index is storing the last place we started
-        // parsing (or the last place we tried to start parsing) so we can just
-        // return what we have, and resume later.
+        // we ran out of data, so return what we have so far
 
-        // reset() in case we're done with our current buffer
-        index = reset(index)
-
-      case e: Exception =>
-        // we got some other exception
-        throw e
+      case e: ParseException =>
+        // we hit a parser error, so return that error and results so far
+        errors.append(e)
     }
     (AsyncParse(errors, results), this)
   }
 
-  // every 65k bytes we shift our array back by 65k.
+  // every 1M we shift our array back by 1M.
   protected[this] final def reset(i: Int): Int = {
-    if (index >= 65536) {
-      len -= 65536
-      index -= 65536
-      pos -= 65536
-      System.arraycopy(data, 65536, data, 0, len)
-      i - 65536
+    if (offset >= 1048576) {
+      len -= 1048576
+      offset -= 1048576
+      pos -= 1048576
+      System.arraycopy(data, 1048576, data, 0, len)
+      i - 1048576
     } else {
       i
     }
+  }
+
+  /**
+   * We use this to keep track of the last recoverable place we've
+   * seen. If we hit an AsyncException, we can later resume from this
+   * point.
+   *
+   * This method is called during every loop of rparse, and the
+   * arguments are the exact arguments we can pass to rparse to
+   * continue where we left off.
+   */
+  protected[this] final def checkpoint(state: Int, i: Int, stack: List[Context]) {
+    this.state = state
+    this.curr = i
+    this.stack = stack
   }
 
   /**

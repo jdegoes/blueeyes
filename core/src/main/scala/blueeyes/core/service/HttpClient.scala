@@ -11,7 +11,7 @@ import scalaz.std.option._
 import scalaz.std.string._
 import scalaz.syntax.semigroup._
 
-trait HttpClient[A] extends HttpClientHandler[A] { self =>
+trait HttpClient[A] extends PartialFunction[HttpRequest[A], Future[HttpResponse[A]]] { self =>
   def get[B](path: String)(implicit transcoder: AsyncHttpTranscoder[B, A]) = method[B](HttpMethods.GET, path)
 
   def post[B](path: String)(content: B)(implicit f: B => A, transcoder: AsyncHttpTranscoder[B, A]) = method[B](HttpMethods.POST, path, Some(f(content)))
@@ -149,7 +149,7 @@ trait HttpClient[A] extends HttpClientHandler[A] { self =>
 }
 
 object HttpClient extends blueeyes.bkka.AkkaDefaults {
-  implicit def requestHandlerToHttpClient[A](h: HttpClientHandler[A]): HttpClient[A] = new HttpClient[A] {
+  implicit def requestHandlerToHttpClient[A](h: PartialFunction[HttpRequest[A], Future[HttpResponse[A]]]): HttpClient[A] = new HttpClient[A] {
     def isDefinedAt(r: HttpRequest[A]): Boolean = h.isDefinedAt(r)
 
     def apply(r: HttpRequest[A]): Future[HttpResponse[A]] = h.apply(r)

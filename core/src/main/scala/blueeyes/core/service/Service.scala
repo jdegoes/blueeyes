@@ -22,7 +22,7 @@ trait Service[T, S] {
   override def toString = name + "." + version.majorVersion
 }
 
-case class ServiceLifecycle[T, S](startup: () => Future[S], runningState: S => (AsyncHttpService[T], Option[Stoppable])) { self =>
+case class ServiceLifecycle[T, S](startup: () => Future[S], runningState: S => (AsyncHttpService[T, T], Option[Stoppable])) { self =>
   def ~ [S0](that: ServiceLifecycle[T, S0]): ServiceLifecycle[T, (S, S0)] = {
     ServiceLifecycle[T, (S, S0)](
       startup  = () => self.startup() zip that.startup(),
@@ -36,7 +36,7 @@ case class ServiceLifecycle[T, S](startup: () => Future[S], runningState: S => (
     )
   }
 
-  def ~> (that: AsyncHttpService[T]): ServiceLifecycle[T, S] = {
+  def ~> (that: AsyncHttpService[T, T]): ServiceLifecycle[T, S] = {
     self.copy(
       runningState = (s: S) => {
         val (service, stoppable) = self.runningState(s)
@@ -45,7 +45,7 @@ case class ServiceLifecycle[T, S](startup: () => Future[S], runningState: S => (
     )
   }
   
-  def ~ (that: AsyncHttpService[T]): ServiceLifecycle[T, S] = {
+  def ~ (that: AsyncHttpService[T, T]): ServiceLifecycle[T, S] = {
     self.copy(
       runningState = (s: S) => {
         val (service, stoppable) = self.runningState(s)

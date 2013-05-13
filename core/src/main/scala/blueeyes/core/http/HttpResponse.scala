@@ -5,13 +5,15 @@ import blueeyes.core.http.HttpHeaders._
 import blueeyes.core.http.MimeTypes._
 import blueeyes.core.http.HttpVersions._
 
-sealed case class HttpResponse[+T](
+import scalaz._
+
+sealed case class HttpResponse[+A](
   status: HttpStatus = HttpStatus(OK), 
   headers: HttpHeaders = HttpHeaders.Empty, 
-  content: Option[T] = None, 
+  content: Option[A] = None, 
   version: HttpVersion = `HTTP/1.1`
 ) {
-  def map[B](f: T => B): HttpResponse[B] = copy(content = content.map(f))
+  def map[B](f: A => B): HttpResponse[B] = copy(content = content.map(f))
 }
 
 object HttpResponse {
@@ -20,6 +22,14 @@ object HttpResponse {
   def error[T](th: Throwable)(implicit decode: String => T): HttpResponse[T] = th match {
     case e: HttpException => HttpResponse[T](HttpStatus(e.failure), headers = HttpHeaders(`Content-Type`(text/plain)), content = Some(decode(e.reason)))
     case e => HttpResponse[T](HttpStatus(HttpStatusCodes.InternalServerError))
+  }
+
+  implicit val instances: Functor[HttpResponse] = new Functor[HttpResponse] {
+    def map[A, B](fa: HttpResponse[A])(f: A => B) = fa.map(f)
+  }
+
+  def modifyHeaders(f: HttpHeaders => HttpHeaders) = new NaturalTransformation[HttpResponse, HttpResponse] {
+    def apply[A](r: HttpResponse[A]): HttpResponse[A] = r.copy(headers = f(r.headers))
   }
 }
 

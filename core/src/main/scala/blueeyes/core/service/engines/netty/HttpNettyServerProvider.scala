@@ -14,22 +14,20 @@ import com.weiglewilczek.slf4s.Logging
 
 import HttpServerConfig._
 
-private[engines] class HttpNettyServerProvider(server: HttpServerConfig, service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
+private[engines] class HttpNettyServerProvider(conf: HttpServerConfig, service: AsyncHttpService[ByteChunk, ByteChunk], executionContext: ExecutionContext) extends AbstractNettyServerProvider {
   def pipelineFactory(channelGroup: ChannelGroup) = {
-    new HttpPipelineFactory("http", server.host, server.port, server.chunkSize, server.compressionLevel, service, channelGroup, executionContext)
+    new HttpPipelineFactory("http", conf.host, conf.port, conf.chunkSize, conf.compressionLevel, service, channelGroup, executionContext)
   }
 
   def engineType = "http"
 
-  def enginePort = server.port
+  def enginePort = conf.port
 
-  def config = server.config
-
-  def log = server.log
+  def config = conf.config
 }
 
 private[engines] class HttpPipelineFactory(protocol: String, host: String, port: Int, chunkSize: Int, compression: Option[CompressionLevel],
-                                           service: AsyncHttpService[ByteChunk], channelGroup: ChannelGroup,
+                                           service: AsyncHttpService[ByteChunk, ByteChunk], channelGroup: ChannelGroup,
                                            executionContext: ExecutionContext) extends ChannelPipelineFactory with Logging {
   def getPipeline: ChannelPipeline = {
     val pipeline = Channels.pipeline()

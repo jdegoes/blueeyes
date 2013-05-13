@@ -26,30 +26,33 @@ import scalaz.syntax.monad._
 
 trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinators with TestAkkaDefaults {
   import blueeyes.core.http.MimeTypes._
+  import HttpRequestHandlerImplicits._
 
   private val response = HttpResponse[String](status = HttpStatus(HttpStatusCodes.OK), content = Some(TestEngineService.content))
 
   val sampleService = service("sample", "1.32") { _ =>
     request {
-      produce[ByteChunk, String, ByteChunk](text/html) {
-        path("/bar/'adId/adCode.html") {
-          get { request: HttpRequest[ByteChunk] =>
-            Future[HttpResponse[String]](response)
-          }
-        } ~
-        path("/foo") {
-          get { request: HttpRequest[ByteChunk] =>
-            Future[HttpResponse[String]](response)
-          }
-        } ~
-        path("/error") {
-          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
-            throw new RuntimeException("Unexpected error (GET /error)")
-          }
-        } ~
-        path("/http/error") {
-          get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
-            throw HttpException(HttpStatusCodes.BadRequest)
+      encode[ByteChunk, Future[HttpResponse[String]], Future[HttpResponse[ByteChunk]]] {
+        produce(text/html) {
+          path("/bar/'adId/adCode.html") {
+            get { request: HttpRequest[ByteChunk] =>
+              Future[HttpResponse[String]](response)
+            }
+          } ~
+          path("/foo") {
+            get { request: HttpRequest[ByteChunk] =>
+              Future[HttpResponse[String]](response)
+            }
+          } ~
+          path("/error") {
+            get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
+              throw new RuntimeException("Unexpected error (GET /error)")
+            }
+          } ~
+          path("/http/error") {
+            get[ByteChunk, Future[HttpResponse[String]]] { request: HttpRequest[ByteChunk] =>
+              throw HttpException(HttpStatusCodes.BadRequest)
+            }
           }
         }
       } ~

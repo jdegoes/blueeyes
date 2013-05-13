@@ -2,7 +2,7 @@ package blueeyes.core.http
 
 import scala.util.parsing.combinator._
 
-case class URI(scheme: Option[String], userInfo: Option[String], host: Option[String], port: Option[Int], path: Option[String], query: Option[String], fragment: Option[String]){ self =>
+case class URI(scheme: Option[String] = None, userInfo: Option[String] = None, host: Option[String] = None, port: Option[Int] = None, path: Option[String] = None, query: Option[String] = None, fragment: Option[String] = None){ self =>
   import URITranscoders._
   private lazy  val _toString: String = List(scheme.map(_ + ":"), host.orElse(port).map(v =>"//" + authority.getOrElse("")).orElse(authority), path, query.map("?" + _), fragment.map("#" + _)).map(_.getOrElse("")).mkString("")
 
@@ -29,11 +29,11 @@ trait URIGrammar extends RegexParsers {
   def portParser     = (":" ~> (regex("""[\d]+""".r) ^^ {case v => v.toInt}) )?
 
   def authorityParser1 = ("//" ~> userInfoParser ~ hostParser ~ portParser) ^^ {
-    case userInfo ~ host ~ port => URI(None, userInfo, host, port, None, None, None)
+    case userInfo0 ~ host0 ~ port0 => URI(userInfo = userInfo0, host = host0, port = port0)
   }
 
   def authorityParser2 = userInfoParser ^^ {
-    case userInfo => URI(None, userInfo, None, None, None, None, None)
+    case userInfo0 => URI(userInfo = userInfo0)
   }
 
   def authorityParser =  (authorityParser1 | authorityParser2)?

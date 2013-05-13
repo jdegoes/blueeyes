@@ -61,7 +61,7 @@ import scala.collection.mutable.{HashSet, SynchronizedSet}
  *
  * TODO: Pass health monitor to the request handler to report on Netty errors.
  */
-private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[ByteChunk], executionContext: ExecutionContext) extends SimpleChannelUpstreamHandler with Logging {
+private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[ByteChunk, ByteChunk], executionContext: ExecutionContext) extends SimpleChannelUpstreamHandler with Logging {
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
   private implicit val M: Monad[Future] = new FutureMonad(executionContext)
 

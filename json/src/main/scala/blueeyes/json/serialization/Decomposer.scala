@@ -20,6 +20,10 @@ trait Decomposer[A] { self =>
   }
 }
 
+object Decomposer {
+  def apply[A](implicit d: Decomposer[A]): Decomposer[A] = d
+}
+
 /** Serialization implicits allow a convenient syntax for serialization and 
  * deserialization when implicit decomposers and extractors are in scope.
  * <p>
