@@ -23,7 +23,7 @@ class BijectionsChunkByteArraySpec extends Specification with TestAkkaDefaults w
       val bytes2 = Array[Byte](0x04, 0x05, 0x06)
       val expected = Array[Byte](0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
 
-      val result = bijection.unapply(Right(ByteBuffer.wrap(bytes1) :: ByteBuffer.wrap(bytes2) :: StreamT.empty[Future, ByteBuffer]))
+      val result = bijection.unapply(Right(bytes1 :: bytes2 :: StreamT.empty[Future, Array[Byte]]))
 
       result must whenDelivered {
         be_==(expected)

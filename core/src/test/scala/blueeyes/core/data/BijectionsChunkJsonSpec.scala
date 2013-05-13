@@ -23,18 +23,18 @@ class BijectionsChunkJsonSpec extends Specification with AkkaDefaults with Futur
 
   "BijectionsChunkJson" should{
     "parse JSON split across chunks" in {
-      val b1 = ByteBuffer.wrap("""{"foo":""".getBytes("UTF-8"))
-      val b2 = ByteBuffer.wrap(""""bar"}""".getBytes("UTF-8"))
+      val b1 = """{"foo":""".getBytes("UTF-8")
+      val b2 = """"bar"}""".getBytes("UTF-8")
 
-      val stream = Right(b1 :: b2 :: StreamT.empty[Future, ByteBuffer]) 
+      val stream = Right(b1 :: b2 :: StreamT.empty[Future, Array[Byte]]) 
       Await.result(bijection.unapply(stream), Duration(500, "milliseconds")) must_== JObject(JField("foo", JString("bar")) :: Nil)
     }
 
     "return JUndefined when JSON is incomplete" in {
-      val b1 = ByteBuffer.wrap("""{"foo":""".getBytes("UTF-8"))
-      val b2 = ByteBuffer.wrap(""""bar""".getBytes("UTF-8"))
+      val b1 = """{"foo":""".getBytes("UTF-8")
+      val b2 = """"bar""".getBytes("UTF-8")
 
-      val stream = Right(b1 :: b2 :: StreamT.empty[Future, ByteBuffer]) 
+      val stream = Right(b1 :: b2 :: StreamT.empty[Future, Array[Byte]]) 
       Await.result(bijection.unapply(stream), Duration(500, "milliseconds")) must_== JUndefined
     }
   }

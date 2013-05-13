@@ -158,7 +158,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
 
     "Support POST requests with large payload with several chunks" in {
       val expected = Array.fill[Byte](2048*100)('0')
-      val chunk: ByteChunk = Right(ByteBuffer.wrap(expected) :: Future(ByteBuffer.wrap(expected)).liftM[StreamT])
+      val chunk: ByteChunk = Right(expected :: Future(expected).liftM[StreamT])
       httpClient.post[ByteChunk]("")(chunk) must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must awaited(duration) {
           (data: Array[Byte]) => data.length must_== expected.length * 2
@@ -217,7 +217,7 @@ class HttpClientXLightWebSpec extends Specification with TestAkkaDefaults with H
     }
 
     "Support POST requests with body several chunks and transcoding" in {
-      val content: ByteChunk = Right(ByteBuffer.wrap("foo".getBytes("UTF-8")) :: Future(ByteBuffer.wrap("bar".getBytes("UTF-8"))).liftM[StreamT])
+      val content: ByteChunk = Right("foo".getBytes("UTF-8") :: Future("bar".getBytes("UTF-8")).liftM[StreamT])
       httpClient.post("")(content) must succeedWithContent {
         (data: ByteChunk) => ByteChunk.forceByteArray(data) must awaited(duration) {
           (bytes: Array[Byte]) => new String(bytes, "UTF-8") must_== "foobar"

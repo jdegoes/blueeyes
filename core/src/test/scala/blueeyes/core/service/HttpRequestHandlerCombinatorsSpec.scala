@@ -37,7 +37,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
   import DefaultBijections._
   sequential
 
-  def stream = ByteBuffer.wrap(Array[Byte]('1', '2')) :: Future(ByteBuffer.wrap(Array[Byte]('3', '4'))).liftM[StreamT]
+  def stream = Array[Byte]('1', '2') :: Array[Byte]('3', '4') :: StreamT.empty[Future, Array[Byte]]
   val timeout = akka.util.Duration(5, "seconds")
 
   "composition of paths" should {
@@ -327,7 +327,11 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
-            case Right(data) => Await.result(data.head.map(buf => buf.array.toList.take(buf.remaining)), Duration(2, "seconds")) must_== List[Byte]('1','2','3','4')
+            case Right(stream) =>
+              val bytes = Await.result(stream.uncons.map {
+                _.map { case (h, t) => h.toList }
+              }, Duration(2, "seconds"))
+              bytes must_== Some(List[Byte]('1','2','3','4'))
           }
         }
       }
@@ -345,7 +349,7 @@ class HttpRequestHandlerCombinatorsSpec extends Specification
       handler.service(HttpRequest[ByteChunk](method = HttpMethods.GET, uri = "/foo", content = Some(Right(stream)))) must beLike {
         case Success(future) => future must succeedWithContent {
           (v: ByteChunk) => v must beLike {
-            case Right(data) => Await.result(data.head.map(buf => buf.array.toList.take(buf.remaining)), Duration(2, "seconds")) must_== List[Byte]('1','2')
+            case Right(data) => Await.result(data.head.map(buf => buf.toList), Duration(2, "seconds")) must_== List[Byte]('1','2')
 
           }
         }

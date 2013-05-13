@@ -15,12 +15,15 @@ import scalaz._
 import scala.math.min
 
 object FileSource {
-  def apply(file: File) = {
+  def apply(file: File): FileSource = {
     val len = file.length
     if (len > Int.MaxValue)
       throw new IllegalArgumentException("file is too large (%d)" format len)
     new FileSource(file, 0, len.toInt)
   }
+
+  def apply(file: File, offset: Long, length: Int, chunkSize: Int = 8192): FileSource =
+    new FileSource(file, offset, length, chunkSize)
 }
 
 class FileSource(file: File, offset: Long, length: Int, chunkSize: Int = 8192) {

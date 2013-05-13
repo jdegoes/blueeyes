@@ -20,7 +20,7 @@ import scalaz._
 import scalaz.syntax.monad._
 
 class HttpClientByteChunkSpec extends Specification with TestAkkaDefaults with HttpRequestMatchers { test =>
-  def stream = ByteBuffer.wrap(Array[Byte]('1', '2')) :: Future(ByteBuffer.wrap(Array[Byte]('3', '4'))).liftM[StreamT]
+  def stream = Array[Byte]('1', '2') :: Array[Byte]('3', '4') :: StreamT.empty[Future, Array[Byte]]
 
   "HttpClientByteChunk" should {
     "aggregate full content when size is not specified" in{
@@ -37,7 +37,7 @@ class HttpClientByteChunkSpec extends Specification with TestAkkaDefaults with H
       }
 
       Await.result(firstBuffer, Duration(2L, "seconds")) must beLike {
-        case buffer => buffer.array.toList.take(buffer.remaining) must_== List[Byte]('1','2')
+        case bytes => bytes.toList must_== List[Byte]('1','2')
       }
     }
   }

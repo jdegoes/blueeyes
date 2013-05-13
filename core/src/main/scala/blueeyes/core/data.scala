@@ -72,7 +72,7 @@ package object data {
           case Some((bytes, tail)) =>
             val limit = buf.length - offset
             if (bytes.length <= limit) {
-              System.arraycopy(bytes, 0, buf, 0, bytes.length)
+              System.arraycopy(bytes, 0, buf, offset, bytes.length)
               aggregateStream(tail, buf, offset + bytes.length)
             } else if (offset > 0) {
               val copy = Arrays.copyOf(buf, offset)
@@ -119,6 +119,7 @@ package object data {
         var i = 0
         arrays.foreach { bytes =>
           System.arraycopy(bytes, 0, arr, i, bytes.length)
+          i += bytes.length
         }
         arr
       }

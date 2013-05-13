@@ -58,7 +58,7 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
       path("/huge"){
         get { request: HttpRequest[ByteChunk] =>
-          val chunk = Right(StreamT.fromStream[Future, ByteBuffer](Future(TestEngineService.hugeContent.toStream.map(ByteBuffer.wrap _))))
+          val chunk = Right(StreamT.fromStream[Future, Array[Byte]](Future(TestEngineService.hugeContent.toStream)))
           val response = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)
         }
@@ -80,22 +80,25 @@ trait TestEngineService extends BlueEyesServiceBuilder with HttpRequestCombinato
       } ~
       path("/file/read"){
         get { request: HttpRequest[ByteChunk] =>
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(new FileSource(TestEngineService.dataFile).read))
+          val response = HttpResponse[ByteChunk](
+            status = HttpStatus(HttpStatusCodes.OK),
+            content = Some(FileSource(TestEngineService.dataFile).read)
+          )
           Future[HttpResponse[ByteChunk]](response)
         }
       } ~
       path("/huge/delayed"){
         get { request: HttpRequest[ByteChunk] =>
 
-          val promise = Promise[ByteBuffer]()
+          val promise = Promise[Array[Byte]]()
           import scala.actors.Actor.actor
           actor {
             Thread.sleep(2000)
-            promise.success(ByteBuffer.wrap(TestEngineService.hugeContent.tail.head))
+            promise.success(TestEngineService.hugeContent.tail.head)
           }
 
-          val chunk = Right(ByteBuffer.wrap(TestEngineService.hugeContent.head) :: (promise: Future[ByteBuffer]).liftM[StreamT])
-          val response     = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
+          val chunk = Right(TestEngineService.hugeContent.head :: (promise: Future[Array[Byte]]).liftM[StreamT])
+          val response = HttpResponse[ByteChunk](status = HttpStatus(HttpStatusCodes.OK), content = Some(chunk))
           Future[HttpResponse[ByteChunk]](response)
         }
       }

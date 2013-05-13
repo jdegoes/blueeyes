@@ -64,7 +64,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
       handler.messageReceived(context, event)
       handler.messageReceived(context, chunkEvent)
 
-      val chunk: ByteChunk = Right(ByteBuffer.wrap(chunkData) :: StreamT.empty[Future, ByteBuffer])
+      val chunk: ByteChunk = Right(chunkData :: StreamT.empty[Future, Array[Byte]])
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
@@ -84,7 +84,7 @@ class HttpNettyChunkedRequestHandlerSpec extends Specification with Mockito with
 
       handler.messageReceived(context, chunkEvent)
 
-      val chunk: ByteChunk = Right(ByteBuffer.wrap(chunkData) :: Future(ByteBuffer.wrap(chunkData)).liftM[StreamT])
+      val chunk: ByteChunk = Right(chunkData :: Future(chunkData).liftM[StreamT])
       val request: HttpRequest[ByteChunk] = fromNettyRequest(nettyRequest, remoteAddress)(Some(chunk))
 
       there was one(context).sendUpstream(new UpstreamMessageEventImpl(channel, request, remoteAddress))
