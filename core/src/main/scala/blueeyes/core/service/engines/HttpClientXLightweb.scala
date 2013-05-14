@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
 
 import scalaz._
+import scalaz.syntax.show._
 import scala.collection.JavaConverters._
 
 class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpClientByteChunk with Logging {
@@ -71,7 +72,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
 
   def apply(request: HttpRequest[ByteChunk]): Future[HttpResponse[ByteChunk]] = {
     val result = Promise[HttpResponse[ByteChunk]]()
-    executeRequest(request, createXLRequest(request), result)
+    executeRequest(request.uri.scheme, request.content, createXLRequest(request), result)
     result
   }
 
@@ -84,8 +85,8 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
     })
   }
 
-  private def executeRequest(request: HttpRequest[ByteChunk], xlrequest: IHeader, promise: Promise[HttpResponse[ByteChunk]]) = {
-    val clientInstance = httpClientInstance(request.uri.scheme)
+  private def executeRequest(uriScheme: Option[String], content: Option[ByteChunk], xlrequest: IHeader, promise: Promise[HttpResponse[ByteChunk]]) = {
+    val clientInstance = httpClientInstance(uriScheme)
     clientInstance.setAutoHandleCookies(false)
 
     val handler = new IHttpResponseHandler() {
@@ -114,7 +115,7 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
 
       case e: IHttpRequestHeader =>
         val bodyDataSink = clientInstance.send(e, handler)
-        request.content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
+        content.map(sendData(_, bodyDataSink)).getOrElse(bodyDataSink.close())
 
       case r => sys.error("Unrecognized request type: " + r)
     }
@@ -179,6 +180,8 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
   private def createXLRequest(request: HttpRequest[ByteChunk]): IHeader =  {
     import blueeyes.util.QueryParser
     import java.net.URI
+
+    logger.debug("HttpClientXLightWeb creating XLRequest for HttpRequest: \n%s".format(request.shows))
 
     // Merge request.parameters and original query params (in uri)
     val origURI = new URI(request.uri.toString)
