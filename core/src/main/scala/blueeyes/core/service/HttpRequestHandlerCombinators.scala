@@ -228,6 +228,8 @@ trait HttpRequestHandlerCombinators {
       produce(mimeType) { h }
     }
 
+  def ifRequest[A, B](p: HttpRequest[A] => Boolean)(h: HttpService[A, B]): HttpService[A, B] = new IfRequestService(p, h)
+
   /** The aggregate combinator creates a handler that stitches together chunks
    * to make a bigger chunk, up to the specified size.
    */
@@ -246,8 +248,14 @@ trait HttpRequestHandlerCombinators {
   /** The jvalue combinator creates a handler that accepts and produces JSON.
    * Requires an implicit bijection used for transcoding.
    */
-  def jvalue[A](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit inj: A => Future[JValue], surj: JValue => A, M: Monad[Future]): HttpService[A, Future[HttpResponse[A]]] = 
-    contentType(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
+  def jvalue[A](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit inj: A => Future[JValue], surj: JValue => A, M: Monad[Future]): HttpService[A, Future[HttpResponse[A]]] = {
+    ifRequest((_: HttpRequest[A]).content.isDefined) {
+      contentType(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
+    } ~
+    ifRequest((_: HttpRequest[A]).content.isEmpty) {
+      produce(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
+    }
+  }
 
   /** The xml combinator creates a handler that accepts and produces XML.
    * Requires an implicit bijection used for transcoding.

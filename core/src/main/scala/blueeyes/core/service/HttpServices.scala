@@ -156,6 +156,15 @@ class DebugService[A, B](logger: Logger, val delegate: HttpService[A, B]) extend
   val metadata = NoMetadata
 }
 
+class IfRequestService[A, B](p: HttpRequest[A] => Boolean, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+  val service = (req: HttpRequest[A]) => {
+    if (p(req)) delegate.service(req) else Failure(inapplicable)
+  }
+
+  val metadata = NoMetadata
+}
+
+
 class HealthMonitorService[A, B](context: ServiceContext, monitor: HealthMonitor, startTime: Long)(implicit jv2b: JValue => B) extends CustomHttpService[A, Future[HttpResponse[B]]] {
   val service = (req: HttpRequest[A]) => Success {
     import scalaz.syntax.show._

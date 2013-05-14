@@ -109,6 +109,12 @@ class HttpClientXLightWeb(implicit val executor: ExecutionContext) extends HttpC
       }
     }
 
+    logger.trace("Executing request of type " + xlrequest.getClass())
+    logger.trace("xlRequest content type: " + xlrequest.getContentType())
+    for (name <- xlrequest.getHeaderNames.asScala) {
+      logger.trace("Header %s has values %s".format(name, xlrequest.getHeaderList(name.asInstanceOf[String]).asScala.mkString("[", ", ", "]")))
+    }
+
     xlrequest match {
       case e: IHttpRequest => 
         clientInstance.send(e, handler)
