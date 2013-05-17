@@ -863,6 +863,8 @@ case class JObject(fields: Map[String, JValue]) extends JValue {
   assert(fields != null)
   assert(fields.values.forall(_ != null))
 
+  override def toString(): String = "JObject(<%d fields>)" format fields.size
+
   def get(name: String): JValue = fields.get(name).getOrElse(JUndefined)
 
   def hasDefinedChild: Boolean = fields.values.exists(_ != JUndefined) 
@@ -1012,6 +1014,8 @@ case object JObject extends (Map[String, JValue] => JObject) {
 
 case class JArray(elements: List[JValue]) extends JValue {
   assert(elements.forall(_ != null))
+
+  override def toString(): String = "JArray(<%d values>)" format elements.length
 
   def hasDefinedChild: Boolean = elements exists { _ != JUndefined }
 
