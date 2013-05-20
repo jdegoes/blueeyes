@@ -76,7 +76,6 @@ private[json] trait ByteBasedParser extends Parser {
       } else {
         die(j, "invalid UTF-8 encoding")
       }
-      //j = reset(j)
       c = byte(j)
     }
     ctxt.add(sb.makeString)
