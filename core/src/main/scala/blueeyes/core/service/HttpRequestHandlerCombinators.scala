@@ -203,8 +203,10 @@ trait HttpRequestHandlerCombinators {
    * that have the specified content type. Requires an implicit function
    * used for transcoding.
    */
-  def accept[A, B](mimeTypes: MimeType*)(h: HttpService[A, B]): HttpService[A, B] = 
-    new AcceptService(mimeTypes, h)
+  def accept[A, B](mimeTypes: MimeType*)(h: HttpService[A, B]): HttpService[A, B] = accept0(true, mimeTypes) { h }
+
+  private def accept0[A, B](strict: Boolean, mimeTypes: Seq[MimeType])(h: HttpService[A, B]): HttpService[A, B] = 
+    new AcceptService(mimeTypes, strict, h)
 
   /** The produce combinator creates a handler that is produces responses
    * that have the specified content type. Requires an implicit function
@@ -223,8 +225,8 @@ trait HttpRequestHandlerCombinators {
    * requests and responses of the specified content type. Requires an implicit
    * bijection used for transcoding.
    */
-  def contentType[A, B](mimeType: MimeType)(h: HttpService[A, B])(implicit modifier: ResponseModifier[B]): HttpService[A, B] = 
-    accept(mimeType) {
+  def contentType[A, B](mimeType: MimeType, strict: Boolean = true)(h: HttpService[A, B])(implicit modifier: ResponseModifier[B]): HttpService[A, B] = 
+    accept0(strict, List(mimeType)) {
       produce(mimeType) { h }
     }
 
@@ -250,7 +252,7 @@ trait HttpRequestHandlerCombinators {
    */
   def jvalue[A](h: HttpService[Future[JValue], Future[HttpResponse[JValue]]])(implicit inj: A => Future[JValue], surj: JValue => A, M: Monad[Future]): HttpService[A, Future[HttpResponse[A]]] = {
     ifRequest((_: HttpRequest[A]).content.isDefined) {
-      contentType(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
+      contentType(MimeTypes.application/MimeTypes.json, false) { h.contramap(inj) } map { _ map { _ map surj } }
     } ~
     ifRequest((_: HttpRequest[A]).content.isEmpty) {
       produce(MimeTypes.application/MimeTypes.json) { h.contramap(inj) } map { _ map { _ map surj } }
