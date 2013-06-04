@@ -66,7 +66,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
   private implicit val M: Monad[Future] = new FutureMonad(executionContext)
 
-  private def failure(status0: HttpStatus, detail: Option[String]) = HttpResponse[ByteChunk](
+  private def textResponse(status0: HttpStatus, detail: Option[String]) = HttpResponse[ByteChunk](
     status = status0,
     headers = HttpHeaders(`Content-Type`(text/plain)),
     content = detail map { s => Left(s.getBytes("UTF-8")) }
@@ -85,10 +85,10 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
         }
 
       case Failure(DispatchError(httpFailure, message, detail)) =>
-        writeResponse(request, ctx.getChannel,  failure(HttpStatus(httpFailure, message), detail))
+        writeResponse(request, ctx.getChannel,  textResponse(HttpStatus(httpFailure, message), detail))
 
       case Failure(Inapplicable(_)) =>
-        writeResponse(request, ctx.getChannel, failure(NotFound, Some("No service was found to be able to handle your request: %s".format(request.shows))))
+        writeResponse(request, ctx.getChannel, textResponse(NotFound, Some("No service was found to be able to handle your request: %s".format(request.shows))))
     }
   }
 
@@ -113,20 +113,20 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
       e.getCause match {
         case ex @ HttpException(code, reason) =>
           logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
-          writeResponse(request, ctx.getChannel, failure(code, Option(reason)))
+          writeResponse(request, ctx.getChannel, textResponse(code, Option(reason)))
 
         case ioe: IOException if Option(ioe.getMessage).exists(_.contains("reset by peer")) =>
           try {
             logger.warn("Connection reset by peer: " + Option(ctx.getChannel.getRemoteAddress).getOrElse("unknown"))
             //ctx.getChannel.close() // this didn't work, caused errors draining streams, why?
           } catch {
-            case ex => logger.error("Error thrown attempting to get channel remote address", ex)
+            case ex: Exception => logger.error("Error thrown attempting to get channel remote address", ex)
           }
 
         case ex =>
           // here we do not want to 
           logger.error("An exception was raised by an I/O thread or a ChannelHandler", ex)
-          writeResponse(request, ctx.getChannel, failure(InternalServerError, None))
+          writeResponse(request, ctx.getChannel, textResponse(InternalServerError, None))
       }
     } catch {
       case ex =>
