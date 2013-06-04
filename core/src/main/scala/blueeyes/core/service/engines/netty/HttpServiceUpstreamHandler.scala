@@ -8,9 +8,10 @@ import akka.dispatch.ExecutionContext
 import blueeyes.bkka._
 import blueeyes.concurrent.ReadWriteLock
 import blueeyes.core.http._
+import blueeyes.core.http.MimeTypes._
+import blueeyes.core.http.HttpHeaders.{`Content-Type`}
 import blueeyes.core.http.HttpStatusCodes.{InternalServerError, NotFound}
 import blueeyes.core.data._
-import blueeyes.core.data.DefaultBijections._
 import blueeyes.util._
 
 import com.weiglewilczek.slf4s.Logger
@@ -65,6 +66,12 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   private val pendingResponses = new HashSet[Future[HttpResponse[ByteChunk]]] with SynchronizedSet[Future[HttpResponse[ByteChunk]]]
   private implicit val M: Monad[Future] = new FutureMonad(executionContext)
 
+  private def failure(status0: HttpStatus, detail: Option[String]) = HttpResponse[ByteChunk](
+    status = status0,
+    headers = HttpHeaders(`Content-Type`(text/plain)),
+    content = detail map { s => Left(s.getBytes("UTF-8")) }
+  )
+
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
     val request = event.getMessage.asInstanceOf[HttpRequest[ByteChunk]]
     ctx.setAttachment(request)
@@ -78,11 +85,10 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
         }
 
       case Failure(DispatchError(httpFailure, message, detail)) =>
-        writeResponse(request, ctx.getChannel, HttpResponse(HttpStatus(httpFailure, message), content = detail.map(stringToChunk)))
+        writeResponse(request, ctx.getChannel,  failure(HttpStatus(httpFailure, message), detail))
 
       case Failure(Inapplicable(_)) =>
-        writeResponse(request, ctx.getChannel,
-          HttpResponse(status = NotFound, content = Some("No service was found to be able to handle your request: " + request.shows)))
+        writeResponse(request, ctx.getChannel, failure(NotFound, Some("No service was found to be able to handle your request: %s".format(request.shows))))
     }
   }
 
@@ -107,16 +113,20 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
       e.getCause match {
         case ex @ HttpException(code, reason) =>
           logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
-          writeResponse(request, ctx.getChannel, HttpResponse(status = code, content = Option(reason)))
+          writeResponse(request, ctx.getChannel, failure(code, Option(reason)))
+
         case ioe: IOException if Option(ioe.getMessage).exists(_.contains("reset by peer")) =>
           try {
             logger.warn("Connection reset by peer: " + Option(ctx.getChannel.getRemoteAddress).getOrElse("unknown"))
+            //ctx.getChannel.close() // this didn't work, caused errors draining streams, why?
           } catch {
-            case _ => // Noop
+            case ex => logger.error("Error thrown attempting to get channel remote address", ex)
           }
+
         case ex =>
-          logger.warn("An exception was raised by an I/O thread or a ChannelHandler", ex)
-          writeResponse(request, ctx.getChannel, HttpResponse(status = InternalServerError, content = Option(ex.getMessage())))
+          // here we do not want to 
+          logger.error("An exception was raised by an I/O thread or a ChannelHandler", ex)
+          writeResponse(request, ctx.getChannel, failure(InternalServerError, None))
       }
     } catch {
       case ex =>
