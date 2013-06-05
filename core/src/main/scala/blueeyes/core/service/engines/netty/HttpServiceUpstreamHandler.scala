@@ -69,7 +69,7 @@ private[engines] class HttpServiceUpstreamHandler(service: AsyncHttpService[Byte
   private def failure(status0: HttpStatus, detail: Option[String]) = HttpResponse[ByteChunk](
     status = status0,
     headers = HttpHeaders(`Content-Type`(text/plain)),
-    content = detail map { s => Left(s.getBytes("UTF-8")) }
+    content = detail map { s => Left(ByteBuffer.wrap(s.getBytes("UTF-8"))) }
   )
 
   override def messageReceived(ctx: ChannelHandlerContext, event: MessageEvent) {
