@@ -5,8 +5,8 @@ import util.matching.Regex
 import xschema._
 import xschema.DefaultSerialization._
 import JsonAST._
-import scalaz.Order
-import scalaz.Ordering
+import scalaz.{-\/,\/-,\/, Order, Ordering}
+import scalaz.syntax.id._
 import scalaz.Ordering._
 
 sealed trait JPath { self =>
@@ -42,8 +42,8 @@ sealed trait JPath { self =>
             case _ => None
           }
 
-        case Nil => 
-          if (toDrop.isEmpty) Some(JPath(nodes)) 
+        case Nil =>
+          if (toDrop.isEmpty) Some(JPath(nodes))
           else None
       }
     }
@@ -59,7 +59,10 @@ sealed trait JPath { self =>
 
       case head :: tail => head match {
         case JPathField(name)  => extract0(tail, d \ name)
-        case JPathIndex(index) => extract0(tail, d(index))
+        case JPathIndex(index) => index.fold(
+          l = i => extract0(tail, d(i)),
+          r = s => extract0(tail, d(s))
+        )
       }
     }
 
@@ -77,7 +80,10 @@ sealed trait JPath { self =>
       case Nil => JPath(current) :: Nil
 
       case head :: tail => head match {
-        case x @ JPathIndex(index) => expand0(current :+ x, tail, jvalue(index))
+        case x @ JPathIndex(index) => index.fold(
+          l = i => expand0(current :+ x, tail, jvalue(i)),
+          r = s => expand0(current :+ x, tail, jvalue(s))
+        )
         case x @ JPathField(name) if (isRegex(name)) => {
           val regex = name.r
 
@@ -113,28 +119,40 @@ sealed trait JPathNode {
   def \(that: JPathNode) = JPath(this :: that :: Nil)
 }
 
+sealed case class JPathField(name: String) extends JPathNode {
+  override def toString = "." + name
+}
+
+sealed case class JPathIndex(index: Int \/ String) extends JPathNode {
+  override def toString = "[" + index.fold(l = i => i.toString, r = s => s) + "]"
+}
+
+object JPathIndex {
+
+  def apply(index: Int): JPathIndex =
+    JPathIndex(index.left)
+
+  def apply(index: String): JPathIndex =
+    JPathIndex(index.right)
+
+}
+
+
 object JPathNode {
   implicit def s2PathNode(name: String): JPathNode = JPathField(name)
   implicit def i2PathNode(index: Int): JPathNode = JPathIndex(index)
 
   implicit object JPathNodeOrder extends Order[JPathNode] {
     def order(n1: JPathNode, n2: JPathNode): Ordering = (n1, n2) match {
-      case (JPathField(s1), JPathField(s2)) => Ordering.fromInt(s1.compare(s2))
-      case (JPathField(_) , _             ) => GT
-      case (JPathIndex(i1), JPathIndex(i2)) => Ordering.fromInt(i1.compare(i2))
-      case (JPathIndex(_) , _             ) => LT
+      case (JPathField(s1), JPathField(s2))           => Ordering.fromInt(s1.compare(s2))
+      case (JPathField(_) , _             )           => GT
+      case (JPathIndex(-\/(i1)), JPathIndex(-\/(i2))) => Ordering.fromInt(i1.compare(i2))
+      case (JPathIndex(\/-(s1)), JPathIndex(\/-(s2))) => Ordering.fromInt(s1.compare(s2))
+      case (JPathIndex(_) , _             )           => LT
     }
   }
 
   implicit val JPathNodeOrdering = JPathNodeOrder.toScalaOrdering
-}
-
-sealed case class JPathField(name: String) extends JPathNode {
-  override def toString = "." + name
-}
-
-sealed case class JPathIndex(index: Int) extends JPathNode {
-  override def toString = "[" + index + "]"
 }
 
 trait JPathSerialization {
@@ -149,10 +167,7 @@ trait JPathSerialization {
 }
 
 object JPath extends JPathSerialization {
-  private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath 
-
-  private val PathPattern  = """\.|(?=\[\d+\])""".r
-  private val IndexPattern = """^\[(\d+)\]$""".r
+  private[this] case class CompositeJPath(nodes: List[JPathNode]) extends JPath
 
   val Identity = apply()
 
@@ -165,23 +180,10 @@ object JPath extends JPathSerialization {
   def unapplySeq(path: String): Option[List[JPathNode]] = Some(apply(path).nodes)
 
   implicit def apply(path: String): JPath = {
-    def parse0(segments: List[String], acc: List[JPathNode]): List[JPathNode] = segments match {
-      case Nil => acc
-
-      case head :: tail =>
-        if (head.trim.length == 0) parse0(tail, acc)
-        else parse0(tail,
-          (head match {
-            case IndexPattern(index) => JPathIndex(index.toInt)
-
-            case name => JPathField(name)
-          }) :: acc
-        )
-    }
-
-    val properPath = if (path.startsWith(".")) path else "." + path
-
-    apply(parse0(PathPattern.split(properPath).toList, Nil).reverse: _*)
+    JPathParser.parse(path).fold(
+      l = msg   => JPath(),
+      r = nodes => JPath(nodes)
+    )
   }
 
   implicit def singleNodePath(node: JPathNode) = JPath(node)

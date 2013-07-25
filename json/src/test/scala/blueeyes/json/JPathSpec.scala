@@ -28,8 +28,8 @@ import org.specs2.ScalaCheck
 object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   "Parser" should {
     "parse all valid JPath strings" in {
-      check { (jpath: JPath) =>
-        JPath(jpath.toString) == jpath
+      check { path: (String, JPath) =>
+        JPath(path._1) == path._2
       }
     }
 
@@ -47,7 +47,7 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
 
       check { (testData: (JValue, List[(JPath, JValue)])) =>
         testData match {
-          case (obj, allPathValues) => 
+          case (obj, allPathValues) =>
             val allProps = allPathValues.map {
               case (path, pathValue) => path.extract(obj) == pathValue
             }
@@ -60,6 +60,17 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
       val j = JObject(JField("address", JObject( JField("city", JString("B")) :: JField("street", JString("2")) ::  Nil)) :: Nil)
 
       JPath("address.city").extract(j) mustEqual(JString("B"))
+    }
+
+    "extract quoted field references" in {
+      val json = JObject(List(JField("foo",
+                   JObject(List(JField("bar bar",
+                     JObject(List(JField("ba-sil",
+                       JString("bingo!"))))))))))
+
+      JPath("foo['bar bar']['ba-sil']").extract(json) mustEqual JString("bingo!")
+      JPath("""foo["bar bar"]["ba-sil"]""").extract(json) mustEqual JString("bingo!")
+      JPath("""foo["bar bar"]['ba-sil']""").extract(json) mustEqual JString("bingo!")
     }
   }
 
