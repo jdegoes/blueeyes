@@ -13,36 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package blueeyes.json
 
 import org.scalacheck.{Gen, Arbitrary}
 import Arbitrary.arbitrary
+import scalaz.Monoid
+import scalaz.Scalaz._
+import scalaz.std.tuple._
+import scalaz.std.list._
 
 trait ArbitraryJPath {
   def trace[A](a: => A): A = try { a } catch {
     case ex => { ex.printStackTrace; throw ex }
   }
 
-  val genJPath = {
-    import Gen._
+  import Gen._
 
-    val genIndex = for {
-      index <- choose(0, 10)
-    } yield JPathIndex(index)
+  implicit val tupleJPathApp = Monoid[(String, List[JPathNode])].applicative
 
-    val genField = for {
-      name <- identifier
-    } yield JPathField(name)
-
-    val genIndexOrField = Gen.oneOf(genIndex, genField)
-
+  def path: Gen[(String, List[JPathNode])] = {
     for {
-      length      <- choose(1, 10)
-      listOfNodes <- listOfN(length, genIndexOrField)
-    } yield JPath(listOfNodes)
+      p  <- jIdentifier.map { id => (id, List(JPathField(id))) } | field
+      ps <- resize(10, listOf(field).map { ps => tupleJPathApp.traverse(ps) { x => x } })
+    } yield p |+| ps
   }
 
-  implicit val arbJPath: Arbitrary[JPath] = Arbitrary(genJPath)
+  def field: Gen[(String, List[JPathNode])] =
+    for ((s, p) <- dotField | indexField) yield (s, List(p))
+
+
+  def dotField: Gen[(String, JPathField)] =
+    for {
+      str <- jIdentifier
+    } yield ("." + str -> JPathField(str))
+
+
+  def indexField: Gen[(String, JPathIndex)] = {
+    def dqString: Gen[(String, JPathIndex)] = {
+      for {
+        str <- Arbitrary.arbitrary[String]
+        qs   = str.replace("""\""", """\\""").replace("\"", "\\\"")
+      } yield ("[\"" + qs + "\"]" -> JPathIndex(qs))
+    }
+
+    def sqString: Gen[(String, JPathIndex)] = {
+      for {
+        str <- Arbitrary.arbitrary[String]
+        qs   = str.replace("""\""", """\\""").replace("'", """\'""")
+      } yield ("['" + qs + "']" -> JPathIndex(qs))
+    }
+
+    def number: Gen[(String, JPathIndex)] = {
+      for {
+        idx <- Gen.choose(0, 1000)
+        qs   = idx.toString
+      } yield ("[" + qs + "]" -> JPathIndex(idx))
+    }
+
+    dqString | sqString | number
+  }
+
+
+  def jIdentifier: Gen[String] = {
+    def identifierStart: Gen[Char] =
+      oneOf(
+        choose('a', 'z'),
+        choose('A', 'Z'),
+        '_',
+        '$'
+      )
+
+    def identifierBody: Gen[Char] =
+      identifierStart | choose('0', '9')
+
+    for {
+      c  <- identifierStart
+      cs <- resize(10, listOf(identifierBody))
+    } yield (c::cs).mkString
+  }
+
+  val genJPath = {
+    for {
+      (path, nodes) <- path
+    } yield (path, JPath(nodes))
+  }
+
+  implicit val arbJPath: Arbitrary[(String, JPath)] = Arbitrary(genJPath)
 }
 object ArbitraryJPath extends ArbitraryJPath
