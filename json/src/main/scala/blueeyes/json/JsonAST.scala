@@ -16,6 +16,7 @@
 
 package blueeyes.json
 
+import scalaz.{-\/,\/-,\/}
 import scalaz.NonEmptyList
 import scalaz.Validation
 import scalaz.Validation._
@@ -124,7 +125,7 @@ object JsonAST {
       }
     }
 
-    /** 
+    /**
      * Does a breadth-first traversal of all descendant JValues, beginning
      * with this one.
      */
@@ -136,7 +137,7 @@ object JsonAST {
         else {
           val (head, nextQueue) = queue.dequeue
 
-          breadthFirst0(head :: cur, 
+          breadthFirst0(head :: cur,
             head match {
               case JObject(fields) =>
                 nextQueue.enqueue(fields.map(_.value))
@@ -250,11 +251,12 @@ object JsonAST {
       self match {
         case obj @ JObject(fields) => path.nodes match {
           case JPathField(name)  :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
+          case JPathIndex(\/-(name)) :: nodes => JObject(JField(name, (obj \ name).set(JPath(nodes), value)) :: fields.filterNot(_.name == name))
           case x => sys.error("Objects are not indexed: attempted to set " + path + " on " + self)
         }
 
         case arr @ JArray(elements) => path.nodes match {
-          case JPathIndex(index) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
+          case JPathIndex(-\/(index)) :: nodes => JArray(arraySet(elements, index, JPath(nodes), value))
           case x => sys.error("Arrays have no fields: attempted to set " + path + " on " + self)
         }
 
@@ -274,6 +276,15 @@ object JsonAST {
      * </pre>
      */
     def apply(i: Int): JValue = JNothing
+
+    /** Return named element from JSON.
+      * Meaningful only to JObject. Returns JNothing for other types.
+      * <p>
+      * Example:<pre>
+      * JObject(JField("name", JInt(1)), JField("fred", JInt(2)))("fred") == JField("fred", JInt(2))
+      * </pre>
+      */
+    def apply(s: String): JValue = JNothing
 
     /** Return unboxed values from JSON
      * <p>
@@ -467,7 +478,7 @@ object JsonAST {
             case jvalue => jvalue
           }
 
-          case JPathIndex(index) => j match {
+          case JPathIndex(-\/(index)) => j match {
             case JArray(elements) =>
               val split = elements.splitAt(index)
 
@@ -478,6 +489,22 @@ object JsonAST {
               JArray(prefix ++ (middle :: suffix))
 
             case jvalue => jvalue
+          }
+
+          case JPathIndex(\/-(index)) => j match {
+            case JObject(fields) =>
+              JObject(
+                fields.map {
+                  case JField(index, value) =>
+                    JField(index, replace0(JPath(tail: _*), value))
+
+                  case field =>
+                    field
+                }
+              )
+
+            case jvalue =>
+              jvalue
           }
         }
       }
@@ -533,7 +560,7 @@ object JsonAST {
       def flatten0(path: JPath)(value: JValue): List[(JPath, JValue)] = value match {
         case JObject(Nil) => (path -> value) :: Nil
         case JObject(fields) => fields.flatMap(flatten0(path))
-        
+
         case JArray(Nil) => (path -> value) :: Nil
         case JArray(elements) => elements.zipWithIndex.flatMap { tuple =>
           val (element, index) = tuple
@@ -616,7 +643,7 @@ object JsonAST {
       case ((JPath.Identity, value) :: Nil) => value
       case arr @ ((p, _) :: _) if p.path.startsWith("[") => unflattenArray(arr)
       case obj                                           => unflattenObject(obj)
-    }    
+    }
 
     case class paired(jv1: JValue, jv2: JValue) {
       assert(jv1 != null && jv2 != null)
@@ -661,18 +688,18 @@ object JsonAST {
       import scalaz.syntax.order._
 
       private val objectOrder = (o1: List[JField]) => (o2: List[JField]) => {
-        (o1.size ?|? o2.size) |+| 
+        (o1.size ?|? o2.size) |+|
         (o1.sortBy(_.name) zip o2.sortBy(_.name)).foldLeft[Ordering](EQ) {
-          case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2) 
-        }   
-      }   
+          case (ord, (JField(k1, v1), JField(k2, v2))) => ord |+| (k1 ?|? k2) |+| (v1 ?|? v2)
+        }
+      }
 
       private val arrayOrder = (o1: List[JValue]) => (o2: List[JValue]) => {
-        (o1.length ?|? o2.length) |+| 
+        (o1.length ?|? o2.length) |+|
         (o1 zip o2).foldLeft[Ordering](EQ) {
-          case (ord, (v1, v2)) => ord |+| (v1 ?|? v2) 
-        }   
-      }   
+          case (ord, (v1, v2)) => ord |+| (v1 ?|? v2)
+        }
+      }
 
       private val stringOrder = (Order[String].order _).curried
       private val boolOrder = (Order[Boolean].order _).curried
@@ -689,7 +716,7 @@ object JsonAST {
         bool   = boolOrder,
         nul    = EQ, nothing = EQ
       )
-    } 
+    }
 
 
     def unsafeInsert(rootTarget: JValue, rootPath: JPath, rootValue: JValue): JValue = {
@@ -708,14 +735,15 @@ object JsonAST {
             case obj @ JObject(fields) => path.nodes match {
               case JPathField(name)  :: nodes => JObject(JField(name, rec(obj \ name, JPath(nodes), value)) :: fields.filterNot(_.name == name))
               case JPathIndex(_) :: _ => sys.error("Objects are not indexed: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
-              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
+              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path +
                                   " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
             }
 
             case arr @ JArray(elements) => path.nodes match {
-              case JPathIndex(index) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
+              case JPathIndex(-\/(index)) :: nodes => JArray(arrayInsert(elements, index, JPath(nodes), value))
+              case JPathIndex(\/-(index)) :: _ => sys.error("Array do not have named fields: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
               case JPathField(_) :: _ => sys.error("Arrays have no fields: attempted to insert " + value + " at " + rootPath + " on " + rootTarget)
-              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path + 
+              case Nil => sys.error("JValue insert would overwrite existing data: " + target + " cannot be rewritten to " + value + " at " + path +
                                     " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
             }
 
@@ -725,7 +753,7 @@ object JsonAST {
               case JPathField(_) :: _ => rec(JObject(Nil), path, value)
             }
 
-            case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated to " + value + " at " + path + 
+            case x => sys.error("JValue insert would overwrite existing data: " + x + " cannot be updated to " + value + " at " + path +
                                 " in unsafeInsert of " + rootValue + " at " + rootPath + " in " + rootTarget)
           }
         }
@@ -744,37 +772,37 @@ object JsonAST {
   case object JNull extends JValue {
     type Values = Null
     type Self = JValue
-    
+
     def values = null
   }
   case class JBool(value: Boolean) extends JValue {
     type Values = Boolean
     type Self = JValue
-    
+
     def values = value
   }
   case class JInt(value: BigInt) extends JValue {
     type Values = BigInt
     type Self = JValue
-    
+
     def values = value
   }
   case class JDouble(value: Double) extends JValue {
     type Values = Double
     type Self = JValue
-    
+
     def values = value
   }
   case class JString(value: String) extends JValue {
     type Values = String
     type Self = JValue
-    
+
     def values = value
   }
   case class JField(name: String, value: JValue) extends JValue {
     type Values = (String, value.Values)
     type Self = JField
-    
+
     def values = (name, value.values)
     override def apply(i: Int): JValue = value(i)
   }
@@ -783,11 +811,14 @@ object JsonAST {
     type Value = JValue
     type Values = Map[String, Any]
     type Self = JObject
-    
+
     def values = Map() ++ fields.map(_.values : (String, Any))
     def partition(f: JField => Boolean): (JObject, JObject) = {
       fields.partition(f).bimap(JObject(_), JObject(_))
     }
+
+    override def apply(s: String): JValue =
+      fields.find(_.name == s).map(_.value).getOrElse(JNothing)
 
     def mapFields(f: JField => JField) = JObject(fields.map(f))
 
@@ -805,7 +836,7 @@ object JsonAST {
   case class JArray(elements: List[JValue]) extends JValue {
     type Values = List[Any]
     type Self = JArray
-    
+
     def values = elements.map(_.values)
 
     override def apply(i: Int): JValue = elements.lift(i).getOrElse(JNothing)

@@ -20,6 +20,8 @@ package json
 import org.scalacheck._
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import scalaz.{-\/,\/-,\/}
+
 
 object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath with ArbitraryJValue {
   import JsonAST._
@@ -111,7 +113,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
     test.flattenWithPath must_== expected
   }
-  
+
   "flattenWithPath includes empty array values" in {
     val test = JObject(JField("a", JArray(Nil)) :: Nil)
 
@@ -153,7 +155,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
   }
 
   "unflatten is the inverse of flattenWithPath" in {
-    val inverse = (value: JValue) => JValue.unflatten( value.flattenWithPath ) == value 
+    val inverse = (value: JValue) => JValue.unflatten( value.flattenWithPath ) == value
 
     check(inverse)
   }
@@ -186,13 +188,18 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
     def badPath(jv: JValue, p: JPath): Boolean = {
       p.nodes match {
-        case JPathIndex(index) :: xs => jv match {
-          case JArray(nodes) => index > nodes.length || 
+        case JPathIndex(-\/(index)) :: xs => jv match {
+          case JArray(nodes) => index > nodes.length ||
                                 (index < nodes.length && badPath(nodes(index), JPath(xs))) ||
-                                badPath(JArray(Nil), JPath(xs)) 
+                                badPath(JArray(Nil), JPath(xs))
 
           case JObject(_) => true
           case _ => index != 0 || badPath(JArray(Nil), JPath(xs))
+        }
+
+        case JPathIndex(\/-(index)) :: xs => jv match {
+          case JArray(_) => true
+          case _ => badPath(jv \ index, JPath(xs))
         }
 
         case JPathField(name) :: xs => jv match {
@@ -202,7 +209,7 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
 
         case Nil => false
       }
-    } 
+    }
 
     val setProp = (jv: JValue, p: JPath, toSet: JValue) => {
       (!badPath(jv, p)) ==> {
@@ -214,11 +221,11 @@ object JsonASTSpec extends Specification with ScalaCheck with ArbitraryJPath wit
     val insertProp = (jv: JValue, p: JPath, toSet: JValue) => {
       (!badPath(jv, p) && (jv(p) == JNothing)) ==> {
         (jv, p.nodes) match {
-          case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) => 
+          case (JObject(_), JPathField(_) :: _) | (JArray(_), JPathIndex(_) :: _) | (JNull | JNothing, _) =>
             ((p == JPath.Identity) && (jv.unsafeInsert(p, toSet) == toSet)) ||
             (jv.unsafeInsert(p, toSet).get(p) == toSet)
 
-          case _ => 
+          case _ =>
             jv.unsafeInsert(p, toSet) must throwA[RuntimeException]
         }
       }
