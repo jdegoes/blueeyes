@@ -17,10 +17,18 @@ object JPathParser extends RegexParsers {
     "[a-zA-Z_$][a-zA-Z_$0-9]*".r
 
 
-  def jPath: Parser[List[JPathNode]] =
-    ((identifier ^^ { JPathField(_) }) | pathElement) ~ (pathElement.*) ^^ {
-      case n ~ ns => n +: ns
-    }
+  def jPath: Parser[List[JPathNode]] = {
+    def elements: Parser[List[JPathNode]] =
+      ((identifier ^^ { JPathField(_) }) | pathElement) ~ (pathElement.*) ^^ {
+        case n ~ ns => n +: ns
+      }
+
+    identity | elements
+  }
+
+
+  def identity: Parser[List[JPathNode]] =
+    """^\s*\.?\s*$""".r ^^ { _ => List.empty[JPathNode] }
 
 
   def pathElement: Parser[JPathNode] =
