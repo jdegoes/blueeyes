@@ -36,6 +36,13 @@ object JPathSpec extends Specification with ScalaCheck with ArbitraryJPath with 
     "forgivingly parse initial field name without leading dot" in {
       JPath("foo.bar").nodes mustEqual (JPathField("foo") :: JPathField("bar") :: Nil)
     }
+
+    "parse identity" in {
+      JPath("") mustEqual JPath.Identity
+      JPath(".") mustEqual JPath.Identity
+      JPath("  ") mustEqual JPath.Identity
+      JPath("  .  ") mustEqual JPath.Identity
+    }
   }
 
   "Extractor" should {
