@@ -180,7 +180,7 @@ object JPath extends JPathSerialization {
   def unapplySeq(path: String): Option[List[JPathNode]] = Some(apply(path).nodes)
 
   implicit def apply(path: String): JPath = {
-    JPathParser.parse(path).fold(
+    new JPathParser().parse(path).fold(
       l = msg   => JPath(),
       r = nodes => JPath(nodes)
     )
