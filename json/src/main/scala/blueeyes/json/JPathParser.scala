@@ -5,7 +5,7 @@ import scalaz.\/
 import scalaz.syntax.id._
 
 
-object JPathParser extends RegexParsers {
+class JPathParser extends RegexParsers {
 
   def parse(in: String): String \/ List[JPathNode] =
     this.parseAll(jPath, in) match {
