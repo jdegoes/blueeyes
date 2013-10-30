@@ -4,8 +4,6 @@ import Keys._
 object BlueEyesBuild extends Build {
   val nexusSettings : Seq[Project.Setting[_]] = Seq(
     resolvers ++= Seq(
-      "ReportGrid repo (public)"          at "http://nexus.reportgrid.com/content/repositories/public-releases",
-      "ReportGrid snapshot repo (public)" at "http://nexus.reportgrid.com/content/repositories/public-snapshots",
       "Sonatype Jetty"                    at "http://oss.sonatype.org/content/groups/jetty/",
       "Typesafe Repository"               at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype Releases"                 at "http://oss.sonatype.org/content/repositories/releases",
@@ -15,7 +13,6 @@ object BlueEyesBuild extends Build {
       "Guiceyfruit Googlecode"            at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
     ),
 
-    credentials += Credentials(Path.userHome / ".ivy2" / ".rgcredentials"),
     publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := { (repo: MavenRepository) => false },
@@ -51,13 +48,7 @@ object BlueEyesBuild extends Build {
           <id>dchenbecker</id>
           <name>Derek Chen-Becker</name>
         </developer>
-      </developers>,
-
-    publishTo <<= (version) { version: String =>
-      val nexus = "http://nexus.reportgrid.com/content/repositories/"
-      if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"public-snapshots/") 
-      else                                   Some("releases"  at nexus+"public-releases/")
-    }
+      </developers>
   )
 
   val scalazVersion = "7.0.0"
