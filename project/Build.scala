@@ -55,10 +55,12 @@ object BlueEyesBuild extends Build {
 
   val commonSettings = Seq(
     scalaVersion := "2.9.2",
-
+    
     crossScalaVersions := Seq("2.9.2"),
 
     organization := "com.reportgrid",
+    
+    version := "1.0.0-M9.5",
 
     libraryDependencies ++= Seq(
       "org.scalaz"         %% "scalaz-core"   % scalazVersion,
