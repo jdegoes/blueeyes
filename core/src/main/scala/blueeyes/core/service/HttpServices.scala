@@ -253,8 +253,8 @@ extends DelegatingService[A, Future[HttpResponse[A]], Future[B], Future[HttpResp
   val metadata = NoMetadata
 }
 
-class AcceptService[A, B](mimeTypes: Seq[MimeType], val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
-  val service = (r: HttpRequest[A]) => r.mimeTypes.exists(mimeTypes.toSet).option(r).toSuccess(inapplicable) flatMap { delegate.service }
+class AcceptService[A, B](mimeTypes: Seq[MimeType], strict: Boolean, val delegate: HttpService[A, B]) extends DelegatingService[A, B, A, B] {
+  val service = (r: HttpRequest[A]) => (r.mimeTypes.exists(mimeTypes.toSet) || (!strict && r.mimeTypes.isEmpty)).option(r).toSuccess(inapplicable) flatMap { delegate.service }
   val metadata = RequestHeaderMetadata(Right(`Content-Type`(mimeTypes: _*)))
 }
 

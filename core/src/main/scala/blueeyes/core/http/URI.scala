@@ -22,9 +22,9 @@ case class URI(scheme: Option[String] = None, userInfo: Option[String] = None, h
 trait URIGrammar extends RegexParsers {
   def schemeParser   = (regex("""([a-zA-Z])([a-zA-Z\+\d\.-]+)""".r) <~ ":")?
 
-  def userInfoParser = (regex("""[^\:@]+(:[^\:@]+)?""".r) <~ "@")?
+  def userInfoParser = (regex("""[^\]:/?#\[@]+(:[^\]:/?#\[@]+)""".r) <~ "@")?
 
-  def hostParser     = (regex("""([a-zA-Z\d-]+\.)*([a-zA-Z\d-]+)""".r))?
+  def hostParser     = (regex("""([a-zA-Z\d-]+\.)*([a-zA-Z\d-]+)""".r))?  // doesn't support IPv6
 
   def portParser     = (":" ~> (regex("""[\d]+""".r) ^^ {case v => v.toInt}) )?
 
@@ -38,9 +38,9 @@ trait URIGrammar extends RegexParsers {
 
   def authorityParser =  (authorityParser1 | authorityParser2)?
 
-  def pathParser     = (regex("""[^?#]+""".r))?
+  def pathParser     = (regex("""[^?#\[\]]+""".r))?
 
-  def queryParser    = ("?" ~> regex("""[^#]+""".r))?
+  def queryParser    = ("?" ~> regex("""[^#\[\]]+""".r))?
 
   def fragmentParser = ("#" ~> regex(""".+""".r))?
 
@@ -54,20 +54,20 @@ import scala.util.parsing.input._
 object URI extends URIGrammar {
   implicit def stringToUri(uri: String) = URI(uri)
 
-  def apply(s: String): URI = parser.apply(new CharSequenceReader(s.trim)) match {
-    case Success(result, _) => result
+  def apply(s: String): URI = {
+    parser.apply(new CharSequenceReader(s.trim)) match {
+      case Success(result, _) => result
 
-    case Failure(msg, _)    => parseFailure(msg, s)
+      case Failure(msg, _)    => parseFailure(msg, s)
 
-    case Error(msg, _)      => parseError(msg, s)
+      case Error(msg, _)      => parseError(msg, s)
+    }
   }
 
   def opt(s: String) = {
     try {
-      val uri = apply(s)
-      Some(uri)
-    }
-    catch {
+      Some(apply(s))
+    } catch {
       case _ => None
     }
   }

@@ -16,8 +16,14 @@ class URISpec extends Specification with URIGen with ScalaCheck{
   }
 
   "URI" should{
-    "parser uri" in {
+    "parse uri" in {
       check {n: String => URI(n).toString == n }
+    }
+
+    "parse a URI with an @ in the path" in {
+      val uri = URI("http://precog.com/foo@bar.baz")
+      uri.toString must_== "http://precog.com/foo@bar.baz"
+      uri.path must beSome("/foo@bar.baz")
     }
   }
 
